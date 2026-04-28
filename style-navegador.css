@@ -1,0 +1,202 @@
+/* ========================================
+   NAVEGAÇÃO - LAYOUT FIXO (GLOBAL)
+======================================== */
+
+/* ASIDE FIXO */
+aside {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+aside::-webkit-scrollbar { width: 6px; }
+aside::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+aside::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+
+/* TOPBAR FIXA */
+.topbar {
+    position: fixed !important;
+    top: 0;
+    right: 0;
+    left: 260px;
+    height: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    background: white;
+    border-radius: 0;
+    margin-bottom: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    z-index: 999;
+    transition: box-shadow 0.3s ease;
+}
+
+.topbar.scrolled {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* MAIN: compensar aside e topbar fixos */
+main {
+    margin-left: 260px;
+    padding-top: 72px;
+    min-height: 100vh;
+}
+
+/* ========================================
+   NAVEGAÇÃO - MENU ATIVO E SUBMENUS
+======================================== */
+
+/* ITEM INÍCIO SEMPRE DESTACADO */
+aside li.menu-inicio-ativo {
+    background: var(--laranja);
+    border-left: none;
+    box-shadow: 0 4px 12px rgba(247, 147, 30, 0.3);
+}
+
+aside li.menu-inicio-ativo:hover {
+    background: #e8841a;
+}
+
+/* ITEM ATIVO NO MENU PRINCIPAL */
+aside li.active {
+    background: rgba(255, 255, 255, 0.2);
+    border-left: 4px solid #f7931e;
+    padding-left: 12px;
+    font-weight: 600;
+}
+
+/* ITEM ATIVO NO SUBMENU */
+aside .submenu a.active {
+    background: rgba(255, 255, 255, 0.15);
+    border-left: 4px solid #f7931e;
+    padding-left: 12px;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* SUBMENU COLAPSÁVEL */
+aside .submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+aside .submenu.active {
+    max-height: 2000px;
+    opacity: 1;
+}
+
+/* APOIO: mostrar submenu no hover */
+#menu-apoio:hover .submenu {
+    max-height: 2000px;
+    opacity: 1;
+}
+
+#menu-apoio:hover {
+    overflow: visible;
+}
+
+/* SETA DO MENU */
+aside .arrow {
+    transition: transform 0.3s ease;
+    font-size: 12px;
+    margin-left: auto;
+}
+
+/* MENU ITEM */
+aside .menu-item {
+    margin-bottom: 8px;
+}
+
+aside .menu-title {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    gap: 10px;
+}
+
+aside .menu-title:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* SUBMENU LINKS */
+aside .submenu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px 10px 30px;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    font-size: 13px;
+    margin: 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+aside .submenu a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding-left: 35px;
+}
+
+aside .submenu a i {
+    font-size: 12px;
+}
+
+/* ANIMAÇÃO DE HOVER NO MENU PRINCIPAL */
+aside li:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+/* ÍCONES DO MENU */
+aside li i:first-child,
+aside .menu-title i:first-child {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 768px) {
+    aside .submenu a {
+        padding-left: 20px;
+        font-size: 13px;
+    }
+    
+    aside .submenu a:hover {
+        padding-left: 25px;
+    }
+}
+
+/* ESTADO DE LOADING (opcional) */
+aside li.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* BADGE DE NOTIFICAÇÃO (opcional para uso futuro) */
+aside .badge {
+    background: #f7931e;
+    color: white;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+    font-weight: 600;
+}

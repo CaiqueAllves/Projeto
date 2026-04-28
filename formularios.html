@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Formulários</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-formularios.css">
+    <link rel="stylesheet" href="style-cadastro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+
+        </ul>
+    </aside>
+
+    <main>
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-pen-to-square"></i> Formulários</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user" id="topbarAvatarIcon"></i>
+                        <img id="topbarAvatarImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">—</div>
+                        <div class="user-email" id="userEmail">—</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO -->
+        <div class="content">
+
+            <!-- ABAS -->
+            <div class="form-tabs">
+                <div class="form-tabs-inner">
+                    <button class="tab-btn active" data-tab="empresa" onclick="mudarTab('empresa')">
+                        <i class="fa-solid fa-building"></i> Empresa
+                    </button>
+                    <button class="tab-btn" data-tab="processo" onclick="mudarTab('processo')">
+                        <i class="fa-solid fa-diagram-project"></i> Processo
+                    </button>
+                    <button class="tab-btn" data-tab="proposta" onclick="mudarTab('proposta')">
+                        <i class="fa-solid fa-file-invoice"></i> Proposta
+                    </button>
+                    <button class="tab-btn" data-tab="produto" onclick="mudarTab('produto')">
+                        <i class="fa-solid fa-boxes-stacked"></i> Produto
+                    </button>
+                </div>
+            </div>
+
+            <!-- ============================
+                 TAB: EMPRESA
+            ============================= -->
+            <div class="tab-content active" id="tab-empresa">
+                <div class="form-card">
+                    <form id="form-empresa" onsubmit="salvarEmpresa(event)">
+
+                        <!-- SEÇÃO 1: Dados da Empresa (aberta por padrão) -->
+                        <div class="form-section active">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-building"></i>
+                                Dados da Empresa
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <div class="form-group full-width">
+                                        <label>Tipo <span class="required">*</span></label>
+                                        <div class="tipo-cards-group">
+                                            <label class="tipo-card">
+                                                <input type="checkbox" name="tipo_cliente" value="cliente">
+                                                <div class="tipo-card-inner">
+                                                    <i class="fa-solid fa-user-tie"></i>
+                                                    <span>Cliente</span>
+                                                </div>
+                                            </label>
+                                            <label class="tipo-card">
+                                                <input type="checkbox" name="tipo_fornecedor" value="fornecedor">
+                                                <div class="tipo-card-inner">
+                                                    <i class="fa-solid fa-boxes-stacked"></i>
+                                                    <span>Fornecedor</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-tipo-cadastro">Tipo de Cadastro <span class="required">*</span></label>
+                                        <select id="emp-tipo-cadastro" name="tipo_cadastro">
+                                            <option value="">Selecione...</option>
+                                            <option value="cnpj">CNPJ</option>
+                                            <option value="cpf">CPF</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-documento">CNPJ / CPF <span class="required">*</span></label>
+                                        <input type="text" id="emp-documento" name="documento" placeholder="00.000.000/0001-00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-nome">Nome da Empresa / Razão Social <span class="required">*</span></label>
+                                        <input type="text" id="emp-nome" name="nome_empresa" placeholder="Razão Social">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-fantasia">Nome Fantasia</label>
+                                        <input type="text" id="emp-fantasia" name="nome_fantasia" placeholder="Nome Fantasia">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-ie">Inscrição Estadual</label>
+                                        <input type="text" id="emp-ie" name="inscricao_estadual" placeholder="000.000.000.000">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-suframa">SUFRAMA <span class="campo-opcional">(Zona Franca)</span></label>
+                                        <input type="text" id="emp-suframa" name="suframa" placeholder="00.000.000-0" maxlength="11"
+                                               onfocus="document.getElementById('suframa-info').classList.add('visivel')"
+                                               onblur="document.getElementById('suframa-info').classList.remove('visivel')">
+                                        <div class="incoterm-info" id="suframa-info">
+                                            <strong><i class="fa-solid fa-circle-info"></i> O que é SUFRAMA?</strong><br>
+                                            Superintendência da Zona Franca de Manaus. O número de inscrição SUFRAMA é obrigatório para empresas localizadas na Zona Franca de Manaus (AM) e em outras áreas de livre comércio, sendo necessário para a concessão de incentivos fiscais em operações de comércio exterior.
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Toggle: Tem transportadora? -->
+                                <div class="transp-toggle-row">
+                                    <span class="transp-toggle-label">
+                                        <i class="fa-solid fa-truck"></i> Tem transportadora vinculada?
+                                    </span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="emp-tem-transportadora" onchange="toggleTransportadoraVinculada(this.checked)">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+
+                                <!-- Campos da Transportadora (ocultos por padrão) -->
+                                <div id="emp-transportadora-campos" style="display:none;">
+                                    <div class="transp-vinculada-header">
+                                        <i class="fa-solid fa-truck"></i> Dados da Transportadora
+                                    </div>
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label for="emp-transp-cnpj">CNPJ da Transportadora</label>
+                                            <input type="text" id="emp-transp-cnpj" name="transp_cnpj" placeholder="00.000.000/0000-00" maxlength="18">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="emp-transp-razao">Razão Social</label>
+                                            <input type="text" id="emp-transp-razao" name="transp_razao" placeholder="Razão Social">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="emp-transp-fantasia">Nome Fantasia</label>
+                                            <input type="text" id="emp-transp-fantasia" name="transp_fantasia" placeholder="Nome Fantasia">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="emp-transp-responsavel">Responsável</label>
+                                            <input type="text" id="emp-transp-responsavel" name="transp_responsavel" placeholder="Nome do responsável">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="emp-transp-contato">Contato</label>
+                                            <input type="text" id="emp-transp-contato" name="transp_contato" placeholder="+55 (00) 00000-0000">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 2: Endereço -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-location-dot"></i>
+                                Endereço
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <div class="form-group">
+                                        <label for="emp-pais">País</label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="emp-pais" name="pais" placeholder="Digite para filtrar países..." autocomplete="off">
+                                            <input type="hidden" id="emp-pais-codigo">
+                                            <div class="autocomplete-list" id="emp-pais-lista"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-cep">CEP</label>
+                                        <input type="text" id="emp-cep" name="cep" placeholder="00000-000">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-estado">Estado / Província</label>
+                                        <input type="text" id="emp-estado" name="estado" placeholder="Estado ou Província">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-cidade">Cidade</label>
+                                        <input type="text" id="emp-cidade" name="cidade" placeholder="Cidade">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-bairro">Bairro</label>
+                                        <input type="text" id="emp-bairro" name="bairro" placeholder="Bairro">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-endereco">Endereço</label>
+                                        <input type="text" id="emp-endereco" name="endereco" placeholder="Rua, Av., etc.">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-numero">Número</label>
+                                        <input type="text" id="emp-numero" name="numero" placeholder="Nº">
+                                        <label class="sn-toggle">
+                                            <input type="checkbox" name="sem_numero" onchange="document.getElementById('emp-numero').disabled = this.checked; document.getElementById('emp-numero').value = this.checked ? 'S/N' : '';">
+                                            <span>S/N (Sem número)</span>
+                                        </label>
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label for="emp-complemento">Complemento</label>
+                                        <input type="text" id="emp-complemento" name="complemento" placeholder="Sala, Andar, Bloco...">
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 3: Contato -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-phone"></i>
+                                Contato
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+
+                                <div class="emp-contato-bloco">
+                                    <p class="emp-contato-titulo">Contato Principal</p>
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label for="emp-contato1-nome">Nome</label>
+                                            <input type="text" id="emp-contato1-nome" name="contato1_nome" placeholder="Nome completo">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="emp-contato1-cargo">Cargo</label>
+                                            <input type="text" id="emp-contato1-cargo" name="contato1_cargo" placeholder="Ex: Gerente Comercial">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="emp-contato1-tel">Telefone</label>
+                                            <input type="text" id="emp-contato1-tel" name="contato1_telefone" placeholder="+55 (00) 00000-0000">
+                                            <label class="tel-whats-check">
+                                                <input type="checkbox" id="emp-contato1-tel-whats" onchange="toggleTelWhats('1', this.checked)">
+                                                <span>Este número é WhatsApp?</span>
+                                            </label>
+                                        </div>
+                                        <div class="form-group" id="emp-contato1-whats-group">
+                                            <label for="emp-contato1-whats">WhatsApp</label>
+                                            <input type="text" id="emp-contato1-whats" name="contato1_whatsapp" placeholder="+55 (00) 00000-0000">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="emp-contato2-bloco" class="emp-contato-bloco" style="display:none;">
+                                    <div class="emp-contato-titulo-row">
+                                        <p class="emp-contato-titulo">Contato Secundário</p>
+                                        <button type="button" class="emp-contato-remover" onclick="removerContato2()">
+                                            <i class="fa-solid fa-xmark"></i> Remover
+                                        </button>
+                                    </div>
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label for="emp-contato2-nome">Nome</label>
+                                            <input type="text" id="emp-contato2-nome" name="contato2_nome" placeholder="Nome completo">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="emp-contato2-cargo">Cargo</label>
+                                            <input type="text" id="emp-contato2-cargo" name="contato2_cargo" placeholder="Ex: Analista de Exportação">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="emp-contato2-tel">Telefone</label>
+                                            <input type="text" id="emp-contato2-tel" name="contato2_telefone" placeholder="+55 (00) 00000-0000">
+                                            <label class="tel-whats-check">
+                                                <input type="checkbox" id="emp-contato2-tel-whats" onchange="toggleTelWhats('2', this.checked)">
+                                                <span>Este número é WhatsApp?</span>
+                                            </label>
+                                        </div>
+                                        <div class="form-group" id="emp-contato2-whats-group">
+                                            <label for="emp-contato2-whats">WhatsApp</label>
+                                            <input type="text" id="emp-contato2-whats" name="contato2_whatsapp" placeholder="+55 (00) 00000-0000">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="button" class="btn-add-contato" id="btn-add-contato" onclick="adicionarContato2()">
+                                    <i class="fa-solid fa-plus"></i> Adicionar Contato
+                                </button>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="emp-email">E-mail</label>
+                                        <input type="email" id="emp-email" name="email" placeholder="email@empresa.com.br">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="emp-site">Site / Website</label>
+                                        <input type="text" id="emp-site" name="site" placeholder="www.empresa.com.br">
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 4: Informações Extras -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-circle-info"></i>
+                                Informações Extras
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <div class="form-group">
+                                        <label for="emp-identificacao">Identificação Interna</label>
+                                        <input type="text" id="emp-identificacao" name="identificacao" placeholder="Código ou referência interna">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="emp-responsavel">Responsável pelo Processo</label>
+                                        <input type="text" id="emp-responsavel" name="responsavel_processo" placeholder="Nome do responsável na empresa">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label>Tags</label>
+                                        <div class="tags-input-wrapper">
+                                            <input type="text" id="emp-tags-input" placeholder="Digite e pressione Enter ou clique em +" autocomplete="off">
+                                            <button type="button" class="btn-add-tag" onclick="empAdicionarTag()">
+                                                <i class="fa-solid fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        <div class="tags-container" id="emp-tags-container" style="display:none;"></div>
+                                        <input type="hidden" id="emp-tags" name="tags">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label for="emp-obs">Observações</label>
+                                        <textarea id="emp-obs" name="observacoes" placeholder="Anotações internas sobre esta empresa..."></textarea>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AÇÕES -->
+                        <div class="form-actions">
+                            <button type="button" class="btn-voltar" onclick="window.history.back()">
+                                <i class="fa-solid fa-arrow-left"></i> Voltar à lista
+                            </button>
+                            <div class="form-actions-right">
+                                <button type="button" class="btn-clear" onclick="limparForm('form-empresa')">
+                                    <i class="fa-solid fa-eraser"></i> Limpar Dados
+                                </button>
+                                <button type="submit" class="btn-save">
+                                    <i class="fa-solid fa-floppy-disk"></i> Salvar
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- ============================
+                 TAB: PROCESSO
+            ============================= -->
+            <div class="tab-content" id="tab-processo">
+                <div class="form-card">
+                    <form id="form-processo" onsubmit="salvarProcesso(event)">
+
+                        <!-- RESUMO DO PROCESSO -->
+                        <div class="processo-resumo" id="processo-resumo">
+                            <span id="resumo-empresa">—</span>
+                            <span class="resumo-sep">=</span>
+                            <span id="resumo-tipo">—</span>
+                            <span class="resumo-sep">›</span>
+                            <span id="resumo-emp-destino">—</span>
+                            <span class="resumo-sep">|</span>
+                            <span id="resumo-origem">—</span>
+                            <span class="resumo-sep">›</span>
+                            <span id="resumo-destino">—</span>
+                            <span class="resumo-sep">|</span>
+                            <span id="resumo-incoterm">—</span>
+                            <span class="resumo-sep">›</span>
+                            <span id="resumo-modal">—</span>
+                            <span class="resumo-sep">|</span>
+                            <span id="resumo-status">—</span>
+                        </div>
+
+                        <!-- SEÇÃO 1: Dados do Processo (aberta por padrão) -->
+                        <div class="form-section active">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-diagram-project"></i>
+                                Dados do Processo
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <!-- Linha 1: Código | Tipo -->
+                                    <div class="form-group">
+                                        <label for="proc-codigo">Código do Processo <span class="required">*</span></label>
+                                        <input type="text" id="proc-codigo" name="codigo" placeholder="Ex: EXP-2026-001">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="proc-tipo">Tipo <span class="required">*</span></label>
+                                        <select id="proc-tipo" name="tipo">
+                                            <option value="">Selecione...</option>
+                                            <option value="exportacao_direta">Exportação Direta</option>
+                                            <option value="exportacao_indireta">Exportação Indireta</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Emissor -->
+                                    <div class="form-group">
+                                        <label>Emissor <span class="required">*</span></label>
+                                        <div class="emissor-toggle">
+                                            <label class="emissor-opcao" id="emissor-opcao-usuario">
+                                                <input type="radio" name="proc-emissor-tipo" value="usuario" id="proc-emissor-usuario" checked>
+                                                <i class="fa-solid fa-user"></i> Usuário
+                                            </label>
+                                            <label class="emissor-opcao" id="emissor-opcao-terceiro">
+                                                <input type="radio" name="proc-emissor-tipo" value="terceiro" id="proc-emissor-terceiro">
+                                                <i class="fa-solid fa-building"></i> Terceiro
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="proc-documento">CNPJ / CPF</label>
+                                        <div class="doc-tipo-wrapper">
+                                            <select id="proc-documento-tipo" name="documento_tipo">
+                                                <option value="cnpj">CNPJ</option>
+                                                <option value="cpf">CPF</option>
+                                            </select>
+                                            <input type="text" id="proc-documento" name="documento" placeholder="Preenchido automaticamente" readonly>
+                                        </div>
+                                    </div>
+
+                                    <!-- Empresa vinculada — visível apenas quando Terceiro -->
+                                    <div class="form-group" id="proc-emissor-empresa-group" style="display:none;">
+                                        <label for="proc-cliente">Empresa / Cliente <span class="required">*</span></label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="proc-cliente" name="cliente" placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
+                                            <input type="hidden" id="proc-cliente-id">
+                                            <div class="autocomplete-list" id="proc-cliente-lista"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Propósito -->
+                                    <div class="form-group full-width">
+                                        <label for="proc-proposito">Propósito</label>
+                                        <select id="proc-proposito" name="proposito">
+                                            <option value="">Selecione...</option>
+                                            <option value="vendas">Vendas</option>
+                                            <option value="amostra">Amostra</option>
+                                            <option value="troca">Troca</option>
+                                            <option value="doacao">Doação</option>
+                                            <option value="conserto">Conserto / Reparo</option>
+                                            <option value="retorno">Retorno</option>
+                                            <option value="exposicao">Exposição / Feira</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Linha 3: Incoterm | Modal -->
+                                    <div class="form-group">
+                                        <label for="proc-incoterm">
+                                            Incoterm
+                                            <span class="info-tooltip" data-tooltip="Incoterms são termos internacionais de comércio que definem as responsabilidades entre comprador e vendedor: quem paga o frete, seguro, desembaraço e até onde vai a responsabilidade de cada parte.">
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            </span>
+                                        </label>
+                                        <select id="proc-incoterm" name="incoterm">
+                                            <option value="">Selecione...</option>
+                                            <optgroup label="Todos os modais">
+                                                <option>EXW</option>
+                                                <option>FCA</option>
+                                                <option>CPT</option>
+                                                <option>CIP</option>
+                                                <option>DAP</option>
+                                                <option>DPU</option>
+                                                <option>DDP</option>
+                                            </optgroup>
+                                            <optgroup label="Exclusivo Marítimo">
+                                                <option>FAS</option>
+                                                <option>FOB</option>
+                                                <option>CFR</option>
+                                                <option>CIF</option>
+                                            </optgroup>
+                                        </select>
+                                        <div class="incoterm-info" id="incoterm-info"></div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="proc-modal">Modal</label>
+                                        <select id="proc-modal" name="modal" disabled title="Selecione um Incoterm primeiro">
+                                            <option value="">Selecione...</option>
+                                            <option value="aereo">Aéreo</option>
+                                            <option value="maritimo">Marítimo</option>
+                                            <option value="terrestre">Terrestre</option>
+                                        </select>
+                                        <div class="incoterm-info" id="modal-info"></div>
+                                    </div>
+
+
+                                    <!-- Linha 4: Observações -->
+                                    <div class="form-group full-width">
+                                        <label for="proc-observacoes">Observações</label>
+                                        <textarea id="proc-observacoes" name="observacoes" placeholder="Informações adicionais sobre o processo..."></textarea>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO: Origem / Destino -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-route"></i>
+                                Origem / Destino
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <!-- ORIGEM -->
+                                    <div class="form-group full-width form-inline-pair">
+                                        <div class="form-group">
+                                            <label for="proc-origem-pais">País de Origem</label>
+                                            <div class="autocomplete-wrapper">
+                                                <input type="text" id="proc-origem-pais" name="origem_pais" placeholder="Selecione o país de origem" autocomplete="off">
+                                                <input type="hidden" id="proc-origem-pais-codigo">
+                                                <div class="autocomplete-list" id="proc-origem-pais-lista"></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="proc-origem-cidade">Cidade de Origem</label>
+                                            <input type="text" id="proc-origem-cidade" name="origem_cidade" placeholder="Ex: Joinville">
+                                        </div>
+                                    </div>
+
+                                    <!-- Marítimo: Navio + Porto de Origem -->
+                                    <div class="form-group" id="proc-navio-group" style="display:none;">
+                                        <label for="proc-navio">Navio</label>
+                                        <input type="text" id="proc-navio" name="navio" placeholder="Nome do navio">
+                                    </div>
+                                    <div class="form-group" id="proc-porto-origem-group" style="display:none;">
+                                        <div class="rota-label-row">
+                                            <label for="proc-porto-origem">Porto de Origem</label>
+                                            <button type="button" class="btn-add-rota" id="btn-add-porto" onclick="adicionarIntermediario('porto')">
+                                                <i class="fa-solid fa-plus"></i> Adicionar
+                                            </button>
+                                        </div>
+                                        <input type="text" id="proc-porto-origem" name="porto_origem" placeholder="Ex: Santos, Itajaí...">
+                                    </div>
+
+                                    <!-- Aéreo: Aeronave + Aeroporto de Origem -->
+                                    <div class="form-group" id="proc-aeronave-group" style="display:none;">
+                                        <label for="proc-aeronave">Aeronave</label>
+                                        <input type="text" id="proc-aeronave" name="aeronave" placeholder="Ex: Boeing 737, Airbus A320...">
+                                    </div>
+                                    <div class="form-group" id="proc-aeroporto-origem-group" style="display:none;">
+                                        <div class="rota-label-row">
+                                            <label for="proc-aeroporto-origem">Aeroporto de Origem</label>
+                                            <button type="button" class="btn-add-rota" id="btn-add-aeroporto" onclick="adicionarIntermediario('aeroporto')">
+                                                <i class="fa-solid fa-plus"></i> Adicionar
+                                            </button>
+                                        </div>
+                                        <input type="text" id="proc-aeroporto-origem" name="aeroporto_origem" placeholder="Ex: GRU, JFK...">
+                                    </div>
+
+                                    <!-- Terrestre: Aduana de Saída -->
+                                    <div class="form-group" id="proc-fronteira-saida-group" style="display:none;">
+                                        <div class="rota-label-row">
+                                            <label for="proc-fronteira-saida">Aduana / Fronteira de Saída</label>
+                                            <button type="button" class="btn-add-rota" id="btn-add-fronteira" onclick="adicionarIntermediario('fronteira')">
+                                                <i class="fa-solid fa-plus"></i> Adicionar
+                                            </button>
+                                        </div>
+                                        <input type="text" id="proc-fronteira-saida" name="fronteira_saida" placeholder="Ex: Foz do Iguaçu, Uruguaiana...">
+                                    </div>
+
+                                    <!-- Divisor Origem / Destino -->
+                                    <div class="form-group full-width origem-destino-divisor"></div>
+
+                                    <!-- Intermediários dinâmicos -->
+                                    <div id="rota-intermediarios" class="form-group full-width" style="display:none;">
+                                        <div id="rota-intermediarios-lista"></div>
+                                    </div>
+
+                                    <!-- Marítimo: Porto de Destino -->
+                                    <div class="form-group" id="proc-porto-destino-group" style="display:none;">
+                                        <label for="proc-porto-destino">Porto de Destino</label>
+                                        <input type="text" id="proc-porto-destino" name="porto_destino" placeholder="Ex: Roterdã, Miami...">
+                                    </div>
+
+                                    <!-- Aéreo: Aeroporto de Destino -->
+                                    <div class="form-group" id="proc-aeroporto-destino-group" style="display:none;">
+                                        <label for="proc-aeroporto-destino">Aeroporto de Destino</label>
+                                        <input type="text" id="proc-aeroporto-destino" name="aeroporto_destino" placeholder="Ex: AMS, LHR...">
+                                    </div>
+
+                                    <!-- Terrestre: Aduana de Entrada -->
+                                    <div class="form-group" id="proc-fronteira-entrada-group" style="display:none;">
+                                        <label for="proc-fronteira-entrada">Aduana / Fronteira de Entrada</label>
+                                        <input type="text" id="proc-fronteira-entrada" name="fronteira_entrada" placeholder="Ex: Ciudad del Este, Paso de los Libres...">
+                                    </div>
+
+                                    <!-- Empresa de Destino -->
+                                    <div class="form-group full-width">
+                                        <div class="empresa-destino-header">
+                                            <label>Empresa de Destino</label>
+                                            <div class="empresa-destino-toggle">
+                                                <button type="button" class="emp-dest-btn ativo" id="btn-emp-dest-cadastrada" onclick="toggleEmpresaDestino('cadastrada')">
+                                                    <i class="fa-solid fa-magnifying-glass"></i> Buscar cadastrada
+                                                </button>
+                                                <button type="button" class="emp-dest-btn" id="btn-emp-dest-manual" onclick="toggleEmpresaDestino('manual')">
+                                                    <i class="fa-solid fa-pen"></i> Preencher manual
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Aviso mesmo CNPJ -->
+                                    <div class="form-group full-width emp-dest-aviso" id="emp-dest-aviso-mesmo-cnpj" style="display:none;">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        O CNPJ/CPF da empresa de destino não pode ser o mesmo do emissor do processo.
+                                    </div>
+
+                                    <!-- Busca em empresas cadastradas -->
+                                    <div class="form-group full-width" id="emp-dest-busca-group">
+                                        <label for="proc-emp-dest-busca">Buscar Empresa</label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="proc-emp-dest-busca" name="emp_dest_busca" placeholder="Digite o nome ou CNPJ da empresa..." autocomplete="off">
+                                            <input type="hidden" id="proc-emp-dest-id">
+                                            <div class="autocomplete-list" id="proc-emp-dest-lista"></div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" id="emp-dest-auto-doc-group" style="display:none;">
+                                        <label for="proc-emp-dest-auto-doc">CNPJ / CPF</label>
+                                        <input type="text" id="proc-emp-dest-auto-doc" name="emp_dest_auto_doc" readonly>
+                                    </div>
+                                    <div class="form-group" id="emp-dest-auto-id-group" style="display:none;">
+                                        <label for="proc-emp-dest-auto-id">Identificação Interna</label>
+                                        <input type="text" id="proc-emp-dest-auto-id" name="emp_dest_auto_id" readonly>
+                                    </div>
+
+                                    <!-- Preenchimento manual -->
+                                    <div class="form-group" id="emp-dest-razao-group" style="display:none;">
+                                        <label for="proc-emp-dest-razao">Razão Social</label>
+                                        <input type="text" id="proc-emp-dest-razao" name="emp_dest_razao" placeholder="Razão social da empresa">
+                                    </div>
+                                    <div class="form-group" id="emp-dest-fantasia-group" style="display:none;">
+                                        <label for="proc-emp-dest-fantasia">Nome Fantasia</label>
+                                        <input type="text" id="proc-emp-dest-fantasia" name="emp_dest_fantasia" placeholder="Nome fantasia">
+                                    </div>
+                                    <div class="form-group" id="emp-dest-doc-group" style="display:none;">
+                                        <label for="proc-emp-dest-doc">CNPJ / CPF</label>
+                                        <div class="doc-tipo-wrapper">
+                                            <select id="proc-emp-dest-doc-tipo">
+                                                <option value="cnpj">CNPJ</option>
+                                                <option value="cpf">CPF</option>
+                                            </select>
+                                            <input type="text" id="proc-emp-dest-doc" name="emp_dest_doc" placeholder="00.000.000/0001-00">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group full-width form-inline-pair">
+                                        <div class="form-group">
+                                            <label for="proc-destino-pais">País de Destino</label>
+                                            <div class="autocomplete-wrapper">
+                                                <input type="text" id="proc-destino-pais" name="destino_pais" placeholder="Digite para filtrar países..." autocomplete="off">
+                                                <input type="hidden" id="proc-destino-pais-codigo">
+                                                <div class="autocomplete-list" id="proc-destino-pais-lista"></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group" id="destino-cep-group" style="display:none;">
+                                            <label for="proc-destino-cep">CEP</label>
+                                            <input type="text" id="proc-destino-cep" name="destino_cep" placeholder="00000-000" maxlength="9">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="proc-destino-estado">Estado / Província</label>
+                                        <input type="text" id="proc-destino-estado" name="destino_estado" placeholder="Ex: SP, Florida...">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="proc-destino-cidade">Cidade de Destino</label>
+                                        <input type="text" id="proc-destino-cidade" name="destino_cidade" placeholder="Ex: São Paulo, Miami...">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="proc-destino-bairro">Bairro</label>
+                                        <input type="text" id="proc-destino-bairro" name="destino_bairro" placeholder="Bairro">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="proc-destino-endereco">Endereço</label>
+                                        <input type="text" id="proc-destino-endereco" name="destino_endereco" placeholder="Rua, Av., etc.">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label for="proc-destino-complemento">Complemento</label>
+                                        <input type="text" id="proc-destino-complemento" name="destino_complemento" placeholder="Sala, Andar, Bloco...">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label for="proc-destino-responsavel">Responsável no Destino</label>
+                                        <input type="text" id="proc-destino-responsavel" name="destino_responsavel" placeholder="Nome da empresa ou pessoa responsável pelo recebimento">
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 2: Etapas do Processo -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-list-check"></i>
+                                Etapas do Processo
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+
+                                <!-- Status e Datas -->
+                                <div class="form-grid" style="margin-bottom:16px;">
+                                    <div class="form-group">
+                                        <label for="proc-status">Status</label>
+                                        <select id="proc-status" name="status">
+                                            <option value="">Selecione...</option>
+                                            <option value="aberto">Aberto</option>
+                                            <option value="em_andamento">Em Andamento</option>
+                                            <option value="aguardando">Aguardando Documentos</option>
+                                            <option value="liberado">Liberado</option>
+                                            <option value="encerrado">Encerrado</option>
+                                            <option value="cancelado">Cancelado</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group" data-show-for="aberto,em_andamento,aguardando,liberado,encerrado,cancelado">
+                                        <label for="proc-data-abertura">Data de Abertura</label>
+                                        <input type="date" id="proc-data-abertura" name="data_abertura">
+                                    </div>
+
+                                    <div class="form-group" data-show-for="encerrado">
+                                        <label for="proc-data-embarque">Data de Embarque</label>
+                                        <input type="date" id="proc-data-embarque" name="data_embarque">
+                                    </div>
+
+                                    <div class="form-group" data-show-for="encerrado">
+                                        <label for="proc-data-chegada">Data de Chegada</label>
+                                        <input type="date" id="proc-data-chegada" name="data_chegada">
+                                    </div>
+
+                                    <div class="form-group" data-show-for="cancelado">
+                                        <label for="proc-data-cancelamento">Data de Cancelamento</label>
+                                        <input type="date" id="proc-data-cancelamento" name="data_cancelamento">
+                                    </div>
+
+                                    <div class="form-group full-width" data-show-for="aberto,em_andamento,aguardando,liberado,encerrado,cancelado">
+                                        <label for="proc-obs-prazos">Observações</label>
+                                        <textarea id="proc-obs-prazos" name="obs_prazos" placeholder="Informações adicionais sobre prazos e status..."></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="etapas-toolbar">
+                                    <span class="etapas-info" id="etapas-info">0 etapas</span>
+                                    <button type="button" class="btn-add-etapa" id="btn-add-etapa">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Etapa
+                                    </button>
+                                </div>
+                                <div class="etapas-header">
+                                    <span class="etapa-col-check">Feito</span>
+                                    <span class="etapa-col-nome">Etapa</span>
+                                    <span class="etapa-col-data">Data</span>
+                                    <span class="etapa-col-resp">Responsável</span>
+                                    <span class="etapa-col-acao"></span>
+                                </div>
+                                <div id="etapas-lista"></div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 4: Documentos -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-file-lines"></i>
+                                Documentos
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+
+                                <!-- Numeração dos documentos — campos comuns -->
+                                <div class="form-grid" style="margin-bottom:0;">
+
+                                    <!-- PROFORMA INVOICE -->
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-proforma">Nº Proforma Invoice</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('proforma')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('proforma')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('proforma')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-proforma" name="doc_num_proforma" placeholder="Ex: PI-2024-001">
+                                        <input type="file" id="doc-file-proforma" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-proforma"></span>
+                                    </div>
+
+                                    <!-- COMMERCIAL INVOICE -->
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-commercial">Nº Commercial Invoice</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('commercial')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('commercial')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('commercial')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-commercial" name="doc_num_commercial" placeholder="Ex: CI-2024-001">
+                                        <input type="file" id="doc-file-commercial" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-commercial"></span>
+                                    </div>
+
+                                    <!-- PACKING LIST -->
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-packing">Nº Packing List</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('packing')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('packing')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('packing')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-packing" name="doc_num_packing" placeholder="Ex: PL-2024-001">
+                                        <input type="file" id="doc-file-packing" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-packing"></span>
+                                    </div>
+
+                                    <!-- DUE -->
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-due">Nº DUE</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('due')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('due')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('due')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-due" name="doc_num_due" placeholder="Ex: 24BR000000000-0">
+                                        <input type="file" id="doc-file-due" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-due"></span>
+                                    </div>
+
+                                    <!-- CERTIFICADO DE ORIGEM -->
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-certorigem">Nº Certificado de Origem</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('certorigem')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('certorigem')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('certorigem')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-certorigem" name="doc_num_certorigem" placeholder="Ex: CO-2024-001">
+                                        <input type="file" id="doc-file-certorigem" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-certorigem"></span>
+                                    </div>
+
+                                    <!-- CTN -->
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-ctn">Nº Conhecimento de Transporte Nacional</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('ctn')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('ctn')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('ctn')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-ctn" name="doc_num_ctn" placeholder="Ex: CTN-2024-001">
+                                        <input type="file" id="doc-file-ctn" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-ctn"></span>
+                                    </div>
+
+                                    <!-- NF EXPORTAÇÃO -->
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-nfe">Nº Nota Fiscal de Exportação</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('nfe')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('nfe')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('nfe')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-nfe" name="doc_num_nfe" placeholder="Ex: NF-000001">
+                                        <input type="file" id="doc-file-nfe" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-nfe"></span>
+                                    </div>
+
+                                    <!-- Documentos exclusivos: AÉREO -->
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="aereo" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-awb">Nº AWB <small class="doc-modal-tag">Aéreo</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('awb')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('awb')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('awb')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-awb" name="doc_num_awb" placeholder="Ex: 057-12345678">
+                                        <input type="file" id="doc-file-awb" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-awb"></span>
+                                    </div>
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="aereo" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-manifesto">Nº Manifesto de Carga <small class="doc-modal-tag">Aéreo</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('manifesto')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('manifesto')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('manifesto')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-manifesto" name="doc_num_manifesto" placeholder="Ex: MC-2024-001">
+                                        <input type="file" id="doc-file-manifesto" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-manifesto"></span>
+                                    </div>
+
+                                    <!-- Documentos exclusivos: MARÍTIMO -->
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="maritimo" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-fcl">Nº FCL — Full Container Load <small class="doc-modal-tag">Marítimo</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('fcl')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('fcl')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('fcl')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-fcl" name="doc_num_fcl" placeholder="Ex: FCL-2024-001">
+                                        <input type="file" id="doc-file-fcl" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-fcl"></span>
+                                    </div>
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="maritimo" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-lcl">Nº LCL — Less than Container Load <small class="doc-modal-tag">Marítimo</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('lcl')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('lcl')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('lcl')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-lcl" name="doc_num_lcl" placeholder="Ex: LCL-2024-001">
+                                        <input type="file" id="doc-file-lcl" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-lcl"></span>
+                                    </div>
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="maritimo" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-bl">Nº BL — Bill of Lading <small class="doc-modal-tag">Marítimo</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('bl')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('bl')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('bl')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-bl" name="doc_num_bl" placeholder="Ex: BL-2024-001">
+                                        <input type="file" id="doc-file-bl" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-bl"></span>
+                                    </div>
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="maritimo" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-apolice">Nº Apólice de Seguro <small class="doc-modal-tag">Marítimo</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('apolice')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('apolice')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('apolice')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-apolice" name="doc_num_apolice" placeholder="Ex: AP-2024-001">
+                                        <input type="file" id="doc-file-apolice" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-apolice"></span>
+                                    </div>
+
+                                    <!-- Documentos exclusivos: TERRESTRE -->
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="terrestre" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-crt">Nº CRT — Conhecimento de Transporte Internacional <small class="doc-modal-tag">Terrestre</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('crt')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('crt')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('crt')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-crt" name="doc_num_crt" placeholder="Ex: CRT-2024-001">
+                                        <input type="file" id="doc-file-crt" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-crt"></span>
+                                    </div>
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="terrestre" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-micdta">Nº MIC/DTA — TIF (Transporte Internacional Ferroviário) <small class="doc-modal-tag">Terrestre</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('micdta')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('micdta')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('micdta')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-micdta" name="doc_num_micdta" placeholder="Ex: MIC-2024-001">
+                                        <input type="file" id="doc-file-micdta" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-micdta"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Resumo Incoterm | Modal -->
+                                <div class="processo-resumo processo-resumo-etapas" id="resumo-docs">
+                                    <i class="fa-solid fa-file-contract"></i>
+                                    <span>Incoterm:</span>
+                                    <span id="resumo-doc-incoterm">—</span>
+                                    <span class="resumo-sep">|</span>
+                                    <span>Modal:</span>
+                                    <span id="resumo-doc-modal">—</span>
+                                </div>
+
+                                <!-- Header da lista -->
+                                <div class="docs-header">
+                                    <span></span>
+                                    <span>Documento</span>
+                                    <span>Arquivo</span>
+                                    <span>Ações</span>
+                                </div>
+
+                                <!-- Lista dinâmica -->
+                                <div id="docs-lista"></div>
+
+                                <!-- Adicionar documento extra -->
+                                <div class="docs-add-wrapper">
+                                    <button type="button" class="btn-add-etapa" id="btn-add-doc">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Documento
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO: Transporte -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-truck"></i>
+                                Transporte
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="transp-nome">Transportadora</label>
+                                        <div class="doc-tipo-wrapper">
+                                            <select id="transp-tipo" name="transp_tipo">
+                                                <option value="solicitada">Solicitada</option>
+                                                <option value="propria">Própria do Cliente</option>
+                                            </select>
+                                            <input type="text" id="transp-nome" name="transp_nome" placeholder="Nome da transportadora">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transp-cnpj">CNPJ da Transportadora</label>
+                                        <input type="text" id="transp-cnpj" name="transp_cnpj" placeholder="00.000.000/0000-00" maxlength="18">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transp-num-coleta">Nº de Coleta <span class="campo-opcional">(se houver)</span></label>
+                                        <input type="text" id="transp-num-coleta" name="transp_num_coleta" placeholder="Número de coleta">
+                                    </div>
+                                </div>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="transp-tipo-veiculo">Tipo de Veículo</label>
+                                        <select id="transp-tipo-veiculo" name="transp_tipo_veiculo">
+                                            <option value="">Selecione...</option>
+                                            <option value="caminhao_bau">Caminhão Baú</option>
+                                            <option value="caminhao_aberto">Caminhão Aberto (Carroceria)</option>
+                                            <option value="caminhao_frigorifico">Caminhão Frigorífico</option>
+                                            <option value="caminhao_tanque">Caminhão Tanque</option>
+                                            <option value="bitrem">Bitrem / Rodotrem</option>
+                                            <option value="van">Van / Utilitário</option>
+                                            <option value="outro">Outro</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transp-placa">Placa do Veículo</label>
+                                        <input type="text" id="transp-placa" name="transp_placa" placeholder="AAA-0000 ou AAA0A00" maxlength="8">
+                                    </div>
+                                </div>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="transp-data-coleta">Data de Coleta</label>
+                                        <input type="date" id="transp-data-coleta" name="transp_data_coleta">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transp-data-entrega">Entrega Prevista</label>
+                                        <input type="date" id="transp-data-entrega" name="transp_data_entrega">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transp-frete-valor">Valor do Frete</label>
+                                        <div class="doc-tipo-wrapper">
+                                            <div class="autocomplete-wrapper" style="width:220px;flex-shrink:0;">
+                                                <input type="text" id="transp-frete-moeda-display" placeholder="Moeda..." autocomplete="off">
+                                                <input type="hidden" id="transp-frete-moeda" name="transp_frete_moeda">
+                                                <div class="autocomplete-dropdown" id="transp-frete-moeda-list" style="display:none;"></div>
+                                            </div>
+                                            <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="max-width:100px;">
+                                        <label for="transp-frete-incoterm">Incoterm</label>
+                                        <input type="text" id="transp-frete-incoterm" name="transp_frete_incoterm" class="transp-incoterm-tag" placeholder="—" readonly tabindex="-1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transp-seguro">Seguro de Transporte <span class="campo-opcional">(se houver)</span></label>
+                                        <input type="text" id="transp-seguro" name="transp_seguro" placeholder="Nº apólice ou valor do seguro">
+                                    </div>
+                                </div>
+
+                                <div class="form-grid">
+                                    <div class="form-group full-width">
+                                        <label for="transp-obs">Observações</label>
+                                        <textarea id="transp-obs" name="transp_obs" placeholder="Informações adicionais sobre o transporte..."></textarea>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- AÇÕES -->
+                        <div class="form-actions">
+                            <button type="button" class="btn-voltar" onclick="window.history.back()">
+                                <i class="fa-solid fa-arrow-left"></i> Voltar à lista
+                            </button>
+                            <div class="form-actions-right">
+                                <button type="button" class="btn-clear" onclick="limparForm('form-processo')">
+                                    <i class="fa-solid fa-eraser"></i> Limpar Dados
+                                </button>
+                                <button type="button" class="btn-pdf" onclick="gerarPDFProcesso()">
+                                    <i class="fa-solid fa-file-pdf"></i> Gerar PDF
+                                </button>
+                                <button type="submit" class="btn-save">
+                                    <i class="fa-solid fa-floppy-disk"></i> Salvar
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- ============================
+                 TAB: PROPOSTA
+            ============================= -->
+            <div class="tab-content" id="tab-proposta">
+                <div class="form-card">
+                    <form id="form-proposta" onsubmit="salvarProposta(event)">
+
+                        <!-- RESUMO DA PROPOSTA -->
+                        <div class="processo-resumo" id="proposta-resumo">
+                            <span id="prop-resumo-empresa">—</span>
+                            <span class="resumo-sep">=</span>
+                            <span id="prop-resumo-tipo">—</span>
+                            <span class="resumo-sep">›</span>
+                            <span id="prop-resumo-emp-destino">—</span>
+                            <span class="resumo-sep">|</span>
+                            <span id="prop-resumo-origem">—</span>
+                            <span class="resumo-sep">›</span>
+                            <span id="prop-resumo-destino">—</span>
+                            <span class="resumo-sep">|</span>
+                            <span id="prop-resumo-incoterm">—</span>
+                            <span class="resumo-sep">›</span>
+                            <span id="prop-resumo-modal">—</span>
+                            <span class="resumo-sep">|</span>
+                            <span id="prop-resumo-status">—</span>
+                        </div>
+
+                        <!-- SEÇÃO 1: Dados da Proposta (unificada) -->
+                        <div class="form-section active">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-file-invoice"></i>
+                                Dados da Proposta
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <!-- Tipo -->
+                                    <div class="form-group">
+                                        <label for="prop-tipo">Tipo <span class="required">*</span></label>
+                                        <select id="prop-tipo" name="tipo">
+                                            <option value="">Selecione...</option>
+                                            <option value="exportacao_direta">Exportação Direta</option>
+                                            <option value="exportacao_indireta">Exportação Indireta</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Propósito -->
+                                    <div class="form-group">
+                                        <label for="prop-proposito">Propósito</label>
+                                        <select id="prop-proposito" name="proposito">
+                                            <option value="">Selecione...</option>
+                                            <option value="vendas">Vendas</option>
+                                            <option value="amostra">Amostra</option>
+                                            <option value="troca">Troca</option>
+                                            <option value="doacao">Doação</option>
+                                            <option value="conserto">Conserto / Reparo</option>
+                                            <option value="retorno">Retorno</option>
+                                            <option value="exposicao">Exposição / Feira</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Emissor -->
+                                    <div class="form-group full-width">
+                                        <label>Emissor <span class="required">*</span></label>
+                                        <div class="emissor-toggle">
+                                            <label class="emissor-opcao" id="prop-emissor-opcao-usuario">
+                                                <input type="radio" name="prop-emissor-tipo" value="usuario" id="prop-emissor-usuario" checked>
+                                                <i class="fa-solid fa-user"></i> Usuário
+                                            </label>
+                                            <label class="emissor-opcao" id="prop-emissor-opcao-terceiro">
+                                                <input type="radio" name="prop-emissor-tipo" value="terceiro" id="prop-emissor-terceiro">
+                                                <i class="fa-solid fa-building"></i> Terceiro
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Empresa do Usuário (somente quando Usuário) -->
+                                    <div class="form-group" id="prop-usuario-empresa-group">
+                                        <label for="prop-usuario-empresa">Empresa</label>
+                                        <input type="text" id="prop-usuario-empresa" name="usuario_empresa" placeholder="Empresa do usuário" readonly>
+                                    </div>
+
+                                    <!-- Remetente (somente quando Terceiro) -->
+                                    <div class="form-group" id="prop-emissor-empresa-group" style="display:none;">
+                                        <label for="prop-cliente">Remetente <span class="required">*</span></label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-cliente" name="cliente" placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
+                                            <input type="hidden" id="prop-cliente-id">
+                                            <div class="autocomplete-list" id="prop-cliente-lista"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Número TIN -->
+                                    <div class="form-group" id="prop-documento-group">
+                                        <label for="prop-documento">
+                                            Documento Fiscal
+                                            <span class="info-balao" data-tooltip="Documento fiscal único de cada empresa, CNPJ ou CPF">
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            </span>
+                                        </label>
+                                        <input type="text" id="prop-documento" name="documento" placeholder="Digite o número do documento" maxlength="18" autocomplete="off">
+                                        <input type="hidden" id="prop-documento-tipo" name="documento_tipo">
+                                    </div>
+
+                                    <!-- Modal (primeiro) -->
+                                    <div class="form-group">
+                                        <label for="prop-modal">Modal <span class="required">*</span></label>
+                                        <select id="prop-modal" name="modal">
+                                            <option value="">Selecione...</option>
+                                            <option value="aereo">Aéreo</option>
+                                            <option value="maritimo">Marítimo</option>
+                                            <option value="terrestre">Terrestre</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Incoterm (bloqueado até Modal) -->
+                                    <div class="form-group">
+                                        <label for="prop-incoterm">Incoterm</label>
+                                        <div class="incoterm-field-row">
+                                            <select id="prop-incoterm" name="incoterm" disabled title="Selecione o modal primeiro">
+                                                <option value="">Selecione...</option>
+                                                <optgroup label="Todos os modais">
+                                                    <option value="EXW">EXW</option><option value="FCA">FCA</option>
+                                                    <option value="CPT">CPT</option><option value="CIP">CIP</option>
+                                                    <option value="DAP">DAP</option><option value="DPU">DPU</option>
+                                                    <option value="DDP">DDP</option>
+                                                </optgroup>
+                                                <optgroup label="Exclusivo Marítimo">
+                                                    <option value="FAS">FAS</option><option value="FOB">FOB</option>
+                                                    <option value="CFR">CFR</option><option value="CIF">CIF</option>
+                                                </optgroup>
+                                            </select>
+                                            <span class="incoterm-balao" id="prop-incoterm-info" style="display:none;"><i class="fa-solid fa-circle-info"></i></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Observações -->
+                                    <div class="form-group full-width">
+                                        <label for="prop-observacoes">Observações</label>
+                                        <textarea id="prop-observacoes" name="observacoes" placeholder="Informações adicionais sobre a proposta..."></textarea>
+                                    </div>
+
+                                    <!-- DIVISOR: Rota -->
+                                    <div class="form-group full-width origem-destino-divisor"></div>
+
+                                    <!-- País Origem | País Destino -->
+                                    <div class="form-group">
+                                        <label for="prop-origem-pais">País de Origem</label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-origem-pais" name="origem_pais" placeholder="Selecione o país de origem" autocomplete="off">
+                                            <input type="hidden" id="prop-origem-pais-codigo">
+                                            <div class="autocomplete-list" id="prop-origem-pais-lista"></div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prop-destino-pais">País de Destino</label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-destino-pais" name="destino_pais" placeholder="Digite para filtrar países..." autocomplete="off">
+                                            <input type="hidden" id="prop-destino-pais-codigo">
+                                            <div class="autocomplete-list" id="prop-destino-pais-lista"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Porto Origem | Porto Destino (Marítimo) -->
+                                    <div class="form-group" id="prop-porto-origem-group" style="display:none;">
+                                        <label for="prop-porto-origem">Porto de Origem</label>
+                                        <input type="text" id="prop-porto-origem" name="porto_origem" placeholder="Ex: Santos, Itajaí...">
+                                    </div>
+                                    <div class="form-group" id="prop-porto-destino-group" style="display:none;">
+                                        <label for="prop-porto-destino">Porto de Destino</label>
+                                        <input type="text" id="prop-porto-destino" name="porto_destino" placeholder="Ex: Roterdã, Miami...">
+                                    </div>
+
+                                    <!-- Aeroporto Origem | Aeroporto Destino (Aéreo) -->
+                                    <div class="form-group" id="prop-aeroporto-origem-group" style="display:none;">
+                                        <label for="prop-aeroporto-origem">Aeroporto de Origem</label>
+                                        <input type="text" id="prop-aeroporto-origem" name="aeroporto_origem" placeholder="Ex: GRU, VCP...">
+                                    </div>
+                                    <div class="form-group" id="prop-aeroporto-destino-group" style="display:none;">
+                                        <label for="prop-aeroporto-destino">Aeroporto de Destino</label>
+                                        <input type="text" id="prop-aeroporto-destino" name="aeroporto_destino" placeholder="Ex: JFK, AMS...">
+                                    </div>
+
+                                    <!-- Fronteira Saída | Fronteira Entrada (Terrestre) -->
+                                    <div class="form-group" id="prop-fronteira-saida-group" style="display:none;">
+                                        <label for="prop-fronteira-saida">Fronteira de Saída</label>
+                                        <input type="text" id="prop-fronteira-saida" name="fronteira_saida" placeholder="Ex: Foz do Iguaçu...">
+                                    </div>
+                                    <div class="form-group" id="prop-fronteira-entrada-group" style="display:none;">
+                                        <label for="prop-fronteira-entrada">Fronteira de Entrada</label>
+                                        <input type="text" id="prop-fronteira-entrada" name="fronteira_entrada" placeholder="Ex: Ciudad del Este...">
+                                    </div>
+
+                                    <!-- DIVISOR: Destinatário -->
+                                    <div class="form-group full-width origem-destino-divisor"></div>
+
+                                    <!-- Destinatário -->
+                                    <div class="form-group full-width">
+                                        <div class="empresa-destino-header">
+                                            <div class="empresa-destino-toggle">
+                                                <button type="button" class="emp-dest-btn ativo" id="prop-btn-emp-dest-cadastrada" onclick="propToggleEmpresaDestino('cadastrada')">
+                                                    <i class="fa-solid fa-magnifying-glass"></i> Buscar cadastrado
+                                                </button>
+                                                <button type="button" class="emp-dest-btn" id="prop-btn-emp-dest-manual" onclick="propAbrirCadastroNovaEmpresa()">
+                                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Cadastrar novo
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="emp-dest-redirect-msg" id="prop-emp-dest-redirect-msg" style="display:none;">
+                                        <i class="fa-solid fa-circle-info"></i>
+                                        <div>Uma nova aba foi aberta com a tela de <a href="cadastros.html" target="_blank">cadastro de empresas</a>. Após realizar o cadastro, retorne aqui e use <strong>Buscar cadastrado</strong> para localizar a empresa.</div>
+                                    </div>
+
+                                    <div class="form-group full-width emp-dest-aviso" id="prop-emp-dest-aviso-mesmo-cnpj" style="display:none;">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        A empresa de destino não pode ser a mesma do remetente da proposta.
+                                    </div>
+
+                                    <div class="form-group" id="prop-emp-dest-busca-group">
+                                        <label for="prop-emp-dest-busca">Destinatário</label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-emp-dest-busca" name="emp_dest_busca" placeholder="Buscar empresa cadastrada..." autocomplete="off">
+                                            <input type="hidden" id="prop-emp-dest-id">
+                                            <div class="autocomplete-list" id="prop-emp-dest-lista"></div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" id="prop-emp-dest-auto-doc-group">
+                                        <label for="prop-emp-dest-auto-doc">Documento Fiscal</label>
+                                        <input type="text" id="prop-emp-dest-auto-doc" placeholder="Preenchido automaticamente" readonly>
+                                    </div>
+
+                                    <div class="form-group" id="prop-emp-dest-razao-group" style="display:none;">
+                                        <label for="prop-emp-dest-razao">Razão Social</label>
+                                        <input type="text" id="prop-emp-dest-razao" name="emp_dest_razao" placeholder="Razão social da empresa">
+                                    </div>
+                                    <div class="form-group" id="prop-emp-dest-doc-group" style="display:none;">
+                                        <label for="prop-emp-dest-doc">Número TIN</label>
+                                        <div class="doc-tipo-wrapper">
+                                            <select id="prop-emp-dest-doc-tipo">
+                                                <option value="cnpj">CNPJ</option>
+                                                <option value="cpf">CPF</option>
+                                                <option value="tin">TIN</option>
+                                                <option value="ein">EIN</option>
+                                                <option value="vat">VAT</option>
+                                            </select>
+                                            <input type="text" id="prop-emp-dest-doc" name="emp_dest_doc" placeholder="Número de identificação fiscal">
+                                        </div>
+                                    </div>
+
+                                    <!-- DIVISOR: Datas -->
+                                    <div class="form-group full-width origem-destino-divisor"></div>
+                                    <div class="form-group">
+                                        <label for="prop-data-emissao">Data de Criação</label>
+                                        <input type="date" id="prop-data-emissao" name="data_emissao" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prop-validade-dias">Validade da Proposta</label>
+                                        <div class="validade-wrapper">
+                                            <select id="prop-validade-dias" name="validade_dias">
+                                                <option value="">Selecione...</option>
+                                                <option value="2">2 dias</option>
+                                                <option value="5">5 dias</option>
+                                                <option value="7">7 dias</option>
+                                                <option value="15">15 dias</option>
+                                                <option value="custom">Escolher</option>
+                                            </select>
+                                            <input type="date" id="prop-data-validade" name="data_validade" readonly placeholder="Data de vencimento">
+                                        </div>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label for="prop-obs-status">Observações</label>
+                                        <textarea id="prop-obs-status" name="obs_status" placeholder="Informações adicionais sobre o status da proposta..."></textarea>
+                                    </div>
+
+                                    <!-- Código da Proposta -->
+                                    <div class="form-group full-width">
+                                        <input type="hidden" id="prop-codigo" name="codigo">
+                                        <p class="prop-codigo-exibicao">Código da Proposta: <strong id="prop-codigo-display">—</strong></p>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO: Itens da Proposta -->
+                        <div class="form-section active">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-list-ul"></i>
+                                Itens da Proposta
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="prop-itens-wrapper">
+                                    <div class="prop-itens-scroll">
+                                        <table class="prop-itens-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="col-num">#</th>
+                                                    <th class="col-produto">Produto / Descrição</th>
+                                                    <th class="col-qtd">Qtd</th>
+                                                    <th class="col-un">Un.</th>
+                                                    <th class="col-preco">Preço Unit.</th>
+                                                    <th class="col-moeda">Moeda</th>
+                                                    <th class="col-total">Total</th>
+                                                    <th class="col-acao"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="prop-itens-body"></tbody>
+                                            <tfoot>
+                                                <tr class="prop-itens-tfoot">
+                                                    <td colspan="6" class="prop-total-label">Total Geral</td>
+                                                    <td class="prop-total-valor" id="prop-total-geral">—</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                    <button type="button" class="btn-add-item" onclick="propAdicionarItem()">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Item
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO: Condições Comerciais -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-handshake"></i>
+                                Condições Comerciais
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="prop-forma-pagamento">Forma de Pagamento</label>
+                                        <select id="prop-forma-pagamento" name="forma_pagamento">
+                                            <option value="">Selecione...</option>
+                                            <option value="tt">TT — Transferência Bancária</option>
+                                            <option value="lc">LC — Carta de Crédito</option>
+                                            <option value="dp">DP — Documentos contra Pagamento</option>
+                                            <option value="da">DA — Documentos contra Aceite</option>
+                                            <option value="avista">À Vista</option>
+                                            <option value="antecipado">Pagamento Antecipado</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prop-prazo-pagamento">Prazo de Pagamento</label>
+                                        <select id="prop-prazo-pagamento" name="prazo_pagamento">
+                                            <option value="">Selecione...</option>
+                                            <option value="avista">À Vista</option>
+                                            <option value="15">15 dias</option>
+                                            <option value="30">30 dias</option>
+                                            <option value="45">45 dias</option>
+                                            <option value="60">60 dias</option>
+                                            <option value="90">90 dias</option>
+                                            <option value="120">120 dias</option>
+                                            <option value="personalizado">Personalizado</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label for="prop-condicoes-obs">Observações da Proposta</label>
+                                        <textarea id="prop-condicoes-obs" name="condicoes_obs" placeholder="Condições especiais, notas de negociação, validade da oferta..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display:none;">
+                                <div class="form-grid" style="margin-bottom:0;">
+
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="prop-doc-num-proforma">Nº Proforma Invoice</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" onclick="docUpload('prop-proforma')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    onclick="docVer('prop-proforma')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    onclick="docExcluir('prop-proforma')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="prop-doc-num-proforma" name="doc_num_proforma" placeholder="Ex: PI-2026-001">
+                                        <input type="file" id="doc-file-prop-proforma" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-prop-proforma"></span>
+                                    </div>
+
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="prop-doc-num-commercial">Nº Commercial Invoice</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" onclick="docUpload('prop-commercial')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    onclick="docVer('prop-commercial')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    onclick="docExcluir('prop-commercial')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="prop-doc-num-commercial" name="doc_num_commercial" placeholder="Ex: CI-2026-001">
+                                        <input type="file" id="doc-file-prop-commercial" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-prop-commercial"></span>
+                                    </div>
+
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="prop-doc-num-packing">Nº Packing List</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" onclick="docUpload('prop-packing')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    onclick="docVer('prop-packing')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    onclick="docExcluir('prop-packing')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="prop-doc-num-packing" name="doc_num_packing" placeholder="Ex: PL-2026-001">
+                                        <input type="file" id="doc-file-prop-packing" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-prop-packing"></span>
+                                    </div>
+
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="prop-aereo" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="prop-doc-num-awb">Nº AWB <small class="doc-modal-tag">Aéreo</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" onclick="docUpload('prop-awb')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    onclick="docVer('prop-awb')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    onclick="docExcluir('prop-awb')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="prop-doc-num-awb" name="doc_num_awb" placeholder="Ex: 057-12345678">
+                                        <input type="file" id="doc-file-prop-awb" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-prop-awb"></span>
+                                    </div>
+
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="prop-maritimo" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="prop-doc-num-bl">Nº BL — Bill of Lading <small class="doc-modal-tag">Marítimo</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" onclick="docUpload('prop-bl')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    onclick="docVer('prop-bl')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    onclick="docExcluir('prop-bl')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="prop-doc-num-bl" name="doc_num_bl" placeholder="Ex: BL-2026-001">
+                                        <input type="file" id="doc-file-prop-bl" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-prop-bl"></span>
+                                    </div>
+
+                                    <div class="form-group doc-campo doc-modal-field" data-doc-modal="prop-terrestre" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="prop-doc-num-crt">Nº CRT <small class="doc-modal-tag">Terrestre</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" onclick="docUpload('prop-crt')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    onclick="docVer('prop-crt')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    onclick="docExcluir('prop-crt')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="prop-doc-num-crt" name="doc_num_crt" placeholder="Ex: CRT-2026-001">
+                                        <input type="file" id="doc-file-prop-crt" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-prop-crt"></span>
+                                    </div>
+
+                                </div>
+                        </div>
+
+                        <!-- AÇÕES -->
+                        <div class="form-actions">
+                            <button type="button" class="btn-voltar" onclick="window.history.back()">
+                                <i class="fa-solid fa-arrow-left"></i> Voltar à lista
+                            </button>
+                            <div class="form-actions-right">
+                                <button type="button" class="btn-clear" onclick="limparForm('form-proposta')">
+                                    <i class="fa-solid fa-eraser"></i> Limpar Dados
+                                </button>
+                                <button type="button" class="btn-pdf" onclick="gerarPDFProposta()">
+                                    <i class="fa-solid fa-file-pdf"></i> Gerar PDF
+                                </button>
+                                <button type="submit" class="btn-save">
+                                    <i class="fa-solid fa-floppy-disk"></i> Salvar
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- ============================
+                 TAB: PRODUTO
+            ============================= -->
+            <div class="tab-content" id="tab-produto">
+                <div class="form-card">
+                    <form id="form-produto" onsubmit="salvarProduto(event)">
+
+                        <!-- SEÇÃO 1: Dados Gerais (aberta por padrão) -->
+                        <div class="form-section active">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                                Dados Gerais
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <div class="form-group">
+                                        <label for="prod-sku">SKU <span class="required">*</span></label>
+                                        <input type="text" id="prod-sku" name="sku" placeholder="Código único do produto">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-status">Status</label>
+                                        <select id="prod-status" name="status">
+                                            <option value="">Selecione...</option>
+                                            <option value="ativo">Ativo</option>
+                                            <option value="inativo">Inativo</option>
+                                            <option value="descontinuado">Descontinuado</option>
+                                            <option value="em_revisao">Em Revisão</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label for="prod-nome">Nome do Produto <span class="required">*</span></label>
+                                        <input type="text" id="prod-nome" name="nome" placeholder="Nome completo do produto">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label for="prod-descricao">Descrição</label>
+                                        <textarea id="prod-descricao" name="descricao" placeholder="Descrição detalhada do produto..."></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-categoria">Categoria</label>
+                                        <input type="text" id="prod-categoria" name="categoria" placeholder="Ex: Eletrônicos, Alimentos...">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-marca">Marca / Fabricante</label>
+                                        <input type="text" id="prod-marca" name="marca" placeholder="Marca ou fabricante">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-ncm">NCM</label>
+                                        <input type="text" id="prod-ncm" name="ncm" placeholder="Ex: 8471.30.12">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-unidade">Unidade de Medida</label>
+                                        <select id="prod-unidade" name="unidade_medida">
+                                            <option value="">Selecione...</option>
+                                            <option value="un">UN (Unidade)</option>
+                                            <option value="kg">KG (Quilograma)</option>
+                                            <option value="g">G (Grama)</option>
+                                            <option value="l">L (Litro)</option>
+                                            <option value="ml">ML (Mililitro)</option>
+                                            <option value="m">M (Metro)</option>
+                                            <option value="m2">M² (Metro Quadrado)</option>
+                                            <option value="m3">M³ (Metro Cúbico)</option>
+                                            <option value="cx">CX (Caixa)</option>
+                                            <option value="pc">PC (Peça)</option>
+                                            <option value="par">PAR</option>
+                                        </select>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 2: Precificação -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-tag"></i>
+                                Precificação
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <div class="form-group">
+                                        <label for="prod-moeda">Moeda</label>
+                                        <select id="prod-moeda" name="moeda">
+                                            <option value="">Selecione...</option>
+                                            <option value="BRL">BRL — Real Brasileiro</option>
+                                            <option value="USD">USD — Dólar Americano</option>
+                                            <option value="EUR">EUR — Euro</option>
+                                            <option value="GBP">GBP — Libra Esterlina</option>
+                                            <option value="CNY">CNY — Yuan Chinês</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-custo">Custo</label>
+                                        <input type="number" id="prod-custo" name="custo" step="0.01" min="0" placeholder="0,00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-margem">Margem (%)</label>
+                                        <input type="number" id="prod-margem" name="margem" step="0.01" min="0" max="100" placeholder="0,00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-preco-venda">Preço de Venda</label>
+                                        <input type="number" id="prod-preco-venda" name="preco_venda" step="0.01" min="0" placeholder="0,00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-desconto-max">Desconto Máximo (%)</label>
+                                        <input type="number" id="prod-desconto-max" name="desconto_max" step="0.01" min="0" max="100" placeholder="0,00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-lead-time">Lead Time (dias)</label>
+                                        <input type="number" id="prod-lead-time" name="lead_time" min="0" placeholder="Dias">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label for="prod-obs-preco">Observações sobre Preço</label>
+                                        <textarea id="prod-obs-preco" name="obs_preco" placeholder="Condições especiais, tabelas, notas..."></textarea>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 3: Estoque -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-warehouse"></i>
+                                Estoque
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <div class="form-group full-width">
+                                        <label>Configurações de Estoque</label>
+                                        <div class="checkbox-group">
+                                            <label class="checkbox-item">
+                                                <input type="checkbox" name="controla_estoque" checked>
+                                                Controla Estoque
+                                            </label>
+                                            <label class="checkbox-item">
+                                                <input type="checkbox" name="venda_sem_estoque">
+                                                Permite Venda sem Estoque
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-estoque-atual">Estoque Atual</label>
+                                        <input type="number" id="prod-estoque-atual" name="estoque_atual" min="0" step="0.001" placeholder="0">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-estoque-minimo">Estoque Mínimo</label>
+                                        <input type="number" id="prod-estoque-minimo" name="estoque_minimo" min="0" step="0.001" placeholder="0">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-localizacao">Localização no Estoque</label>
+                                        <input type="text" id="prod-localizacao" name="localizacao" placeholder="Ex: Galpão A, Prateleira 3">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-lote-validade">Lote / Validade</label>
+                                        <input type="text" id="prod-lote-validade" name="lote_validade" placeholder="Número do lote ou data de validade">
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 4: Logística -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-truck"></i>
+                                Logística
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="form-grid">
+
+                                    <div class="form-group">
+                                        <label for="prod-peso-bruto">Peso Bruto (kg)</label>
+                                        <input type="number" id="prod-peso-bruto" name="peso_bruto" step="0.001" min="0" placeholder="0,000">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-peso-liquido">Peso Líquido (kg)</label>
+                                        <input type="number" id="prod-peso-liquido" name="peso_liquido" step="0.001" min="0" placeholder="0,000">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-altura">Altura (cm)</label>
+                                        <input type="number" id="prod-altura" name="altura" step="0.01" min="0" placeholder="0,00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-largura">Largura (cm)</label>
+                                        <input type="number" id="prod-largura" name="largura" step="0.01" min="0" placeholder="0,00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-comprimento">Comprimento (cm)</label>
+                                        <input type="number" id="prod-comprimento" name="comprimento" step="0.01" min="0" placeholder="0,00">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="prod-embalagem">Tipo de Embalagem</label>
+                                        <select id="prod-embalagem" name="embalagem">
+                                            <option value="">Selecione...</option>
+                                            <option value="caixa">Caixa de Papelão</option>
+                                            <option value="pallet">Pallet</option>
+                                            <option value="saco">Saco / Big Bag</option>
+                                            <option value="tambor">Tambor / Barril</option>
+                                            <option value="container">Container</option>
+                                            <option value="blister">Blister</option>
+                                            <option value="envolto">Envolto em Filme</option>
+                                            <option value="outro">Outro</option>
+                                        </select>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AÇÕES -->
+                        <div class="form-actions">
+                            <button type="button" class="btn-voltar" onclick="window.history.back()">
+                                <i class="fa-solid fa-arrow-left"></i> Voltar à lista
+                            </button>
+                            <div class="form-actions-right">
+                                <button type="button" class="btn-clear" onclick="limparForm('form-produto')">
+                                    <i class="fa-solid fa-eraser"></i> Limpar Dados
+                                </button>
+                                <button type="submit" class="btn-save">
+                                    <i class="fa-solid fa-floppy-disk"></i> Salvar
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- MODAL CONFIRMAÇÃO SALVAR -->
+            <div id="modal-confirmar-salvar" class="modal-confirm-overlay" style="display:none;">
+                <div class="modal-confirm-box">
+                    <div class="modal-confirm-icon">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </div>
+                    <h3 class="modal-confirm-title">Salvar Processo</h3>
+                    <p class="modal-confirm-msg">Deseja salvar as informações deste processo?</p>
+                    <div class="modal-confirm-actions">
+                        <button class="modal-confirm-btn modal-confirm-nao" onclick="fecharConfirmSalvar()">
+                            <i class="fa-solid fa-xmark"></i> Não
+                        </button>
+                        <button class="modal-confirm-btn modal-confirm-sim" onclick="confirmarSalvarProcesso()">
+                            <i class="fa-solid fa-check"></i> Sim, salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL PÓS-SALVO -->
+            <div id="modal-pos-salvo" class="modal-confirm-overlay" style="display:none;">
+                <div class="modal-confirm-box">
+                    <div class="modal-confirm-icon modal-confirm-icon-success">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h3 class="modal-confirm-title">Processo salvo!</h3>
+                    <p class="modal-confirm-msg">O que deseja fazer agora?</p>
+                    <div class="modal-confirm-actions">
+                        <button class="modal-confirm-btn modal-confirm-nao" onclick="fecharGuiaProcesso()">
+                            <i class="fa-solid fa-door-open"></i> Fechar
+                        </button>
+                        <button class="modal-confirm-btn modal-confirm-sim" onclick="criarNovoProcesso()">
+                            <i class="fa-solid fa-plus"></i> Criar outro
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RODAPÉ -->
+            <footer class="dashboard-footer">
+                <p>© 2026 Marpex - Todos os direitos reservados</p>
+            </footer>
+
+        </div>
+    </main>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="formularios.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="pdf-processo.js"></script>
+
+</body>
+</html>

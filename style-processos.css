@@ -1,0 +1,303 @@
+/* ========================================
+   PROCESSOS — ESTILOS ESPECÍFICOS
+======================================== */
+
+/* AUTOCOMPLETE */
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-wrapper input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.autocomplete-list {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid var(--cinza-claro, #e2e8f0);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    z-index: 999;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.autocomplete-list.aberta {
+    display: block;
+}
+
+.autocomplete-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+
+.autocomplete-item:last-child { border-bottom: none; }
+
+.autocomplete-item:hover { background: #f0f5ff; }
+
+.ac-nome {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--texto, #1e293b);
+}
+
+.ac-fantasia {
+    font-size: 12px;
+    color: var(--texto-claro, #64748b);
+}
+
+.autocomplete-vazio {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--texto-claro, #64748b);
+    text-align: center;
+}
+
+/* BADGES DE STATUS */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge[data-status="aberto"]    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+.badge[data-status="andamento"] { background: #fffbeb; border: 1px solid #fde68a; color: #b45309; }
+.badge[data-status="concluido"] { background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; }
+.badge[data-status="cancelado"] { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+
+/* BADGE DE ETAPA ATUAL */
+.etapa-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #6d28d9;
+}
+
+/* ETAPAS */
+.etapas-grid {
+  display: grid;
+  grid-template-columns: 1fr 0.9fr;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .etapas-grid { grid-template-columns: 1fr; }
+}
+
+.etapas-col {
+  border: 2px solid #f1f5f9;
+  border-radius: 14px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.etapas-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.etapas-title {
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.btn-mini {
+  border: none;
+  background: #4776ec;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-mini:hover { background: #4271e9; }
+
+.etapas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.etapa-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.etapa-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.etapa-left input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4776ec;
+}
+
+.etapa-text {
+  font-weight: 700;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tip-card {
+  border: 1.5px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.tip-title {
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: #1f2937;
+}
+
+.tip-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* CHECKLIST DE DOCUMENTOS */
+.checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+  .checklist { grid-template-columns: 1fr; }
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: white;
+}
+
+.check-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4776ec;
+}
+
+.check-item label {
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+/* TABELA DE PROCESSOS */
+.proc-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.proc-tabela thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.proc-tabela thead th {
+  background: #f8fafc;
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 2px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+.proc-tabela tbody tr {
+  border-bottom: 1px solid #f8fafc;
+  transition: background .12s;
+  height: 50px;
+}
+
+.proc-tabela tbody tr:hover { background: #fafbff; }
+
+.proc-tabela td {
+  padding: 0 12px;
+  color: #374151;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.proc-codigo {
+  font-weight: 700;
+  color: #1e293b;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.btn-acao {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-editar  { background: #eff6ff; color: #3b82f6; }
+.btn-editar:hover  { background: #3b82f6; color: white; }
+.btn-excluir { background: #fef2f2; color: #ef4444; margin-left: 4px; }
+.btn-excluir:hover { background: #ef4444; color: white; }

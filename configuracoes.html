@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Configurações</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-permissoes.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+
+        </ul>
+    </aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-gear"></i> Configurações</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">—</div>
+                        <div class="user-email" id="userEmail">—</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content" style="padding:32px; display:flex; flex-direction:column; gap:28px;">
+            <div style="background:white; border-radius:12px; border:1px solid #f1f5f9; padding:60px; text-align:center; color:#94a3b8;">
+                <i class="fa-solid fa-gear" style="font-size:48px; margin-bottom:16px; display:block;"></i>
+                <h3 style="font-size:18px; font-weight:600; color:#64748b; margin-bottom:8px;">Configurações em construção</h3>
+                <p style="font-size:14px;">Esta seção estará disponível em breve.</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+
+</body>
+</html>

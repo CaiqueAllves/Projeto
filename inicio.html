@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Início</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-inicio.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+
+        </ul>
+    </aside>
+
+    <main>
+        <!-- TOPO -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-chart-line"></i> Início</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div class="content">
+
+            <!-- MENSAGEM DE BOAS-VINDAS -->
+            <div class="welcome-section">
+                <h1>Que bom ter você aqui, <span id="welcomeUsername"></span>!</h1>
+                <p>Gerencie seus documentos internacionais de forma inteligente e produtiva</p>
+                <div class="welcome-date">
+                    <i class="fa-solid fa-calendar"></i>
+                    <span id="dataAtual"></span>
+                </div>
+            </div>
+
+            <!-- AÇÕES RÁPIDAS COM DADOS -->
+            <div class="quick-actions">
+                <h3><i class="fa-solid fa-bolt"></i> Ações Rápidas</h3>
+                <div class="action-cards">
+                    <div class="action-card" onclick="window.location.href='cadastros.html'">
+                        <div class="action-icon" style="background: linear-gradient(135deg, #4f46e5, #7c3aed);">
+                            <i class="fa-solid fa-plus"></i>
+                        </div>
+                        <div class="action-content">
+                            <h4>Nova Empresa</h4>
+                            <p>Cadastrar cliente ou fornecedor</p>
+                            <div class="action-badge" id="badgeNovasEmpresas">+0 esta semana</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right action-arrow"></i>
+                    </div>
+
+                    <div class="action-card" onclick="window.location.href='documentos.html'">
+                        <div class="action-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                            <i class="fa-solid fa-file-lines"></i>
+                        </div>
+                        <div class="action-content">
+                            <h4>Documentos</h4>
+                            <p>Visualizar documentos do processo</p>
+                            <div class="action-badge" id="badgeArquivos">Ver documentos</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right action-arrow"></i>
+                    </div>
+
+                    <div class="action-card" onclick="window.location.href='relatorios.html'">
+                        <div class="action-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <div class="action-content">
+                            <h4>Relatórios</h4>
+                            <p>Análises e exportações</p>
+                            <div class="action-badge" id="badgeRelatorios">Visualizar dados</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right action-arrow"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAREFAS PENDENTES -->
+            <div class="tasks-section">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-list-check"></i> Tarefas Pendentes <span class="tasks-count-badge" id="tarefasCountBadge"></span></h3>
+                    <button class="btn-add-task" onclick="adicionarTarefa()">
+                        <i class="fa-solid fa-plus"></i> Nova Tarefa
+                    </button>
+                </div>
+
+                <div class="tasks-container" id="tasksContainer">
+                    <!-- Tarefas serão adicionadas dinamicamente -->
+                </div>
+            </div>
+
+            <!-- CARDS DE ESTATÍSTICAS RÁPIDAS -->
+            <div class="stats-section">
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #dbeafe; color: #3b82f6;">
+                            <i class="fa-solid fa-building"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalEmpresas">0</div>
+                            <div class="stat-label">Empresas Cadastradas</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #dcfce7; color: #22C55E;">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalClientes">0</div>
+                            <div class="stat-label">Clientes</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #fef3c7; color: #f59e0b;">
+                            <i class="fa-solid fa-truck"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalFornecedores">0</div>
+                            <div class="stat-label">Fornecedores</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- GRÁFICOS DE DASHBOARD -->
+            <div class="charts-section">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-chart-pie"></i> Análises</h3>
+                </div>
+
+                <div class="charts-grid">
+                    <!-- Gráfico de Empresas por Tipo -->
+                    <div class="chart-card">
+                        <h4>Empresas por Tipo</h4>
+                        <canvas id="chartTipos"></canvas>
+                    </div>
+
+                    <!-- Gráfico de Empresas por País -->
+                    <div class="chart-card">
+                        <h4>Empresas por País</h4>
+                        <canvas id="chartEstados"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ATIVIDADES RECENTES -->
+            <div class="recent-section">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-clock-rotate-left"></i> Atividades Recentes</h3>
+                </div>
+                <div class="timeline" id="timelineContainer">
+                    <!-- Timeline será preenchida dinamicamente -->
+                </div>
+            </div>
+            
+            <!-- RODAPÉ -->
+            <footer class="dashboard-footer">
+                <p>© 2026 Marpex - Todos os direitos reservados</p>
+            </footer>
+        </div>
+    </main>
+</div>
+        
+<!-- BOTÃO FLUTUANTE DO WHATSAPP -->
+<div class="whatsapp-float" onclick="toggleWhatsappChat()">
+    <i class="fa-brands fa-whatsapp"></i>
+</div>
+
+<!-- PAINEL DE CHAT DO WHATSAPP -->
+<div class="whatsapp-chat" id="whatsappChat">
+    <div class="chat-header">
+        <div class="chat-header-info">
+            <i class="fa-brands fa-whatsapp"></i>
+            <div>
+                <div class="chat-title">Suporte Marpex</div>
+                <div class="chat-status">Online</div>
+            </div>
+        </div>
+        <i class="fa-solid fa-xmark" onclick="toggleWhatsappChat()"></i>
+    </div>
+    <div class="chat-body">
+        <div class="chat-message bot">
+            <div class="message-content">
+                Olá! 👋 Como podemos ajudar você hoje?
+            </div>
+            <div class="message-time">Agora</div>
+        </div>
+    </div>
+    <div class="chat-footer">
+        <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
+        <button onclick="enviarMensagem()">
+            <i class="fa-solid fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
+
+<!-- MODAL PARA ADICIONAR TAREFA -->
+<div class="modal-overlay" id="modalTarefa" onclick="fecharModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-tasks"></i> Nova Tarefa</h3>
+            <button class="modal-close" onclick="fecharModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="tarefaTitulo">Título da Tarefa <span style="color: #dc2626;">*</span></label>
+                <input type="text" id="tarefaTitulo" placeholder="Ex: Revisar contrato cliente X">
+            </div>
+            <div class="form-group">
+                <label for="tarefaPrioridade">Prioridade <span style="color: #dc2626;">*</span></label>
+                <select id="tarefaPrioridade">
+                    <option value="baixa">🟢 Baixa</option>
+                    <option value="media" selected>🟡 Média</option>
+                    <option value="alta">🔴 Alta</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tarefaPrazo">Prazo de Conclusão <span style="color: #64748b; font-weight: normal;">(opcional)</span></label>
+                <input type="date" id="tarefaPrazo">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-save" onclick="salvarTarefa()">
+                <i class="fa-solid fa-check"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="dashboard.js"></script>
+<script src="inicio.js"></script>
+
+</body>
+</html>

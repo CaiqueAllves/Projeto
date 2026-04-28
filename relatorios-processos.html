@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Processos › Relatórios</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-relatorios.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+        </ul>
+    </aside>
+
+    <main>
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-chart-pie"></i> Processos: Relatórios</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO -->
+        <div class="content">
+
+            <!-- STATS -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#ede9fe; color:#7c3aed;">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalProcessos">—</div>
+                        <div class="stat-label">Total de Processos</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalAbertos">—</div>
+                        <div class="stat-label">Abertos</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#dbeafe; color:#3b82f6;">
+                        <i class="fa-solid fa-rotate"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalAndamento">—</div>
+                        <div class="stat-label">Em Andamento</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#dcfce7; color:#22c55e;">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalConcluidos">—</div>
+                        <div class="stat-label">Concluídos</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIPOS DE RELATÓRIO -->
+            <div>
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-file-lines"></i> Gerar Relatório</h3>
+                </div>
+
+                <div class="report-grid">
+                    <!-- Card: Por Período -->
+                    <div class="report-card">
+                        <div class="report-card-icon" style="background: linear-gradient(135deg,#7c3aed,#6366f1);">
+                            <i class="fa-solid fa-calendar"></i>
+                        </div>
+                        <h4>Relatório por Período</h4>
+                        <p>Processos abertos no intervalo de datas selecionado, com totais por status e modal.</p>
+                        <div class="report-preview" id="previewPeriodo">
+                            <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                        </div>
+                        <button class="btn-report" style="background: linear-gradient(135deg,#7c3aed,#6366f1);" onclick="gerarRelatorio('periodo')">
+                            <i class="fa-solid fa-download"></i> Gerar
+                        </button>
+                    </div>
+
+                    <!-- Card: Por Status -->
+                    <div class="report-card">
+                        <div class="report-card-icon" style="background: linear-gradient(135deg,#f59e0b,#f97316);">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                        <h4>Relatório por Status</h4>
+                        <p>Distribuição dos processos entre Aberto, Em andamento, Concluído e Cancelado.</p>
+                        <div class="report-preview" id="previewStatus">
+                            <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                        </div>
+                        <button class="btn-report" style="background: linear-gradient(135deg,#f59e0b,#f97316);" onclick="gerarRelatorio('status')">
+                            <i class="fa-solid fa-download"></i> Gerar
+                        </button>
+                    </div>
+
+                    <!-- Card: Por Tipo/Modal -->
+                    <div class="report-card">
+                        <div class="report-card-icon" style="background: linear-gradient(135deg,#0891b2,#06b6d4);">
+                            <i class="fa-solid fa-ship"></i>
+                        </div>
+                        <h4>Relatório por Modal</h4>
+                        <p>Ranking dos modais de transporte (Marítimo, Aéreo, Rodoviário) mais utilizados.</p>
+                        <div class="report-preview" id="previewModal">
+                            <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                        </div>
+                        <button class="btn-report" style="background: linear-gradient(135deg,#0891b2,#06b6d4);" onclick="gerarRelatorio('modal')">
+                            <i class="fa-solid fa-download"></i> Gerar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTÓRICO (somente admin) -->
+            <div class="history-card" id="secaoHistorico" style="display:none;">
+                <div class="history-card-header">
+                    <i class="fa-solid fa-clock-rotate-left" style="color:#94a3b8;"></i>
+                    Histórico de Relatórios
+                </div>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Usuário</th>
+                            <th>Data de Geração</th>
+                            <th>Formato</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historicoBody">
+                        <!-- preenchido dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <footer class="dashboard-footer">
+                <p>© 2026 Marpex — Todos os direitos reservados</p>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL: PARÂMETROS DO RELATÓRIO -->
+<div class="rel-modal-overlay" id="modalRelatorio" onclick="fecharModalRelatorio()">
+    <div class="rel-modal" onclick="event.stopPropagation()">
+
+        <div class="rel-modal-header">
+            <div class="rel-modal-title">
+                <div class="rel-modal-icon" id="modalRelIcon"></div>
+                <div>
+                    <div class="rel-modal-nome" id="modalRelNome">Relatório</div>
+                    <div class="rel-modal-sub">Configure os parâmetros e baixe em PDF</div>
+                </div>
+            </div>
+            <button class="rel-modal-close" onclick="fecharModalRelatorio()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="rel-modal-body">
+
+            <!-- Atalho de período -->
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-clock"></i> Período predefinido</label>
+                <div class="period-bar">
+                    <button class="period-btn active" onclick="setPeriod(this,'mensal')">Mensal</button>
+                    <button class="period-btn" onclick="setPeriod(this,'trimestral')">Trimestral</button>
+                    <button class="period-btn" onclick="setPeriod(this,'anual')">Anual</button>
+                </div>
+            </div>
+
+            <!-- Intervalo de datas -->
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-calendar-range"></i> Intervalo de datas</label>
+                <div class="rel-date-row">
+                    <div class="rel-date-field">
+                        <span>De</span>
+                        <input type="date" id="relDataInicio" />
+                    </div>
+                    <div class="rel-date-field">
+                        <span>Até</span>
+                        <input type="date" id="relDataFim" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parâmetros específicos por tipo -->
+            <div id="relParamsEspecificos"></div>
+
+            <!-- Preview resumido -->
+            <div class="rel-preview-box" id="relPreviewBox">
+                <div class="rel-preview-label"><i class="fa-solid fa-eye"></i> Prévia dos dados</div>
+                <div id="relPreviewConteudo" class="rel-preview-conteudo">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="rel-modal-footer">
+            <button class="rel-btn-cancelar" onclick="fecharModalRelatorio()">Cancelar</button>
+            <button class="rel-btn-pdf" onclick="baixarPDF()">
+                <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="relatorios-processos.js"></script>
+
+</body>
+</html>

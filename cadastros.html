@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Empresas > Cadastro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-cadastro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+
+        </ul>
+    </aside>
+
+    <main>
+        <!-- TOPO -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-chart-line"></i> Empresa: Cadastro</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div class="content">
+
+            <!-- FILTRO + AÇÕES -->
+            <div class="page-header">
+                <div class="header-left">
+                    <div class="filter-wrapper">
+                        <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+                        <input type="text" id="filterInput" placeholder="Filtrar por nome, documento, cidade, tag..." />
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn-cadastrar" onclick="window.open('formularios.html?tab=empresa', '_blank')">
+                        <i class="fa-solid fa-plus"></i> Cadastrar
+                    </button>
+                    <button class="btn-upload" onclick="document.getElementById('uploadInput').click()">
+                        <i class="fa-solid fa-upload"></i> Upload
+                    </button>
+                    <input type="file" id="uploadInput" accept=".xlsx,.xls,.pdf" style="display: none;" onchange="processarUpload(this)" />
+                </div>
+            </div>
+
+            <!-- LISTA DE EMPRESAS -->
+            <div class="empresas-lista" id="empresasLista">
+                <div class="lista-header">
+                    <span><i class="fa-solid fa-building"></i> Empresas Cadastradas</span>
+                    <span class="lista-count" id="listaCount">—</span>
+                </div>
+                <div id="listaContainer" class="lista-scroll">
+                    <div class="lista-vazia">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...
+                    </div>
+                </div>
+            </div>
+
+            <!-- RODAPÉ -->
+            <footer class="dashboard-footer">
+                <p>© 2026 Marpex - Todos os direitos reservados</p>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- =============================================
+     MODAL: FORMULÁRIO DE CADASTRO
+============================================== -->
+<div class="modal-form-overlay" id="modalFormCadastro" onclick="fecharModalCadastro()">
+    <div class="modal-form-wrapper" onclick="event.stopPropagation()">
+
+        <div class="modal-form-top">
+            <h3><i class="fa-solid fa-building"></i> <span id="modalFormTitulo">Cadastrar Empresa</span></h3>
+            <button class="modal-form-close" onclick="fecharModalCadastro()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-form-body">
+            <form id="empresaForm">
+                <input type="hidden" id="empresaEditandoId" />
+
+                <!-- SEÇÃO: DADOS PRINCIPAIS -->
+                <div class="form-section active">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-building"></i>
+                        <span>Dados da Empresa</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Tipo <span class="required">*</span></label>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="tipoCliente" name="tipo" value="cliente">
+                                        <label for="tipoCliente">Cliente</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="tipoFornecedor" name="tipo" value="fornecedor">
+                                        <label for="tipoFornecedor">Fornecedor</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="tipoCadastro">Cadastro <span class="required">*</span></label>
+                                <select id="tipoCadastro" required onchange="alterarTipoCadastro()">
+                                    <option value="">Selecione...</option>
+                                    <option value="cnpj">CNPJ</option>
+                                    <option value="cpf">CPF</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cadastro">
+                                    <span id="labelCadastro">CNPJ/CPF</span> <span class="required">*</span>
+                                </label>
+                                <input type="text" id="cadastro" required placeholder="Selecione o tipo de cadastro primeiro" disabled />
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label for="nomeEmpresa">Nome da Empresa <span class="required">*</span></label>
+                                <input type="text" id="nomeEmpresa" maxlength="100" required placeholder="Digite o nome da empresa" />
+                                <small class="char-counter">0/100 caracteres</small>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label for="nomeFantasia">Nome Fantasia</label>
+                                <input type="text" id="nomeFantasia" maxlength="50" placeholder="Digite o nome fantasia (opcional)" />
+                                <small class="char-counter">0/50 caracteres</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: ENDEREÇO -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-map-marker-alt"></i>
+                        <span>Endereço</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display: none;">
+                        <div class="form-grid">
+                            <!-- PAÍS -->
+                            <div class="form-group">
+                                <label for="pais">País <span class="required">*</span></label>
+                                <select id="pais" required onchange="onPaisChange()">
+                                    <option value="">Selecione...</option>
+                                    <option value="BR" selected>Brasil</option>
+                                    <option value="US">Estados Unidos</option>
+                                    <option value="AR">Argentina</option>
+                                    <option value="UY">Uruguai</option>
+                                    <option value="PY">Paraguai</option>
+                                    <option value="CL">Chile</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+
+                            <!-- CEP (somente Brasil) -->
+                            <div class="form-group" id="campoCep">
+                                <label for="cep">CEP <span class="required">*</span></label>
+                                <input type="text" id="cep" required placeholder="00000-000" onblur="buscarCEP()" />
+                                <small class="info-text">
+                                    <i class="fa-solid fa-info-circle"></i> Digite o CEP para preenchimento automático
+                                </small>
+                            </div>
+
+                            <!-- ESTADO -->
+                            <div class="form-group">
+                                <label for="estado">Estado/Distrito/Área <span class="required">*</span></label>
+                                <input type="text" id="estado" required placeholder="Ex: São Paulo" />
+                            </div>
+
+                            <!-- CIDADE -->
+                            <div class="form-group">
+                                <label for="cidade">Cidade <span class="required">*</span></label>
+                                <input type="text" id="cidade" required placeholder="Ex: Guarulhos" />
+                            </div>
+
+                            <!-- BAIRRO -->
+                            <div class="form-group">
+                                <label for="bairro">Bairro <span class="required">*</span></label>
+                                <input type="text" id="bairro" required placeholder="Ex: Centro" />
+                            </div>
+
+                            <!-- ENDEREÇO -->
+                            <div class="form-group">
+                                <label for="endereco">Endereço <span class="required">*</span></label>
+                                <input type="text" id="endereco" required placeholder="Ex: Rua das Flores" />
+                            </div>
+
+                            <!-- NÚMERO -->
+                            <div class="form-group form-group-numero">
+                                <label for="numero">Número <span class="required" id="numeroRequired">*</span></label>
+                                <div class="numero-wrapper">
+                                    <input type="text" id="numero" maxlength="6" required placeholder="000000" style="max-width: 100px;" />
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" id="semNumero" onchange="toggleNumero()" />
+                                        <label for="semNumero" class="checkbox-label">S/N</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- COMPLEMENTO -->
+                            <div class="form-group">
+                                <label for="complemento">Complemento</label>
+                                <input type="text" id="complemento" placeholder="Apto, Sala, Bloco... (opcional)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: CONTATO -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-phone"></i>
+                        <span>Contato</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display: none;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="contato1">Contato Principal <span class="required">*</span></label>
+                                <input type="tel" id="contato1" required placeholder="(00) 00000-0000" />
+                            </div>
+                            <div class="form-group">
+                                <label for="contato2">Contato Secundário</label>
+                                <input type="tel" id="contato2" placeholder="(00) 00000-0000 (opcional)" />
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="email">E-mail</label>
+                                <input type="email" id="email" placeholder="empresa@exemplo.com (opcional)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: INFORMAÇÕES EXTRAS -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-info-circle"></i>
+                        <span>Informações Extras</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display: none;">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label for="identificacao">Identificação da Empresa</label>
+                                <input type="text" id="identificacao" maxlength="15" placeholder="Somente números (opcional)" onkeypress="return apenasNumeros(event)" />
+                                <small class="char-counter">0/15 caracteres</small>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="tagsInput">Tags (Palavras-chave)</label>
+                                <div class="tags-input-wrapper">
+                                    <input type="text" id="tagsInput" placeholder="Digite uma tag e clique em adicionar" />
+                                    <button type="button" class="btn-add-tag" onclick="adicionarTag()">
+                                        <i class="fa-solid fa-plus"></i> Adicionar
+                                    </button>
+                                </div>
+                                <small class="info-text">
+                                    <i class="fa-solid fa-tag"></i> Adicione tags para facilitar buscas futuras
+                                </small>
+                                <div id="tagsContainer" class="tags-container" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTÕES DE AÇÃO -->
+                <div class="form-actions">
+                    <button type="button" class="btn-clear" onclick="confirmarLimparDados()">
+                        <i class="fa-solid fa-eraser"></i> Limpar Dados
+                    </button>
+                    <button type="submit" class="btn-save">
+                        <i class="fa-solid fa-check"></i> Salvar Cadastro
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================
+     MODAL: CONFIRMAR EXCLUSÃO
+============================================== -->
+<div class="modal-overlay" id="modalExcluir" onclick="fecharModalExcluir()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal-header" style="border-bottom: 2px solid #fee2e2;">
+            <h3 style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Excluir Empresa</h3>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+            <p style="color:#374151; margin-bottom:16px;">Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.</p>
+            <div id="excluirEmpresaInfo" style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:16px; margin-bottom:16px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="fecharModalExcluir()">Cancelar</button>
+            <button id="btnConfirmarExcluir" style="background:#dc2626; color:white; border:none; padding:10px 24px; border-radius:8px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-trash"></i> Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- BOTÃO FLUTUANTE DO WHATSAPP -->
+<div class="whatsapp-float" onclick="toggleWhatsappChat()">
+    <i class="fa-brands fa-whatsapp"></i>
+</div>
+
+<!-- PAINEL DE CHAT DO WHATSAPP -->
+<div class="whatsapp-chat" id="whatsappChat">
+    <div class="chat-header">
+        <div class="chat-header-info">
+            <i class="fa-brands fa-whatsapp"></i>
+            <div>
+                <div class="chat-title">Suporte Marpex</div>
+                <div class="chat-status">Online</div>
+            </div>
+        </div>
+        <i class="fa-solid fa-xmark" onclick="toggleWhatsappChat()"></i>
+    </div>
+    <div class="chat-body">
+        <div class="chat-message bot">
+            <div class="message-content">Olá! Como podemos ajudar você hoje?</div>
+            <div class="message-time">Agora</div>
+        </div>
+    </div>
+    <div class="chat-footer">
+        <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
+        <button onclick="enviarMensagem()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="cadastros.js"></script>
+<script src="navegador.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Usuários e Permissões</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-permissoes.css">
+    <link rel="stylesheet" href="style-usuarios.css">
+    <link rel="stylesheet" href="style-login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+        </ul>
+    </aside>
+
+    <main>
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">—</div>
+                        <div class="user-email" id="userEmail">—</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO -->
+        <div class="content">
+
+            <!-- CABEÇALHO DA PÁGINA -->
+            <div class="perm-page-header">
+                <div>
+                    <h2>Usuários e Permissões</h2>
+                    <p>Gerencie quem tem acesso à sua empresa e o que cada um pode fazer.</p>
+                </div>
+            </div>
+
+            <!-- SEM ACESSO (não admin) -->
+            <div id="semAcesso" style="display:none;">
+                <div class="acesso-negado-card">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <h3>Acesso Restrito</h3>
+                    <p>Esta área é exclusiva para administradores da empresa.<br>Apenas o responsável pela conta pode gerenciar usuários e permissões.</p>
+                    <a href="perfil.html" class="btn-ver-perfil">
+                        <i class="fa-solid fa-user"></i> Ver meu perfil
+                    </a>
+                </div>
+            </div>
+
+            <!-- PAINEL ADMIN -->
+            <div id="painelAdmin" style="display:none;">
+
+                <!-- STATS -->
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#dbeafe; color:#3b82f6;">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="statTotal">—</div>
+                            <div class="stat-label">Sub-usuários</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#dcfce7; color:#22c55e;">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="statAtivos">—</div>
+                            <div class="stat-label">Ativos</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#f1f5f9; color:#64748b;">
+                            <i class="fa-solid fa-user-xmark"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="statInativos">—</div>
+                            <div class="stat-label">Inativos</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="statPendentes">—</div>
+                            <div class="stat-label">Aguardando Aprovação</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHAVE DA EMPRESA -->
+                <div class="section-card" id="secaoChaveEmpresa">
+                    <div class="section-card-header">
+                        <h3><i class="fa-solid fa-key"></i> Chave de Acesso da Empresa</h3>
+                    </div>
+                    <div class="section-card-body">
+                        <p style="font-size:13px; color:#64748b; margin-bottom:14px;">
+                            Compartilhe esta chave com novos colaboradores para que possam solicitar acesso à sua empresa.
+                        </p>
+                        <div class="chave-empresa-box">
+                            <i class="fa-solid fa-key" style="color:#94a3b8; font-size:18px;"></i>
+                            <span class="chave-empresa-valor" id="chaveEmpresaValor">—</span>
+                            <button class="btn-copiar" onclick="copiarChave()">
+                                <i class="fa-solid fa-copy"></i> Copiar
+                            </button>
+                        </div>
+                        <p class="chave-info">
+                            <i class="fa-solid fa-circle-info"></i>
+                            Novos usuários informam esta chave ao criar sua conta. A solicitação aparecerá abaixo para sua aprovação.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- SOLICITAÇÕES PENDENTES -->
+                <div class="section-card" id="secaoSolicitacoes" style="display:none;">
+                    <div class="section-card-header">
+                        <h3><i class="fa-solid fa-user-clock"></i> Solicitações de Acesso Pendentes</h3>
+                        <span class="badge-pendente" id="badgePendentes">0</span>
+                    </div>
+                    <div class="section-card-body" id="listaSolicitacoes">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-inbox"></i>
+                            <p>Nenhuma solicitação pendente.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USUÁRIOS DA EMPRESA -->
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3><i class="fa-solid fa-users-gear"></i> Gerenciar Sub-usuários</h3>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span class="usuarios-count" id="usuariosCount"></span>
+                            <button class="btn-novo-usuario" onclick="abrirModalNovoUsuario()">
+                                <i class="fa-solid fa-user-plus"></i> Adicionar Usuário
+                            </button>
+                        </div>
+                    </div>
+                    <div class="section-card-body" id="usuariosContainer">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            <p>Carregando usuários...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ATIVIDADE RECENTE -->
+                <div class="section-card" id="secaoAtividade" style="display:none;">
+                    <div class="section-card-header">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Atividade Recente</h3>
+                    </div>
+                    <div class="section-card-body" id="listaAtividade"></div>
+                </div>
+
+            </div>
+            <!-- fim painelAdmin -->
+
+            <footer class="dashboard-footer">
+                <p>© 2026 Marpex - Todos os direitos reservados</p>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL CONFIRMAR DESATIVAR -->
+<div class="modal-overlay" id="modalDesativar" style="display:none;">
+    <div class="modal-confirm">
+        <div class="modal-confirm-icon" style="background:#fee2e2; color:#dc2626;">
+            <i class="fa-solid fa-ban"></i>
+        </div>
+        <h3 id="modalDesativarTitulo">Desativar usuário?</h3>
+        <p id="modalDesativarTexto">Este usuário perderá o acesso ao sistema imediatamente.</p>
+        <div class="modal-confirm-actions">
+            <button class="btn-modal-cancel" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-modal-confirm" id="btnConfirmarToggle">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL NOVO USUÁRIO -->
+<div class="modal-overlay" id="modalNovoUsuario">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-user-plus" style="color:#4776ec;"></i> Adicionar Usuário</h3>
+            <button class="modal-close" onclick="fecharModalNovoUsuario()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>Preencha os dados do novo colaborador para criar o acesso.</p>
+
+            <div class="input-group">
+                <label><i class="fa-solid fa-user"></i> Nome Completo</label>
+                <input type="text" id="novoNome" placeholder="Ex: João da Silva">
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label><i class="fa-solid fa-id-card"></i> CPF</label>
+                    <input type="text" id="novoCpf" placeholder="000.000.000-00" maxlength="14">
+                </div>
+                <div class="input-group">
+                    <label><i class="fa-regular fa-calendar"></i> Data de Nascimento</label>
+                    <input type="date" id="novoDataNasc">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label><i class="fa-solid fa-envelope"></i> E-mail</label>
+                <input type="email" id="novoEmail" placeholder="email@exemplo.com">
+            </div>
+
+            <div class="input-group">
+                <label><i class="fa-solid fa-lock"></i> Senha de acesso</label>
+                <div class="password-wrapper">
+                    <input type="password" id="novaSenha" placeholder="Mínimo 6 caracteres">
+                    <button type="button" class="toggle-password" onclick="toggleNovaSenha(this)">
+                        <i class="fa-solid fa-eye" id="iconNovaSenha"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label><i class="fa-solid fa-shield-halved"></i> Perfil de acesso</label>
+                <select id="novoPerfil" style="width:100%; padding:14px 16px; border:2px solid #e2e8f0; border-radius:12px; font-size:15px; background:white; cursor:pointer; font-family:inherit; transition:border-color .3s;">
+                    <option value="usuario">Usuário</option>
+                    <option value="gerente">Gerente</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="fecharModalNovoUsuario()">Cancelar</button>
+            <button class="btn-primary" id="btnSalvarNovoUsuario" onclick="salvarNovoUsuario()">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar Usuário
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="permissoes.js"></script>
+
+</body>
+</html>

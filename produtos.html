@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Produtos > Cadastro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-cadastro.css">
+    <link rel="stylesheet" href="style-produtos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+
+        </ul>
+    </aside>
+
+    <main>
+        <!-- TOPO -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-boxes-stacked"></i> Produtos</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">—</div>
+                        <div class="user-email" id="userEmail">—</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div class="content">
+
+            <!-- FILTRO + AÇÕES -->
+            <div class="page-header">
+                <div class="header-left">
+                    <div class="filter-wrapper">
+                        <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+                        <input type="text" id="filtroProdutos" placeholder="Filtrar por SKU, nome, categoria, NCM..." />
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn-cadastrar" onclick="window.open('formularios.html?tab=produto', '_blank')">
+                        <i class="fa-solid fa-plus"></i> Novo Produto
+                    </button>
+                    <button class="btn-upload" onclick="document.getElementById('uploadProdutos').click()">
+                        <i class="fa-solid fa-upload"></i> Upload
+                    </button>
+                    <input type="file" id="uploadProdutos" accept=".xlsx,.xls,.pdf" style="display:none;" onchange="processarUploadProdutos(this)" />
+                </div>
+            </div>
+
+            <!-- LISTA DE PRODUTOS -->
+            <div class="empresas-lista" id="produtosLista">
+                <div class="lista-header">
+                    <span><i class="fa-solid fa-boxes-stacked"></i> Produtos Cadastrados</span>
+                    <span class="lista-count" id="listaCount">—</span>
+                </div>
+                <div id="listaContainer" class="lista-scroll">
+                    <div class="lista-vazia">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...
+                    </div>
+                </div>
+            </div>
+
+            <!-- RODAPÉ -->
+            <footer class="dashboard-footer">
+                <p>© 2026 Marpex - Todos os direitos reservados</p>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- =============================================
+     MODAL: FORMULÁRIO DE PRODUTO
+============================================== -->
+<div class="modal-form-overlay" id="modalFormProduto" onclick="fecharModalProduto()">
+    <div class="modal-form-wrapper" onclick="event.stopPropagation()">
+
+        <div class="modal-form-top">
+            <h3><i class="fa-solid fa-boxes-stacked"></i> <span id="modalFormTitulo">Novo Produto</span></h3>
+            <button class="modal-form-close" onclick="fecharModalProduto()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-form-body">
+            <form id="produtoForm" novalidate>
+                <input type="hidden" id="produtoEditandoId" />
+
+                <!-- SEÇÃO: DADOS GERAIS -->
+                <div class="form-section active">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                        <span>Dados Gerais</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="sku">Código SKU <span class="required">*</span></label>
+                                <input id="sku" name="sku" type="text" maxlength="40" required placeholder="Ex: COPLAST100ML">
+                                <small class="info-text">Identificador único do produto.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="statusAtivo">Status</label>
+                                <select id="statusAtivo" name="statusAtivo">
+                                    <option value="ativo" selected>Ativo</option>
+                                    <option value="inativo">Inativo</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="nome">Nome do Produto <span class="required">*</span></label>
+                                <input id="nome" name="nome" type="text" maxlength="120" required placeholder="Ex: Copo Plástico 100ml">
+                                <small class="char-counter" data-for="nome">0/120</small>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="descricao">Descrição</label>
+                                <textarea id="descricao" name="descricao" maxlength="600" rows="3" placeholder="Descreva o produto, aplicação, cuidados, etc."></textarea>
+                                <small class="char-counter" data-for="descricao">0/600</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="categoria">Categoria</label>
+                                <input id="categoria" name="categoria" type="text" maxlength="60" placeholder="Ex: Embalagens">
+                            </div>
+                            <div class="form-group">
+                                <label for="marca">Marca</label>
+                                <input id="marca" name="marca" type="text" maxlength="60" placeholder="Ex: Marpex">
+                            </div>
+                            <div class="form-group">
+                                <label for="ncm">NCM</label>
+                                <input id="ncm" name="ncm" type="text" maxlength="10" inputmode="numeric" placeholder="Ex: 3923.90.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="unidadeMedida">Unidade de Medida</label>
+                                <select id="unidadeMedida" name="unidadeMedida">
+                                    <option value="">Selecione...</option>
+                                    <option value="un">Unidade (UN)</option>
+                                    <option value="kg">Quilograma (KG)</option>
+                                    <option value="g">Grama (G)</option>
+                                    <option value="l">Litro (L)</option>
+                                    <option value="ml">Mililitro (ML)</option>
+                                    <option value="m">Metro (M)</option>
+                                    <option value="m2">Metro quadrado (M²)</option>
+                                    <option value="m3">Metro cúbico (M³)</option>
+                                    <option value="cx">Caixa (CX)</option>
+                                    <option value="pct">Pacote (PCT)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: PRECIFICAÇÃO -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-tags"></i>
+                        <span>Precificação</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display:none;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="moeda">Moeda</label>
+                                <select id="moeda" name="moeda">
+                                    <option value="BRL" selected>BRL (R$)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="custo">Custo (por unidade)</label>
+                                <input id="custo" name="custo" type="number" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="margem">Margem (%)</label>
+                                <input id="margem" name="margem" type="number" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="precoVenda">Preço de Venda</label>
+                                <input id="precoVenda" name="precoVenda" type="number" step="0.01" min="0" placeholder="0.00">
+                                <small class="info-text">Preenchido automaticamente (custo + margem) se vazio.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="descontoMax">Desconto máximo (%)</label>
+                                <input id="descontoMax" name="descontoMax" type="number" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="leadTimeDias">Lead time (dias)</label>
+                                <input id="leadTimeDias" name="leadTimeDias" type="number" step="1" min="0" placeholder="0">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="observacoesPreco">Observações de preço</label>
+                                <textarea id="observacoesPreco" name="observacoesPreco" maxlength="400" rows="3" placeholder="Condições comerciais, validade do preço, etc."></textarea>
+                                <small class="char-counter" data-for="observacoesPreco">0/400</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: ESTOQUE -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-warehouse"></i>
+                        <span>Estoque</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display:none;">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Controle</label>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="controlaEstoque" name="controlaEstoque" value="1" checked>
+                                        <label for="controlaEstoque">Controla estoque</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="permiteVendaSemEstoque" name="permiteVendaSemEstoque" value="1">
+                                        <label for="permiteVendaSemEstoque">Permitir venda sem estoque</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="estoqueAtual">Estoque atual</label>
+                                <input id="estoqueAtual" name="estoqueAtual" type="number" step="1" min="0" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="estoqueMinimo">Estoque mínimo</label>
+                                <input id="estoqueMinimo" name="estoqueMinimo" type="number" step="1" min="0" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="localizacao">Localização</label>
+                                <input id="localizacao" name="localizacao" type="text" maxlength="40" placeholder="Ex: A-03-02">
+                            </div>
+                            <div class="form-group">
+                                <label for="loteValidade">Lote/Validade</label>
+                                <select id="loteValidade" name="loteValidade">
+                                    <option value="nao" selected>Não controla</option>
+                                    <option value="lote">Controla lote</option>
+                                    <option value="validade">Controla validade</option>
+                                    <option value="ambos">Controla lote e validade</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: LOGÍSTICA -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-truck-container"></i>
+                        <span>Logística / Container</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display:none;">
+                        <div class="grid-two">
+                            <div class="box">
+                                <h3 class="box-title"><i class="fa-solid fa-ruler-combined"></i> Dimensões e Peso</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="pesoBrutoKg">Peso bruto (kg)</label>
+                                        <input id="pesoBrutoKg" name="pesoBrutoKg" type="number" step="0.001" min="0" placeholder="0.000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="pesoLiquidoKg">Peso líquido (kg)</label>
+                                        <input id="pesoLiquidoKg" name="pesoLiquidoKg" type="number" step="0.001" min="0" placeholder="0.000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="comprimentoCm">Comprimento (cm)</label>
+                                        <input id="comprimentoCm" name="comprimentoCm" type="number" step="0.1" min="0" placeholder="0.0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="larguraCm">Largura (cm)</label>
+                                        <input id="larguraCm" name="larguraCm" type="number" step="0.1" min="0" placeholder="0.0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="alturaCm">Altura (cm)</label>
+                                        <input id="alturaCm" name="alturaCm" type="number" step="0.1" min="0" placeholder="0.0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="volumeM3">Volume (m³)</label>
+                                        <input id="volumeM3" name="volumeM3" type="text" readonly placeholder="Calculado">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label>Características</label>
+                                        <div class="checkbox-group">
+                                            <div class="checkbox-item">
+                                                <input type="checkbox" id="fragil" name="fragil" value="1">
+                                                <label for="fragil">Frágil</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <input type="checkbox" id="empilhavel" name="empilhavel" value="1">
+                                                <label for="empilhavel">Empilhável</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <input type="checkbox" id="perigoso" name="perigoso" value="1">
+                                                <label for="perigoso">Carga perigosa</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="temperatura">Temperatura</label>
+                                        <select id="temperatura" name="temperatura">
+                                            <option value="ambiente" selected>Ambiente</option>
+                                            <option value="refrigerado">Refrigerado</option>
+                                            <option value="congelado">Congelado</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="embalagem">Embalagem</label>
+                                        <input id="embalagem" name="embalagem" type="text" maxlength="60" placeholder="Ex: Caixa, Pallet, Saco">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="box">
+                                <h3 class="box-title"><i class="fa-solid fa-truck-container"></i> Container</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="tipoContainer">Tipo recomendado</label>
+                                        <select id="tipoContainer" name="tipoContainer">
+                                            <option value="20" selected>20' (aprox. 33.2 m³)</option>
+                                            <option value="40">40' (aprox. 67.7 m³)</option>
+                                            <option value="40hc">40' HC (aprox. 76.4 m³)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="unidadesPorContainer">Unidades por container (estimativa)</label>
+                                        <input id="unidadesPorContainer" name="unidadesPorContainer" type="text" readonly placeholder="-">
+                                        <small class="info-text">Estimativa por volume. Não considera paletização nem peso máximo.</small>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label for="observacoesLogistica">Observações de logística</label>
+                                        <textarea id="observacoesLogistica" name="observacoesLogistica" maxlength="400" rows="4" placeholder="Regras de empilhamento, orientação, restrições, etc."></textarea>
+                                        <small class="char-counter" data-for="observacoesLogistica">0/400</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: IMAGENS E DOCUMENTOS -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-paperclip"></i>
+                        <span>Imagens e Documentos</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display:none;">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label for="imagens">Imagens</label>
+                                <input id="imagens" name="imagens" type="file" accept="image/*" multiple>
+                                <small class="info-text">Selecione uma ou mais imagens para pré-visualização.</small>
+                                <div id="imagensPreview" class="images-preview" aria-live="polite"></div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="fichaTecnicaUrl">Ficha técnica (URL)</label>
+                                <input id="fichaTecnicaUrl" name="fichaTecnicaUrl" type="url" placeholder="https://...">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="observacoesGerais">Observações gerais</label>
+                                <textarea id="observacoesGerais" name="observacoesGerais" maxlength="500" rows="3" placeholder="Anotações internas, padrões de qualidade, etc."></textarea>
+                                <small class="char-counter" data-for="observacoesGerais">0/500</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTÕES DE AÇÃO -->
+                <div class="form-actions">
+                    <button type="button" class="btn-clear" id="btnLimparProduto">
+                        <i class="fa-solid fa-eraser"></i> Limpar Dados
+                    </button>
+                    <button type="submit" class="btn-save">
+                        <i class="fa-solid fa-check"></i> Salvar Produto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================
+     MODAL: CONFIRMAR EXCLUSÃO
+============================================== -->
+<div class="modal-overlay" id="modalExcluir" onclick="fecharModalExcluir()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal-header" style="border-bottom: 2px solid #fee2e2;">
+            <h3 style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Excluir Produto</h3>
+        </div>
+        <div class="modal-body">
+            <p style="color:#374151; margin-bottom:16px;">Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.</p>
+            <div id="excluirProdutoInfo" style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:16px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="fecharModalExcluir()">Cancelar</button>
+            <button id="btnConfirmarExcluir" style="background:#dc2626; color:white; border:none; padding:10px 24px; border-radius:8px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-trash"></i> Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- BOTÃO FLUTUANTE DO WHATSAPP -->
+<div class="whatsapp-float" onclick="toggleWhatsappChat()">
+    <i class="fa-brands fa-whatsapp"></i>
+</div>
+
+<!-- PAINEL DE CHAT DO WHATSAPP -->
+<div class="whatsapp-chat" id="whatsappChat">
+    <div class="chat-header">
+        <div class="chat-header-info">
+            <i class="fa-brands fa-whatsapp"></i>
+            <div>
+                <div class="chat-title">Suporte Marpex</div>
+                <div class="chat-status">Online</div>
+            </div>
+        </div>
+        <i class="fa-solid fa-xmark" onclick="toggleWhatsappChat()"></i>
+    </div>
+    <div class="chat-body">
+        <div class="chat-message bot">
+            <div class="message-content">Olá! Como podemos ajudar você hoje?</div>
+            <div class="message-time">Agora</div>
+        </div>
+    </div>
+    <div class="chat-footer">
+        <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
+        <button onclick="enviarMensagem()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="produtos.js"></script>
+
+</body>
+</html>

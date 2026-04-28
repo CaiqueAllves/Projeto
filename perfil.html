@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Meu Perfil</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-permissoes.css">
+    <link rel="stylesheet" href="style-perfil.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+        </ul>
+    </aside>
+
+    <main>
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-user-circle"></i> Meu Perfil</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar" id="topbarAvatar">
+                        <i class="fa-solid fa-user" id="topbarAvatarIcon"></i>
+                        <img id="topbarAvatarImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">—</div>
+                        <div class="user-email" id="userEmail">—</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO -->
+        <div class="content perfil-content">
+
+            <!-- CABEÇALHO DA PÁGINA -->
+            <div class="perfil-page-header">
+                <div>
+                    <h2 id="pageHeaderNome">Meu Perfil</h2>
+                    <p>Gerencie suas informações pessoais, segurança e dados da conta.</p>
+                </div>
+            </div>
+
+            <!-- LAYOUT DUAS COLUNAS -->
+            <div class="perfil-layout">
+
+                <!-- ========================
+                     SIDEBAR
+                ======================== -->
+                <div class="perfil-sidebar">
+
+                    <!-- Identidade -->
+                    <div class="sidebar-card sidebar-identidade">
+                        <div class="perfil-avatar-wrap" onclick="document.getElementById('inputFoto').click()">
+                            <div class="perfil-avatar-grande" id="avatarGrande">?</div>
+                            <img class="perfil-avatar-img" id="avatarImg" src="" alt="" style="display:none;">
+                            <div class="perfil-avatar-overlay">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                        </div>
+                        <input type="file" id="inputFoto" accept="image/*" style="display:none;" onchange="previewFoto(event)">
+                        <div class="sidebar-nome" id="sideNome">—</div>
+                        <div class="sidebar-cargo" id="sideCargo"></div>
+                        <span class="sidebar-perfil-badge" id="sidePerfilBadge">—</span>
+
+                        <!-- Sub-usuário: banner do time -->
+                        <div class="sidebar-team-badge" id="sideTeam" style="display:none;">
+                            <i class="fa-solid fa-people-group"></i>
+                            <span>Time <strong id="sideTeamEmpresa">—</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Dados rápidos -->
+                    <div class="sidebar-card">
+                        <div class="sidebar-section-titulo">Informações da Conta</div>
+                        <div class="sidebar-meta-lista">
+                            <div class="sidebar-meta-item">
+                                <div class="sidebar-meta-icon" style="background:#f0fdf4; color:#22c55e;">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </div>
+                                <div>
+                                    <div class="sidebar-meta-label">Membro desde</div>
+                                    <div class="sidebar-meta-valor" id="sideMembro">—</div>
+                                </div>
+                            </div>
+                            <div class="sidebar-meta-item">
+                                <div class="sidebar-meta-icon" style="background:#eff6ff; color:#3b82f6;">
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                </div>
+                                <div>
+                                    <div class="sidebar-meta-label">Último acesso</div>
+                                    <div class="sidebar-meta-valor" id="sideUltimoAcesso">—</div>
+                                </div>
+                            </div>
+                            <div class="sidebar-meta-item">
+                                <div class="sidebar-meta-icon" style="background:#fdf4ff; color:#a855f7;">
+                                    <i class="fa-solid fa-id-badge"></i>
+                                </div>
+                                <div>
+                                    <div class="sidebar-meta-label">Perfil de acesso</div>
+                                    <div class="sidebar-meta-valor" id="sidePerfilInfo">—</div>
+                                </div>
+                            </div>
+                            <div class="sidebar-meta-item">
+                                <div class="sidebar-meta-icon" style="background:#f0fdf4; color:#22c55e;" id="sideStatusIcon">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </div>
+                                <div>
+                                    <div class="sidebar-meta-label">Status</div>
+                                    <div class="sidebar-meta-valor" id="sideStatus">—</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Segurança resumo -->
+                    <div class="sidebar-card">
+                        <div class="sidebar-section-titulo">Segurança da Conta</div>
+                        <div class="sidebar-seg-lista">
+
+                            <!-- Senha -->
+                            <div class="sidebar-seg-item sidebar-seg-ok">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <div class="sidebar-seg-detalhe">
+                                    <span class="sidebar-seg-nome">Senha</span>
+                                    <span class="sidebar-seg-valor">Configurada</span>
+                                </div>
+                            </div>
+
+                            <!-- E-mail -->
+                            <div class="sidebar-seg-item sidebar-seg-ok">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <div class="sidebar-seg-detalhe">
+                                    <span class="sidebar-seg-nome">E-mail</span>
+                                    <span class="sidebar-seg-valor" id="sideEmailValor">—</span>
+                                </div>
+                            </div>
+
+                            <!-- Celular -->
+                            <div class="sidebar-seg-item" id="sideTelStatus">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                                <div class="sidebar-seg-detalhe">
+                                    <span class="sidebar-seg-nome">Celular</span>
+                                    <span class="sidebar-seg-valor" id="sideTelValor">Não cadastrado</span>
+                                </div>
+                                <a class="sidebar-seg-adicionar" id="sideTelAdicionar"
+                                   onclick="focarCampoTelefone()" style="display:none;">
+                                    Adicionar
+                                </a>
+                            </div>
+
+                            <!-- 2FA -->
+                            <div class="sidebar-seg-item sidebar-seg-info">
+                                <i class="fa-solid fa-lock"></i>
+                                <div class="sidebar-seg-detalhe">
+                                    <span class="sidebar-seg-nome">2 Fatores</span>
+                                    <span class="sidebar-seg-valor"><span class="badge-soon">em breve</span></span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+
+                </div>
+
+                <!-- ========================
+                     COLUNA PRINCIPAL
+                ======================== -->
+                <div class="perfil-main">
+
+                    <!-- DADOS PESSOAIS -->
+                    <div class="perfil-section-card" id="secaoDadosPessoais">
+                        <div class="perfil-section-header">
+                            <div class="perfil-section-header-left">
+                                <div class="perfil-section-icon" style="background:#fff7ed; color:#f7931e;">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </div>
+                                <div>
+                                    <h3>Dados Pessoais</h3>
+                                    <p>Suas informações de identificação e contato.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="perfil-section-body">
+                            <div class="perfil-form-grid">
+                                <div class="perfil-form-group perfil-form-group-full">
+                                    <label>Nome Completo</label>
+                                    <input type="text" id="inputNome" placeholder="Seu nome completo">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>E-mail</label>
+                                    <input type="email" id="inputEmail" placeholder="seu@email.com">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>CPF <span class="label-readonly">somente leitura</span></label>
+                                    <input type="text" id="inputCpf" disabled>
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Cargo / Função</label>
+                                    <input type="text" id="inputCargo" placeholder="Ex: Analista de Comércio Exterior">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Telefone</label>
+                                    <input type="text" id="inputTelefone" placeholder="(00) 00000-0000">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Perfil de Acesso <span class="label-readonly">somente leitura</span></label>
+                                    <input type="text" id="inputPerfilAcesso" disabled>
+                                </div>
+                            </div>
+                            <div class="perfil-form-footer">
+                                <button class="btn-salvar" id="btnSalvarDados" onclick="salvarDados()">
+                                    <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DADOS DA EMPRESA -->
+                    <div class="perfil-section-card" id="secaoDadosEmpresa">
+                        <div class="perfil-section-header">
+                            <div class="perfil-section-header-left">
+                                <div class="perfil-section-icon" style="background:#eff6ff; color:#3b82f6;">
+                                    <i class="fa-solid fa-building"></i>
+                                </div>
+                                <div>
+                                    <h3>Dados da Empresa</h3>
+                                    <p id="empresaSubtitulo">Informações da empresa vinculada à sua conta.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="section-card-body" id="empresaBody">
+                            <div class="empresa-info-grid" id="empresaInfoGrid">
+                                <!-- preenchido via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PLANO E USUÁRIOS (admin) -->
+                    <div class="perfil-section-card" id="secaoPlano" style="display:none;">
+                        <div class="perfil-section-header">
+                            <div class="perfil-section-header-left">
+                                <div class="perfil-section-icon" style="background:#fef9c3; color:#ca8a04;">
+                                    <i class="fa-solid fa-crown"></i>
+                                </div>
+                                <div>
+                                    <h3>Plano e Usuários</h3>
+                                    <p>Capacidade do seu plano e uso atual de licenças.</p>
+                                </div>
+                            </div>
+                            <span class="plano-badge" id="planoBadge">—</span>
+                        </div>
+                        <div class="section-card-body">
+                            <div id="planoGrid"></div>
+                            <div id="planoUso"></div>
+                            <div id="planoUpgrade"></div>
+                        </div>
+                    </div>
+
+                    <!-- SEGURANÇA -->
+                    <div class="perfil-section-card" id="secaoSeguranca">
+                        <div class="perfil-section-header">
+                            <div class="perfil-section-header-left">
+                                <div class="perfil-section-icon" style="background:#f0fdf4; color:#22c55e;">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <div>
+                                    <h3>Segurança da Conta</h3>
+                                    <p>Controle o acesso e a senha da sua conta.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="perfil-section-body">
+
+                            <!-- Último acesso info -->
+                            <div class="seg-ultimo-acesso">
+                                <div class="seg-acesso-icon">
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                </div>
+                                <div>
+                                    <div class="seg-acesso-label">Último acesso registrado</div>
+                                    <div class="seg-acesso-valor" id="segAcessoValor">—</div>
+                                </div>
+                            </div>
+
+                            <div class="seg-divider"><span>Alterar Senha</span></div>
+
+                            <!-- STEP 1: Escolha do canal + Solicitar -->
+                            <div id="segStep1">
+                                <!-- Seletor de canal -->
+                                <div class="seg-canal-selector">
+                                    <button class="seg-canal-btn active" id="btnCanalEmail" onclick="selecionarCanal('email')">
+                                        <i class="fa-solid fa-envelope"></i> E-mail
+                                    </button>
+                                    <button class="seg-canal-btn" id="btnCanalSms" onclick="selecionarCanal('sms')">
+                                        <i class="fa-solid fa-mobile-screen"></i> Celular
+                                    </button>
+                                </div>
+
+                                <!-- Info canal email -->
+                                <div class="seg-email-card" id="segCanalEmailCard">
+                                    <div class="seg-email-icon">
+                                        <i class="fa-solid fa-envelope"></i>
+                                    </div>
+                                    <div class="seg-email-texto">
+                                        <div class="seg-email-label">Código de verificação será enviado para o e-mail</div>
+                                        <div class="seg-email-valor" id="segEmailMasked">—</div>
+                                    </div>
+                                </div>
+
+                                <!-- Info canal celular -->
+                                <div class="seg-email-card" id="segCanalSmsCard" style="display:none;">
+                                    <div class="seg-email-icon" style="background:#f0fdf4; color:#22c55e;">
+                                        <i class="fa-solid fa-mobile-screen"></i>
+                                    </div>
+                                    <div class="seg-email-texto">
+                                        <div class="seg-email-label">Código de verificação será enviado via SMS para</div>
+                                        <div class="seg-email-valor" id="segTelMasked">—</div>
+                                    </div>
+                                </div>
+
+                                <div class="seg-senha-regras">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                    O código é válido por 10 minutos e expira após o uso.
+                                </div>
+                                <div class="perfil-form-footer">
+                                    <button class="btn-salvar btn-solicitar" id="btnSolicitarCodigo" onclick="solicitarCodigo()">
+                                        <i class="fa-solid fa-paper-plane"></i> Enviar Código
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 2: Inserir código + nova senha -->
+                            <div id="segStep2" style="display:none;">
+                                <div class="seg-codigo-aviso">
+                                    <i class="fa-solid fa-envelope-circle-check"></i>
+                                    Código enviado para <strong id="segEmailDisplay">—</strong>. Válido por 10 minutos.
+                                </div>
+                                <div class="perfil-form-grid perfil-form-grid-senha">
+                                    <div class="perfil-form-group perfil-form-group-codigo">
+                                        <label>Código de Verificação</label>
+                                        <input type="text" id="inputCodigo" placeholder="000000" maxlength="6"
+                                               style="letter-spacing:6px; font-size:20px; font-weight:700; text-align:center;">
+                                    </div>
+                                    <div class="perfil-form-group">
+                                        <label>Nova Senha</label>
+                                        <div class="input-senha-wrap">
+                                            <input type="password" id="inputNovaSenha" placeholder="Mínimo 6 caracteres">
+                                            <i class="fa-solid fa-eye toggle-senha" onclick="toggleSenha('inputNovaSenha', this)"></i>
+                                        </div>
+                                    </div>
+                                    <div class="perfil-form-group">
+                                        <label>Confirmar Nova Senha</label>
+                                        <div class="input-senha-wrap">
+                                            <input type="password" id="inputConfirmarSenha" placeholder="Repita a senha">
+                                            <i class="fa-solid fa-eye toggle-senha" onclick="toggleSenha('inputConfirmarSenha', this)"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="seg-senha-regras">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                    A senha deve ter no mínimo 6 caracteres.
+                                </div>
+                                <div class="seg-step2-footer">
+                                    <button class="btn-cancelar-codigo" onclick="voltarStep1()">
+                                        <i class="fa-solid fa-arrow-left"></i> Cancelar
+                                    </button>
+                                    <div class="seg-step2-footer-right">
+                                        <button class="btn-reenviar" onclick="reenviarCodigo()">
+                                            <i class="fa-solid fa-rotate-right"></i> Reenviar
+                                        </button>
+                                        <button class="btn-salvar" onclick="confirmarSenha()">
+                                            <i class="fa-solid fa-check"></i> Confirmar Alteração
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+                <!-- fim perfil-main -->
+
+            </div>
+            <!-- fim perfil-layout -->
+
+            <footer class="dashboard-footer">
+                <p>© 2026 Marpex - Todos os direitos reservados</p>
+            </footer>
+
+        </div>
+    </main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="perfil.js"></script>
+
+</body>
+</html>

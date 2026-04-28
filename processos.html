@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Processos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-cadastro.css">
+    <link rel="stylesheet" href="style-processos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside>
+        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Documentos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
+            </div>
+
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+
+        </ul>
+    </aside>
+
+    <main>
+        <!-- TOPO -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-ship"></i> Processos</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">—</div>
+                        <div class="user-email" id="userEmail">—</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div class="content">
+
+            <!-- FILTRO + AÇÕES -->
+            <div class="page-header">
+                <div class="header-left">
+                    <div class="filter-wrapper">
+                        <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+                        <input type="text" id="filtroProcessos" placeholder="Filtrar por código, cliente, origem, destino..." />
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn-cadastrar" onclick="window.open('formularios.html?tab=processo', '_blank')">
+                        <i class="fa-solid fa-plus"></i> Novo Processo
+                    </button>
+                </div>
+            </div>
+
+            <!-- LISTA DE PROCESSOS -->
+            <div class="empresas-lista" id="processosLista">
+                <div class="lista-header">
+                    <span><i class="fa-solid fa-diagram-project"></i> Processos Cadastrados</span>
+                    <span class="lista-count" id="listaCount">—</span>
+                </div>
+                <div id="listaContainer" class="lista-scroll">
+                    <div class="lista-vazia">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...
+                    </div>
+                </div>
+            </div>
+
+            <!-- RODAPÉ -->
+            <footer class="dashboard-footer">
+                <p>© 2026 Marpex - Todos os direitos reservados</p>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- =============================================
+     MODAL: FORMULÁRIO DE PROCESSO
+============================================== -->
+<div class="modal-form-overlay" id="modalFormProcesso" onclick="fecharModalProcesso()">
+    <div class="modal-form-wrapper" onclick="event.stopPropagation()">
+
+        <div class="modal-form-top">
+            <h3><i class="fa-solid fa-diagram-project"></i> <span id="modalFormTitulo">Novo Processo</span></h3>
+            <button class="modal-form-close" onclick="fecharModalProcesso()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-form-body">
+            <form id="processoForm" novalidate>
+                <input type="hidden" id="processoEditandoId" />
+
+                <!-- SEÇÃO: DADOS DO PROCESSO -->
+                <div class="form-section active">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-diagram-project"></i>
+                        <span>Dados do Processo</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="procCodigo">Código <span class="required">*</span></label>
+                                <input id="procCodigo" name="procCodigo" type="text" maxlength="30" required placeholder="Ex: PRC-2026-001">
+                            </div>
+                            <div class="form-group">
+                                <label for="procTipo">Tipo</label>
+                                <select id="procTipo" name="procTipo">
+                                    <option value="importacao" selected>Importação</option>
+                                    <option value="exportacao">Exportação</option>
+                                    <option value="interno">Interno</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="procCliente">Cliente/Empresa <span class="required">*</span></label>
+                                <div class="autocomplete-wrapper">
+                                    <input id="procCliente" name="procCliente" type="text" maxlength="120" required placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
+                                    <input type="hidden" id="procClienteId">
+                                    <div class="autocomplete-list" id="procClienteLista"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="procOrigem">Origem</label>
+                                <input id="procOrigem" name="procOrigem" type="text" maxlength="60" placeholder="Ex: Shanghai/CN">
+                            </div>
+                            <div class="form-group">
+                                <label for="procDestino">Destino</label>
+                                <input id="procDestino" name="procDestino" type="text" maxlength="60" placeholder="Ex: Santos/BR">
+                            </div>
+                            <div class="form-group">
+                                <label for="procIncoterm">Incoterm</label>
+                                <select id="procIncoterm" name="procIncoterm">
+                                    <option value="">Selecione...</option>
+                                    <option value="EXW">EXW</option>
+                                    <option value="FOB">FOB</option>
+                                    <option value="CIF">CIF</option>
+                                    <option value="DAP">DAP</option>
+                                    <option value="DDP">DDP</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="procModal">Modal</label>
+                                <select id="procModal" name="procModal">
+                                    <option value="maritimo" selected>Marítimo</option>
+                                    <option value="aereo">Aéreo</option>
+                                    <option value="rodoviario">Rodoviário</option>
+                                    <option value="ferroviario">Ferroviário</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="procObservacoes">Observações</label>
+                                <textarea id="procObservacoes" name="procObservacoes" maxlength="500" rows="3" placeholder="Notas internas, referências, contatos, etc."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: PRAZOS E STATUS -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <span>Prazos e Status</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display:none;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="procStatus">Status</label>
+                                <select id="procStatus" name="procStatus">
+                                    <option value="aberto" selected>Aberto</option>
+                                    <option value="andamento">Em andamento</option>
+                                    <option value="concluido">Concluído</option>
+                                    <option value="cancelado">Cancelado</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="procAbertura">Data de Abertura</label>
+                                <input id="procAbertura" name="procAbertura" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label for="procEmbarque">Embarque (estimado)</label>
+                                <input id="procEmbarque" name="procEmbarque" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label for="procChegada">Chegada (estimado)</label>
+                                <input id="procChegada" name="procChegada" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label for="procContainerTipo">Container</label>
+                                <select id="procContainerTipo" name="procContainerTipo">
+                                    <option value="">Não aplica</option>
+                                    <option value="20">20'</option>
+                                    <option value="40">40'</option>
+                                    <option value="40hc">40' HC</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="procContainerNum">Número do Container</label>
+                                <input id="procContainerNum" name="procContainerNum" type="text" maxlength="16" placeholder="Ex: MSKU1234567">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: ETAPAS -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>Etapas do Processo</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display:none;">
+                        <div class="etapas-grid">
+                            <div class="etapas-col">
+                                <div class="etapas-head">
+                                    <div class="etapas-title">Etapas</div>
+                                    <button class="btn-mini" type="button" id="btnAddEtapa"><i class="fa-solid fa-plus"></i> Etapa</button>
+                                </div>
+                                <div class="etapas-list" id="etapasList"></div>
+                            </div>
+                            <div class="etapas-col">
+                                <div class="tip-card">
+                                    <div class="tip-title"><i class="fa-solid fa-lightbulb"></i> Dica</div>
+                                    <p>Use etapas para padronizar o fluxo (ex: Booking, BL Draft, Embarque, Chegada, Desembaraço).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: DOCUMENTOS -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Documentos</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display:none;">
+                        <div class="form-group full-width">
+                            <label>Checklist de documentos</label>
+                            <div class="checklist" id="docsChecklist"></div>
+                            <small class="info-text">Marque o que já foi recebido/conferido.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTÕES DE AÇÃO -->
+                <div class="form-actions">
+                    <button type="button" class="btn-clear" id="btnLimparProcesso">
+                        <i class="fa-solid fa-eraser"></i> Limpar Dados
+                    </button>
+                    <button type="submit" class="btn-save">
+                        <i class="fa-solid fa-check"></i> Salvar Processo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================
+     MODAL: CONFIRMAR EXCLUSÃO
+============================================== -->
+<div class="modal-overlay" id="modalExcluir" onclick="fecharModalExcluir()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal-header" style="border-bottom: 2px solid #fee2e2;">
+            <h3 style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Excluir Processo</h3>
+        </div>
+        <div class="modal-body">
+            <p style="color:#374151; margin-bottom:16px;">Tem certeza que deseja excluir este processo? Esta ação não pode ser desfeita.</p>
+            <div id="excluirProcessoInfo" style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:16px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="fecharModalExcluir()">Cancelar</button>
+            <button id="btnConfirmarExcluir" style="background:#dc2626; color:white; border:none; padding:10px 24px; border-radius:8px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-trash"></i> Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- BOTÃO FLUTUANTE DO WHATSAPP -->
+<div class="whatsapp-float" onclick="toggleWhatsappChat()">
+    <i class="fa-brands fa-whatsapp"></i>
+</div>
+
+<!-- PAINEL DE CHAT DO WHATSAPP -->
+<div class="whatsapp-chat" id="whatsappChat">
+    <div class="chat-header">
+        <div class="chat-header-info">
+            <i class="fa-brands fa-whatsapp"></i>
+            <div>
+                <div class="chat-title">Suporte Marpex</div>
+                <div class="chat-status">Online</div>
+            </div>
+        </div>
+        <i class="fa-solid fa-xmark" onclick="toggleWhatsappChat()"></i>
+    </div>
+    <div class="chat-body">
+        <div class="chat-message bot">
+            <div class="message-content">Olá! Como podemos ajudar você hoje?</div>
+            <div class="message-time">Agora</div>
+        </div>
+    </div>
+    <div class="chat-footer">
+        <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
+        <button onclick="enviarMensagem()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="processos.js"></script>
+
+</body>
+</html>
