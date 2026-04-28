@@ -2,6 +2,8 @@
 // CONFIGURAÇÃO DO SUPABASE
 // ========================================
 
+const SUPABASE_URL = 'https://mvgbgjqkxsptbndgoskw.supabase.co';
+
 let supabaseClient;
 try {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
