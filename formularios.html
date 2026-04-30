@@ -49,8 +49,8 @@
                     <i class="fa-solid fa-chevron-down arrow"></i>
                 </a>
                 <div class="submenu">
+                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Proformas (Em desenvolvimento)</a>
                     <a href="formularios.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
-                    <a href="#" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
                 </div>
             </div>
 
@@ -85,7 +85,7 @@
                     <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
                     <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
                     <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
-                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
                     <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
                     <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
                     <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
@@ -172,6 +172,13 @@
                                         <label>Tipo <span class="required">*</span></label>
                                         <div class="tipo-cards-group">
                                             <label class="tipo-card">
+                                                <input type="checkbox" name="tipo_fabricante" value="fabricante">
+                                                <div class="tipo-card-inner">
+                                                    <i class="fa-solid fa-industry"></i>
+                                                    <span>Fabricante</span>
+                                                </div>
+                                            </label>
+                                            <label class="tipo-card">
                                                 <input type="checkbox" name="tipo_cliente" value="cliente">
                                                 <div class="tipo-card-inner">
                                                     <i class="fa-solid fa-user-tie"></i>
@@ -185,11 +192,25 @@
                                                     <span>Fornecedor</span>
                                                 </div>
                                             </label>
+                                            <label class="tipo-card">
+                                                <input type="checkbox" name="tipo_transportadora" value="transportadora">
+                                                <div class="tipo-card-inner">
+                                                    <i class="fa-solid fa-truck"></i>
+                                                    <span>Transportadora</span>
+                                                </div>
+                                            </label>
+                                            <label class="tipo-card">
+                                                <input type="checkbox" name="tipo_remetente" value="remetente">
+                                                <div class="tipo-card-inner">
+                                                    <i class="fa-solid fa-box-open"></i>
+                                                    <span>Remetente</span>
+                                                </div>
+                                            </label>
                                         </div>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-tipo-cadastro">Tipo de Cadastro <span class="required">*</span></label>
+                                        <label for="emp-tipo-cadastro">Identificação da Empresa <span class="required">*</span></label>
                                         <select id="emp-tipo-cadastro" name="tipo_cadastro">
                                             <option value="">Selecione...</option>
                                             <option value="cnpj">CNPJ</option>
@@ -198,12 +219,17 @@
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-documento">CNPJ / CPF <span class="required">*</span></label>
-                                        <input type="text" id="emp-documento" name="documento" placeholder="00.000.000/0001-00">
+                                        <label for="emp-documento">
+                                            Número de Identificação <span class="required">*</span>
+                                            <span class="info-balao" data-tooltip="Documento de identificação fiscal da empresa: CNPJ para empresas brasileiras ou CPF para pessoas físicas.">
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            </span>
+                                        </label>
+                                        <input type="text" id="emp-documento" name="documento" placeholder="Selecione o tipo primeiro">
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-nome">Nome da Empresa / Razão Social <span class="required">*</span></label>
+                                        <label for="emp-nome">Razão Social <span class="required">*</span></label>
                                         <input type="text" id="emp-nome" name="nome_empresa" placeholder="Razão Social">
                                     </div>
 
@@ -218,70 +244,13 @@
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-suframa">SUFRAMA <span class="campo-opcional">(Zona Franca)</span></label>
-                                        <input type="text" id="emp-suframa" name="suframa" placeholder="00.000.000-0" maxlength="11"
-                                               onfocus="document.getElementById('suframa-info').classList.add('visivel')"
-                                               onblur="document.getElementById('suframa-info').classList.remove('visivel')">
-                                        <div class="incoterm-info" id="suframa-info">
-                                            <strong><i class="fa-solid fa-circle-info"></i> O que é SUFRAMA?</strong><br>
-                                            Superintendência da Zona Franca de Manaus. O número de inscrição SUFRAMA é obrigatório para empresas localizadas na Zona Franca de Manaus (AM) e em outras áreas de livre comércio, sendo necessário para a concessão de incentivos fiscais em operações de comércio exterior.
-                                        </div>
+                                        <label>
+                                            <button type="button" class="btn-suframa-link" id="btn-suframa" onclick="toggleSuframa()">
+                                                <i class="fa-solid fa-plus" id="suframa-btn-icon"></i> SUFRAMA (Zona Franca)
+                                            </button>
+                                        </label>
+                                        <input type="text" id="emp-suframa" name="suframa" placeholder="00.000.000-0" maxlength="11" id="suframa-campo" style="display:none;">
                                     </div>
-
-                                </div>
-
-                                <!-- Toggle: Tem transportadora? -->
-                                <div class="transp-toggle-row">
-                                    <span class="transp-toggle-label">
-                                        <i class="fa-solid fa-truck"></i> Tem transportadora vinculada?
-                                    </span>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="emp-tem-transportadora" onchange="toggleTransportadoraVinculada(this.checked)">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-
-                                <!-- Campos da Transportadora (ocultos por padrão) -->
-                                <div id="emp-transportadora-campos" style="display:none;">
-                                    <div class="transp-vinculada-header">
-                                        <i class="fa-solid fa-truck"></i> Dados da Transportadora
-                                    </div>
-                                    <div class="form-grid">
-                                        <div class="form-group">
-                                            <label for="emp-transp-cnpj">CNPJ da Transportadora</label>
-                                            <input type="text" id="emp-transp-cnpj" name="transp_cnpj" placeholder="00.000.000/0000-00" maxlength="18">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="emp-transp-razao">Razão Social</label>
-                                            <input type="text" id="emp-transp-razao" name="transp_razao" placeholder="Razão Social">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="emp-transp-fantasia">Nome Fantasia</label>
-                                            <input type="text" id="emp-transp-fantasia" name="transp_fantasia" placeholder="Nome Fantasia">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="emp-transp-responsavel">Responsável</label>
-                                            <input type="text" id="emp-transp-responsavel" name="transp_responsavel" placeholder="Nome do responsável">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="emp-transp-contato">Contato</label>
-                                            <input type="text" id="emp-transp-contato" name="transp_contato" placeholder="+55 (00) 00000-0000">
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
-                        <!-- SEÇÃO 2: Endereço -->
-                        <div class="form-section">
-                            <div class="section-title" onclick="toggleSection(this)">
-                                <i class="fa-solid fa-location-dot"></i>
-                                Endereço
-                                <i class="fa-solid fa-chevron-down section-arrow"></i>
-                            </div>
-                            <div class="section-content">
-                                <div class="form-grid">
 
                                     <div class="form-group">
                                         <label for="emp-pais">País</label>
@@ -298,7 +267,7 @@
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-estado">Estado / Província</label>
+                                        <label for="emp-estado">Estado</label>
                                         <input type="text" id="emp-estado" name="estado" placeholder="Estado ou Província">
                                     </div>
 
@@ -318,16 +287,18 @@
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-numero">Número</label>
+                                        <div class="numero-label-row">
+                                            <label for="emp-numero">Número</label>
+                                            <label class="sn-toggle">
+                                                <input type="checkbox" name="sem_numero" onchange="const n=document.getElementById('emp-numero'); n.disabled=this.checked; n.value=this.checked?'S/N':''; n.placeholder=this.checked?'':'Nº';">
+                                                <span>Sem Número</span>
+                                            </label>
+                                        </div>
                                         <input type="text" id="emp-numero" name="numero" placeholder="Nº">
-                                        <label class="sn-toggle">
-                                            <input type="checkbox" name="sem_numero" onchange="document.getElementById('emp-numero').disabled = this.checked; document.getElementById('emp-numero').value = this.checked ? 'S/N' : '';">
-                                            <span>S/N (Sem número)</span>
-                                        </label>
                                     </div>
 
                                     <div class="form-group full-width">
-                                        <label for="emp-complemento">Complemento</label>
+                                        <label for="emp-complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
                                         <input type="text" id="emp-complemento" name="complemento" placeholder="Sala, Andar, Bloco...">
                                     </div>
 
@@ -343,76 +314,146 @@
                                 <i class="fa-solid fa-chevron-down section-arrow"></i>
                             </div>
                             <div class="section-content">
-
-                                <div class="emp-contato-bloco">
-                                    <p class="emp-contato-titulo">Contato Principal</p>
-                                    <div class="form-grid">
-                                        <div class="form-group">
-                                            <label for="emp-contato1-nome">Nome</label>
-                                            <input type="text" id="emp-contato1-nome" name="contato1_nome" placeholder="Nome completo">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="emp-contato1-cargo">Cargo</label>
-                                            <input type="text" id="emp-contato1-cargo" name="contato1_cargo" placeholder="Ex: Gerente Comercial">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="emp-contato1-tel">Telefone</label>
-                                            <input type="text" id="emp-contato1-tel" name="contato1_telefone" placeholder="+55 (00) 00000-0000">
-                                            <label class="tel-whats-check">
-                                                <input type="checkbox" id="emp-contato1-tel-whats" onchange="toggleTelWhats('1', this.checked)">
-                                                <span>Este número é WhatsApp?</span>
-                                            </label>
-                                        </div>
-                                        <div class="form-group" id="emp-contato1-whats-group">
-                                            <label for="emp-contato1-whats">WhatsApp</label>
-                                            <input type="text" id="emp-contato1-whats" name="contato1_whatsapp" placeholder="+55 (00) 00000-0000">
-                                        </div>
+                                <div class="contato-lista" id="emp-contato-lista">
+                                    <div class="contato-lista-header">
+                                        <span>Tipo</span>
+                                        <span>Nome</span>
+                                        <span>E-mail</span>
+                                        <span>Telefone</span>
+                                        <span></span>
                                     </div>
-                                </div>
-
-                                <div id="emp-contato2-bloco" class="emp-contato-bloco" style="display:none;">
-                                    <div class="emp-contato-titulo-row">
-                                        <p class="emp-contato-titulo">Contato Secundário</p>
-                                        <button type="button" class="emp-contato-remover" onclick="removerContato2()">
-                                            <i class="fa-solid fa-xmark"></i> Remover
+                                    <div id="emp-contato-rows"></div>
+                                    <div class="contato-lista-footer" id="emp-contato-footer">
+                                        <button type="button" class="btn-add-contato" id="btn-add-contato" onclick="empContatoAdicionar()">
+                                            <i class="fa-solid fa-plus"></i> Adicionar Contato
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO 3: Dados Financeiros -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-landmark"></i>
+                                Dados Financeiros
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+
+                                <div class="fin-bloco">
+                                    <div class="fin-bloco-titulo">
+                                        <i class="fa-solid fa-arrow-up-from-bracket"></i> Pagamento
+                                    </div>
                                     <div class="form-grid">
+
                                         <div class="form-group">
-                                            <label for="emp-contato2-nome">Nome</label>
-                                            <input type="text" id="emp-contato2-nome" name="contato2_nome" placeholder="Nome completo">
+                                            <label for="fin-pag-forma">Forma de Pagamento</label>
+                                            <select id="fin-pag-forma" name="fin_pag_forma">
+                                                <option value="">Selecione</option>
+                                                <option value="cheque">Cheque</option>
+                                                <option value="cartao_credito">Cartão de Crédito</option>
+                                                <option value="cartao_debito">Cartão de Débito</option>
+                                                <option value="boleto">Boleto Bancário</option>
+                                                <option value="deposito">Depósito Bancário</option>
+                                                <option value="outros">Outros</option>
+                                            </select>
                                         </div>
+
                                         <div class="form-group">
-                                            <label for="emp-contato2-cargo">Cargo</label>
-                                            <input type="text" id="emp-contato2-cargo" name="contato2_cargo" placeholder="Ex: Analista de Exportação">
+                                            <label for="fin-pag-condicao">Condição de Pagamento</label>
+                                            <select id="fin-pag-condicao" name="fin_pag_condicao">
+                                                <option value="">Selecione</option>
+                                                <option value="avista">À vista</option>
+                                                <option value="15d">15 dias</option>
+                                                <option value="30d">30 dias</option>
+                                                <option value="45d">45 dias</option>
+                                                <option value="60d">60 dias</option>
+                                                <option value="90d">90 dias</option>
+                                                <option value="120d">120 dias</option>
+                                                <option value="parcelado">Parcelado</option>
+                                            </select>
                                         </div>
+
                                         <div class="form-group">
-                                            <label for="emp-contato2-tel">Telefone</label>
-                                            <input type="text" id="emp-contato2-tel" name="contato2_telefone" placeholder="+55 (00) 00000-0000">
-                                            <label class="tel-whats-check">
-                                                <input type="checkbox" id="emp-contato2-tel-whats" onchange="toggleTelWhats('2', this.checked)">
-                                                <span>Este número é WhatsApp?</span>
-                                            </label>
+                                            <label for="fin-pag-banco">Banco</label>
+                                            <input type="text" id="fin-pag-banco" name="fin_pag_banco" placeholder="Nome ou código do banco">
                                         </div>
-                                        <div class="form-group" id="emp-contato2-whats-group">
-                                            <label for="emp-contato2-whats">WhatsApp</label>
-                                            <input type="text" id="emp-contato2-whats" name="contato2_whatsapp" placeholder="+55 (00) 00000-0000">
+
+                                        <div class="form-group">
+                                            <label for="fin-pag-tipo-conta">Tipo de Conta</label>
+                                            <select id="fin-pag-tipo-conta" name="fin_pag_tipo_conta">
+                                                <option value="">Selecione</option>
+                                                <option value="corrente">Conta Corrente</option>
+                                                <option value="poupanca">Conta Poupança</option>
+                                                <option value="pagamento">Conta de Pagamento</option>
+                                            </select>
                                         </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-pag-agencia">Agência</label>
+                                            <input type="text" id="fin-pag-agencia" name="fin_pag_agencia" placeholder="0000">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-pag-conta">Conta</label>
+                                            <input type="text" id="fin-pag-conta" name="fin_pag_conta" placeholder="00000-0">
+                                        </div>
+
                                     </div>
                                 </div>
 
-                                <button type="button" class="btn-add-contato" id="btn-add-contato" onclick="adicionarContato2()">
-                                    <i class="fa-solid fa-plus"></i> Adicionar Contato
-                                </button>
-
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="emp-email">E-mail</label>
-                                        <input type="email" id="emp-email" name="email" placeholder="email@empresa.com.br">
+                                <div class="fin-bloco fin-bloco--recebimento">
+                                    <div class="fin-bloco-titulo">
+                                        <i class="fa-solid fa-arrow-down-to-bracket"></i> Recebimento
                                     </div>
-                                    <div class="form-group">
-                                        <label for="emp-site">Site / Website</label>
-                                        <input type="text" id="emp-site" name="site" placeholder="www.empresa.com.br">
+                                    <div class="form-grid">
+
+                                        <div class="form-group">
+                                            <label for="fin-rec-forma">Forma de Recebimento</label>
+                                            <select id="fin-rec-forma" name="fin_rec_forma">
+                                                <option value="">Selecione</option>
+                                                <option value="cheque">Cheque</option>
+                                                <option value="cartao_credito">Cartão de Crédito</option>
+                                                <option value="cartao_debito">Cartão de Débito</option>
+                                                <option value="boleto">Boleto Bancário</option>
+                                                <option value="deposito">Depósito Bancário</option>
+                                                <option value="outros">Outros</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-rec-moeda">Moeda Preferencial</label>
+                                            <select id="fin-rec-moeda" name="fin_rec_moeda">
+                                                <option value="">Selecione</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-rec-banco">Banco</label>
+                                            <input type="text" id="fin-rec-banco" name="fin_rec_banco" placeholder="Nome ou código do banco">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-rec-tipo-conta">Tipo de Conta</label>
+                                            <select id="fin-rec-tipo-conta" name="fin_rec_tipo_conta">
+                                                <option value="">Selecione</option>
+                                                <option value="corrente">Conta Corrente</option>
+                                                <option value="poupanca">Conta Poupança</option>
+                                                <option value="pagamento">Conta de Pagamento</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-rec-agencia">Agência</label>
+                                            <input type="text" id="fin-rec-agencia" name="fin_rec_agencia" placeholder="0000">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-rec-conta">Conta</label>
+                                            <input type="text" id="fin-rec-conta" name="fin_rec_conta" placeholder="00000-0">
+                                        </div>
+
                                     </div>
                                 </div>
 
@@ -430,13 +471,13 @@
                                 <div class="form-grid">
 
                                     <div class="form-group">
-                                        <label for="emp-identificacao">Identificação Interna</label>
-                                        <input type="text" id="emp-identificacao" name="identificacao" placeholder="Código ou referência interna">
+                                        <label for="emp-site">Site</label>
+                                        <input type="url" id="emp-site" name="site" placeholder="https://www.empresa.com">
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-responsavel">Responsável pelo Processo</label>
-                                        <input type="text" id="emp-responsavel" name="responsavel_processo" placeholder="Nome do responsável na empresa">
+                                        <label for="emp-horario">Horário de Atendimento</label>
+                                        <input type="text" id="emp-horario" name="horario_atendimento" placeholder="Ex: Seg–Sex, 08h às 18h">
                                     </div>
 
                                     <div class="form-group full-width">
@@ -670,7 +711,10 @@
                                                 <i class="fa-solid fa-plus"></i> Adicionar
                                             </button>
                                         </div>
-                                        <input type="text" id="proc-porto-origem" name="porto_origem" placeholder="Ex: Santos, Itajaí...">
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="proc-porto-origem" name="porto_origem" placeholder="Ex: Santos, Itajaí..." autocomplete="off">
+                                            <div class="autocomplete-list" id="proc-porto-origem-lista"></div>
+                                        </div>
                                     </div>
 
                                     <!-- Aéreo: Aeronave + Aeroporto de Origem -->
@@ -685,7 +729,10 @@
                                                 <i class="fa-solid fa-plus"></i> Adicionar
                                             </button>
                                         </div>
-                                        <input type="text" id="proc-aeroporto-origem" name="aeroporto_origem" placeholder="Ex: GRU, JFK...">
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="proc-aeroporto-origem" name="aeroporto_origem" placeholder="Ex: GRU, JFK..." autocomplete="off">
+                                            <div class="autocomplete-list" id="proc-aeroporto-origem-lista"></div>
+                                        </div>
                                     </div>
 
                                     <!-- Terrestre: Aduana de Saída -->
@@ -710,13 +757,19 @@
                                     <!-- Marítimo: Porto de Destino -->
                                     <div class="form-group" id="proc-porto-destino-group" style="display:none;">
                                         <label for="proc-porto-destino">Porto de Destino</label>
-                                        <input type="text" id="proc-porto-destino" name="porto_destino" placeholder="Ex: Roterdã, Miami...">
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="proc-porto-destino" name="porto_destino" placeholder="Ex: Roterdã, Miami..." autocomplete="off">
+                                            <div class="autocomplete-list" id="proc-porto-destino-lista"></div>
+                                        </div>
                                     </div>
 
                                     <!-- Aéreo: Aeroporto de Destino -->
                                     <div class="form-group" id="proc-aeroporto-destino-group" style="display:none;">
                                         <label for="proc-aeroporto-destino">Aeroporto de Destino</label>
-                                        <input type="text" id="proc-aeroporto-destino" name="aeroporto_destino" placeholder="Ex: AMS, LHR...">
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="proc-aeroporto-destino" name="aeroporto_destino" placeholder="Ex: AMS, LHR..." autocomplete="off">
+                                            <div class="autocomplete-list" id="proc-aeroporto-destino-lista"></div>
+                                        </div>
                                     </div>
 
                                     <!-- Terrestre: Aduana de Entrada -->
@@ -1280,9 +1333,9 @@
 
                         <!-- RESUMO DA PROPOSTA -->
                         <div class="processo-resumo" id="proposta-resumo">
-                            <span id="prop-resumo-empresa">—</span>
-                            <span class="resumo-sep">=</span>
                             <span id="prop-resumo-tipo">—</span>
+                            <span class="resumo-sep">|</span>
+                            <span id="prop-resumo-empresa">—</span>
                             <span class="resumo-sep">›</span>
                             <span id="prop-resumo-emp-destino">—</span>
                             <span class="resumo-sep">|</span>
@@ -1290,11 +1343,10 @@
                             <span class="resumo-sep">›</span>
                             <span id="prop-resumo-destino">—</span>
                             <span class="resumo-sep">|</span>
-                            <span id="prop-resumo-incoterm">—</span>
-                            <span class="resumo-sep">›</span>
                             <span id="prop-resumo-modal">—</span>
+                            <span class="resumo-sep">›</span>
+                            <span id="prop-resumo-incoterm">—</span>
                             <span class="resumo-sep">|</span>
-                            <span id="prop-resumo-status">—</span>
                         </div>
 
                         <!-- SEÇÃO 1: Dados da Proposta (unificada) -->
@@ -1437,21 +1489,33 @@
                                     <!-- Porto Origem | Porto Destino (Marítimo) -->
                                     <div class="form-group" id="prop-porto-origem-group" style="display:none;">
                                         <label for="prop-porto-origem">Porto de Origem</label>
-                                        <input type="text" id="prop-porto-origem" name="porto_origem" placeholder="Ex: Santos, Itajaí...">
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-porto-origem" name="porto_origem" placeholder="Ex: Santos, Itajaí..." autocomplete="off">
+                                            <div class="autocomplete-list" id="prop-porto-origem-lista"></div>
+                                        </div>
                                     </div>
                                     <div class="form-group" id="prop-porto-destino-group" style="display:none;">
                                         <label for="prop-porto-destino">Porto de Destino</label>
-                                        <input type="text" id="prop-porto-destino" name="porto_destino" placeholder="Ex: Roterdã, Miami...">
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-porto-destino" name="porto_destino" placeholder="Ex: Roterdã, Miami..." autocomplete="off">
+                                            <div class="autocomplete-list" id="prop-porto-destino-lista"></div>
+                                        </div>
                                     </div>
 
                                     <!-- Aeroporto Origem | Aeroporto Destino (Aéreo) -->
                                     <div class="form-group" id="prop-aeroporto-origem-group" style="display:none;">
                                         <label for="prop-aeroporto-origem">Aeroporto de Origem</label>
-                                        <input type="text" id="prop-aeroporto-origem" name="aeroporto_origem" placeholder="Ex: GRU, VCP...">
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-aeroporto-origem" name="aeroporto_origem" placeholder="Ex: GRU, VCP..." autocomplete="off">
+                                            <div class="autocomplete-list" id="prop-aeroporto-origem-lista"></div>
+                                        </div>
                                     </div>
                                     <div class="form-group" id="prop-aeroporto-destino-group" style="display:none;">
                                         <label for="prop-aeroporto-destino">Aeroporto de Destino</label>
-                                        <input type="text" id="prop-aeroporto-destino" name="aeroporto_destino" placeholder="Ex: JFK, AMS...">
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-aeroporto-destino" name="aeroporto_destino" placeholder="Ex: JFK, AMS..." autocomplete="off">
+                                            <div class="autocomplete-list" id="prop-aeroporto-destino-lista"></div>
+                                        </div>
                                     </div>
 
                                     <!-- Fronteira Saída | Fronteira Entrada (Terrestre) -->
@@ -1499,11 +1563,6 @@
                                             <div class="autocomplete-list" id="prop-emp-dest-lista"></div>
                                         </div>
                                     </div>
-                                    <div class="form-group" id="prop-emp-dest-auto-doc-group">
-                                        <label for="prop-emp-dest-auto-doc">Documento Fiscal</label>
-                                        <input type="text" id="prop-emp-dest-auto-doc" placeholder="Preenchido automaticamente" readonly>
-                                    </div>
-
                                     <div class="form-group" id="prop-emp-dest-razao-group" style="display:none;">
                                         <label for="prop-emp-dest-razao">Razão Social</label>
                                         <input type="text" id="prop-emp-dest-razao" name="emp_dest_razao" placeholder="Razão social da empresa">
@@ -1566,29 +1625,10 @@
                             </div>
                             <div class="section-content">
                                 <div class="prop-itens-wrapper">
-                                    <div class="prop-itens-scroll">
-                                        <table class="prop-itens-table">
-                                            <thead>
-                                                <tr>
-                                                    <th class="col-num">#</th>
-                                                    <th class="col-produto">Produto / Descrição</th>
-                                                    <th class="col-qtd">Qtd</th>
-                                                    <th class="col-un">Un.</th>
-                                                    <th class="col-preco">Preço Unit.</th>
-                                                    <th class="col-moeda">Moeda</th>
-                                                    <th class="col-total">Total</th>
-                                                    <th class="col-acao"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="prop-itens-body"></tbody>
-                                            <tfoot>
-                                                <tr class="prop-itens-tfoot">
-                                                    <td colspan="6" class="prop-total-label">Total Geral</td>
-                                                    <td class="prop-total-valor" id="prop-total-geral">—</td>
-                                                    <td></td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
+                                    <div id="prop-itens-body"></div>
+                                    <div class="prop-itens-footer">
+                                        <span class="prop-total-label">Total Geral</span>
+                                        <span class="prop-total-valor" id="prop-total-geral">—</span>
                                     </div>
                                     <button type="button" class="btn-add-item" onclick="propAdicionarItem()">
                                         <i class="fa-solid fa-plus"></i> Adicionar Item
@@ -1610,12 +1650,20 @@
                                         <label for="prop-forma-pagamento">Forma de Pagamento</label>
                                         <select id="prop-forma-pagamento" name="forma_pagamento">
                                             <option value="">Selecione...</option>
-                                            <option value="tt">TT — Transferência Bancária</option>
-                                            <option value="lc">LC — Carta de Crédito</option>
-                                            <option value="dp">DP — Documentos contra Pagamento</option>
-                                            <option value="da">DA — Documentos contra Aceite</option>
-                                            <option value="avista">À Vista</option>
-                                            <option value="antecipado">Pagamento Antecipado</option>
+                                            <option value="dinheiro">Dinheiro</option>
+                                            <option value="cheque">Cheque</option>
+                                            <option value="cartao-credito">Cartão de Crédito</option>
+                                            <option value="cartao-debito">Cartão de Débito</option>
+                                            <option value="duplicata">Duplicata Mercantil</option>
+                                            <option value="boleto">Boleto Bancário</option>
+                                            <option value="deposito">Depósito Bancário</option>
+                                            <option value="swift">SWIFT</option>
+                                            <option value="cad">CAD</option>
+                                            <option value="30-advanced">30% ADVANCED</option>
+                                            <option value="70-against-document">70% AGAINST DOCUMENT</option>
+                                            <option value="sem-pagamento">Sem Pagamento</option>
+                                            <option value="pagamento-posterior">Pagamento Posterior</option>
+                                            <option value="outros">Outros</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
