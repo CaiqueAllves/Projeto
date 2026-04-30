@@ -180,12 +180,81 @@ function gerarPDFProposta() {
 }
 
 // ========================================
+// SUFRAMA — TOGGLE
+// ========================================
+
+function toggleSuframa() {
+    const input = document.getElementById('emp-suframa');
+    const btn   = document.getElementById('btn-suframa');
+    const icon  = document.getElementById('suframa-btn-icon');
+    if (!input) return;
+    const aberto = input.style.display !== 'none';
+    input.style.display = aberto ? 'none' : 'block';
+    icon.className = aberto ? 'fa-solid fa-plus' : 'fa-solid fa-xmark';
+    btn.classList.toggle('ativo', !aberto);
+    if (aberto) input.value = '';
+}
+
+// CONTATOS — ADICIONAR / REMOVER
+// ========================================
+
+let _empContatoCount = 0;
+const EMP_CONTATO_MAX = 3;
+
+function empContatoIniciar() {
+    empContatoAdicionar();
+}
+
+function empContatoAdicionar() {
+    if (_empContatoCount >= EMP_CONTATO_MAX) return;
+    _empContatoCount++;
+    const id = Date.now();
+
+    const container = document.getElementById('emp-contato-rows');
+    if (!container) return;
+
+    const row = document.createElement('div');
+    row.className = 'contato-lista-row';
+    row.id = `contato-row-${id}`;
+    row.innerHTML = `
+        <input type="text"  class="contato-tipo-input" name="contato_${id}_tipo"  placeholder="Ex: Financeiro">
+        <input type="text"  name="contato_${id}_nome"  placeholder="Nome completo">
+        <input type="email" name="contato_${id}_email" placeholder="email@empresa.com">
+        <input type="text"  name="contato_${id}_tel"   placeholder="00000000000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+        <button type="button" class="btn-remover-contato" onclick="empContatoRemover('${id}')" title="Remover">
+            <i class="fa-solid fa-xmark"></i>
+        </button>`;
+    container.appendChild(row);
+
+    _empContatoAtualizarUI();
+}
+
+function empContatoRemover(id) {
+    const row = document.getElementById(`contato-row-${id}`);
+    if (row) { row.remove(); _empContatoCount--; }
+    _empContatoAtualizarUI();
+}
+
+function _empContatoAtualizarUI() {
+    const btn  = document.getElementById('btn-add-contato');
+    const rows = document.querySelectorAll('#emp-contato-rows .contato-lista-row');
+    if (btn) btn.style.display = _empContatoCount >= EMP_CONTATO_MAX ? 'none' : '';
+    rows.forEach(r => {
+        const b = r.querySelector('.btn-remover-contato');
+        if (b) b.style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+    });
+}
+
 // AUTOCOMPLETE — DADOS
 // ========================================
 
-let _acEmpresas  = [];
-let _acPaises    = [];
-let _acContainers = [];
+let _acEmpresas    = [];
+let _acPaises      = [];
+let _acContainers  = [];
+let _acAeroportos  = [];
+let _acPortos      = [];
+let _acMoedas      = [];
+let _acUnidades    = [];
 
 const MODAL_INFO = {
     aereo:     'Transporte por via aérea. Mais rápido e seguro, indicado para cargas urgentes, de alto valor ou perecíveis. Custo mais elevado. Utiliza aeroportos como ponto de embarque e desembarque.',
@@ -224,6 +293,50 @@ async function _acCarregarContainers() {
             .order('numero', { ascending: true });
         if (!error) _acContainers = data || [];
     } catch { _acContainers = []; }
+}
+
+async function _acCarregarAeroportos() {
+    if (_acAeroportos.length > 0) return;
+    try {
+        const lote = 1000;
+        let de = 0;
+        let todos = [];
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from('apoio_aeroportos')
+                .select('nome, codigo, pais')
+                .order('nome', { ascending: true })
+                .range(de, de + lote - 1);
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            todos = todos.concat(data);
+            if (data.length < lote) break;
+            de += lote;
+        }
+        _acAeroportos = todos;
+    } catch { _acAeroportos = []; }
+}
+
+async function _acCarregarPortos() {
+    if (_acPortos.length > 0) return;
+    try {
+        const lote = 1000;
+        let de = 0;
+        let todos = [];
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from('apoio_portos')
+                .select('nome, sigla, cidade, pais')
+                .order('nome', { ascending: true })
+                .range(de, de + lote - 1);
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            todos = todos.concat(data);
+            if (data.length < lote) break;
+            de += lote;
+        }
+        _acPortos = todos;
+    } catch { _acPortos = []; }
 }
 
 async function _acCarregarPaises() {
@@ -361,6 +474,114 @@ function iniciarAutocompletePaisDestino() {
     document.addEventListener('click', e => {
         if (!e.target.closest('.autocomplete-wrapper')) _acFechar(lista);
     });
+}
+
+// ========================================
+// AUTOCOMPLETE — AEROPORTOS
+// ========================================
+
+function _iniciarAcAeroporto(inputId, listaId) {
+    const input = document.getElementById(inputId);
+    const lista = document.getElementById(listaId);
+    if (!input || !lista) return;
+
+    async function mostrar() {
+        await _acCarregarAeroportos();
+        const q = input.value.trim().toLowerCase();
+        const filtrados = q
+            ? _acAeroportos.filter(a =>
+                (a.nome   || '').toLowerCase().includes(q) ||
+                (a.codigo || '').toLowerCase().includes(q) ||
+                (a.pais   || '').toLowerCase().includes(q))
+            : _acAeroportos;
+
+        lista.innerHTML = filtrados.slice(0, 50).map(a => `
+            <div class="autocomplete-item"
+                 data-nome="${(a.nome || '').replace(/"/g, '&quot;')}"
+                 data-codigo="${(a.codigo || '').replace(/"/g, '&quot;')}">
+                <span class="ac-nome">${a.nome}</span>
+                <span class="ac-fantasia">${a.codigo}${a.pais ? ' · ' + a.pais : ''}</span>
+            </div>`).join('');
+        _acPosicionar(input, lista);
+        lista.classList.add('aberta');
+    }
+
+    input.addEventListener('focus', mostrar);
+    input.addEventListener('input', mostrar);
+
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        input.value = `${item.getAttribute('data-nome')} (${item.getAttribute('data-codigo')})`;
+        _acFechar(lista);
+    });
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.autocomplete-wrapper')) _acFechar(lista);
+    });
+}
+
+function iniciarAutocompleteAeroportos() {
+    _iniciarAcAeroporto('proc-aeroporto-origem',  'proc-aeroporto-origem-lista');
+    _iniciarAcAeroporto('proc-aeroporto-destino', 'proc-aeroporto-destino-lista');
+    _iniciarAcAeroporto('prop-aeroporto-origem',  'prop-aeroporto-origem-lista');
+    _iniciarAcAeroporto('prop-aeroporto-destino', 'prop-aeroporto-destino-lista');
+}
+
+// ========================================
+// AUTOCOMPLETE — PORTOS
+// ========================================
+
+function _iniciarAcPorto(inputId, listaId) {
+    const input = document.getElementById(inputId);
+    const lista = document.getElementById(listaId);
+    if (!input || !lista) return;
+
+    async function mostrar() {
+        await _acCarregarPortos();
+        const q = input.value.trim().toLowerCase();
+        const filtrados = q
+            ? _acPortos.filter(p =>
+                (p.nome   || '').toLowerCase().includes(q) ||
+                (p.sigla  || '').toLowerCase().includes(q) ||
+                (p.cidade || '').toLowerCase().includes(q) ||
+                (p.pais   || '').toLowerCase().includes(q))
+            : _acPortos;
+
+        lista.innerHTML = filtrados.slice(0, 50).map(p => `
+            <div class="autocomplete-item"
+                 data-nome="${(p.nome  || '').replace(/"/g, '&quot;')}"
+                 data-sigla="${(p.sigla || '').replace(/"/g, '&quot;')}">
+                <span class="ac-nome">${p.nome}</span>
+                <span class="ac-fantasia">${p.sigla ? p.sigla + ' · ' : ''}${p.cidade ? p.cidade + ' · ' : ''}${p.pais || ''}</span>
+            </div>`).join('');
+        _acPosicionar(input, lista);
+        lista.classList.add('aberta');
+    }
+
+    input.addEventListener('focus', mostrar);
+    input.addEventListener('input', mostrar);
+
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        const sigla = item.getAttribute('data-sigla');
+        input.value = sigla
+            ? `${item.getAttribute('data-nome')} (${sigla})`
+            : item.getAttribute('data-nome');
+        _acFechar(lista);
+    });
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.autocomplete-wrapper')) _acFechar(lista);
+    });
+}
+
+function iniciarAutocompletePortos() {
+    _iniciarAcPorto('proc-porto-origem',  'proc-porto-origem-lista');
+    _iniciarAcPorto('proc-porto-destino', 'proc-porto-destino-lista');
+    _iniciarAcPorto('prop-porto-origem',  'prop-porto-origem-lista');
+    _iniciarAcPorto('prop-porto-destino', 'prop-porto-destino-lista');
 }
 
 // ========================================
@@ -1639,6 +1860,17 @@ document.addEventListener('DOMContentLoaded', function () {
     iniciarPaisEmpresa();
     iniciarMascaraCEP();
     empIniciarTags();
+    empContatoIniciar();
+    _carregarMoedas().then(moedas => {
+        const sel = document.getElementById('fin-rec-moeda');
+        if (!sel) return;
+        moedas.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m.codigo;
+            o.textContent = m.descricao || m.codigo;
+            sel.appendChild(o);
+        });
+    });
 
     // Processo
     aplicarMascaraDocumentoProcesso();
@@ -1655,9 +1887,13 @@ document.addEventListener('DOMContentLoaded', function () {
     iniciarDocs();
     iniciarIncotermModal();
     iniciarAutocompleteEmpresaDestino();
+    iniciarAutocompleteAeroportos();
+    iniciarAutocompletePortos();
     iniciarAutocompleteDestinoPais();
     iniciarCEPDestino();
     iniciarMascarasTransporte();
+    _carregarMoedas();
+    _carregarUnidades();
     carregarMoedasTransporte();
     iniciarTransportadoraPropria();
 
@@ -1674,6 +1910,8 @@ document.addEventListener('DOMContentLoaded', function () {
     iniciarAutocompletePaisDestinoProposta();
     iniciarAutocompletePropCliente();
     iniciarAutocompleteEmpresaDestinoProposta();
+    iniciarAutocompleteAeroportos();
+    iniciarAutocompletePortos();
     propIniciarItens();
 
     // Modal info
@@ -1773,6 +2011,34 @@ function _mostrarDropdownTransp(lista, nomeInput, cnpjInput) {
 }
 
 // ========================================
+// MOEDAS — CACHE COMPARTILHADO
+// ========================================
+
+async function _carregarMoedas() {
+    if (_acMoedas.length > 0) return;
+    try {
+        const { data } = await supabaseClient
+            .from('apoio_moedas')
+            .select('codigo, descricao')
+            .order('codigo', { ascending: true });
+        _acMoedas = data || [];
+    } catch { _acMoedas = []; }
+}
+
+// UNIDADES DE MEDIDA — CACHE COMPARTILHADO
+// ========================================
+
+async function _carregarUnidades() {
+    if (_acUnidades.length > 0) return;
+    try {
+        const { data } = await supabaseClient
+            .from('apoio_unidades_medida')
+            .select('unidade, descricao')
+            .order('unidade', { ascending: true });
+        _acUnidades = data || [];
+    } catch { _acUnidades = []; }
+}
+
 // MOEDAS — TRANSPORTE
 // ========================================
 
@@ -1782,26 +2048,18 @@ async function carregarMoedasTransporte() {
     const dropdown = document.getElementById('transp-frete-moeda-list');
     if (!display || !hidden || !dropdown) return;
 
-    let _moedas = [];
-
-    try {
-        const { data } = await supabaseClient
-            .from('moedas')
-            .select('codigo, descricao')
-            .order('descricao', { ascending: true });
-        _moedas = data || [];
-    } catch (_) {}
+    await _carregarMoedas();
 
     function mostrar(lista) {
         dropdown.innerHTML = '';
         if (!lista.length) { dropdown.style.display = 'none'; return; }
-        lista.slice(0, 3).forEach(m => {
+        lista.slice(0, 5).forEach(m => {
             const item = document.createElement('div');
             item.className   = 'autocomplete-item';
             item.textContent = m.descricao;
             item.addEventListener('mousedown', () => {
                 display.value  = m.descricao;
-                hidden.value   = m.codigo;
+                hidden.value   = m.descricao;
                 dropdown.style.display = 'none';
             });
             dropdown.appendChild(item);
@@ -1813,7 +2071,7 @@ async function carregarMoedasTransporte() {
         hidden.value = '';
         const q = this.value.trim().toLowerCase();
         if (!q) { dropdown.style.display = 'none'; return; }
-        mostrar(_moedas.filter(m =>
+        mostrar(_acMoedas.filter(m =>
             m.descricao?.toLowerCase().includes(q) || m.codigo?.toLowerCase().includes(q)
         ));
     });
@@ -1844,21 +2102,18 @@ function iniciarResumoProposta() {
         const incoterm = document.getElementById('prop-incoterm')?.value            || '—';
         const modalEl  = document.getElementById('prop-modal');
         const modal    = modalEl?.options[modalEl.selectedIndex]?.text              || '—';
-        const statusEl = document.getElementById('prop-status');
-        const status   = statusEl?.options[statusEl.selectedIndex]?.text            || '—';
         const empDest  = document.getElementById('prop-emp-dest-busca')?.value.trim()
                       || document.getElementById('prop-emp-dest-razao')?.value.trim()
                       || '—';
 
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        set('prop-resumo-empresa',     empresa);
         set('prop-resumo-tipo',        tipo === 'Selecione...' ? '—' : tipo);
+        set('prop-resumo-empresa',     empresa);
         set('prop-resumo-emp-destino', empDest);
         set('prop-resumo-origem',      origem);
         set('prop-resumo-destino',     destino);
-        set('prop-resumo-incoterm',    incoterm === '' ? '—' : incoterm);
         set('prop-resumo-modal',       modal === 'Selecione...' ? '—' : modal);
-        set('prop-resumo-status',      status === 'Selecione...' ? '—' : status);
+        set('prop-resumo-incoterm',    incoterm === '' ? '—' : incoterm);
     }
 
     document.querySelectorAll('input[name="prop-emissor-tipo"]').forEach(r => r.addEventListener('change', atualizar));
@@ -1868,7 +2123,6 @@ function iniciarResumoProposta() {
     document.getElementById('prop-destino-pais')?.addEventListener('input', atualizar);
     document.getElementById('prop-incoterm')?.addEventListener('change', atualizar);
     document.getElementById('prop-modal')?.addEventListener('change', atualizar);
-    document.getElementById('prop-status')?.addEventListener('change', atualizar);
     document.getElementById('prop-emp-dest-busca')?.addEventListener('input', atualizar);
     document.getElementById('prop-emp-dest-razao')?.addEventListener('input', atualizar);
     document.getElementById('prop-emp-dest-lista')?.addEventListener('mousedown', () => setTimeout(atualizar, 50));
@@ -2209,19 +2463,23 @@ async function _propPreencherPaisOrigem(valorPais) {
 
     paisInput.value = pais ? pais.descricao : valorPais;
     if (paisCod) paisCod.value = pais ? pais.codigo : valorPais;
-    propGerarCodigo();
 }
 
-function propGerarCodigo() {
-    const agora  = new Date();
-    const mes    = String(agora.getMonth() + 1).padStart(2, '0');
-    const ano    = agora.getFullYear();
-    const orig   = (document.getElementById('prop-origem-pais-codigo')?.value || '').toUpperCase().slice(0, 2) || '--';
-    const dest   = (document.getElementById('prop-destino-pais-codigo')?.value  || '').toUpperCase().slice(0, 2) || '--';
-    const codigo = `PROP${mes}${ano}${orig}${dest}`;
+async function propGerarCodigo() {
+    const ano    = new Date().getFullYear();
+    let   seq    = 1;
+    try {
+        const { count } = await supabaseClient
+            .from('propostas')
+            .select('*', { count: 'exact', head: true })
+            .like('codigo', `PROPO${ano}%`);
+        if (count != null) seq = count + 1;
+    } catch { /* tabela ainda não existe — usa seq 1 */ }
+
+    const codigo  = `PROPO${ano}${String(seq).padStart(4, '0')}`;
     const hidden  = document.getElementById('prop-codigo');
     const display = document.getElementById('prop-codigo-display');
-    if (hidden)  hidden.value       = codigo;
+    if (hidden)  hidden.value        = codigo;
     if (display) display.textContent = codigo;
 }
 
@@ -2258,7 +2516,6 @@ function iniciarAutocompletePaisOrigemProposta() {
         input.value = item.getAttribute('data-nome');
         if (codigo) codigo.value = item.getAttribute('data-codigo');
         _acFechar(lista);
-        propGerarCodigo();
     });
     document.addEventListener('click', e => { if (!e.target.closest('.autocomplete-wrapper')) _acFechar(lista); });
 }
@@ -2305,7 +2562,6 @@ function iniciarAutocompletePaisDestinoProposta() {
         if (codigo) codigo.value = item.dataset.codigo || '';
         lista.classList.remove('aberta');
         atualizarCEP();
-        propGerarCodigo();
     });
     document.addEventListener('click', e => { if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta'); });
     input.addEventListener('blur', () => { setTimeout(() => lista.classList.remove('aberta'), 150); atualizarCEP(); });
@@ -2354,13 +2610,16 @@ function iniciarAutocompletePropCliente() {
 
 let _propItens = [];
 
-function propIniciarItens() {
+async function propIniciarItens() {
     if (!document.getElementById('prop-itens-body')) return;
-    propAdicionarItem();
+    await propAdicionarItem();
 }
 
-function propAdicionarItem() {
-    _propItens.push({ produto: '', qtd: 1, unidade: 'un', preco: 0, moeda: 'USD' });
+async function propAdicionarItem() {
+    await Promise.all([_carregarMoedas(), _carregarUnidades()]);
+    const _moedaDefault   = _acMoedas.length   > 0 ? _acMoedas[0].descricao   : '';
+    const _unidadeDefault = _acUnidades.length  > 0 ? _acUnidades[0].unidade   : 'un';
+    _propItens.push({ produto: '', qtd: 1, unidade: _unidadeDefault, preco: 0, moeda: _moedaDefault });
     propRenderizarItens();
 }
 
@@ -2375,46 +2634,67 @@ function propAtualizarItem(idx, campo, valor) {
     propRecalcularTotais();
 }
 
+function propMascaraPreco(input, idx) {
+    let raw = input.value.replace(/\D/g, '');
+    if (!raw) { propAtualizarItem(idx, 'preco', 0); return; }
+    const num = parseInt(raw, 10) / 100;
+    input.value = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    propAtualizarItem(idx, 'preco', num);
+}
+
 function propRenderizarItens() {
     const tbody = document.getElementById('prop-itens-body');
     if (!tbody) return;
 
-    const unidades = ['un','kg','g','l','ml','m','m2','m3','cx','pc','par'];
-    const moedas   = ['USD','EUR','BRL','GBP','CNY'];
+    const unidades = _acUnidades.length > 0
+        ? _acUnidades
+        : [{unidade:'UN',descricao:'Unidade'},{unidade:'KG',descricao:'Quilograma'},{unidade:'CX',descricao:'Caixa'}];
+    const moedas   = _acMoedas.length > 0
+        ? _acMoedas
+        : [{descricao:'Dólar Americano'},{descricao:'Euro'},{descricao:'Real Brasileiro'}];
 
     tbody.innerHTML = _propItens.map((item, i) => `
-        <tr>
-            <td class="col-num">${i + 1}</td>
-            <td class="col-produto">
+        <div class="prop-item-card">
+            <div class="prop-item-top">
+                <span class="prop-item-badge">${i + 1}</span>
                 <input type="text" class="prop-item-input" value="${(item.produto || '').replace(/"/g,'&quot;')}"
                     oninput="propAtualizarItem(${i}, 'produto', this.value)"
                     placeholder="Produto ou descrição...">
-            </td>
-            <td class="col-qtd">
-                <input type="number" class="prop-item-input prop-item-num" min="0" step="0.001" value="${item.qtd}"
-                    oninput="propAtualizarItem(${i}, 'qtd', parseFloat(this.value)||0)">
-            </td>
-            <td class="col-un">
-                <select class="prop-item-select" onchange="propAtualizarItem(${i}, 'unidade', this.value)">
-                    ${unidades.map(u => `<option value="${u}"${item.unidade===u?' selected':''}>${u.toUpperCase()}</option>`).join('')}
-                </select>
-            </td>
-            <td class="col-preco">
-                <input type="number" class="prop-item-input prop-item-num" min="0" step="0.01" value="${item.preco}"
-                    oninput="propAtualizarItem(${i}, 'preco', parseFloat(this.value)||0)">
-            </td>
-            <td class="col-moeda">
-                <select class="prop-item-select" onchange="propAtualizarItem(${i}, 'moeda', this.value)">
-                    ${moedas.map(m => `<option value="${m}"${item.moeda===m?' selected':''}>${m}</option>`).join('')}
-                </select>
-            </td>
-            <td class="col-total" id="prop-item-total-${i}">${propFormatarValor(item.qtd * item.preco, item.moeda)}</td>
-            <td class="col-acao">
                 <button type="button" class="prop-item-del" onclick="propRemoverItem(${i})" title="Remover">
                     <i class="fa-solid fa-trash"></i>
                 </button>
-            </td>
-        </tr>`).join('');
+            </div>
+            <div class="prop-item-bottom">
+                <div class="prop-item-field prop-item-field--qtd">
+                    <label>Qtd</label>
+                    <input type="number" class="prop-item-input prop-item-num" min="0" step="1" value="${item.qtd}"
+                        oninput="propAtualizarItem(${i}, 'qtd', parseInt(this.value)||0)">
+                </div>
+                <div class="prop-item-field prop-item-field--un">
+                    <label>Un.</label>
+                    <select class="prop-item-select" onchange="propAtualizarItem(${i}, 'unidade', this.value)">
+                        ${unidades.map(u => `<option value="${u.unidade}"${item.unidade===u.unidade?' selected':''}>${u.unidade}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="prop-item-field prop-item-field--preco">
+                    <label>Preço Unit.</label>
+                    <input type="text" inputmode="decimal" class="prop-item-input prop-item-num"
+                        value="${item.preco ? item.preco.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : ''}"
+                        placeholder="0,00"
+                        oninput="propMascaraPreco(this, ${i})">
+                </div>
+                <div class="prop-item-field prop-item-field--moeda">
+                    <label>Moeda</label>
+                    <select class="prop-item-select" onchange="propAtualizarItem(${i}, 'moeda', this.value)">
+                        ${moedas.map(m => `<option value="${m.descricao}"${item.moeda===m.descricao?' selected':''}>${m.descricao}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="prop-item-field prop-item-field--total">
+                    <label>Total</label>
+                    <span class="prop-item-total-val" id="prop-item-total-${i}">${propFormatarValor(item.qtd * item.preco, item.moeda)}</span>
+                </div>
+            </div>
+        </div>`).join('');
 
     propRecalcularTotais();
 }
