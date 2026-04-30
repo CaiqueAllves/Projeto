@@ -2,6 +2,70 @@
    CADASTRO DE EMPRESAS - ESTILO
 ======================================== */
 
+.form-section-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    padding: 4px 0 2px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.info-balao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    color: #6366f1;
+    cursor: default;
+    position: relative;
+    vertical-align: middle;
+    font-size: 13px;
+}
+.info-balao::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    padding: 8px 12px;
+    border-radius: 8px;
+    width: 260px;
+    white-space: normal;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 200;
+}
+.info-balao::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 3px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1e293b;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 200;
+}
+.info-balao:hover::after,
+.info-balao:hover::before {
+    opacity: 1;
+}
+
 /* ========================================
    LAYOUT ALTURA TOTAL
 ======================================== */
