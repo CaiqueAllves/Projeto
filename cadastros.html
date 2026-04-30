@@ -84,7 +84,7 @@
                     <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
                     <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
                     <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
-                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
                     <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
                     <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
                     <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
@@ -201,6 +201,10 @@
                                 <label>Tipo <span class="required">*</span></label>
                                 <div class="checkbox-group">
                                     <div class="checkbox-item">
+                                        <input type="checkbox" id="tipoFabricante" name="tipo" value="fabricante">
+                                        <label for="tipoFabricante">Fabricante</label>
+                                    </div>
+                                    <div class="checkbox-item">
                                         <input type="checkbox" id="tipoCliente" name="tipo" value="cliente">
                                         <label for="tipoCliente">Cliente</label>
                                     </div>
@@ -208,28 +212,44 @@
                                         <input type="checkbox" id="tipoFornecedor" name="tipo" value="fornecedor">
                                         <label for="tipoFornecedor">Fornecedor</label>
                                     </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="tipoTransportadora" name="tipo" value="transportadora">
+                                        <label for="tipoTransportadora">Transportadora</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="tipoRemetente" name="tipo" value="remetente">
+                                        <label for="tipoRemetente">Remetente</label>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="tipoCadastro">Cadastro <span class="required">*</span></label>
+                                <label for="tipoCadastro">
+                                    Identificação da Empresa <span class="required">*</span>
+                                    <span class="info-balao" data-tooltip="Selecione o tipo de documento de identificação fiscal da empresa: CNPJ para empresas brasileiras, CPF para pessoas físicas, ou TIN/EIN/VAT para empresas estrangeiras.">
+                                        <i class="fa-solid fa-circle-info"></i>
+                                    </span>
+                                </label>
                                 <select id="tipoCadastro" required onchange="alterarTipoCadastro()">
                                     <option value="">Selecione...</option>
                                     <option value="cnpj">CNPJ</option>
                                     <option value="cpf">CPF</option>
+                                    <option value="tin">TIN</option>
+                                    <option value="ein">EIN</option>
+                                    <option value="vat">VAT</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
                                 <label for="cadastro">
-                                    <span id="labelCadastro">CNPJ/CPF</span> <span class="required">*</span>
+                                    <span id="labelCadastro">Número</span> <span class="required">*</span>
                                 </label>
-                                <input type="text" id="cadastro" required placeholder="Selecione o tipo de cadastro primeiro" disabled />
+                                <input type="text" id="cadastro" required placeholder="Selecione o tipo de identificação primeiro" disabled />
                             </div>
 
                             <div class="form-group full-width">
-                                <label for="nomeEmpresa">Nome da Empresa <span class="required">*</span></label>
-                                <input type="text" id="nomeEmpresa" maxlength="100" required placeholder="Digite o nome da empresa" />
+                                <label for="nomeEmpresa">Razão Social <span class="required">*</span></label>
+                                <input type="text" id="nomeEmpresa" maxlength="100" required placeholder="Digite a razão social da empresa" />
                                 <small class="char-counter">0/100 caracteres</small>
                             </div>
 
@@ -238,19 +258,12 @@
                                 <input type="text" id="nomeFantasia" maxlength="50" placeholder="Digite o nome fantasia (opcional)" />
                                 <small class="char-counter">0/50 caracteres</small>
                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- SEÇÃO: ENDEREÇO -->
-                <div class="form-section">
-                    <h3 class="section-title" onclick="toggleSection(this)">
-                        <i class="fa-solid fa-map-marker-alt"></i>
-                        <span>Endereço</span>
-                        <i class="fa-solid fa-chevron-down section-arrow"></i>
-                    </h3>
-                    <div class="section-content" style="display: none;">
-                        <div class="form-grid">
+                            <!-- DIVISOR ENDEREÇO -->
+                            <div class="form-group full-width">
+                                <div class="form-section-divider"><i class="fa-solid fa-map-marker-alt"></i> Endereço</div>
+                            </div>
+
                             <!-- PAÍS -->
                             <div class="form-group">
                                 <label for="pais">País <span class="required">*</span></label>
@@ -277,7 +290,7 @@
 
                             <!-- ESTADO -->
                             <div class="form-group">
-                                <label for="estado">Estado/Distrito/Área <span class="required">*</span></label>
+                                <label for="estado">Estado <span class="required">*</span></label>
                                 <input type="text" id="estado" required placeholder="Ex: São Paulo" />
                             </div>
 
@@ -313,8 +326,8 @@
 
                             <!-- COMPLEMENTO -->
                             <div class="form-group">
-                                <label for="complemento">Complemento</label>
-                                <input type="text" id="complemento" placeholder="Apto, Sala, Bloco... (opcional)" />
+                                <label for="complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
+                                <input type="text" id="complemento" placeholder="Apto, Sala, Bloco..." />
                             </div>
                         </div>
                     </div>
