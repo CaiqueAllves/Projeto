@@ -211,7 +211,7 @@
 
                                     <div class="form-group">
                                         <label for="emp-tipo-cadastro">Identificação da Empresa <span class="required">*</span></label>
-                                        <select id="emp-tipo-cadastro" name="tipo_cadastro">
+                                        <select id="emp-tipo-cadastro" name="tipo_cadastro" required>
                                             <option value="">Selecione...</option>
                                             <option value="cnpj">CNPJ</option>
                                             <option value="cpf">CPF</option>
@@ -225,22 +225,22 @@
                                                 <i class="fa-solid fa-circle-info"></i>
                                             </span>
                                         </label>
-                                        <input type="text" id="emp-documento" name="documento" placeholder="Selecione o tipo primeiro">
+                                        <input type="text" id="emp-documento" name="documento" placeholder="Selecione o tipo primeiro" inputmode="numeric" required>
                                     </div>
 
                                     <div class="form-group">
                                         <label for="emp-nome">Razão Social <span class="required">*</span></label>
-                                        <input type="text" id="emp-nome" name="nome_empresa" placeholder="Razão Social">
+                                        <input type="text" id="emp-nome" name="nome_empresa" placeholder="Razão Social" required>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-fantasia">Nome Fantasia</label>
-                                        <input type="text" id="emp-fantasia" name="nome_fantasia" placeholder="Nome Fantasia">
+                                        <label for="emp-fantasia">Nome Fantasia <span class="required">*</span></label>
+                                        <input type="text" id="emp-fantasia" name="nome_fantasia" placeholder="Nome Fantasia" required>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-ie">Inscrição Estadual</label>
-                                        <input type="text" id="emp-ie" name="inscricao_estadual" placeholder="000.000.000.000">
+                                        <label for="emp-ie">Inscrição Estadual <span class="required">*</span></label>
+                                        <input type="text" id="emp-ie" name="inscricao_estadual" placeholder="000000000000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" required>
                                     </div>
 
                                     <div class="form-group">
@@ -249,52 +249,52 @@
                                                 <i class="fa-solid fa-plus" id="suframa-btn-icon"></i> SUFRAMA (Zona Franca)
                                             </button>
                                         </label>
-                                        <input type="text" id="emp-suframa" name="suframa" placeholder="00.000.000-0" maxlength="11" id="suframa-campo" style="display:none;">
+                                        <input type="text" id="emp-suframa" name="suframa" placeholder="00000000" maxlength="11" style="display:none;" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-pais">País</label>
+                                        <label for="emp-pais">País <span class="required">*</span></label>
                                         <div class="autocomplete-wrapper">
-                                            <input type="text" id="emp-pais" name="pais" placeholder="Digite para filtrar países..." autocomplete="off">
+                                            <input type="text" id="emp-pais" name="pais" placeholder="Digite para filtrar países..." autocomplete="off" required>
                                             <input type="hidden" id="emp-pais-codigo">
                                             <div class="autocomplete-list" id="emp-pais-lista"></div>
                                         </div>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-cep">CEP</label>
-                                        <input type="text" id="emp-cep" name="cep" placeholder="00000-000">
+                                        <label for="emp-cep">CEP <span class="required">*</span></label>
+                                        <input type="text" id="emp-cep" name="cep" placeholder="00000-000" required>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-estado">Estado</label>
-                                        <input type="text" id="emp-estado" name="estado" placeholder="Estado ou Província">
+                                        <label for="emp-estado">Estado <span class="required">*</span></label>
+                                        <input type="text" id="emp-estado" name="estado" placeholder="Estado ou Província" required>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-cidade">Cidade</label>
-                                        <input type="text" id="emp-cidade" name="cidade" placeholder="Cidade">
+                                        <label for="emp-cidade">Cidade <span class="required">*</span></label>
+                                        <input type="text" id="emp-cidade" name="cidade" placeholder="Cidade" required>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-bairro">Bairro</label>
-                                        <input type="text" id="emp-bairro" name="bairro" placeholder="Bairro">
+                                        <label for="emp-bairro">Bairro <span class="required">*</span></label>
+                                        <input type="text" id="emp-bairro" name="bairro" placeholder="Bairro" required>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="emp-endereco">Endereço</label>
-                                        <input type="text" id="emp-endereco" name="endereco" placeholder="Rua, Av., etc.">
+                                        <label for="emp-endereco">Endereço <span class="required">*</span></label>
+                                        <input type="text" id="emp-endereco" name="endereco" placeholder="Rua, Av., etc." required>
                                     </div>
 
                                     <div class="form-group">
                                         <div class="numero-label-row">
-                                            <label for="emp-numero">Número</label>
+                                            <label for="emp-numero">Número <span class="required">*</span></label>
                                             <label class="sn-toggle">
                                                 <input type="checkbox" name="sem_numero" onchange="const n=document.getElementById('emp-numero'); n.disabled=this.checked; n.value=this.checked?'S/N':''; n.placeholder=this.checked?'':'Nº';">
                                                 <span>Sem Número</span>
                                             </label>
                                         </div>
-                                        <input type="text" id="emp-numero" name="numero" placeholder="Nº">
+                                        <input type="text" id="emp-numero" name="numero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')" required>
                                     </div>
 
                                     <div class="form-group full-width">
@@ -392,12 +392,12 @@
 
                                         <div class="form-group">
                                             <label for="fin-pag-agencia">Agência</label>
-                                            <input type="text" id="fin-pag-agencia" name="fin_pag_agencia" placeholder="0000">
+                                            <input type="text" id="fin-pag-agencia" name="fin_pag_agencia" placeholder="0000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                         </div>
 
                                         <div class="form-group">
                                             <label for="fin-pag-conta">Conta</label>
-                                            <input type="text" id="fin-pag-conta" name="fin_pag_conta" placeholder="00000-0">
+                                            <input type="text" id="fin-pag-conta" name="fin_pag_conta" placeholder="000000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                         </div>
 
                                     </div>
@@ -446,12 +446,12 @@
 
                                         <div class="form-group">
                                             <label for="fin-rec-agencia">Agência</label>
-                                            <input type="text" id="fin-rec-agencia" name="fin_rec_agencia" placeholder="0000">
+                                            <input type="text" id="fin-rec-agencia" name="fin_rec_agencia" placeholder="0000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                         </div>
 
                                         <div class="form-group">
                                             <label for="fin-rec-conta">Conta</label>
-                                            <input type="text" id="fin-rec-conta" name="fin_rec_conta" placeholder="00000-0">
+                                            <input type="text" id="fin-rec-conta" name="fin_rec_conta" placeholder="000000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                         </div>
 
                                     </div>
