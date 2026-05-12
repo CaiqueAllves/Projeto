@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -85,7 +85,7 @@
                     <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
                     <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
                     <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
-                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
                     <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
                     <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
                     <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
@@ -212,6 +212,12 @@
                         </div>
                     </div>
 
+                    <!-- Plano (admin only) -->
+                    <div class="sidebar-card" id="sidePlanoCard" style="display:none;">
+                        <div class="sidebar-section-titulo">Plano Atual</div>
+                        <div id="sidePlanoInfo"></div>
+                    </div>
+
                     <!-- Segurança resumo -->
                     <div class="sidebar-card">
                         <div class="sidebar-section-titulo">Segurança da Conta</div>
@@ -328,6 +334,9 @@
                                     <p id="empresaSubtitulo">Informações da empresa vinculada à sua conta.</p>
                                 </div>
                             </div>
+                            <button class="btn-editar-empresa" id="btnEditarEmpresa" onclick="abrirEditarEmpresa()" style="display:none;">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
                         </div>
                         <div class="section-card-body" id="empresaBody">
                             <div class="empresa-info-grid" id="empresaInfoGrid">
@@ -350,7 +359,7 @@
                             </div>
                             <span class="plano-badge" id="planoBadge">—</span>
                         </div>
-                        <div class="section-card-body">
+                        <div class="section-card-body" id="planoBody">
                             <div id="planoGrid"></div>
                             <div id="planoUso"></div>
                             <div id="planoUpgrade"></div>
@@ -485,8 +494,150 @@
             </div>
             <!-- fim perfil-layout -->
 
+            <!-- MODAL EDITAR EMPRESA -->
+            <div class="modal-editar-overlay" id="modalEditarEmpresa" style="display:none;" onclick="fecharEditarEmpresa(event)">
+                <div class="modal-editar-box">
+                    <div class="modal-editar-header">
+                        <div class="modal-editar-titulo">
+                            <i class="fa-solid fa-building"></i> Editar Dados da Empresa
+                        </div>
+                        <button class="modal-editar-fechar" onclick="fecharEditarEmpresaBtn()">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="modal-editar-body">
+                        <div class="perfil-form-grid">
+
+                            <!-- Identificação | Número de Identificação -->
+                            <div class="perfil-form-group">
+                                <label>Identificação da Empresa <span class="required">*</span></label>
+                                <select id="editEmpTipoCadastro" onchange="editEmpAlterarTipo()">
+                                    <option value="">Selecione...</option>
+                                    <option value="cnpj">CNPJ</option>
+                                    <option value="cpf">CPF</option>
+                                </select>
+                            </div>
+                            <div class="perfil-form-group">
+                                <label>Número de Identificação <span class="required">*</span></label>
+                                <input type="text" id="editEmpDocumento" placeholder="Selecione o tipo primeiro" disabled maxlength="18" oninput="this.value=_mascaraDocBR(this.value)">
+                            </div>
+
+                            <!-- IE | IM | SUFRAMA -->
+                            <div class="perfil-form-group-row3">
+                                <div class="perfil-form-group">
+                                    <label>Inscrição Estadual</label>
+                                    <input type="text" id="editEmpIE" placeholder="000.000.00-0" maxlength="15" inputmode="numeric" oninput="this.value=_mascaraIE(this.value)">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Inscrição Municipal</label>
+                                    <input type="text" id="editEmpIM" placeholder="000000-0" maxlength="8" inputmode="numeric" oninput="this.value=_mascaraIM(this.value)">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>SUFRAMA <span class="label-opcional">(se houver)</span></label>
+                                    <input type="text" id="editEmpSuframa" placeholder="00000000" maxlength="11" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                                </div>
+                            </div>
+
+                            <!-- Razão Social | Nome Fantasia -->
+                            <div class="perfil-form-group">
+                                <label>Razão Social <span class="required">*</span></label>
+                                <input type="text" id="editEmpRazaoSocial" placeholder="Nome da Empresa">
+                            </div>
+                            <div class="perfil-form-group">
+                                <label>Nome Fantasia <span class="label-opcional">(se houver)</span></label>
+                                <input type="text" id="editEmpNomeFantasia" placeholder="Nome comercial">
+                            </div>
+
+                            <!-- CEP | Estado | Cidade -->
+                            <div class="perfil-form-group-row3">
+                                <div class="perfil-form-group">
+                                    <label>CEP</label>
+                                    <input type="text" id="editEmpCep" placeholder="00000-000" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'').replace(/^(\d{5})(\d)/,'$1-$2')" onblur="editEmpBuscarCep()">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Estado</label>
+                                    <input type="text" id="editEmpEstado" placeholder="Estado">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Cidade</label>
+                                    <input type="text" id="editEmpCidade" placeholder="Cidade">
+                                </div>
+                            </div>
+
+                            <!-- Endereço | Bairro | Número | Complemento -->
+                            <div class="perfil-form-group-row4">
+                                <div class="perfil-form-group">
+                                    <label>Endereço</label>
+                                    <input type="text" id="editEmpEndereco" placeholder="Rua, Av., etc.">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Bairro</label>
+                                    <input type="text" id="editEmpBairro" placeholder="Bairro">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Número</label>
+                                    <div class="input-com-sn">
+                                        <input type="text" id="editEmpNumero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')">
+                                        <span class="sn-toggle-inner" onclick="const n=document.getElementById('editEmpNumero');this.classList.toggle('ativo');const a=this.classList.contains('ativo');n.disabled=a;n.value=a?'S/N':'';n.placeholder=a?'':'Nº';">S/N</span>
+                                    </div>
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Complemento <span class="label-opcional">(opcional)</span></label>
+                                    <input type="text" id="editEmpComplemento" placeholder="Sala, Andar, Bloco...">
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- DOCUMENTOS -->
+                        <div class="modal-docs-divider">
+                            <i class="fa-solid fa-file-arrow-up"></i>
+                            <span>Documentos da Empresa</span>
+                        </div>
+
+                        <div class="upload-doc-zone" id="uploadDocZone"
+                             onclick="document.getElementById('inputDocEmpresa').click()"
+                             ondragover="uploadDocDragOver(event)"
+                             ondragleave="uploadDocDragLeave(event)"
+                             ondrop="uploadDocDrop(event)">
+                            <i class="fa-solid fa-cloud-arrow-up upload-doc-icone"></i>
+                            <div class="upload-doc-texto">
+                                <strong>Clique para selecionar</strong> ou arraste aqui
+                                <span class="upload-doc-hint">Aceita PDF e CSV — máximo 10 MB por arquivo</span>
+                            </div>
+                        </div>
+                        <input type="file" id="inputDocEmpresa"
+                               accept=".pdf,.csv,application/pdf,text/csv"
+                               multiple style="display:none;"
+                               onchange="uploadDocEmpresa(this.files)">
+
+                        <!-- Progresso -->
+                        <div class="upload-doc-prog-wrap" id="uploadDocProgresso" style="display:none;">
+                            <div class="upload-doc-prog-barra-fundo">
+                                <div class="upload-doc-prog-barra" id="uploadDocBarraInner"></div>
+                            </div>
+                            <div class="upload-doc-prog-texto" id="uploadDocProgTexto">Enviando...</div>
+                        </div>
+
+                        <!-- Lista de documentos -->
+                        <div class="doc-emp-lista" id="docEmpLista">
+                            <div class="doc-emp-vazio">Nenhum documento enviado ainda.</div>
+                        </div>
+                    </div>
+                    <div class="modal-editar-footer">
+                        <button class="btn-cancelar-codigo" onclick="fecharEditarEmpresaBtn()">
+                            Cancelar
+                        </button>
+                        <button class="btn-salvar" id="btnSalvarEmpresaModal" onclick="salvarEdicaoEmpresa()">
+                            <i class="fa-solid fa-floppy-disk"></i> Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <footer class="dashboard-footer">
-                <p>© 2026 Marpex - Todos os direitos reservados</p>
+                <span>© 2026 Marpex — Todos os direitos reservados</span>
+                <span class="footer-version">v3.0</span>
             </footer>
 
         </div>

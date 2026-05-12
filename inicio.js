@@ -116,7 +116,7 @@ function mostrarDataAtual() {
 // CARREGAR ESTATÍSTICAS DOS CADASTROS
 // ========================================
 
-function carregarEstatisticas(empresas) {
+async function carregarEstatisticas(empresas) {
     const arquivos = JSON.parse(localStorage.getItem('arquivosUpload') || '[]');
 
     const totalEmpresas = empresas.length;
@@ -141,7 +141,15 @@ function carregarEstatisticas(empresas) {
     document.getElementById('badgeArquivos').textContent =
         arquivos.length > 0 ? `${arquivos.length} arquivo${arquivos.length > 1 ? 's' : ''} enviado${arquivos.length > 1 ? 's' : ''}` : 'Nenhum arquivo';
 
-    console.log('Estatísticas carregadas:', { totalEmpresas, totalClientes, totalFornecedores });
+    try {
+        const usuario = obterUsuarioLogado();
+        const { count } = await supabaseClient
+            .from('produtos')
+            .select('*', { count: 'exact', head: true })
+            .eq('empresa_proprietaria_id', usuario.empresa_id);
+        const el = document.getElementById('totalProdutos');
+        if (el) el.textContent = count || 0;
+    } catch { /* silencioso */ }
 }
 
 // ========================================
@@ -153,17 +161,7 @@ function carregarTarefas() {
     if (tarefasSalvas) {
         tarefas = JSON.parse(tarefasSalvas);
     } else {
-        // Tarefas de exemplo
-        tarefas = [
-            {
-                id: Date.now(),
-                titulo: 'Revisar cadastros pendentes',
-                prioridade: 'media',
-                concluida: false,
-                data: new Date().toISOString()
-            }
-        ];
-        salvarTarefas();
+        tarefas = [];
     }
 }
 
@@ -217,15 +215,10 @@ function renderizarTarefas() {
     const badge = document.getElementById('tarefasCountBadge');
     if (badge) badge.textContent = totalPendente || '';
 
-    if (tarefas.length === 0 && pendencias.length === 0) {
-        container.innerHTML = `
-            <div class="tasks-empty">
-                <i class="fa-solid fa-clipboard-check"></i>
-                <p>Nenhuma tarefa ou pendência encontrada.</p>
-            </div>
-        `;
-        return;
-    }
+    const section = document.getElementById('tasks-section');
+    if (section) section.style.display = (tarefas.length === 0 && pendencias.length === 0) ? 'none' : '';
+
+    if (tarefas.length === 0 && pendencias.length === 0) return;
 
     container.innerHTML = '';
 
@@ -452,15 +445,10 @@ function carregarAtividades(empresas) {
     // Limitar a 10 atividades
     const atividadesRecentes = atividadesFiltradas.slice(0, 10);
     
-    if (atividadesRecentes.length === 0) {
-        container.innerHTML = `
-            <div class="tasks-empty">
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                <p>Nenhuma atividade recente.</p>
-            </div>
-        `;
-        return;
-    }
+    const section = document.getElementById('recent-section');
+    if (section) section.style.display = atividadesRecentes.length === 0 ? 'none' : '';
+
+    if (atividadesRecentes.length === 0) return;
     
     container.innerHTML = '';
     
@@ -495,10 +483,8 @@ function formatarDataAtividade(dataISO) {
 // ========================================
 
 function inicializarGraficos(empresas) {
-    const arquivos = JSON.parse(localStorage.getItem('arquivosUpload') || '[]');
-
     criarGraficoTipos(empresas);
-    criarGraficoUploads(arquivos);
+    criarGraficoCadastros(empresas);
     criarGraficoEstados(empresas);
 }
 
@@ -533,7 +519,64 @@ function criarGraficoTipos(empresas) {
     });
 }
 
-// Gráfico de Uploads por Mês
+// Gráfico de Novos Cadastros por Mês
+function criarGraficoCadastros(empresas) {
+    const ctx = document.getElementById('chartCadastros');
+    if (!ctx) return;
+
+    const hoje = new Date();
+    const meses = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() - (5 - i), 1);
+        return {
+            key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+            label: d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+            count: 0
+        };
+    });
+
+    empresas.forEach(e => {
+        const d = new Date(e.created_at);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const mes = meses.find(m => m.key === key);
+        if (mes) mes.count++;
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: meses.map(m => m.label),
+            datasets: [{
+                data: meses.map(m => m.count),
+                backgroundColor: 'rgba(34,197,94,0.12)',
+                borderColor: '#22c55e',
+                borderWidth: 2,
+                borderRadius: 6,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    titleColor: '#f8fafc',
+                    bodyColor: '#94a3b8',
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: { label: c => ` ${c.parsed.y} cadastro${c.parsed.y !== 1 ? 's' : ''}` }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } } },
+                y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f8fafc' } }
+            }
+        }
+    });
+}
+
+// Gráfico de Uploads por Mês (legado — mantido para referência)
 function criarGraficoUploads(arquivos) {
     const ctx = document.getElementById('chartUploads');
     if (!ctx) return;
@@ -595,10 +638,10 @@ function criarGraficoEstados(empresas) {
         estados[estado] = (estados[estado] || 0) + 1;
     });
     
-    // Ordenar e pegar top 10
+    // Ordenar e pegar top 8
     const estadosOrdenados = Object.entries(estados)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
+        .slice(0, 8);
     
     const labels = estadosOrdenados.map(e => e[0]);
     const valores = estadosOrdenados.map(e => e[1]);

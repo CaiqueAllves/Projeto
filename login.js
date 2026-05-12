@@ -118,6 +118,46 @@ function enviarRecuperacao() {
     document.getElementById('emailRecuperar').value = '';
 }
 
+// Máscaras e tipo do documento da empresa (cadastro)
+function cadAlterarTipoDoc() {
+    const tipo  = document.getElementById('tipoDocEmpresa')?.value;
+    const input = document.getElementById('docEmpresa');
+    if (!input) return;
+    input.disabled = !tipo;
+    input.value = '';
+    if (tipo === 'cnpj') {
+        input.placeholder = '00.000.000/0000-00';
+        input.maxLength = 18;
+    } else if (tipo === 'cpf') {
+        input.placeholder = '000.000.000-00';
+        input.maxLength = 14;
+    } else {
+        input.placeholder = 'Selecione o tipo primeiro';
+        input.maxLength = 18;
+    }
+}
+
+function cadMascaraDoc(valor) {
+    const d    = valor.replace(/\D/g, '');
+    const tipo = document.getElementById('tipoDocEmpresa')?.value;
+    if (tipo === 'cpf') {
+        const n = d.slice(0, 11);
+        let o = n.slice(0, 3);
+        if (n.length > 3) o += '.' + n.slice(3, 6);
+        if (n.length > 6) o += '.' + n.slice(6, 9);
+        if (n.length > 9) o += '-' + n.slice(9, 11);
+        return o;
+    } else {
+        const n = d.slice(0, 14);
+        let o = n.slice(0, 2);
+        if (n.length > 2)  o += '.' + n.slice(2, 5);
+        if (n.length > 5)  o += '.' + n.slice(5, 8);
+        if (n.length > 8)  o += '/' + n.slice(8, 12);
+        if (n.length > 12) o += '-' + n.slice(12, 14);
+        return o;
+    }
+}
+
 // Realizar cadastro
 async function realizarCadastro() {
     const btnCriar = document.querySelector('#modalCadastro .btn-primary');
@@ -125,6 +165,8 @@ async function realizarCadastro() {
     const cpf = document.getElementById('cpfCadastro').value.trim();
     const empresa = document.getElementById('empresa').value.trim();
     const chaveEmpresa = document.getElementById('chaveEmpresa').value.trim();
+    const tipoDoc = document.getElementById('tipoDocEmpresa')?.value || '';
+    const docEmpresa = (document.getElementById('docEmpresa')?.value || '').replace(/\D/g, '');
     const email = document.getElementById('emailCadastro').value.trim();
     const senha = document.getElementById('senhaCadastro').value;
     const aceitouTermos = document.getElementById('aceitarTermos').checked;
@@ -132,6 +174,22 @@ async function realizarCadastro() {
     if (!nome || !cpf || !email || !senha) {
         mostrarNotificacao('Preencha todos os campos obrigatórios!', 'error');
         return;
+    }
+
+    // Campos da empresa obrigatórios quando não usa chave
+    if (!chaveEmpresa) {
+        if (!tipoDoc) {
+            mostrarNotificacao('Selecione o tipo de identificação da empresa.', 'error');
+            return;
+        }
+        if (!docEmpresa) {
+            mostrarNotificacao('Preencha o Número de Identificação da empresa.', 'error');
+            return;
+        }
+        if (!empresa) {
+            mostrarNotificacao('Preencha a Razão Social da empresa.', 'error');
+            return;
+        }
     }
 
     if (!validarCPF(cpf)) {
@@ -160,7 +218,7 @@ async function realizarCadastro() {
     }
 
     try {
-        const resultado = await window.supabaseAPI.cadastrar({ nome, cpf, email, senha, empresa, chaveEmpresa, aceitouTermos });
+        const resultado = await window.supabaseAPI.cadastrar({ nome, cpf, email, senha, empresa, cnpjEmpresa: docEmpresa, chaveEmpresa, aceitouTermos });
 
         if (resultado.sucesso) {
             fecharModal('modalCadastro');

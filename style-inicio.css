@@ -109,16 +109,13 @@
 }
 
 /* ========================================
-   ESTATÍSTICAS
+   ESTATÍSTICAS (dentro de .charts-section)
 ======================================== */
-.stats-section {
-    margin-bottom: 0;
-}
-
 .stats-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
+    margin-bottom: 16px;
 }
 
 .stat-card {
@@ -495,10 +492,40 @@
 
 .chart-card {
     background: white;
-    padding: 16px;
-    border-radius: 10px;
+    padding: 20px;
+    border-radius: 14px;
     border: 1px solid #f1f5f9;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.chart-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.chart-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.chart-card-sub {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
 }
 
 .chart-card h4 {
@@ -846,17 +873,7 @@ canvas {
     box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
-/* ========================================
-   FOOTER
-======================================== */
-.dashboard-footer {
-    text-align: center;
-    padding: 24px;
-    color: var(--texto-claro);
-    font-size: 14px;
-    margin-top: 40px;
-    border-top: 2px solid #F1F5F9;
-}
+/* RODAPÉ — definido em style-base.css */
 
 /* ========================================
    RESPONSIVIDADE

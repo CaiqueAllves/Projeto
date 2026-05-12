@@ -16,22 +16,26 @@ const PLANOS = {
     basico: {
         nome: 'Básico', icone: 'fa-seedling', cor: '#64748b', corFundo: '#f1f5f9',
         total: 1, admins: 1, subs: 0,
-        descricao: '1 usuário responsável, sem sub-usuários.'
+        descricao: '1 usuário responsável, sem sub-usuários.',
+        recursos: ['Processos de exportação/importação', 'Cadastro de empresas', 'Cadastro de produtos', 'Propostas comerciais', 'Relatórios básicos'],
     },
     regular: {
         nome: 'Regular', icone: 'fa-star', cor: '#3b82f6', corFundo: '#dbeafe',
         total: 3, admins: 1, subs: 2,
-        descricao: '1 administrador + 2 sub-usuários.'
+        descricao: '1 administrador + 2 sub-usuários.',
+        recursos: ['Tudo do Básico', 'Até 3 usuários simultâneos', 'Permissões por módulo', 'Relatórios intermediários', 'Suporte por e-mail'],
     },
     profissional: {
         nome: 'Profissional', icone: 'fa-rocket', cor: '#f7931e', corFundo: '#fff7ed',
         total: 5, admins: 2, subs: 3,
-        descricao: '2 administradores + 3 sub-usuários.'
+        descricao: '2 administradores + 3 sub-usuários.',
+        recursos: ['Tudo do Regular', 'Até 5 usuários simultâneos', '2 administradores', 'Relatórios avançados', 'Suporte prioritário'],
     },
     empresa: {
         nome: 'Empresa', icone: 'fa-building', cor: '#7c3aed', corFundo: '#ede9fe',
         total: null, admins: null, subs: null,
-        descricao: 'Capacidade personalizada conforme contrato.'
+        descricao: 'Capacidade personalizada conforme contrato.',
+        recursos: ['Tudo do Profissional', 'Usuários ilimitados', 'SLA garantido', 'Gerente de conta dedicado', 'Integrações sob medida'],
     }
 };
 
@@ -73,6 +77,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     const isAdmin = usuarioAtual.perfil === 'admin';
     if (isAdmin) {
         document.getElementById('secaoPlano').style.display = 'block';
+        const btnEditar = document.getElementById('btnEditarEmpresa');
+        if (btnEditar) btnEditar.style.display = '';
+        const sidePlanoCard = document.getElementById('sidePlanoCard');
+        if (sidePlanoCard) sidePlanoCard.style.display = '';
         const resPlano = await buscarDadosPlano();
         if (resPlano.sucesso) renderizarPlano(resPlano.data);
     }
@@ -206,25 +214,57 @@ function preencherEmpresa() {
             'Empresa ao qual sua conta está vinculada.';
     }
 
-    const cnpj = empresa.cnpj || null;
+    const cnpjRaw = (empresa.cnpj || '').replace(/\D/g, '');
+    const tipoDoc = cnpjRaw.length === 14 ? 'CNPJ' : cnpjRaw.length === 11 ? 'CPF' : null;
+    const docFormatado = cnpjRaw ? formatarCnpj(cnpjRaw) : '—';
+
+    const temEndereco = empresa.cep || empresa.estado || empresa.cidade || empresa.endereco;
+
+    const item = (icon, label, valor) => valor ? `
+        <div class="empresa-info-item">
+            <div class="empresa-info-label"><i class="fa-solid ${icon}"></i> ${label}</div>
+            <div class="empresa-info-valor">${valor}</div>
+        </div>` : '';
+
+    const secao = (label) => `
+        <div class="empresa-info-full" style="grid-column:1/-1; border-top:1px solid #f1f5f9; padding-top:12px; margin-top:4px;">
+            <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#94a3b8;">${label}</span>
+        </div>`;
+
+    const roleBadges = {
+        admin:   '<span class="empresa-role-badge role-admin">Administrador</span>',
+        gerente: '<span class="empresa-role-badge role-gerente">Gerente</span>',
+        usuario: '<span class="empresa-role-badge role-usuario">Usuário</span>',
+    };
 
     grid.innerHTML = `
-        <div class="empresa-info-item">
-            <div class="empresa-info-label"><i class="fa-solid fa-building"></i> Razão Social</div>
-            <div class="empresa-info-valor">${nomeEmpresa}</div>
-        </div>
-        <div class="empresa-info-item">
-            <div class="empresa-info-label"><i class="fa-solid fa-file-invoice"></i> CNPJ</div>
-            <div class="empresa-info-valor">${cnpj ? formatarCnpj(cnpj) : '—'}</div>
-        </div>
+        ${secao('Identificação')}
+        ${item('id-card', 'Tipo', tipoDoc)}
+        ${item('file-invoice', tipoDoc || 'Documento', docFormatado)}
+        ${item('building', 'Razão Social', nomeEmpresa)}
+        ${empresa.nome_fantasia ? item('tag', 'Nome Fantasia', empresa.nome_fantasia) : ''}
+
+        ${(empresa.ie || empresa.im || empresa.suframa) ? `
+        ${secao('Registros Fiscais')}
+        ${item('receipt', 'Inscrição Estadual', empresa.ie || null)}
+        ${item('landmark', 'Inscrição Municipal', empresa.im || null)}
+        ${item('barcode', 'SUFRAMA', empresa.suframa || null)}
+        ` : ''}
+
+        ${temEndereco ? `
+        ${secao('Endereço')}
+        ${item('location-dot', 'Endereço', empresa.endereco ? `${empresa.endereco}${empresa.numero ? ', ' + empresa.numero : ''}${empresa.complemento ? ' — ' + empresa.complemento : ''}` : null)}
+        ${item('map', 'Bairro', empresa.bairro || null)}
+        ${item('city', 'Cidade / Estado', empresa.cidade ? `${empresa.cidade}${empresa.estado ? ' — ' + empresa.estado : ''}` : empresa.estado || null)}
+        ${item('envelope', 'CEP', empresa.cep ? empresa.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2') : null)}
+        ` : ''}
+
+        ${secao('Acesso')}
         <div class="empresa-info-item">
             <div class="empresa-info-label"><i class="fa-solid fa-id-card"></i> Perfil na Empresa</div>
-            <div class="empresa-info-valor">
-                ${{ admin: '<span class="empresa-role-badge role-admin">Administrador</span>',
-                    gerente: '<span class="empresa-role-badge role-gerente">Gerente</span>',
-                    usuario: '<span class="empresa-role-badge role-usuario">Usuário</span>' }[usuarioAtual.perfil] || '—'}
-            </div>
+            <div class="empresa-info-valor">${roleBadges[usuarioAtual.perfil] || '—'}</div>
         </div>
+
         ${isAdmin && empresa.chave_empresa ? `
         <div class="empresa-info-item empresa-info-full">
             <div class="empresa-info-label"><i class="fa-solid fa-key"></i> Chave de Acesso da Empresa</div>
@@ -236,6 +276,7 @@ function preencherEmpresa() {
             </div>
         </div>
         ` : ''}
+
         ${isSub ? `
         <div class="empresa-info-item empresa-info-full">
             <div class="empresa-membro-banner">
@@ -255,98 +296,402 @@ function copiarChave(chave) {
 }
 
 // ========================================
+// EDITAR EMPRESA
+// ========================================
+
+let _dadosEmpresaCarregados = null;
+
+async function abrirEditarEmpresa() {
+    const modal = document.getElementById('modalEditarEmpresa');
+    if (!modal) return;
+
+    const empresa = dadosPerfil?.empresas || {};
+
+    // Tipo de cadastro (CNPJ = 14 dígitos, CPF = 11)
+    const cnpjRaw = (empresa.cnpj || '').replace(/\D/g, '');
+    const tipoEl  = document.getElementById('editEmpTipoCadastro');
+    if (tipoEl) {
+        tipoEl.value = cnpjRaw.length === 11 ? 'cpf' : (cnpjRaw.length === 14 ? 'cnpj' : '');
+        editEmpAlterarTipo();
+    }
+    document.getElementById('editEmpDocumento').value    = cnpjRaw ? formatarCnpj(cnpjRaw) : '';
+    document.getElementById('editEmpIE').value           = empresa.ie          || '';
+    document.getElementById('editEmpIM').value           = empresa.im          || '';
+    document.getElementById('editEmpSuframa').value      = empresa.suframa     || '';
+    document.getElementById('editEmpRazaoSocial').value  = empresa.razao_social || '';
+    document.getElementById('editEmpNomeFantasia').value = empresa.nome_fantasia || '';
+    const cepRaw = (empresa.cep || '').replace(/\D/g, '');
+    document.getElementById('editEmpCep').value          = cepRaw ? cepRaw.replace(/^(\d{5})(\d{3})$/, '$1-$2') : '';
+    document.getElementById('editEmpEstado').value       = empresa.estado      || '';
+    document.getElementById('editEmpCidade').value       = empresa.cidade      || '';
+    document.getElementById('editEmpBairro').value       = empresa.bairro      || '';
+    document.getElementById('editEmpEndereco').value     = empresa.endereco    || '';
+    document.getElementById('editEmpNumero').value       = empresa.numero      || '';
+    document.getElementById('editEmpComplemento').value  = empresa.complemento || '';
+
+    // Campos de identificação são bloqueados após o cadastro
+    const bloqueado = !!(cnpjRaw || empresa.razao_social);
+    ['editEmpTipoCadastro', 'editEmpDocumento', 'editEmpRazaoSocial'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = bloqueado;
+        el.closest('.perfil-form-group')?.classList.toggle('campo-bloqueado', bloqueado);
+    });
+
+    modal.style.display = 'flex';
+    const primeiroEditavel = bloqueado
+        ? document.getElementById('editEmpNomeFantasia')
+        : document.getElementById('editEmpRazaoSocial');
+    primeiroEditavel?.focus();
+
+    carregarDocumentosEmpresa();
+}
+
+function fecharEditarEmpresa(event) {
+    if (event?.target === document.getElementById('modalEditarEmpresa')) fecharEditarEmpresaBtn();
+}
+
+function fecharEditarEmpresaBtn() {
+    const modal = document.getElementById('modalEditarEmpresa');
+    if (modal) modal.style.display = 'none';
+}
+
+async function salvarEdicaoEmpresa() {
+    const razao = document.getElementById('editEmpRazaoSocial')?.value.trim();
+    if (!razao) { mostrarToast('Razão Social é obrigatória.', 'erro'); return; }
+
+    const dados = {
+        razao_social:  razao,
+        nome_fantasia: document.getElementById('editEmpNomeFantasia')?.value.trim() || null,
+        cnpj:          (document.getElementById('editEmpDocumento')?.value || '').replace(/\D/g, '') || null,
+        ie:            document.getElementById('editEmpIE')?.value.trim() || null,
+        im:            document.getElementById('editEmpIM')?.value.trim() || null,
+        suframa:       document.getElementById('editEmpSuframa')?.value.trim() || null,
+        cep:           (document.getElementById('editEmpCep')?.value || '').replace(/\D/g, '') || null,
+        estado:        document.getElementById('editEmpEstado')?.value.trim() || null,
+        cidade:        document.getElementById('editEmpCidade')?.value.trim() || null,
+        bairro:        document.getElementById('editEmpBairro')?.value.trim() || null,
+        endereco:      document.getElementById('editEmpEndereco')?.value.trim() || null,
+        numero:        document.getElementById('editEmpNumero')?.value.trim() || null,
+        complemento:   document.getElementById('editEmpComplemento')?.value.trim() || null,
+    };
+
+    const btn = document.getElementById('btnSalvarEmpresaModal');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...'; }
+
+    const res = await window.supabaseAPI.atualizarTenantEmpresa(dados);
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar'; }
+
+    if (res.sucesso) {
+        mostrarToast('Dados da empresa atualizados!', 'sucesso');
+        fecharEditarEmpresaBtn();
+        if (dadosPerfil?.empresas) Object.assign(dadosPerfil.empresas, dados);
+        preencherEmpresa();
+    } else {
+        mostrarToast('Erro ao atualizar: ' + (res.mensagem || 'Tente novamente.'), 'erro');
+    }
+}
+
+// ========================================
+// DOCUMENTOS DA EMPRESA
+// ========================================
+
+const BUCKET_DOCS = 'empresa-docs';
+
+async function carregarDocumentosEmpresa() {
+    const empresaId = dadosPerfil?.empresa_id || usuarioAtual?.empresa_id;
+    const listaEl   = document.getElementById('docEmpLista');
+    if (!listaEl) return;
+
+    if (!empresaId) {
+        listaEl.innerHTML = '<div class="doc-emp-vazio">Empresa não vinculada.</div>';
+        return;
+    }
+
+    listaEl.innerHTML = '<div class="doc-emp-carregando"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</div>';
+
+    const { data, error } = await supabaseClient.storage
+        .from(BUCKET_DOCS)
+        .list(`${empresaId}/`, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+
+    if (error || !data?.length) {
+        listaEl.innerHTML = '<div class="doc-emp-vazio">Nenhum documento enviado ainda.</div>';
+        return;
+    }
+
+    const itens = data.filter(d => d.name !== '.emptyFolderPlaceholder');
+    if (!itens.length) {
+        listaEl.innerHTML = '<div class="doc-emp-vazio">Nenhum documento enviado ainda.</div>';
+        return;
+    }
+
+    listaEl.innerHTML = itens.map(doc => {
+        const ext  = doc.name.split('.').pop().toLowerCase();
+        const icone = ext === 'pdf' ? 'fa-file-pdf' : 'fa-file-csv';
+        const cor   = ext === 'pdf' ? '#dc2626'     : '#16a34a';
+        const size  = doc.metadata?.size ? formatarTamanho(doc.metadata.size) : '';
+        const path  = `${empresaId}/${doc.name}`;
+        const nome  = doc.name.replace(/^\d+_/, ''); // remove timestamp prefix for display
+        return `
+            <div class="doc-emp-item">
+                <div class="doc-emp-icone" style="color:${cor};">
+                    <i class="fa-solid ${icone}"></i>
+                </div>
+                <div class="doc-emp-info">
+                    <div class="doc-emp-nome" title="${nome}">${nome}</div>
+                    ${size ? `<div class="doc-emp-meta">${size} · ${ext.toUpperCase()}</div>` : `<div class="doc-emp-meta">${ext.toUpperCase()}</div>`}
+                </div>
+                <div class="doc-emp-acoes">
+                    <button class="doc-emp-btn doc-emp-btn-baixar" onclick="baixarDocEmpresa('${path}','${nome}')" title="Baixar">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                    <button class="doc-emp-btn doc-emp-btn-excluir" onclick="excluirDocEmpresa('${path}')" title="Excluir">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+async function uploadDocEmpresa(files) {
+    const empresaId = dadosPerfil?.empresa_id || usuarioAtual?.empresa_id;
+    if (!empresaId) { mostrarToast('Sem empresa vinculada.', 'erro'); return; }
+    if (!files?.length) return;
+
+    const progWrap  = document.getElementById('uploadDocProgresso');
+    const progBarra = document.getElementById('uploadDocBarraInner');
+    const progTexto = document.getElementById('uploadDocProgTexto');
+
+    progWrap.style.display = 'block';
+    progBarra.style.width  = '0%';
+
+    let enviados = 0;
+    const total  = files.length;
+
+    for (const file of Array.from(files)) {
+        const ext = file.name.split('.').pop().toLowerCase();
+
+        if (!['pdf', 'csv'].includes(ext)) {
+            mostrarToast(`${file.name}: tipo não suportado. Use PDF ou CSV.`, 'erro');
+            continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            mostrarToast(`${file.name}: excede o limite de 10 MB.`, 'erro');
+            continue;
+        }
+
+        progTexto.textContent = `Enviando ${file.name}…`;
+
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${empresaId}/${Date.now()}_${safeName}`;
+
+        const { error } = await supabaseClient.storage
+            .from(BUCKET_DOCS)
+            .upload(path, file);
+
+        if (error) {
+            mostrarToast(`Erro ao enviar ${file.name}: ${error.message}`, 'erro');
+        } else {
+            enviados++;
+        }
+
+        progBarra.style.width = `${Math.round(((enviados) / total) * 100)}%`;
+    }
+
+    progTexto.textContent = `${enviados} de ${total} arquivo(s) enviado(s).`;
+    setTimeout(() => { progWrap.style.display = 'none'; progBarra.style.width = '0%'; }, 2500);
+
+    document.getElementById('inputDocEmpresa').value = '';
+    if (enviados > 0) {
+        mostrarToast(`${enviados} documento(s) enviado(s) com sucesso!`, 'sucesso');
+        carregarDocumentosEmpresa();
+    }
+}
+
+async function baixarDocEmpresa(path, nome) {
+    const { data, error } = await supabaseClient.storage
+        .from(BUCKET_DOCS)
+        .download(path);
+
+    if (error) { mostrarToast('Erro ao baixar documento.', 'erro'); return; }
+
+    const url = URL.createObjectURL(data);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+async function excluirDocEmpresa(path) {
+    if (!confirm('Deseja excluir este documento? Esta ação não pode ser desfeita.')) return;
+
+    const { error } = await supabaseClient.storage
+        .from(BUCKET_DOCS)
+        .remove([path]);
+
+    if (error) { mostrarToast('Erro ao excluir: ' + error.message, 'erro'); return; }
+
+    mostrarToast('Documento excluído.', 'sucesso');
+    carregarDocumentosEmpresa();
+}
+
+function uploadDocDragOver(e) {
+    e.preventDefault();
+    document.getElementById('uploadDocZone').classList.add('drag-over');
+}
+function uploadDocDragLeave() {
+    document.getElementById('uploadDocZone').classList.remove('drag-over');
+}
+function uploadDocDrop(e) {
+    e.preventDefault();
+    document.getElementById('uploadDocZone').classList.remove('drag-over');
+    uploadDocEmpresa(e.dataTransfer.files);
+}
+
+function formatarTamanho(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// ========================================
 // PLANO (admin)
 // ========================================
 
 function renderizarPlano(dados) {
-    const planoKey = dados.plano || 'basico';
-    const plano = PLANOS[planoKey] || PLANOS.basico;
-    const ativos = dados.usuarios_ativos || 0;
-    const isEmpresa = planoKey === 'empresa';
+    const planoKey      = dados.plano || 'basico';
+    const plano         = PLANOS[planoKey] || PLANOS.basico;
+    const ativos        = dados.usuarios_ativos || 0;
+    const totalUsuarios = dados.total_usuarios  || 0;
+    const isEmpresa     = planoKey === 'empresa';
+    const proximos      = { basico: 'regular', regular: 'profissional', profissional: 'empresa' };
+    const proximo       = proximos[planoKey];
+    const capacidade    = isEmpresa ? totalUsuarios : plano.total;
+    const vagas         = isEmpresa ? null : capacidade - ativos;
+    const pct           = isEmpresa ? null : Math.min((ativos / capacidade) * 100, 100);
+    const corBarra      = !isEmpresa && vagas === 0 ? '#dc2626' : vagas === 1 ? '#f59e0b' : plano.cor;
 
-    // Badge no header
+    // ── Badge no header ───────────────────────────────────────
     const badge = document.getElementById('planoBadge');
-    badge.textContent = plano.nome;
+    badge.textContent      = plano.nome;
     badge.style.background = plano.corFundo;
-    badge.style.color = plano.cor;
+    badge.style.color      = plano.cor;
 
-    // Sidebar resumo
-    const proximos = { basico: 'regular', regular: 'profissional', profissional: 'empresa' };
-    const proximo = proximos[planoKey];
-    document.getElementById('sidePlanoInfo').innerHTML = `
+    // ── Sidebar ───────────────────────────────────────────────
+    const sidePlanoInfo = document.getElementById('sidePlanoInfo');
+    if (sidePlanoInfo) sidePlanoInfo.innerHTML = `
         <div class="sidebar-plano-pill" style="background:${plano.corFundo}; color:${plano.cor};">
             <i class="fa-solid ${plano.icone}"></i> ${plano.nome}
         </div>
-        <div class="sidebar-plano-uso">${ativos} ${ativos === 1 ? 'usuário ativo' : 'usuários ativos'}
-        ${!isEmpresa ? `de ${plano.total}` : ''}</div>
-        ${proximo ? `<div class="sidebar-plano-upgrade">Upgrade disponível: ${PLANOS[proximo].nome}</div>` : ''}
+        <div class="sidebar-plano-uso">${ativos} ${ativos === 1 ? 'usuário ativo' : 'usuários ativos'}${!isEmpresa ? ` de ${capacidade}` : ''}</div>
+        ${proximo ? `<div class="sidebar-plano-upgrade">Upgrade: ${PLANOS[proximo].nome}</div>` : ''}
     `;
 
-    // Grid principal
+    // ── Bloco principal ───────────────────────────────────────
     document.getElementById('planoGrid').innerHTML = `
-        <div class="plano-info-card">
-            <div class="plano-info-icone" style="background:${plano.corFundo}; color:${plano.cor};">
-                <i class="fa-solid ${plano.icone}"></i>
+        <div class="plano-bloco">
+            <div class="plano-bloco-topo">
+                <div class="plano-bloco-icone" style="background:${plano.corFundo}; color:${plano.cor};">
+                    <i class="fa-solid ${plano.icone}"></i>
+                </div>
+                <div class="plano-bloco-info">
+                    <div class="plano-bloco-nome" style="color:${plano.cor};">${plano.nome}</div>
+                    <div class="plano-bloco-desc">${plano.descricao}</div>
+                </div>
+                <div class="plano-bloco-stats">
+                    <div class="plano-bloco-stat">
+                        <span class="plano-bloco-stat-val">${isEmpresa ? totalUsuarios : capacidade}</span>
+                        <span class="plano-bloco-stat-lbl">${isEmpresa ? 'cadastrados' : 'licenças'}</span>
+                    </div>
+                    <div class="plano-bloco-stat-sep"></div>
+                    <div class="plano-bloco-stat">
+                        <span class="plano-bloco-stat-val" style="color:${plano.cor};">${ativos}</span>
+                        <span class="plano-bloco-stat-lbl">ativos</span>
+                    </div>
+                    ${!isEmpresa ? `
+                    <div class="plano-bloco-stat-sep"></div>
+                    <div class="plano-bloco-stat">
+                        <span class="plano-bloco-stat-val" style="color:${corBarra};">${vagas}</span>
+                        <span class="plano-bloco-stat-lbl">disponíveis</span>
+                    </div>` : ''}
+                </div>
             </div>
-            <div>
-                <div class="plano-info-titulo">Plano ${plano.nome}</div>
-                <div class="plano-info-desc">${plano.descricao}</div>
+
+            <div class="plano-bloco-recursos">
+                ${(plano.recursos || []).map(r => `
+                    <span class="plano-bloco-rec">
+                        <i class="fa-solid fa-circle-check" style="color:${plano.cor};"></i>${r}
+                    </span>`).join('')}
             </div>
-        </div>
-        <div class="plano-slots">
-            ${isEmpresa
-                ? `<div class="plano-slot"><i class="fa-solid fa-infinity" style="color:#7c3aed;"></i><span>Usuários ilimitados</span></div>
-                   <div class="plano-slot"><i class="fa-solid fa-handshake" style="color:#7c3aed;"></i><span>Capacidade personalizada</span></div>`
-                : `<div class="plano-slot"><i class="fa-solid fa-users" style="color:#3b82f6;"></i><span><strong>${plano.total}</strong> usuário${plano.total !== 1 ? 's' : ''} no total</span></div>
-                   <div class="plano-slot"><i class="fa-solid fa-user-shield" style="color:#f7931e;"></i><span><strong>${plano.admins}</strong> administrador${plano.admins !== 1 ? 'es' : ''}</span></div>
-                   <div class="plano-slot"><i class="fa-solid fa-user" style="color:#64748b;"></i><span><strong>${plano.subs}</strong> sub-usuário${plano.subs !== 1 ? 's' : ''}</span></div>`
-            }
         </div>
     `;
 
-    // Barra de uso
-    if (isEmpresa) {
-        document.getElementById('planoUso').innerHTML = `
-            <div class="plano-uso-box plano-uso-empresa">
-                <i class="fa-solid fa-circle-check" style="color:#7c3aed;"></i>
-                <span>${ativos} usuário${ativos !== 1 ? 's' : ''} ativo${ativos !== 1 ? 's' : ''} no momento</span>
-            </div>`;
-    } else {
-        const total = plano.total;
-        const pct = Math.min((ativos / total) * 100, 100);
-        const vagas = total - ativos;
-        const cor = vagas === 0 ? '#dc2626' : vagas === 1 ? '#f59e0b' : '#22c55e';
-        document.getElementById('planoUso').innerHTML = `
-            <div class="plano-uso-box">
-                <div class="plano-uso-header">
-                    <span class="plano-uso-label">Licenças utilizadas</span>
-                    <span class="plano-uso-contagem" style="color:${cor};">${ativos} / ${total}</span>
-                </div>
-                <div class="plano-barra-fundo">
-                    <div class="plano-barra-preenchida" style="width:${pct}%; background:${cor};"></div>
-                </div>
-                <div class="plano-vagas">
-                    ${vagas > 0
-                        ? `<i class="fa-solid fa-circle-check" style="color:#22c55e;"></i> ${vagas} vaga${vagas !== 1 ? 's' : ''} disponível${vagas !== 1 ? 'is' : ''}`
-                        : `<i class="fa-solid fa-circle-exclamation" style="color:#dc2626;"></i> Nenhuma vaga disponível`}
-                </div>
-            </div>`;
-    }
+    // ── Barra de uso ──────────────────────────────────────────
+    document.getElementById('planoUso').innerHTML = isEmpresa ? '' : `
+        <div class="plano-uso-wrap">
+            <div class="plano-uso-header">
+                <span class="plano-uso-label">Licenças utilizadas</span>
+                <span class="plano-uso-count" style="color:${corBarra};">${ativos} / ${capacidade}</span>
+            </div>
+            <div class="plano-barra-fundo">
+                <div class="plano-barra-preenchida" style="width:${pct}%; background:${corBarra};"></div>
+            </div>
+            <span class="plano-uso-vagas" style="color:${corBarra};">
+                ${vagas > 0 ? `${vagas} vaga${vagas !== 1 ? 's' : ''} disponível${vagas !== 1 ? 'is' : ''}` : 'Todas as licenças em uso'}
+            </span>
+        </div>
+    `;
 
-    // Upgrade
+    // ── Upgrade ───────────────────────────────────────────────
     if (proximo) {
-        const proximoPlano = PLANOS[proximo];
+        const prox   = PLANOS[proximo];
+        const ganhos = prox.recursos.filter(r => !plano.recursos.includes(r));
         document.getElementById('planoUpgrade').innerHTML = `
             <div class="plano-upgrade-banner">
-                <div class="plano-upgrade-texto">
-                    <strong>Quer expandir seu time?</strong>
-                    <span>Upgrade para o plano <strong>${proximoPlano.nome}</strong>
-                    ${proximo !== 'empresa' ? `— até ${proximoPlano.total} usuários` : '— capacidade personalizada'}.</span>
+                <div class="plano-upgrade-banner-esq">
+                    <span class="plano-upgrade-banner-badge" style="background:${prox.corFundo}; color:${prox.cor};">
+                        <i class="fa-solid ${prox.icone}"></i> ${prox.nome}
+                    </span>
+                    <span class="plano-upgrade-banner-texto">
+                        Faça upgrade e tenha acesso a
+                        ${ganhos.length ? `<strong>${ganhos[0]}</strong>${ganhos.length > 1 ? ` e mais ${ganhos.length - 1} recurso${ganhos.length > 2 ? 's' : ''}` : ''}` : 'mais recursos'}.
+                    </span>
                 </div>
-                <button class="btn-upgrade" onclick="solicitarUpgrade('${proximo}')">
-                    <i class="fa-solid fa-arrow-up"></i> Fazer upgrade
+                <button class="plano-upgrade-banner-btn" style="background:${prox.cor};" onclick="solicitarUpgrade('${proximo}')">
+                    <i class="fa-solid fa-arrow-trend-up"></i> Upgrade
                 </button>
-            </div>`;
+            </div>
+        `;
+    } else {
+        document.getElementById('planoUpgrade').innerHTML = `
+            <div class="plano-maximo-banner">
+                <i class="fa-solid fa-trophy" style="color:#ca8a04;"></i>
+                <span>Você está no plano máximo — capacidade <strong>personalizada</strong> ativa.</span>
+            </div>
+        `;
+    }
+}
+
+// ── Collapsible ───────────────────────────────────────────────
+let _planoAberto = true;
+
+function togglePlanoSection() {
+    _planoAberto = !_planoAberto;
+    const body = document.getElementById('planoBody');
+    const icon = document.getElementById('planoToggleIcon');
+    if (_planoAberto) {
+        body.style.maxHeight = body.scrollHeight + 'px';
+        icon.style.transform = 'rotate(0deg)';
+        setTimeout(() => { body.style.maxHeight = '2000px'; }, 310);
+    } else {
+        body.style.maxHeight = body.scrollHeight + 'px';
+        body.offsetHeight; // força reflow antes de animar para 0
+        body.style.maxHeight = '0';
+        icon.style.transform = 'rotate(-90deg)';
     }
 }
 
@@ -685,6 +1030,92 @@ function focarCampoTelefone() {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         setTimeout(() => el.focus(), 400);
     }
+}
+
+// ========================================
+// MÁSCARAS
+// ========================================
+
+function _mascaraDocBR(valor) {
+    const d = valor.replace(/\D/g, '');
+    const tipo = document.getElementById('editEmpTipoCadastro')?.value;
+    if (tipo === 'cpf') {
+        const n = d.slice(0, 11);
+        let o = n.slice(0, 3);
+        if (n.length > 3) o += '.' + n.slice(3, 6);
+        if (n.length > 6) o += '.' + n.slice(6, 9);
+        if (n.length > 9) o += '-' + n.slice(9, 11);
+        return o;
+    } else {
+        const n = d.slice(0, 14);
+        let o = n.slice(0, 2);
+        if (n.length > 2)  o += '.' + n.slice(2, 5);
+        if (n.length > 5)  o += '.' + n.slice(5, 8);
+        if (n.length > 8)  o += '/' + n.slice(8, 12);
+        if (n.length > 12) o += '-' + n.slice(12, 14);
+        return o;
+    }
+}
+
+function _mascaraIE(valor) {
+    const d = valor.replace(/\D/g, '').slice(0, 12);
+    if (d.length <= 9) {
+        let o = d.slice(0, 3);
+        if (d.length > 3) o += '.' + d.slice(3, 6);
+        if (d.length > 6) o += '.' + d.slice(6, 8);
+        if (d.length > 8) o += '-' + d.slice(8, 9);
+        return o;
+    } else {
+        let o = d.slice(0, 3);
+        if (d.length > 3) o += '.' + d.slice(3, 6);
+        if (d.length > 6) o += '.' + d.slice(6, 9);
+        if (d.length > 9) o += '.' + d.slice(9, 12);
+        return o;
+    }
+}
+
+function _mascaraIM(valor) {
+    const d = valor.replace(/\D/g, '').slice(0, 7);
+    let o = d.slice(0, 6);
+    if (d.length > 6) o += '-' + d.slice(6, 7);
+    return o;
+}
+
+// ========================================
+// EDITAR EMPRESA — TIPO / CEP
+// ========================================
+
+function editEmpAlterarTipo() {
+    const tipo  = document.getElementById('editEmpTipoCadastro')?.value;
+    const input = document.getElementById('editEmpDocumento');
+    if (!input) return;
+    input.disabled = !tipo;
+    input.value = '';
+    if (tipo === 'cnpj') {
+        input.placeholder = '00.000.000/0000-00';
+        input.maxLength = 18;
+    } else if (tipo === 'cpf') {
+        input.placeholder = '000.000.000-00';
+        input.maxLength = 14;
+    } else {
+        input.placeholder = 'Selecione o tipo primeiro';
+        input.maxLength = 18;
+    }
+}
+
+async function editEmpBuscarCep() {
+    const cep = document.getElementById('editEmpCep')?.value.replace(/\D/g, '');
+    if (!cep || cep.length !== 8) return;
+    try {
+        const res  = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await res.json();
+        if (data.erro) return;
+        const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+        set('editEmpEstado',  data.uf);
+        set('editEmpCidade',  data.localidade);
+        set('editEmpBairro',  data.bairro);
+        set('editEmpEndereco', data.logradouro);
+    } catch {}
 }
 
 function mostrarToast(msg, tipo = 'sucesso') {

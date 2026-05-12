@@ -83,7 +83,7 @@ function gerarChaveEmpresa() {
 
 async function cadastrarContaSupabase(dados) {
     try {
-        const { nome, cpf, email, senha, empresa, chaveEmpresa, aceitouTermos } = dados;
+        const { nome, cpf, email, senha, empresa, cnpjEmpresa, chaveEmpresa, aceitouTermos } = dados;
 
         if (!aceitouTermos) {
             return { sucesso: false, mensagem: 'Você deve aceitar os termos de uso!' };
@@ -134,7 +134,7 @@ async function cadastrarContaSupabase(dados) {
 
             const { data: empresaCriada, error: erroEmpresa } = await supabaseClient
                 .from('empresas')
-                .insert({ razao_social: empresa, nome_fantasia: empresa, email, status: 'trial', plano: 'free', chave_empresa: chaveGerada })
+                .insert({ razao_social: empresa, nome_fantasia: empresa, cnpj: cnpjEmpresa || null, email, status: 'trial', plano: 'free', chave_empresa: chaveGerada })
                 .select()
                 .single();
 
@@ -266,40 +266,82 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
         const usuarioLogado = obterUsuarioLogado();
         if (!usuarioLogado) return { sucesso: false, mensagem: 'Usuário não autenticado' };
 
-        const { data, error } = await supabaseClient
-            .from('empresas_cadastradas')
+        // 1. Inserir na tabela principal
+        const { data: parceiro, error: errParceiro } = await supabaseClient
+            .from('parceiros')
             .insert({
-                empresa_proprietaria_id: usuarioLogado.empresa_id,
-                tipos: dadosEmpresa.tipos,
-                tipo_documento: dadosEmpresa.cadastro,
-                documento: dadosEmpresa.documento,
-                nome_empresa: dadosEmpresa.nomeEmpresa,
-                nome_fantasia: dadosEmpresa.nomeFantasia,
-                identificacao_empresa: dadosEmpresa.identificacao,
-                pais: dadosEmpresa.pais,
-                cep: dadosEmpresa.cep,
-                estado: dadosEmpresa.estado,
-                cidade: dadosEmpresa.cidade,
-                bairro: dadosEmpresa.bairro,
-                endereco: dadosEmpresa.endereco,
-                numero: dadosEmpresa.numero,
-                sem_numero: dadosEmpresa.semNumero,
-                complemento: dadosEmpresa.complemento,
-                contato_principal: dadosEmpresa.contatoPrincipal,
-                contato_secundario: dadosEmpresa.contatoSecundario,
-                email: dadosEmpresa.email,
-                tags: dadosEmpresa.tags || [],
-                cadastrado_por: usuarioLogado.id
+                created_by:           usuarioLogado.id,
+                empresa_id:           usuarioLogado.empresa_id || null,
+                is_fabricante:        dadosEmpresa.tipos.includes('fabricante'),
+                is_cliente:           dadosEmpresa.tipos.includes('cliente'),
+                is_fornecedor:        dadosEmpresa.tipos.includes('fornecedor'),
+                is_transportadora:    dadosEmpresa.tipos.includes('transportadora'),
+                is_remetente:         dadosEmpresa.tipos.includes('remetente'),
+                tipo_cadastro:        dadosEmpresa.tipo_cadastro,
+                documento:            dadosEmpresa.documento.replace(/\D/g, ''),
+                razao_social:         dadosEmpresa.razao_social,
+                nome_fantasia:        dadosEmpresa.nome_fantasia        || null,
+                inscricao_estadual:   dadosEmpresa.inscricao_estadual   || null,
+                suframa:              dadosEmpresa.suframa               || null,
+                pais:                 dadosEmpresa.pais,
+                cep:                  dadosEmpresa.cep ? dadosEmpresa.cep.replace(/\D/g, '') : null,
+                estado:               dadosEmpresa.estado      || null,
+                cidade:               dadosEmpresa.cidade      || null,
+                bairro:               dadosEmpresa.bairro      || null,
+                endereco:             dadosEmpresa.endereco    || null,
+                numero:               dadosEmpresa.numero      || null,
+                complemento:          dadosEmpresa.complemento || null,
+                site:                 dadosEmpresa.site                 || null,
+                horario_atendimento:  dadosEmpresa.horario_atendimento  || null,
+                tags:                 dadosEmpresa.tags || [],
             })
-            .select()
+            .select('id')
             .single();
 
-        if (error) {
-            console.error('Erro ao salvar empresa:', error);
-            return { sucesso: false, mensagem: 'Erro ao salvar cadastro' };
+        if (errParceiro) {
+            console.error('Erro ao salvar parceiro:', errParceiro);
+            return { sucesso: false, mensagem: 'Erro ao salvar cadastro: ' + errParceiro.message };
         }
 
-        return { sucesso: true, mensagem: 'Empresa cadastrada com sucesso!', data };
+        const parceiroId = parceiro.id;
+
+        // 2. Inserir contatos
+        const contatos = (dadosEmpresa.contatos || []).filter(c => c.tipo || c.nome || c.email || c.telefone);
+        if (contatos.length > 0) {
+            const rows = contatos.map((c, i) => ({
+                parceiro_id: parceiroId,
+                tipo:        c.tipo     || 'Geral',
+                nome:        c.nome     || null,
+                email:       c.email    || null,
+                telefone:    c.telefone || null,
+                ordem:       i + 1,
+            }));
+            const { error: errC } = await supabaseClient.from('parceiro_contatos').insert(rows);
+            if (errC) console.error('Erro ao salvar contatos:', errC);
+        }
+
+        // 3. Inserir dados financeiros
+        const fin = dadosEmpresa.financeiro || {};
+        if (Object.values(fin).some(v => v)) {
+            const { error: errF } = await supabaseClient.from('parceiro_financeiro').insert({
+                parceiro_id:    parceiroId,
+                pag_forma:      fin.pag_forma      || null,
+                pag_condicao:   fin.pag_condicao   || null,
+                pag_banco:      fin.pag_banco      || null,
+                pag_tipo_conta: fin.pag_tipo_conta || null,
+                pag_agencia:    fin.pag_agencia    || null,
+                pag_conta:      fin.pag_conta      || null,
+                rec_forma:      fin.rec_forma      || null,
+                rec_moeda:      fin.rec_moeda      || null,
+                rec_banco:      fin.rec_banco      || null,
+                rec_tipo_conta: fin.rec_tipo_conta || null,
+                rec_agencia:    fin.rec_agencia    || null,
+                rec_conta:      fin.rec_conta      || null,
+            });
+            if (errF) console.error('Erro ao salvar financeiro:', errF);
+        }
+
+        return { sucesso: true, mensagem: 'Empresa cadastrada com sucesso!', data: parceiro };
 
     } catch (err) {
         console.error(err);
@@ -312,23 +354,20 @@ async function buscarEmpresasCadastradas() {
         const usuarioLogado = obterUsuarioLogado();
         if (!usuarioLogado) return { sucesso: false, mensagem: 'Usuário não autenticado' };
 
+        // Filtra por empresa_id (toda a equipe vê) ou fallback por created_by
         let query = supabaseClient
-            .from('empresas_cadastradas')
+            .from('vw_parceiros_completo')
             .select('*')
-            .order('criado_em', { ascending: false });
+            .order('created_at', { ascending: false });
 
         if (usuarioLogado.empresa_id) {
-            query = query.eq('empresa_proprietaria_id', usuarioLogado.empresa_id);
+            query = query.eq('empresa_id', usuarioLogado.empresa_id);
         } else {
-            query = query.eq('cadastrado_por', usuarioLogado.id);
+            query = query.eq('created_by', usuarioLogado.id);
         }
 
         const { data, error } = await query;
-
-        if (error) {
-            return { sucesso: false, mensagem: 'Erro ao buscar cadastros' };
-        }
-
+        if (error) return { sucesso: false, mensagem: 'Erro ao buscar cadastros' };
         return { sucesso: true, data: data || [] };
 
     } catch (err) {
@@ -341,33 +380,71 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        const { error } = await supabaseClient
-            .from('empresas_cadastradas')
+        // 1. Atualizar tabela principal
+        const { error: errParceiro } = await supabaseClient
+            .from('parceiros')
             .update({
-                tipos: dadosEmpresa.tipos,
-                tipo_documento: dadosEmpresa.cadastro,
-                documento: dadosEmpresa.documento,
-                nome_empresa: dadosEmpresa.nomeEmpresa,
-                nome_fantasia: dadosEmpresa.nomeFantasia,
-                identificacao_empresa: dadosEmpresa.identificacao,
-                pais: dadosEmpresa.pais,
-                cep: dadosEmpresa.cep,
-                estado: dadosEmpresa.estado,
-                cidade: dadosEmpresa.cidade,
-                bairro: dadosEmpresa.bairro,
-                endereco: dadosEmpresa.endereco,
-                numero: dadosEmpresa.numero,
-                sem_numero: dadosEmpresa.semNumero,
-                complemento: dadosEmpresa.complemento,
-                contato_principal: dadosEmpresa.contatoPrincipal,
-                contato_secundario: dadosEmpresa.contatoSecundario,
-                email: dadosEmpresa.email,
-                tags: dadosEmpresa.tags || []
+                is_fabricante:        dadosEmpresa.tipos.includes('fabricante'),
+                is_cliente:           dadosEmpresa.tipos.includes('cliente'),
+                is_fornecedor:        dadosEmpresa.tipos.includes('fornecedor'),
+                is_transportadora:    dadosEmpresa.tipos.includes('transportadora'),
+                is_remetente:         dadosEmpresa.tipos.includes('remetente'),
+                tipo_cadastro:        dadosEmpresa.tipo_cadastro,
+                documento:            dadosEmpresa.documento.replace(/\D/g, ''),
+                razao_social:         dadosEmpresa.razao_social,
+                nome_fantasia:        dadosEmpresa.nome_fantasia       || null,
+                inscricao_estadual:   dadosEmpresa.inscricao_estadual  || null,
+                suframa:              dadosEmpresa.suframa              || null,
+                pais:                 dadosEmpresa.pais,
+                cep:                  dadosEmpresa.cep ? dadosEmpresa.cep.replace(/\D/g, '') : null,
+                estado:               dadosEmpresa.estado      || null,
+                cidade:               dadosEmpresa.cidade      || null,
+                bairro:               dadosEmpresa.bairro      || null,
+                endereco:             dadosEmpresa.endereco    || null,
+                numero:               dadosEmpresa.numero      || null,
+                complemento:          dadosEmpresa.complemento || null,
+                site:                 dadosEmpresa.site                || null,
+                horario_atendimento:  dadosEmpresa.horario_atendimento || null,
+                tags:                 dadosEmpresa.tags || [],
             })
             .eq('id', id)
-            .eq('empresa_proprietaria_id', usuario.empresa_id);
+            .eq('created_by', usuario.id);
 
-        if (error) return { sucesso: false, mensagem: 'Erro ao atualizar cadastro: ' + error.message };
+        if (errParceiro) return { sucesso: false, mensagem: 'Erro ao atualizar: ' + errParceiro.message };
+
+        // 2. Substituir contatos (delete + insert)
+        await supabaseClient.from('parceiro_contatos').delete().eq('parceiro_id', id);
+        const contatos = (dadosEmpresa.contatos || []).filter(c => c.tipo || c.nome || c.email || c.telefone);
+        if (contatos.length > 0) {
+            const rows = contatos.map((c, i) => ({
+                parceiro_id: id,
+                tipo:        c.tipo     || 'Geral',
+                nome:        c.nome     || null,
+                email:       c.email    || null,
+                telefone:    c.telefone || null,
+                ordem:       i + 1,
+            }));
+            await supabaseClient.from('parceiro_contatos').insert(rows);
+        }
+
+        // 3. Upsert financeiro
+        const fin = dadosEmpresa.financeiro || {};
+        await supabaseClient.from('parceiro_financeiro').upsert({
+            parceiro_id:    id,
+            pag_forma:      fin.pag_forma      || null,
+            pag_condicao:   fin.pag_condicao   || null,
+            pag_banco:      fin.pag_banco      || null,
+            pag_tipo_conta: fin.pag_tipo_conta || null,
+            pag_agencia:    fin.pag_agencia    || null,
+            pag_conta:      fin.pag_conta      || null,
+            rec_forma:      fin.rec_forma      || null,
+            rec_moeda:      fin.rec_moeda      || null,
+            rec_banco:      fin.rec_banco      || null,
+            rec_tipo_conta: fin.rec_tipo_conta || null,
+            rec_agencia:    fin.rec_agencia    || null,
+            rec_conta:      fin.rec_conta      || null,
+        }, { onConflict: 'parceiro_id' });
+
         return { sucesso: true };
     } catch (err) {
         return { sucesso: false, mensagem: 'Erro ao processar atualização' };
@@ -380,12 +457,12 @@ async function excluirEmpresaCadastrada(id) {
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
         const { error } = await supabaseClient
-            .from('empresas_cadastradas')
+            .from('parceiros')
             .delete()
             .eq('id', id)
-            .eq('empresa_proprietaria_id', usuario.empresa_id);
+            .eq('created_by', usuario.id);
 
-        if (error) return { sucesso: false, mensagem: 'Erro ao excluir empresa: ' + error.message };
+        if (error) return { sucesso: false, mensagem: 'Erro ao excluir: ' + error.message };
         return { sucesso: true };
     } catch (err) {
         return { sucesso: false, mensagem: 'Erro ao processar exclusão' };
@@ -533,7 +610,7 @@ async function buscarDadosPerfilCompleto() {
 
         const { data, error } = await supabaseClient
             .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, cargo, telefone, avatar_url, ultimo_login, criado_em, empresa_id, empresas(razao_social, plano, chave_empresa, cnpj)')
+            .select('id, cpf, nome_completo, email, perfil, ativo, cargo, telefone, avatar_url, ultimo_login, criado_em, empresa_id, empresas(razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, bairro, endereco, numero, complemento, plano, chave_empresa)')
             .eq('id', usuario.id)
             .single();
 
@@ -828,6 +905,126 @@ async function excluirProduto(id) {
 }
 
 // ========================================
+// EMPRESA TENANT — ATUALIZAR DADOS
+// ========================================
+
+async function atualizarTenantEmpresa(dados) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada' };
+        const { error } = await supabaseClient
+            .from('empresas')
+            .update({
+                razao_social:  dados.razao_social  ?? null,
+                nome_fantasia: dados.nome_fantasia ?? null,
+                cnpj:          dados.cnpj          ?? null,
+                nome:          dados.nome          ?? null,
+                ie:            dados.ie            ?? null,
+                im:            dados.im            ?? null,
+                suframa:       dados.suframa       ?? null,
+                cep:           dados.cep           ?? null,
+                estado:        dados.estado        ?? null,
+                cidade:        dados.cidade        ?? null,
+                bairro:        dados.bairro        ?? null,
+                endereco:      dados.endereco      ?? null,
+                numero:        dados.numero        ?? null,
+                complemento:   dados.complemento   ?? null,
+            })
+            .eq('id', usuario.empresa_id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
+async function buscarTenantEmpresa() {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id) return { sucesso: false };
+        const { data, error } = await supabaseClient
+            .from('empresas')
+            .select('id, razao_social, nome_fantasia, nome, cnpj, ie, im, suframa, email, cep, estado, cidade, bairro, endereco, numero, complemento, plano, chave_empresa')
+            .eq('id', usuario.empresa_id)
+            .single();
+        if (error) return { sucesso: false };
+        return { sucesso: true, data };
+    } catch (err) {
+        return { sucesso: false };
+    }
+}
+
+// ========================================
+// PROPOSTAS
+// ========================================
+
+async function contarPropostas() {
+    try {
+        const ano = new Date().getFullYear();
+        const { count } = await supabaseClient
+            .from('propostas')
+            .select('*', { count: 'exact', head: true })
+            .like('codigo', `PROPO${ano}%`);
+        return count || 0;
+    } catch { return 0; }
+}
+
+async function salvarPropostaDB(dados) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+
+        // Generate codigo server-side to avoid collisions from client-side caching
+        const ano  = new Date().getFullYear();
+        const cont = await contarPropostas();
+        const codigo = `PROPO${ano}${String(cont + 1).padStart(4, '0')}`;
+
+        const { data, error } = await supabaseClient
+            .from('propostas')
+            .insert({
+                codigo:              codigo,
+                empresa_id:          usuario.empresa_id || null,
+                criado_por:          usuario.id,
+                tipo:                dados.tipo                || null,
+                proposito:           dados.proposito           || null,
+                status:              'ativo',
+                emissor_tipo:        dados.emissor_tipo        || 'usuario',
+                parceiro_id:         dados.parceiro_id         || null,
+                documento:           dados.documento           || null,
+                documento_tipo:      dados.documento_tipo      || null,
+                modal:               dados.modal               || null,
+                incoterm:            dados.incoterm            || null,
+                origem_pais:         dados.origem_pais         || null,
+                origem_pais_codigo:  dados.origem_pais_codigo  || null,
+                destino_pais:        dados.destino_pais        || null,
+                destino_pais_codigo: dados.destino_pais_codigo || null,
+                porto_origem:        dados.porto_origem        || null,
+                porto_destino:       dados.porto_destino       || null,
+                aeroporto_origem:    dados.aeroporto_origem    || null,
+                aeroporto_destino:   dados.aeroporto_destino   || null,
+                fronteira_saida:     dados.fronteira_saida     || null,
+                fronteira_entrada:   dados.fronteira_entrada   || null,
+                forma_pagamento:     dados.forma_pagamento     || null,
+                prazo_pagamento:     dados.prazo_pagamento     || null,
+                condicoes_obs:       dados.condicoes_obs       || null,
+                observacoes:         dados.observacoes         || null,
+                data_emissao:        dados.data_emissao        || null,
+                data_validade:       dados.data_validade       || null,
+                itens:               dados.itens               || [],
+                valor_total:         dados.valor_total         || 0,
+                moeda_principal:     dados.moeda_principal     || 'USD',
+            })
+            .select('id, codigo')
+            .single();
+
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, data };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
+// ========================================
 // EXPORTAR API
 // ========================================
 
@@ -858,5 +1055,9 @@ window.supabaseAPI = {
     salvarProduto,
     editarProduto,
     excluirProduto,
+    atualizarTenantEmpresa,
+    buscarTenantEmpresa,
+    salvarProposta: salvarPropostaDB,
+    contarPropostas,
 };
 

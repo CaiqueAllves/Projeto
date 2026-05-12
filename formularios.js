@@ -29,7 +29,90 @@ function limparForm(formId) {
     }
 }
 
-function salvarEmpresa(e)  { e.preventDefault(); alert('Empresa salva com sucesso! (integração pendente)'); }
+let _empEditandoId = null;
+
+async function salvarEmpresa(e) {
+    e.preventDefault();
+
+    const tipos = [];
+    ['fabricante','cliente','fornecedor','transportadora','remetente'].forEach(t => {
+        if (document.querySelector(`[name="tipo_${t}"]`)?.checked) tipos.push(t);
+    });
+    if (tipos.length === 0) {
+        mostrarNotificacao('Selecione pelo menos um tipo de empresa.', 'warning');
+        return;
+    }
+
+    const dados = {
+        tipos,
+        tipo_cadastro:       document.getElementById('emp-tipo-cadastro')?.value   || '',
+        documento:           document.getElementById('emp-documento')?.value        || '',
+        razao_social:        document.getElementById('emp-nome')?.value             || '',
+        nome_fantasia:       document.getElementById('emp-fantasia')?.value         || '',
+        inscricao_estadual:  document.getElementById('emp-ie')?.value              || '',
+        suframa:             document.getElementById('emp-suframa')?.value          || '',
+        pais:                document.getElementById('emp-pais')?.value             || '',
+        cep:                 document.getElementById('emp-cep')?.value              || '',
+        estado:              document.getElementById('emp-estado')?.value           || '',
+        cidade:              document.getElementById('emp-cidade')?.value           || '',
+        bairro:              document.getElementById('emp-bairro')?.value           || '',
+        endereco:            document.getElementById('emp-endereco')?.value         || '',
+        numero:              document.getElementById('emp-numero')?.value           || '',
+        complemento:         document.getElementById('emp-complemento')?.value     || '',
+        site:                document.getElementById('emp-site')?.value             || '',
+        horario_atendimento: document.getElementById('emp-horario')?.value         || '',
+        tags:                _empTagsArray,
+        observacoes:         document.getElementById('emp-obs')?.value             || '',
+        contatos: [],
+        financeiro: {
+            pag_forma:      document.getElementById('fin-pag-forma')?.value      || '',
+            pag_condicao:   document.getElementById('fin-pag-condicao')?.value   || '',
+            pag_banco:      document.getElementById('fin-pag-banco')?.value      || '',
+            pag_tipo_conta: document.getElementById('fin-pag-tipo-conta')?.value || '',
+            pag_agencia:    document.getElementById('fin-pag-agencia')?.value    || '',
+            pag_conta:      document.getElementById('fin-pag-conta')?.value      || '',
+            rec_forma:      document.getElementById('fin-rec-forma')?.value      || '',
+            rec_moeda:      document.getElementById('fin-rec-moeda')?.value      || '',
+            rec_banco:      document.getElementById('fin-rec-banco')?.value      || '',
+            rec_tipo_conta: document.getElementById('fin-rec-tipo-conta')?.value || '',
+            rec_agencia:    document.getElementById('fin-rec-agencia')?.value    || '',
+            rec_conta:      document.getElementById('fin-rec-conta')?.value      || '',
+        },
+    };
+
+    document.querySelectorAll('#emp-contato-rows .contato-lista-row').forEach(row => {
+        const ins = row.querySelectorAll('input');
+        if (ins.length >= 4) {
+            const tipo = ins[0].value.trim(), nome = ins[1].value.trim(),
+                  email = ins[2].value.trim(), tel = ins[3].value.trim();
+            if (tipo || nome || email || tel)
+                dados.contatos.push({ tipo, nome, email, telefone: tel });
+        }
+    });
+
+    const btn = document.querySelector('#form-empresa .btn-save');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...'; }
+
+    const res = _empEditandoId
+        ? await window.supabaseAPI.editarEmpresa(_empEditandoId, dados)
+        : await window.supabaseAPI.salvarEmpresa(dados);
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar'; }
+
+    if (res.sucesso) {
+        mostrarNotificacao(_empEditandoId ? 'Empresa atualizada com sucesso!' : 'Empresa cadastrada com sucesso!', 'sucesso');
+        if (!_empEditandoId) {
+            document.getElementById('form-empresa').reset();
+            _empTagsArray = [];
+            empRenderizarTags();
+            _empContatoCount = 0;
+            document.getElementById('emp-contato-rows').innerHTML = '';
+            empContatoIniciar();
+        }
+    } else {
+        mostrarNotificacao('Erro ao salvar: ' + (res.mensagem || 'Tente novamente.'), 'erro');
+    }
+}
 
 // ========================================
 // TAGS — EMPRESA
@@ -128,12 +211,52 @@ function fecharConfirmSalvar() {
     document.getElementById('modal-confirmar-salvar').style.display = 'none';
 }
 
-function confirmarSalvar() {
+async function confirmarSalvar() {
     const origem = document.getElementById('modal-confirmar-salvar').dataset.origem || 'processo';
     fecharConfirmSalvar();
-    // TODO: integrar com Supabase
+
+    if (origem === 'proposta') {
+        const dados = _coletarDadosProposta();
+        const btnSim = document.querySelector('#modal-confirmar-salvar .modal-confirm-sim');
+
+        const res = await window.supabaseAPI.salvarProposta(dados);
+
+        const posModal = document.getElementById('modal-pos-salvo');
+        posModal.dataset.origem = origem;
+
+        if (res.sucesso) {
+            const codigo = res.data?.codigo || dados.codigo;
+            const tituloEl  = document.getElementById('pos-salvo-titulo');
+            const msgEl     = document.getElementById('pos-salvo-msg');
+            const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
+            const codigoEl  = document.getElementById('pos-salvo-codigo');
+            const pdfWrap   = document.getElementById('pos-salvo-pdf-wrap');
+
+            if (tituloEl)   tituloEl.textContent  = 'Proposta salva!';
+            if (msgEl)      msgEl.textContent      = 'O que deseja fazer agora?';
+            if (codigoEl)   codigoEl.textContent   = codigo;
+            if (codigoWrap) codigoWrap.style.display = '';
+            if (pdfWrap)    pdfWrap.style.display    = '';
+
+            posModal.style.display = 'flex';
+        } else {
+            mostrarNotificacao('Erro ao salvar proposta: ' + (res.mensagem || 'Tente novamente.'), 'erro');
+        }
+        return;
+    }
+
+    // Processo (manter comportamento anterior)
     const posModal = document.getElementById('modal-pos-salvo');
     posModal.dataset.origem = origem;
+
+    const tituloEl   = document.getElementById('pos-salvo-titulo');
+    const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
+    const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
+
+    if (tituloEl)   tituloEl.textContent = 'Processo salvo!';
+    if (codigoWrap) codigoWrap.style.display = 'none';
+    if (pdfWrap)    pdfWrap.style.display    = 'none';
+
     posModal.style.display = 'flex';
 }
 
@@ -145,6 +268,13 @@ function criarNovo() {
     document.getElementById('modal-pos-salvo').style.display = 'none';
     if (origem === 'proposta') {
         document.getElementById('form-proposta')?.reset();
+        _propItens = [];
+        propRenderizarItens();
+        propGerarCodigo();
+        const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
+        const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
+        if (codigoWrap) codigoWrap.style.display = 'none';
+        if (pdfWrap)    pdfWrap.style.display    = 'none';
     } else {
         document.getElementById('form-processo')?.reset();
     }
@@ -168,6 +298,10 @@ function salvarProposta(e) {
     e.preventDefault();
     const modal = document.getElementById('modal-confirmar-salvar');
     modal.dataset.origem = 'proposta';
+    const titulo = modal.querySelector('.modal-confirm-title');
+    const msg    = modal.querySelector('.modal-confirm-msg');
+    if (titulo) titulo.textContent = 'Salvar Proposta';
+    if (msg)    msg.textContent    = 'Deseja salvar as informações desta proposta?';
     modal.style.display = 'flex';
 }
 
@@ -177,6 +311,60 @@ function salvarProposta(e) {
 
 function gerarPDFProposta() {
     alert('Geração de PDF para proposta em breve. (integração pendente)');
+}
+
+// ========================================
+// PROPOSTA — PRAZO PERSONALIZADO
+// ========================================
+
+function togglePrazoPersonalizado(valor) {
+    const grupo = document.getElementById('prop-prazo-personalizado-group');
+    if (grupo) grupo.style.display = valor === 'personalizado' ? '' : 'none';
+    if (valor !== 'personalizado') {
+        const input = document.getElementById('prop-prazo-personalizado');
+        if (input) input.value = '';
+    }
+}
+
+// ========================================
+// PROPOSTA — COLETAR DADOS
+// ========================================
+
+function _coletarDadosProposta() {
+    const g = id => document.getElementById(id)?.value || '';
+    const emissorTipo = document.querySelector('input[name="prop-emissor-tipo"]:checked')?.value || 'usuario';
+    const prazo = g('prop-prazo-pagamento');
+
+    return {
+        codigo:              g('prop-codigo'),
+        tipo:                g('prop-tipo'),
+        proposito:           g('prop-proposito'),
+        emissor_tipo:        emissorTipo,
+        parceiro_id:         g('prop-cliente-id') || null,
+        documento:           g('prop-documento'),
+        documento_tipo:      g('prop-documento-tipo'),
+        modal:               g('prop-modal'),
+        incoterm:            g('prop-incoterm'),
+        origem_pais:         g('prop-origem-pais'),
+        origem_pais_codigo:  g('prop-origem-pais-codigo'),
+        destino_pais:        g('prop-destino-pais'),
+        destino_pais_codigo: g('prop-destino-pais-codigo'),
+        porto_origem:        g('prop-porto-origem'),
+        porto_destino:       g('prop-porto-destino'),
+        aeroporto_origem:    g('prop-aeroporto-origem'),
+        aeroporto_destino:   g('prop-aeroporto-destino'),
+        fronteira_saida:     g('prop-fronteira-saida'),
+        fronteira_entrada:   g('prop-fronteira-entrada'),
+        forma_pagamento:     g('prop-forma-pagamento'),
+        prazo_pagamento:     prazo === 'personalizado' ? (g('prop-prazo-personalizado') || 'personalizado') : prazo,
+        condicoes_obs:       g('prop-condicoes-obs'),
+        observacoes:         g('prop-observacoes'),
+        data_emissao:        g('prop-data-emissao') || null,
+        data_validade:       g('prop-data-validade') || null,
+        itens:               _propItens || [],
+        valor_total:         (_propItens || []).reduce((s, i) => s + (i.qtd * i.preco), 0),
+        moeda_principal:     _propItens?.find(i => i.moeda)?.moeda || 'USD',
+    };
 }
 
 // ========================================
@@ -220,7 +408,7 @@ function empContatoAdicionar() {
         <input type="text"  class="contato-tipo-input" name="contato_${id}_tipo"  placeholder="Ex: Financeiro">
         <input type="text"  name="contato_${id}_nome"  placeholder="Nome completo">
         <input type="email" name="contato_${id}_email" placeholder="email@empresa.com">
-        <input type="text"  name="contato_${id}_tel"   placeholder="00000000000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+        <input type="text"  name="contato_${id}_tel"   placeholder="Número de telefone" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
         <button type="button" class="btn-remover-contato" onclick="empContatoRemover('${id}')" title="Remover">
             <i class="fa-solid fa-xmark"></i>
         </button>`;
@@ -354,7 +542,7 @@ function _acMostrar(inputEl, listaEl, termo) {
     const q = (termo || '').trim().toLowerCase();
     const filtradas = q
         ? _acEmpresas.filter(e =>
-            (e.nome_empresa || '').toLowerCase().includes(q) ||
+            (e.razao_social  || '').toLowerCase().includes(q) ||
             (e.nome_fantasia || '').toLowerCase().includes(q))
         : _acEmpresas;
 
@@ -364,10 +552,10 @@ function _acMostrar(inputEl, listaEl, termo) {
         listaEl.innerHTML = filtradas.slice(0, 30).map(e => `
             <div class="autocomplete-item"
                  data-id="${e.id}"
-                 data-nome="${(e.nome_empresa || '').replace(/"/g, '&quot;')}"
+                 data-nome="${(e.razao_social || '').replace(/"/g, '&quot;')}"
                  data-doc="${(e.documento || '').replace(/"/g, '&quot;')}"
                  data-pais="${(e.pais || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${e.nome_empresa || ''}</span>
+                <span class="ac-nome">${e.razao_social || ''}</span>
                 ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
             </div>`).join('');
     }
@@ -597,9 +785,13 @@ function iniciarAutocompletePaisEmpresa() {
     async function mostrar() {
         await _acCarregarPaises();
         const q = input.value.trim().toLowerCase();
-        const filtrados = q
-            ? _acPaises.filter(p => p.descricao.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q))
+        const excluirBrasil = input.getAttribute('data-excluir-brasil') === '1';
+        let base = excluirBrasil
+            ? _acPaises.filter(p => !['BR', 'BRA'].includes(p.codigo.toUpperCase()) && p.descricao.toLowerCase() !== 'brasil')
             : _acPaises;
+        const filtrados = q
+            ? base.filter(p => p.descricao.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q))
+            : base;
         lista.innerHTML = filtrados.slice(0, 50).map(p => `
             <div class="autocomplete-item" data-codigo="${p.codigo}" data-nome="${(p.descricao || '').replace(/"/g, '&quot;')}">
                 <span class="ac-nome">${p.descricao}</span>
@@ -664,7 +856,377 @@ function iniciarPaisEmpresa() {
     }
 
     paisInput.addEventListener('input', atualizar);
+    window._empPaisAtualizar = atualizar;
     atualizar();
+}
+
+// ========================================
+// MODELO DE EMPRESA
+// ========================================
+
+function onModeloChange(modelo) {
+    const paisGroup      = document.getElementById('emp-pais')?.closest('.form-group');
+    const paisInput      = document.getElementById('emp-pais');
+    const paisCodigo     = document.getElementById('emp-pais-codigo');
+    const ieGroup        = document.getElementById('emp-ie')?.closest('.form-group');
+    const sufrGroup      = document.getElementById('btn-suframa')?.closest('.form-group');
+    const tipoCadSel     = document.getElementById('emp-tipo-cadastro');
+    const tipoGroup      = document.getElementById('emp-tipo-group');
+    const coletaDivider  = document.getElementById('emp-coleta-divider-wrapper');
+    const coletaGroup    = document.getElementById('emp-coleta-group');
+    const coletaHorarios = document.getElementById('emp-coleta-horarios');
+    const secaoMarca     = document.getElementById('emp-secao-marca');
+    const secaoFrota     = document.getElementById('emp-secao-frota');
+    const codigoGroup    = document.getElementById('emp-codigo-group');
+    const rntrcGroup     = document.getElementById('emp-rntrc-group');
+    const imGroup        = document.getElementById('emp-im-group');
+
+    const isTransp = modelo === 'transportadora';
+
+    // Highlight active modelo card
+    document.querySelectorAll('.modelo-card').forEach(card => {
+        const radio = card.querySelector('input[type="radio"]');
+        card.classList.toggle('modelo-card--ativo', radio && radio.value === modelo);
+    });
+
+    // Transportadora-specific visibility
+    if (tipoGroup)      tipoGroup.style.display      = isTransp ? 'none' : '';
+    if (coletaDivider)  coletaDivider.style.display  = isTransp ? 'none' : '';
+    if (coletaGroup)    coletaGroup.style.display     = isTransp ? 'none' : '';
+    if (coletaHorarios) coletaHorarios.style.display  = isTransp ? 'none' : '';
+    if (secaoMarca)     secaoMarca.style.display      = isTransp ? 'none' : '';
+    if (secaoFrota)     secaoFrota.style.display      = isTransp ? '' : 'none';
+    if (codigoGroup)    codigoGroup.style.display     = isTransp ? 'none' : '';
+    if (rntrcGroup)     rntrcGroup.style.display      = isTransp ? '' : 'none';
+    if (imGroup)        imGroup.style.display         = modelo === 'empresa' ? '' : 'none';
+
+    if (modelo === 'empresa' || modelo === 'transportadora') {
+        // BR only — auto-set Brasil, hide country picker
+        if (paisInput)  { paisInput.value = 'Brasil'; }
+        if (paisCodigo) paisCodigo.value = 'BR';
+        if (paisGroup)  paisGroup.style.display = 'none';
+        if (ieGroup)    ieGroup.style.display = '';
+        if (sufrGroup)  sufrGroup.style.display = '';
+        if (tipoCadSel) {
+            Array.from(tipoCadSel.options).forEach(o => { o.style.display = o.value === 'outros' ? 'none' : ''; });
+            if (tipoCadSel.value === 'outros') tipoCadSel.value = '';
+        }
+        if (window._empPaisAtualizar) window._empPaisAtualizar();
+    } else if (modelo === 'company') {
+        // Foreign only — clear country, show picker but exclude Brasil
+        if (paisInput)  { paisInput.value = ''; paisInput.setAttribute('data-excluir-brasil', '1'); }
+        if (paisCodigo) paisCodigo.value = '';
+        if (paisGroup)  paisGroup.style.display = '';
+        if (ieGroup)    ieGroup.style.display = 'none';
+        if (sufrGroup)  sufrGroup.style.display = 'none';
+        if (tipoCadSel) {
+            Array.from(tipoCadSel.options).forEach(o => {
+                o.style.display = (o.value === 'cnpj' || o.value === 'cpf') ? 'none' : '';
+            });
+            if (tipoCadSel.value === 'cnpj' || tipoCadSel.value === 'cpf') tipoCadSel.value = 'outros';
+        }
+        if (window._empPaisAtualizar) window._empPaisAtualizar();
+    } else {
+        // Outros — BR + foreign, show everything
+        if (paisInput)  { paisInput.removeAttribute('data-excluir-brasil'); }
+        if (paisGroup)  paisGroup.style.display = '';
+        if (ieGroup)    ieGroup.style.display = '';
+        if (sufrGroup)  sufrGroup.style.display = '';
+        if (tipoCadSel) Array.from(tipoCadSel.options).forEach(o => { o.style.display = ''; });
+        if (window._empPaisAtualizar) window._empPaisAtualizar();
+    }
+}
+
+// ========================================
+// DADOS PARA COLETA
+// ========================================
+
+function toggleDadosColeta(checked) {
+    const campos      = document.getElementById('emp-coleta-campos');
+    const coletaInput = document.getElementById('emp-coleta');
+    if (!campos) return;
+
+    if (checked) {
+        campos.style.display = 'none';
+        if (coletaInput) {
+            const endereco = document.getElementById('emp-endereco')?.value || '';
+            const numero   = document.getElementById('emp-numero')?.value   || '';
+            const cidade   = document.getElementById('emp-cidade')?.value   || '';
+            coletaInput.value         = [endereco, numero, cidade].filter(Boolean).join(', ');
+            coletaInput.style.display = '';
+        }
+    } else {
+        campos.style.display = '';
+        if (coletaInput) coletaInput.style.display = 'none';
+    }
+}
+
+function iniciarMascaraCEPColeta() {
+    const cepInput = document.getElementById('emp-coleta-cep');
+    if (!cepInput) return;
+
+    cepInput.addEventListener('input', () => {
+        let v = cepInput.value.replace(/\D/g, '').slice(0, 8);
+        if (v.length > 5) v = v.slice(0, 5) + '-' + v.slice(5);
+        cepInput.value = v;
+    });
+
+    cepInput.addEventListener('blur', async () => {
+        const cep = cepInput.value.replace(/\D/g, '');
+        if (cep.length !== 8) return;
+        try {
+            const res   = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const dados = await res.json();
+            if (!dados.erro) {
+                const map = {
+                    'emp-coleta-estado':   dados.uf         || '',
+                    'emp-coleta-cidade':   dados.localidade || '',
+                    'emp-coleta-bairro':   dados.bairro     || '',
+                    'emp-coleta-endereco': dados.logradouro || '',
+                };
+                Object.entries(map).forEach(([id, val]) => {
+                    const el = document.getElementById(id);
+                    if (el && !el.value) el.value = val;
+                });
+                setTimeout(() => document.getElementById('emp-coleta-numero')?.focus(), 300);
+            }
+        } catch (_) {}
+    });
+}
+
+// ========================================
+// MARCA
+// ========================================
+
+let _empMarcaCount = 0;
+
+function empAdicionarMarca() {
+    const lista = document.getElementById('emp-marcas-lista');
+    if (!lista) return;
+    if (lista.querySelectorAll('.marca-item').length >= 5) return;
+
+    _empMarcaCount++;
+    const id = _empMarcaCount;
+
+    const div = document.createElement('div');
+    div.className = 'marca-item';
+    div.id = `marca-item-${id}`;
+    div.innerHTML = `
+        <div class="marca-item-preview" id="marca-preview-${id}">
+            <i class="fa-solid fa-image marca-placeholder-icon"></i>
+        </div>
+        <div class="marca-item-body">
+            <div class="marca-item-row">
+                <label class="marca-upload-btn" for="marca-file-${id}">
+                    <i class="fa-solid fa-upload"></i> Carregar imagem
+                    <input type="file" id="marca-file-${id}" accept="image/*" style="display:none"
+                        onchange="empPreviewMarca(this, ${id})">
+                </label>
+            </div>
+            <input type="text" class="marca-nome-input" name="marca_nome_${id}" placeholder="Nome da marca (opcional)">
+        </div>
+        <button type="button" class="btn-remover-marca" onclick="empRemoverMarca(${id})" title="Remover marca">
+            <i class="fa-solid fa-trash"></i>
+        </button>`;
+    lista.appendChild(div);
+}
+
+function empRemoverMarca(id) {
+    document.getElementById(`marca-item-${id}`)?.remove();
+}
+
+function toggleSemMarcaGlobal(checkbox) {
+    const lista  = document.getElementById('emp-marcas-lista');
+    const addBtn = document.getElementById('btn-add-marca');
+    const badge  = document.getElementById('marca-sem-badge');
+    if (checkbox.checked) {
+        if (lista)   lista.style.display  = 'none';
+        if (addBtn)  addBtn.disabled      = true;
+        if (addBtn)  addBtn.style.opacity = '0.4';
+        if (badge)   badge.style.display  = '';
+    } else {
+        if (lista)   lista.style.display  = '';
+        if (addBtn)  addBtn.disabled      = false;
+        if (addBtn)  addBtn.style.opacity = '';
+        if (badge)   badge.style.display  = 'none';
+    }
+}
+
+function empPreviewMarca(input, id) {
+    if (!input.files || !input.files[0]) return;
+    const preview = document.getElementById(`marca-preview-${id}`);
+    if (!preview) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        preview.innerHTML = `<img src="${e.target.result}" alt="Marca" class="marca-preview-img">`;
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+// ========================================
+// DOCUMENTOS (EMPRESA FORM)
+// ========================================
+
+let _empDocCount = 0;
+const _EMP_DOC_TIPOS = [
+    'Contrato Social',
+    'Cartão CNPJ',
+    'Cartão Inscrição Estadual',
+    'Inscrição no MAPA',
+    'Inscrição no ANVISA',
+    'Certificado',
+    'Número CRLV',
+    'Número RCTR-C',
+    'Número RCF-DC',
+    'Outros'
+];
+
+function _empDocUsuario() {
+    try {
+        const u = JSON.parse(sessionStorage.getItem('usuarioLogado') || '{}');
+        return u.nome || u.email || 'Usuário';
+    } catch { return 'Usuário'; }
+}
+
+function _empDocFormatarData(d) {
+    const dias   = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+    const meses  = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    return `${dias[d.getDay()]}, ${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()} às ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function _empDocFormatarTamanho(bytes) {
+    if (bytes < 1024)       return bytes + ' B';
+    if (bytes < 1048576)    return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function empAdicionarDocumento() {
+    const lista = document.getElementById('emp-docs-lista');
+    if (!lista) return;
+
+    _empDocCount++;
+    const id = _empDocCount;
+
+    const tiposOpts = _EMP_DOC_TIPOS.map(t => `<option value="${t}">${t}</option>`).join('');
+    const usuario   = _empDocUsuario();
+    const dataStr   = _empDocFormatarData(new Date());
+
+    const div = document.createElement('div');
+    div.className = 'emp-doc-item';
+    div.id = `emp-doc-item-${id}`;
+    div.innerHTML = `
+        <div class="emp-doc-item-top">
+            <div class="emp-doc-item-fields">
+                <div class="form-group emp-doc-tipo-group">
+                    <label>Tipo de Documento</label>
+                    <select id="emp-doc-tipo-${id}" name="doc_tipo_${id}" onchange="empTipoDocChange(this, ${id})">
+                        <option value="">Selecione...</option>
+                        ${tiposOpts}
+                    </select>
+                </div>
+                <div class="form-group emp-doc-outros-group" id="emp-doc-outros-group-${id}" style="display:none;">
+                    <label>Descrição do Documento</label>
+                    <input type="text" id="emp-doc-outros-${id}" name="doc_outros_${id}" placeholder="Descreva o tipo de documento...">
+                </div>
+            </div>
+            <button type="button" class="btn-remover-doc-emp" onclick="empRemoverDocumento(${id})" title="Remover documento">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+
+        <div class="emp-doc-file-area">
+            <div class="emp-doc-upload-zone" id="emp-doc-upload-zone-${id}">
+                <label class="emp-doc-upload-btn" for="emp-doc-file-${id}">
+                    <i class="fa-solid fa-file-arrow-up"></i> Selecionar PDF
+                    <input type="file" id="emp-doc-file-${id}" accept=".pdf,application/pdf" style="display:none"
+                        onchange="empPreviewDocumento(this, ${id})">
+                </label>
+                <span class="emp-doc-upload-hint">Somente arquivos .PDF</span>
+            </div>
+            <div class="emp-doc-uploaded" id="emp-doc-uploaded-${id}" style="display:none;">
+                <div class="emp-doc-uploaded-info">
+                    <i class="fa-solid fa-circle-check emp-doc-ok-icon"></i>
+                    <div class="emp-doc-uploaded-meta">
+                        <span class="emp-doc-uploaded-name" id="emp-doc-uploaded-name-${id}"></span>
+                        <span class="emp-doc-uploaded-size" id="emp-doc-uploaded-size-${id}"></span>
+                    </div>
+                </div>
+                <div class="emp-doc-uploaded-actions">
+                    <button type="button" class="emp-doc-action-btn emp-doc-btn-ver" onclick="empVisualizarDoc(${id})" title="Visualizar">
+                        <i class="fa-solid fa-eye"></i> Visualizar
+                    </button>
+                    <label class="emp-doc-action-btn emp-doc-btn-editar" for="emp-doc-file-${id}" title="Substituir arquivo">
+                        <i class="fa-solid fa-pen"></i> Editar
+                    </label>
+                    <button type="button" class="emp-doc-action-btn emp-doc-btn-excluir" onclick="empRemoverArquivoDoc(${id})" title="Remover arquivo">
+                        <i class="fa-solid fa-xmark"></i> Remover
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="emp-doc-footer">
+            <i class="fa-solid fa-user"></i>
+            <span>${usuario}</span>
+            <span class="emp-doc-footer-sep">•</span>
+            <i class="fa-regular fa-calendar"></i>
+            <span id="emp-doc-data-${id}">${dataStr}</span>
+        </div>`;
+    lista.appendChild(div);
+}
+
+function empTipoDocChange(sel, id) {
+    const outrosGroup = document.getElementById(`emp-doc-outros-group-${id}`);
+    if (!outrosGroup) return;
+    outrosGroup.style.display = sel.value === 'Outros' ? '' : 'none';
+    if (sel.value !== 'Outros') {
+        const outrosInput = document.getElementById(`emp-doc-outros-${id}`);
+        if (outrosInput) outrosInput.value = '';
+    }
+}
+
+function empRemoverDocumento(id) {
+    document.getElementById(`emp-doc-item-${id}`)?.remove();
+}
+
+function empPreviewDocumento(input, id) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const uploadZone  = document.getElementById(`emp-doc-upload-zone-${id}`);
+    const uploadedBox = document.getElementById(`emp-doc-uploaded-${id}`);
+    const nameEl      = document.getElementById(`emp-doc-uploaded-name-${id}`);
+    const sizeEl      = document.getElementById(`emp-doc-uploaded-size-${id}`);
+    const dataEl      = document.getElementById(`emp-doc-data-${id}`);
+
+    if (nameEl) nameEl.textContent = file.name;
+    if (sizeEl) sizeEl.textContent = _empDocFormatarTamanho(file.size);
+    if (dataEl) dataEl.textContent = _empDocFormatarData(new Date());
+
+    if (uploadZone)  uploadZone.style.display  = 'none';
+    if (uploadedBox) uploadedBox.style.display  = '';
+
+    // store object URL for preview
+    input._objectUrl = URL.createObjectURL(file);
+}
+
+function empRemoverArquivoDoc(id) {
+    const fileInput   = document.getElementById(`emp-doc-file-${id}`);
+    const uploadZone  = document.getElementById(`emp-doc-upload-zone-${id}`);
+    const uploadedBox = document.getElementById(`emp-doc-uploaded-${id}`);
+
+    if (fileInput) {
+        if (fileInput._objectUrl) { URL.revokeObjectURL(fileInput._objectUrl); fileInput._objectUrl = null; }
+        fileInput.value = '';
+    }
+    if (uploadZone)  uploadZone.style.display  = '';
+    if (uploadedBox) uploadedBox.style.display  = 'none';
+}
+
+function empVisualizarDoc(id) {
+    const fileInput = document.getElementById(`emp-doc-file-${id}`);
+    const url = fileInput?._objectUrl;
+    if (url) window.open(url, '_blank');
 }
 
 // ========================================
@@ -1373,6 +1935,52 @@ function iniciarAutocompleteProcCliente() {
 }
 
 // ========================================
+// AUTOCOMPLETE — CÓDIGO DA PROPOSTA (PROCESSO)
+// ========================================
+
+let _acPropostas = [];
+
+async function _acCarregarPropostas() {
+    if (_acPropostas.length > 0) return;
+    try {
+        const usuario = obterUsuarioLogado();
+        let query = supabaseClient.from('propostas').select('id, codigo').order('created_at', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        const { data } = await query;
+        _acPropostas = (data || []).map(p => ({ id: p.id, nome: p.codigo, label: p.codigo }));
+    } catch { _acPropostas = []; }
+}
+
+function iniciarAutocompleteProcCodProposta() {
+    const input    = document.getElementById('proc-codigo');
+    const lista    = document.getElementById('proc-codigo-lista');
+    const idOculto = document.getElementById('proc-proposta-id');
+    if (!input || !lista) return;
+
+    input.addEventListener('focus', async () => {
+        await _acCarregarPropostas();
+        _acMostrar(input, lista, input.value);
+    });
+
+    input.addEventListener('input', () => {
+        if (idOculto) idOculto.value = '';
+        _acMostrar(input, lista, input.value);
+    });
+
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        input.value = item.getAttribute('data-nome');
+        if (idOculto) idOculto.value = item.getAttribute('data-id');
+        _acFechar(lista);
+    });
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.autocomplete-wrapper')) _acFechar(lista);
+    });
+}
+
+// ========================================
 // DOCUMENTOS DO PROCESSO
 // ========================================
 
@@ -1470,7 +2078,7 @@ function iniciarAutocompleteEmpresaDestino() {
         const q = (termo || '').trim().toLowerCase();
         const filtradas = q
             ? _acEmpresas.filter(e =>
-                (e.nome_empresa  || '').toLowerCase().includes(q) ||
+                (e.razao_social  || '').toLowerCase().includes(q) ||
                 (e.nome_fantasia || '').toLowerCase().includes(q) ||
                 (e.documento     || '').includes(q))
             : _acEmpresas;
@@ -1481,11 +2089,11 @@ function iniciarAutocompleteEmpresaDestino() {
             lista.innerHTML = filtradas.slice(0, 30).map(e => `
                 <div class="autocomplete-item"
                      data-id="${e.id}"
-                     data-razao="${(e.nome_empresa  || '').replace(/"/g,'&quot;')}"
+                     data-razao="${(e.razao_social  || '').replace(/"/g,'&quot;')}"
                      data-fantasia="${(e.nome_fantasia || '').replace(/"/g,'&quot;')}"
                      data-doc="${e.documento || ''}"
                      data-idint="${(e.identificacao_empresa || '').replace(/"/g,'&quot;')}">
-                    <span class="ac-nome">${e.nome_empresa || ''}</span>
+                    <span class="ac-nome">${e.razao_social || ''}</span>
                     ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
                 </div>`).join('');
         }
@@ -1844,7 +2452,20 @@ function iniciarIncotermModal() {
 // INICIALIZAÇÃO
 // ========================================
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
+    window._usuarioLogado = obterUsuarioLogado() || {};
+
+    // Carregar dados da empresa tenant para auto-preenchimento
+    try {
+        const resEmp = await window.supabaseAPI.buscarTenantEmpresa();
+        if (resEmp.sucesso && resEmp.data) {
+            window._dadosEmpresaTenant = resEmp.data;
+            window._usuarioLogado.empresa     = resEmp.data.razao_social || window._usuarioLogado.empresa || '';
+            window._usuarioLogado.nome_empresa = resEmp.data.razao_social || '';
+            window._usuarioLogado.documento   = resEmp.data.cnpj || '';
+        }
+    } catch (_) {}
+
     document.querySelectorAll('.form-section.active .section-content').forEach(c => {
         c.style.display = 'block';
     });
@@ -1859,11 +2480,14 @@ document.addEventListener('DOMContentLoaded', function () {
     iniciarAutocompletePaisEmpresa();
     iniciarPaisEmpresa();
     iniciarMascaraCEP();
+    iniciarMascaraCEPColeta();
     empIniciarTags();
     empContatoIniciar();
+    onModeloChange('empresa');
+    empAdicionarDocumento();
     _carregarMoedas().then(moedas => {
         const sel = document.getElementById('fin-rec-moeda');
-        if (!sel) return;
+        if (!sel || !moedas) return;
         moedas.forEach(m => {
             const o = document.createElement('option');
             o.value = m.codigo;
@@ -1879,6 +2503,7 @@ document.addEventListener('DOMContentLoaded', function () {
     iniciarEtapas();
     iniciarCamposStatus();
     iniciarAutocompleteProcCliente();
+    iniciarAutocompleteProcCodProposta();
     iniciarAutocompletePaisOrigem();
     iniciarAutocompletePaisDestino();
     iniciarAutocompleteContainer();
@@ -2015,7 +2640,7 @@ function _mostrarDropdownTransp(lista, nomeInput, cnpjInput) {
 // ========================================
 
 async function _carregarMoedas() {
-    if (_acMoedas.length > 0) return;
+    if (_acMoedas.length > 0) return _acMoedas;
     try {
         const { data } = await supabaseClient
             .from('apoio_moedas')
@@ -2023,6 +2648,7 @@ async function _carregarMoedas() {
             .order('codigo', { ascending: true });
         _acMoedas = data || [];
     } catch { _acMoedas = []; }
+    return _acMoedas;
 }
 
 // UNIDADES DE MEDIDA — CACHE COMPARTILHADO
@@ -2133,6 +2759,30 @@ function iniciarResumoProposta() {
 // ========================================
 // PROPOSTA — EMISSOR
 // ========================================
+
+function _mascaraIE(valor) {
+    const d = valor.replace(/\D/g, '').slice(0, 12);
+    if (d.length <= 9) {
+        let o = d.slice(0, 3);
+        if (d.length > 3) o += '.' + d.slice(3, 6);
+        if (d.length > 6) o += '.' + d.slice(6, 8);
+        if (d.length > 8) o += '-' + d.slice(8, 9);
+        return o;
+    } else {
+        let o = d.slice(0, 3);
+        if (d.length > 3) o += '.' + d.slice(3, 6);
+        if (d.length > 6) o += '.' + d.slice(6, 9);
+        if (d.length > 9) o += '.' + d.slice(9, 12);
+        return o;
+    }
+}
+
+function _mascaraIM(valor) {
+    const d = valor.replace(/\D/g, '').slice(0, 7);
+    let o = d.slice(0, 6);
+    if (d.length > 6) o += '-' + d.slice(6, 7);
+    return o;
+}
 
 function _mascaraDocBR(valor) {
     const d = valor.replace(/\D/g, '').slice(0, 14);
@@ -2371,7 +3021,7 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
         const q = (termo || '').trim().toLowerCase();
         const filtradas = q
             ? _acEmpresas.filter(e =>
-                (e.nome_empresa  || '').toLowerCase().includes(q) ||
+                (e.razao_social  || '').toLowerCase().includes(q) ||
                 (e.nome_fantasia || '').toLowerCase().includes(q) ||
                 (e.documento     || '').includes(q))
             : _acEmpresas;
@@ -2380,11 +3030,11 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
             ? filtradas.slice(0, 30).map(e => `
                 <div class="autocomplete-item"
                      data-id="${e.id}"
-                     data-razao="${(e.nome_empresa  || '').replace(/"/g,'&quot;')}"
+                     data-razao="${(e.razao_social  || '').replace(/"/g,'&quot;')}"
                      data-fantasia="${(e.nome_fantasia || '').replace(/"/g,'&quot;')}"
                      data-doc="${e.documento || ''}"
                      data-idint="${(e.identificacao_empresa || '').replace(/"/g,'&quot;')}">
-                    <span class="ac-nome">${e.nome_empresa || ''}</span>
+                    <span class="ac-nome">${e.razao_social || ''}</span>
                     ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
                 </div>`).join('')
             : '<div class="autocomplete-vazio">Nenhuma empresa encontrada</div>';
@@ -2466,17 +3116,9 @@ async function _propPreencherPaisOrigem(valorPais) {
 }
 
 async function propGerarCodigo() {
-    const ano    = new Date().getFullYear();
-    let   seq    = 1;
-    try {
-        const { count } = await supabaseClient
-            .from('propostas')
-            .select('*', { count: 'exact', head: true })
-            .like('codigo', `PROPO${ano}%`);
-        if (count != null) seq = count + 1;
-    } catch { /* tabela ainda não existe — usa seq 1 */ }
-
-    const codigo  = `PROPO${ano}${String(seq).padStart(4, '0')}`;
+    const ano  = new Date().getFullYear();
+    const cont = await window.supabaseAPI.contarPropostas().catch(() => 0);
+    const codigo  = `PROPO${ano}${String(cont + 1).padStart(4, '0')}`;
     const hidden  = document.getElementById('prop-codigo');
     const display = document.getElementById('prop-codigo-display');
     if (hidden)  hidden.value        = codigo;

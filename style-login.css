@@ -275,6 +275,31 @@ body {
     box-shadow: 0 0 0 4px rgba(71, 118, 236, 0.1);
 }
 
+.input-group input:disabled {
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.input-group select {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    color: #1e293b;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.input-group select:focus {
+    border-color: #4776ec;
+    box-shadow: 0 0 0 4px rgba(71, 118, 236, 0.1);
+}
+
 /* PASSWORD */
 .password-wrapper {
     position: relative;
@@ -514,9 +539,12 @@ body {
     background: white;
     border-radius: 20px;
     width: 90%;
-    max-width: 500px;
+    max-width: 560px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: scaleIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    max-height: 92vh;
 }
 
 .modal-large {
@@ -571,12 +599,45 @@ body {
 }
 
 .modal-body {
-    padding: 24px;
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .modal-body p {
     color: #64748b;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+}
+
+/* Campos compactos dentro dos modais */
+.modal-body .input-group {
+    margin-bottom: 14px;
+}
+
+.modal-body .input-group label {
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.modal-body .input-group input,
+.modal-body .input-group select {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-radius: 10px;
+    height: 42px;
+    box-sizing: border-box;
+    line-height: 1.4;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.modal-body .form-row {
+    gap: 12px;
+    margin-bottom: 0;
+}
+
+.modal-body .checkbox-label {
+    margin-top: 8px;
 }
 
 .form-row {

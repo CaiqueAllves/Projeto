@@ -438,17 +438,7 @@ main, .content, .topbar, .section-card, .stat-card, table, button, input, select
 .toast.erro { border-left-color: #dc2626; color: #dc2626; }
 .toast.sucesso { color: #166534; }
 
-/* ========================================
-   RODAPÉ (igual ao início)
-======================================== */
-.dashboard-footer {
-    text-align: center;
-    padding: 24px;
-    color: var(--texto-claro, #64748b);
-    font-size: 14px;
-    margin-top: 16px;
-    border-top: 2px solid #F1F5F9;
-}
+/* RODAPÉ — definido em style-base.css */
 
 /* ========================================
    OVERRIDE: neutraliza regras do style-login.css

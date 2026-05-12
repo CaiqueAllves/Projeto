@@ -758,13 +758,4 @@ main {
 }
 .rel-btn-pdf:hover { opacity: .88; transform: translateY(-1px); }
 
-/* ========================================
-   FOOTER
-======================================== */
-.dashboard-footer {
-    text-align: center;
-    padding: 24px;
-    color: var(--texto-claro);
-    font-size: 14px;
-    border-top: 1px solid #f1f5f9;
-}
+/* RODAPÉ — definido em style-base.css */

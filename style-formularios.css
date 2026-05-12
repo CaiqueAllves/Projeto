@@ -281,14 +281,29 @@
     flex: 1;
 }
 
-/* TOPBAR - ELEMENTOS INTERNOS */
+/* TOPBAR - OVERRIDE FORMULÁRIOS */
+.topbar {
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #eaecf0;
+    padding: 20px 24px;
+    min-height: 72px;
+    box-sizing: border-box;
+}
+
 .topbar-left h2 {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--azul);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--texto);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+}
+
+.topbar-left h2 i {
+    color: var(--azul);
+    font-size: 15px;
 }
 
 .topbar-right {
@@ -368,7 +383,8 @@ main {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 0;
+    padding: 0 20px 20px;
+    gap: 0;
     background: #f6f7f9;
     overflow: hidden;
 }
@@ -393,31 +409,37 @@ main {
 
 /* TABS */
 .form-tabs {
-    padding: 0 32px 16px;
+    background: #f1f5f9;
+    padding: 0 24px;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 10px 10px 0 0;
+    flex-shrink: 0;
 }
 
 .form-tabs-inner {
-    display: inline-flex;
-    background: #f1f5f9;
-    border-radius: 12px;
-    padding: 4px;
-    gap: 2px;
+    display: flex;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    gap: 0;
 }
 
 .tab-btn {
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 8px 18px;
+    padding: 13px 18px;
     border: none;
-    border-radius: 9px;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     background: transparent;
     color: #64748b;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    transition: color 0.18s, border-color 0.18s;
     white-space: nowrap;
+    margin-bottom: -1px;
 }
 
 .tab-btn i {
@@ -425,15 +447,16 @@ main {
 }
 
 .tab-btn:hover {
-    background: #e2e8f0;
-    color: #1e3a5f;
+    color: var(--azul);
+    background: transparent;
 }
 
 .tab-btn.active {
-    background: #fff;
     color: var(--azul);
     font-weight: 600;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+    border-bottom: 2px solid var(--azul);
+    background: transparent;
+    box-shadow: none;
 }
 
 /* TAB CONTENT */
@@ -448,6 +471,8 @@ main {
     width: 100%;
     min-height: 0;
     overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    border-radius: 0 0 10px 10px;
 }
 
 /* FORM CARD */
@@ -455,51 +480,60 @@ main {
     flex: 1;
     width: 100%;
     background: var(--branco);
-    border-radius: 0;
-    padding: 32px;
-    box-shadow: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
     box-sizing: border-box;
     min-height: 0;
+    border-radius: 0 0 10px 10px;
 }
 
 /* FORM SECTION (colapsável) */
 .form-section {
-    border: 1px solid var(--cinza-claro);
-    border-radius: 12px;
-    margin-bottom: 16px;
+    background: var(--branco);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #f0f2f5;
     overflow: hidden;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    border-radius: 0 0 10px 10px;
 }
 
 .section-title {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 20px;
+    gap: 10px;
+    padding: 13px 18px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--texto);
     background: var(--branco);
+    border-bottom: 1px solid #f0f2f5;
     user-select: none;
     transition: background 0.2s ease;
 }
 
 .section-title i:first-child {
     color: var(--azul);
-    font-size: 15px;
-    width: 18px;
+    font-size: 14px;
+    width: 16px;
     text-align: center;
 }
 
 .section-title:hover {
-    background: #f8faff;
+    background: #f8f9fb;
 }
 
 .section-arrow {
     margin-left: auto;
     color: var(--texto-claro);
-    font-size: 12px;
+    font-size: 11px;
     transition: transform 0.3s ease;
 }
 
@@ -508,7 +542,7 @@ main {
 }
 
 .section-content {
-    padding: 0 20px 20px 20px;
+    padding: 20px 24px;
     display: none;
 }
 
@@ -940,7 +974,26 @@ form {
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
+    column-gap: 16px;
+    row-gap: 24px;
+}
+
+.form-row-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
+}
+
+.form-row-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.form-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
 .form-group {
@@ -1292,13 +1345,7 @@ form {
     background: #fef2f2;
 }
 
-/* RODAPÉ */
-.dashboard-footer {
-    text-align: center;
-    padding: 24px 0;
-    color: var(--texto-claro);
-    font-size: 13px;
-}
+/* RODAPÉ — definido em style-base.css */
 
 /* RESPONSIVO */
 @media (max-width: 768px) {
@@ -1841,6 +1888,39 @@ form {
     color: #fff;
 }
 
+.modal-pos-codigo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 20px;
+    margin: 8px 0 4px;
+}
+
+.modal-pos-codigo-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #94a3b8;
+}
+
+.modal-pos-codigo-valor {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: 2px;
+    font-family: monospace;
+}
+
+.modal-btn-pdf {
+    width: 100%;
+    justify-content: center;
+}
+
 /* ── Transporte ────────────────────────────── */
 .campo-opcional {
     font-size: 11px;
@@ -1867,6 +1947,34 @@ form {
     justify-content: space-between;
 }
 .numero-label-row > label { margin-bottom: 0 !important; }
+
+.input-com-sn {
+    position: relative;
+    display: flex;
+}
+.input-com-sn input[type="text"] {
+    flex: 1;
+    padding-right: 52px;
+}
+.sn-toggle-inner {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    cursor: pointer;
+    user-select: none;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+}
+.sn-toggle-inner:hover {
+    color: #3b82f6;
+}
+.sn-toggle-inner.ativo {
+    color: #3b82f6;
+}
 
 .btn-suframa-link {
     background: none;
@@ -2434,4 +2542,515 @@ form {
 
 .tel-whats-check:hover span {
     color: #25d366;
+}
+
+/* ── Modelo Selector ────────────────────────── */
+.modelo-selector-group {
+    padding: 20px 24px 4px;
+}
+
+.modelo-selector-group--inside {
+    padding: 0 0 16px;
+}
+
+.modelo-selector-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto);
+    margin-bottom: 12px;
+}
+
+.modelo-cards-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.modelo-card {
+    cursor: pointer;
+}
+
+.modelo-card input[type="radio"] {
+    display: none;
+}
+
+.modelo-card-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 14px 22px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 13px;
+    min-width: 110px;
+    transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+    user-select: none;
+    text-align: center;
+}
+
+.modelo-card-inner i {
+    font-size: 18px;
+    margin-bottom: 2px;
+}
+
+.modelo-card-inner strong {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.modelo-card-inner small {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.modelo-card:hover .modelo-card-inner {
+    border-color: #4776ec;
+    color: #4776ec;
+    background: #f0f5ff;
+}
+
+.modelo-card:hover .modelo-card-inner small {
+    color: #7da0f5;
+}
+
+.modelo-card input:checked + .modelo-card-inner,
+.modelo-card--ativo .modelo-card-inner {
+    border-color: #4776ec;
+    background: #eff6ff;
+    color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(71,118,236,0.12);
+}
+
+.modelo-card input:checked + .modelo-card-inner small,
+.modelo-card--ativo .modelo-card-inner small {
+    color: #60a5fa;
+}
+
+/* ── Identificação 3-col ────────────────────── */
+.ident-3col {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 700px) {
+    .ident-3col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Endereço de Coleta ─────────────────────── */
+.coleta-divider {
+    border: none;
+    border-top: 1.5px solid #e2e8f0;
+    margin: 8px 0 4px;
+}
+
+.coleta-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.coleta-label-row label:first-child {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--texto);
+}
+
+#emp-coleta-campos {
+    gap: 16px;
+}
+
+/* ── Marca ──────────────────────────────────── */
+.marca-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.marca-sem-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    white-space: nowrap;
+    padding: 2px 8px;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #dc2626;
+    margin-left: 4px;
+    pointer-events: none;
+}
+
+
+.btn-add-marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    background: #f1f5f9;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4776ec;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-add-marca:hover {
+    background: #eff6ff;
+    border-color: #4776ec;
+}
+
+.marca-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fafafa;
+    margin-bottom: 10px;
+}
+
+.marca-item-preview {
+    width: 72px;
+    height: 72px;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.marca-placeholder-icon {
+    font-size: 22px;
+    color: #cbd5e1;
+}
+
+.marca-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.marca-sem-marca-badge {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+    text-align: center;
+    padding: 4px;
+}
+
+.marca-item-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.marca-item-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.marca-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4776ec;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.marca-upload-btn:hover {
+    background: #eff6ff;
+    border-color: #4776ec;
+}
+
+.marca-nome-input {
+    height: 38px !important;
+    padding: 0 12px !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 13px;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    color: var(--texto);
+    background: var(--branco);
+}
+
+.marca-nome-input:focus {
+    border-color: var(--azul);
+    outline: none;
+}
+
+.marca-sem-marca-toggle {
+    margin-top: 0 !important;
+}
+
+.btn-remover-marca {
+    background: none;
+    border: none;
+    color: #f87171;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-remover-marca:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ── Documentos (Empresa Form) ──────────────── */
+.docs-footer {
+    margin-top: 8px;
+}
+
+.btn-add-doc-emp {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    background: #f1f5f9;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4776ec;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-add-doc-emp:hover {
+    background: #eff6ff;
+    border-color: #4776ec;
+}
+
+.emp-doc-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+/* Linha superior: campos + botão remover bloco */
+.emp-doc-item-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 14px 0;
+}
+
+.emp-doc-item-fields {
+    flex: 1;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.emp-doc-tipo-group { flex: 1; min-width: 180px; }
+.emp-doc-outros-group { flex: 1.4; min-width: 200px; }
+
+.btn-remover-doc-emp {
+    background: none;
+    border: none;
+    color: #f87171;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+    margin-top: 22px;
+}
+
+.btn-remover-doc-emp:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* Área do arquivo */
+.emp-doc-file-area {
+    padding: 12px 14px;
+}
+
+.emp-doc-upload-zone {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.emp-doc-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    background: #f1f5f9;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4776ec;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    height: 38px;
+}
+
+.emp-doc-upload-btn:hover {
+    background: #eff6ff;
+    border-color: #4776ec;
+}
+
+.emp-doc-upload-hint {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* Estado: arquivo enviado com sucesso */
+.emp-doc-uploaded {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 9px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+}
+
+.emp-doc-uploaded-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.emp-doc-ok-icon {
+    color: #16a34a;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.emp-doc-uploaded-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.emp-doc-uploaded-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #166534;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.emp-doc-uploaded-size {
+    font-size: 11px;
+    color: #4ade80;
+}
+
+.emp-doc-uploaded-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.emp-doc-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    box-sizing: border-box;
+    line-height: 1;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.emp-doc-btn-ver {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+.emp-doc-btn-ver:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.emp-doc-btn-editar {
+    background: #fefce8;
+    color: #ca8a04;
+    border-color: #fde68a;
+}
+.emp-doc-btn-editar:hover {
+    background: #fef9c3;
+    border-color: #fcd34d;
+}
+
+.emp-doc-btn-excluir {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+.emp-doc-btn-excluir:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+/* Rodapé do documento */
+.emp-doc-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 11px;
+    color: #94a3b8;
+    background: #fafafa;
+}
+
+.emp-doc-footer i {
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+.emp-doc-footer-sep {
+    margin: 0 2px;
+    color: #cbd5e1;
 }

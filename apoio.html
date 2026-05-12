@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -84,7 +84,7 @@
                     <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
                     <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
                     <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
-                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
                     <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
                     <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
                     <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
@@ -184,6 +184,63 @@
                 <div class="section-card-footer" id="fonteTabela" style="display:none;"></div>
             </div>
 
+            <!-- LAYOUT DUAL (dois painéis lado a lado) -->
+            <div id="cardDuplo" style="display:none;">
+
+                <!-- Painel 1: Aeroportos -->
+                <div class="section-card dual-card" id="dualCard1">
+                    <div class="section-card-header">
+                        <h3 id="dual-titulo1"><i class="fa-solid fa-plane-departure" style="color:#f7931e"></i> Aeroportos</h3>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="dual-busca-wrap">
+                                <i class="fa-solid fa-magnifying-glass dual-busca-icon"></i>
+                                <input type="text" class="dual-busca-input" id="dual-busca1" placeholder="Buscar..." autocomplete="off">
+                            </div>
+                            <span class="card-tabela-count" id="dual-contador1">—</span>
+                        </div>
+                    </div>
+                    <div class="section-card-body dual-card-body">
+                        <div class="mensagem-tabela" id="dual-carregando1" style="display:flex;">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size:18px; margin-bottom:8px;"></i><br>Carregando...
+                        </div>
+                        <div class="mensagem-tabela" id="dual-vazio1" style="display:none;">
+                            <i class="fa-solid fa-inbox" style="font-size:18px; margin-bottom:8px;"></i><br>Nenhum resultado.
+                        </div>
+                        <table class="apoio-table" id="dual-tabela1" style="display:none;">
+                            <thead id="dual-head1"></thead>
+                            <tbody id="dual-body1"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Painel 2: Cias Aéreas -->
+                <div class="section-card dual-card" id="dualCard2">
+                    <div class="section-card-header">
+                        <h3 id="dual-titulo2"><i class="fa-solid fa-plane-circle-check" style="color:#f7931e"></i> Cias Aéreas</h3>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="dual-busca-wrap">
+                                <i class="fa-solid fa-magnifying-glass dual-busca-icon"></i>
+                                <input type="text" class="dual-busca-input" id="dual-busca2" placeholder="Buscar..." autocomplete="off">
+                            </div>
+                            <span class="card-tabela-count" id="dual-contador2">—</span>
+                        </div>
+                    </div>
+                    <div class="section-card-body dual-card-body">
+                        <div class="mensagem-tabela" id="dual-carregando2" style="display:flex;">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size:18px; margin-bottom:8px;"></i><br>Carregando...
+                        </div>
+                        <div class="mensagem-tabela" id="dual-vazio2" style="display:none;">
+                            <i class="fa-solid fa-inbox" style="font-size:18px; margin-bottom:8px;"></i><br>Nenhum resultado.
+                        </div>
+                        <table class="apoio-table" id="dual-tabela2" style="display:none;">
+                            <thead id="dual-head2"></thead>
+                            <tbody id="dual-body2"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
             <!-- TELA DE BOAS-VINDAS (quando nenhuma tab selecionada) -->
             <div id="telaInicial" style="display:none;">
                 <div class="section-card">
@@ -199,7 +256,8 @@
 
             <!-- RODAPÉ -->
             <footer class="dashboard-footer">
-                <p>© 2026 Marpex - Todos os direitos reservados</p>
+                <span>© 2026 Marpex — Todos os direitos reservados</span>
+                <span class="footer-version">v3.0</span>
             </footer>
         </div>
     </main>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -165,7 +165,8 @@
 
             <!-- RODAPÉ -->
             <footer class="dashboard-footer">
-                <p>© 2026 Marpex - Todos os direitos reservados</p>
+                <span>© 2026 Marpex — Todos os direitos reservados</span>
+                <span class="footer-version">v3.0</span>
             </footer>
         </div>
     </main>
@@ -188,7 +189,7 @@
             <form id="empresaForm">
                 <input type="hidden" id="empresaEditandoId" />
 
-                <!-- SEÇÃO: DADOS PRINCIPAIS -->
+                <!-- SEÇÃO 1: Dados da Empresa -->
                 <div class="form-section active">
                     <h3 class="section-title" onclick="toggleSection(this)">
                         <i class="fa-solid fa-building"></i>
@@ -197,78 +198,74 @@
                     </h3>
                     <div class="section-content">
                         <div class="form-grid">
+
                             <div class="form-group full-width">
                                 <label>Tipo <span class="required">*</span></label>
-                                <div class="checkbox-group">
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="tipoFabricante" name="tipo" value="fabricante">
-                                        <label for="tipoFabricante">Fabricante</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="tipoCliente" name="tipo" value="cliente">
-                                        <label for="tipoCliente">Cliente</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="tipoFornecedor" name="tipo" value="fornecedor">
-                                        <label for="tipoFornecedor">Fornecedor</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="tipoTransportadora" name="tipo" value="transportadora">
-                                        <label for="tipoTransportadora">Transportadora</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="tipoRemetente" name="tipo" value="remetente">
-                                        <label for="tipoRemetente">Remetente</label>
-                                    </div>
+                                <div class="cad-tipo-cards">
+                                    <label class="cad-tipo-card">
+                                        <input type="checkbox" id="tipoFabricante" value="fabricante">
+                                        <div class="cad-tipo-inner"><i class="fa-solid fa-industry"></i><span>Fabricante</span></div>
+                                    </label>
+                                    <label class="cad-tipo-card">
+                                        <input type="checkbox" id="tipoCliente" value="cliente">
+                                        <div class="cad-tipo-inner"><i class="fa-solid fa-user-tie"></i><span>Cliente</span></div>
+                                    </label>
+                                    <label class="cad-tipo-card">
+                                        <input type="checkbox" id="tipoFornecedor" value="fornecedor">
+                                        <div class="cad-tipo-inner"><i class="fa-solid fa-boxes-stacked"></i><span>Fornecedor</span></div>
+                                    </label>
+                                    <label class="cad-tipo-card">
+                                        <input type="checkbox" id="tipoTransportadora" value="transportadora">
+                                        <div class="cad-tipo-inner"><i class="fa-solid fa-truck"></i><span>Transportadora</span></div>
+                                    </label>
+                                    <label class="cad-tipo-card">
+                                        <input type="checkbox" id="tipoRemetente" value="remetente">
+                                        <div class="cad-tipo-inner"><i class="fa-solid fa-paper-plane"></i><span>Remetente</span></div>
+                                    </label>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="tipoCadastro">
-                                    Identificação da Empresa <span class="required">*</span>
-                                    <span class="info-balao" data-tooltip="Selecione o tipo de documento de identificação fiscal da empresa: CNPJ para empresas brasileiras, CPF para pessoas físicas, ou TIN/EIN/VAT para empresas estrangeiras.">
-                                        <i class="fa-solid fa-circle-info"></i>
-                                    </span>
-                                </label>
+                                <label for="tipoCadastro">Identificação <span class="required">*</span></label>
                                 <select id="tipoCadastro" required onchange="alterarTipoCadastro()">
                                     <option value="">Selecione...</option>
                                     <option value="cnpj">CNPJ</option>
                                     <option value="cpf">CPF</option>
-                                    <option value="tin">TIN</option>
-                                    <option value="ein">EIN</option>
-                                    <option value="vat">VAT</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
-                                <label for="cadastro">
-                                    <span id="labelCadastro">Número</span> <span class="required">*</span>
-                                </label>
-                                <input type="text" id="cadastro" required placeholder="Selecione o tipo de identificação primeiro" disabled />
+                                <label for="documento"><span id="labelDocumento">CNPJ/CPF</span> <span class="required">*</span></label>
+                                <input type="text" id="documento" required placeholder="Selecione o tipo primeiro" disabled />
                             </div>
 
                             <div class="form-group full-width">
                                 <label for="nomeEmpresa">Razão Social <span class="required">*</span></label>
-                                <input type="text" id="nomeEmpresa" maxlength="100" required placeholder="Digite a razão social da empresa" />
-                                <small class="char-counter">0/100 caracteres</small>
+                                <input type="text" id="nomeEmpresa" required maxlength="100" placeholder="Razão social da empresa" />
                             </div>
 
                             <div class="form-group full-width">
                                 <label for="nomeFantasia">Nome Fantasia</label>
-                                <input type="text" id="nomeFantasia" maxlength="50" placeholder="Digite o nome fantasia (opcional)" />
-                                <small class="char-counter">0/50 caracteres</small>
+                                <input type="text" id="nomeFantasia" maxlength="50" placeholder="Nome fantasia (opcional)" />
                             </div>
 
-                            <!-- DIVISOR ENDEREÇO -->
+                            <div class="form-group">
+                                <label for="inscricaoEstadual">Inscrição Estadual</label>
+                                <input type="text" id="inscricaoEstadual" placeholder="Somente dígitos" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="suframa">SUFRAMA</label>
+                                <input type="text" id="suframa" placeholder="Somente dígitos" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" />
+                            </div>
+
                             <div class="form-group full-width">
                                 <div class="form-section-divider"><i class="fa-solid fa-map-marker-alt"></i> Endereço</div>
                             </div>
 
-                            <!-- PAÍS -->
                             <div class="form-group">
                                 <label for="pais">País <span class="required">*</span></label>
                                 <select id="pais" required onchange="onPaisChange()">
-                                    <option value="">Selecione...</option>
                                     <option value="BR" selected>Brasil</option>
                                     <option value="US">Estados Unidos</option>
                                     <option value="AR">Argentina</option>
@@ -279,120 +276,213 @@
                                 </select>
                             </div>
 
-                            <!-- CEP (somente Brasil) -->
                             <div class="form-group" id="campoCep">
                                 <label for="cep">CEP <span class="required">*</span></label>
                                 <input type="text" id="cep" required placeholder="00000-000" onblur="buscarCEP()" />
-                                <small class="info-text">
-                                    <i class="fa-solid fa-info-circle"></i> Digite o CEP para preenchimento automático
-                                </small>
+                                <small class="info-text" id="cepInfo"><i class="fa-solid fa-info-circle"></i> Digite o CEP para preenchimento automático</small>
                             </div>
 
-                            <!-- ESTADO -->
                             <div class="form-group">
                                 <label for="estado">Estado <span class="required">*</span></label>
-                                <input type="text" id="estado" required placeholder="Ex: São Paulo" />
+                                <input type="text" id="estado" required placeholder="UF" />
                             </div>
 
-                            <!-- CIDADE -->
                             <div class="form-group">
                                 <label for="cidade">Cidade <span class="required">*</span></label>
-                                <input type="text" id="cidade" required placeholder="Ex: Guarulhos" />
+                                <input type="text" id="cidade" required placeholder="Cidade" />
                             </div>
 
-                            <!-- BAIRRO -->
                             <div class="form-group">
                                 <label for="bairro">Bairro <span class="required">*</span></label>
-                                <input type="text" id="bairro" required placeholder="Ex: Centro" />
+                                <input type="text" id="bairro" required placeholder="Bairro" />
                             </div>
 
-                            <!-- ENDEREÇO -->
                             <div class="form-group">
                                 <label for="endereco">Endereço <span class="required">*</span></label>
-                                <input type="text" id="endereco" required placeholder="Ex: Rua das Flores" />
+                                <input type="text" id="endereco" required placeholder="Rua, Av..." />
                             </div>
 
-                            <!-- NÚMERO -->
-                            <div class="form-group form-group-numero">
-                                <label for="numero">Número <span class="required" id="numeroRequired">*</span></label>
-                                <div class="numero-wrapper">
-                                    <input type="text" id="numero" maxlength="6" required placeholder="000000" style="max-width: 100px;" />
-                                    <div class="checkbox-wrapper">
-                                        <input type="checkbox" id="semNumero" onchange="toggleNumero()" />
-                                        <label for="semNumero" class="checkbox-label">S/N</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- COMPLEMENTO -->
                             <div class="form-group">
-                                <label for="complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                                    <label for="numero" style="margin:0">Número <span class="required" id="numeroRequired">*</span></label>
+                                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:500;color:#64748b;">
+                                        <input type="checkbox" id="semNumero" onchange="toggleNumero()"> S/N
+                                    </label>
+                                </div>
+                                <input type="text" id="numero" required placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="complemento">Complemento</label>
                                 <input type="text" id="complemento" placeholder="Apto, Sala, Bloco..." />
                             </div>
+
                         </div>
                     </div>
                 </div>
 
-                <!-- SEÇÃO: CONTATO -->
+                <!-- SEÇÃO 2: Contato -->
                 <div class="form-section">
                     <h3 class="section-title" onclick="toggleSection(this)">
                         <i class="fa-solid fa-phone"></i>
                         <span>Contato</span>
                         <i class="fa-solid fa-chevron-down section-arrow"></i>
                     </h3>
-                    <div class="section-content" style="display: none;">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="contato1">Contato Principal <span class="required">*</span></label>
-                                <input type="tel" id="contato1" required placeholder="(00) 00000-0000" />
+                    <div class="section-content" style="display:none;">
+                        <div class="cad-contato-lista">
+                            <div class="cad-contato-header">
+                                <span>Tipo</span><span>Nome</span><span>E-mail</span><span>Telefone</span><span></span>
                             </div>
-                            <div class="form-group">
-                                <label for="contato2">Contato Secundário</label>
-                                <input type="tel" id="contato2" placeholder="(00) 00000-0000 (opcional)" />
-                            </div>
-                            <div class="form-group full-width">
-                                <label for="email">E-mail</label>
-                                <input type="email" id="email" placeholder="empresa@exemplo.com (opcional)" />
-                            </div>
+                            <div id="cad-contato-rows"></div>
                         </div>
+                        <button type="button" class="cad-btn-add-contato" id="btn-cad-add-contato" onclick="cadContatoAdicionar()">
+                            <i class="fa-solid fa-plus"></i> Adicionar Contato
+                        </button>
                     </div>
                 </div>
 
-                <!-- SEÇÃO: INFORMAÇÕES EXTRAS -->
+                <!-- SEÇÃO 3: Dados Financeiros -->
+                <div class="form-section">
+                    <h3 class="section-title" onclick="toggleSection(this)">
+                        <i class="fa-solid fa-landmark"></i>
+                        <span>Dados Financeiros</span>
+                        <i class="fa-solid fa-chevron-down section-arrow"></i>
+                    </h3>
+                    <div class="section-content" style="display:none;">
+
+                        <div class="cad-fin-bloco">
+                            <div class="cad-fin-titulo"><i class="fa-solid fa-arrow-up-from-bracket"></i> Pagamento</div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="cad-pag-forma">Forma</label>
+                                    <select id="cad-pag-forma">
+                                        <option value="">Selecione...</option>
+                                        <option value="cheque">Cheque</option>
+                                        <option value="cartao_credito">Cartão de Crédito</option>
+                                        <option value="cartao_debito">Cartão de Débito</option>
+                                        <option value="boleto">Boleto Bancário</option>
+                                        <option value="deposito">Depósito Bancário</option>
+                                        <option value="outros">Outros</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-pag-condicao">Condição</label>
+                                    <select id="cad-pag-condicao">
+                                        <option value="">Selecione...</option>
+                                        <option value="avista">À Vista</option>
+                                        <option value="15d">15 dias</option>
+                                        <option value="30d">30 dias</option>
+                                        <option value="45d">45 dias</option>
+                                        <option value="60d">60 dias</option>
+                                        <option value="90d">90 dias</option>
+                                        <option value="120d">120 dias</option>
+                                        <option value="parcelado">Parcelado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-pag-banco">Banco</label>
+                                    <input type="text" id="cad-pag-banco" placeholder="Nome do banco" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-pag-tipo-conta">Tipo de Conta</label>
+                                    <select id="cad-pag-tipo-conta">
+                                        <option value="">Selecione...</option>
+                                        <option value="corrente">Corrente</option>
+                                        <option value="poupanca">Poupança</option>
+                                        <option value="pagamento">Pagamento</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-pag-agencia">Agência</label>
+                                    <input type="text" id="cad-pag-agencia" placeholder="Somente dígitos" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-pag-conta">Conta</label>
+                                    <input type="text" id="cad-pag-conta" placeholder="Somente dígitos" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cad-fin-bloco cad-fin-bloco--rec">
+                            <div class="cad-fin-titulo"><i class="fa-solid fa-arrow-down-to-bracket"></i> Recebimento</div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="cad-rec-forma">Forma</label>
+                                    <select id="cad-rec-forma">
+                                        <option value="">Selecione...</option>
+                                        <option value="cheque">Cheque</option>
+                                        <option value="cartao_credito">Cartão de Crédito</option>
+                                        <option value="cartao_debito">Cartão de Débito</option>
+                                        <option value="boleto">Boleto Bancário</option>
+                                        <option value="deposito">Depósito Bancário</option>
+                                        <option value="outros">Outros</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-rec-moeda">Moeda</label>
+                                    <select id="cad-rec-moeda"><option value="">Selecione...</option></select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-rec-banco">Banco</label>
+                                    <input type="text" id="cad-rec-banco" placeholder="Nome do banco" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-rec-tipo-conta">Tipo de Conta</label>
+                                    <select id="cad-rec-tipo-conta">
+                                        <option value="">Selecione...</option>
+                                        <option value="corrente">Corrente</option>
+                                        <option value="poupanca">Poupança</option>
+                                        <option value="pagamento">Pagamento</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-rec-agencia">Agência</label>
+                                    <input type="text" id="cad-rec-agencia" placeholder="Somente dígitos" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="cad-rec-conta">Conta</label>
+                                    <input type="text" id="cad-rec-conta" placeholder="Somente dígitos" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" />
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 4: Informações Extras -->
                 <div class="form-section">
                     <h3 class="section-title" onclick="toggleSection(this)">
                         <i class="fa-solid fa-info-circle"></i>
                         <span>Informações Extras</span>
                         <i class="fa-solid fa-chevron-down section-arrow"></i>
                     </h3>
-                    <div class="section-content" style="display: none;">
+                    <div class="section-content" style="display:none;">
                         <div class="form-grid">
-                            <div class="form-group full-width">
-                                <label for="identificacao">Identificação da Empresa</label>
-                                <input type="text" id="identificacao" maxlength="15" placeholder="Somente números (opcional)" onkeypress="return apenasNumeros(event)" />
-                                <small class="char-counter">0/15 caracteres</small>
+                            <div class="form-group">
+                                <label for="cadSite">Site</label>
+                                <input type="text" id="cadSite" placeholder="https://www.empresa.com.br" />
+                            </div>
+                            <div class="form-group">
+                                <label for="cadHorario">Horário de Atendimento</label>
+                                <input type="text" id="cadHorario" placeholder="Ex: Seg-Sex 08h-18h" />
                             </div>
                             <div class="form-group full-width">
-                                <label for="tagsInput">Tags (Palavras-chave)</label>
+                                <label for="tagsInput">Tags</label>
                                 <div class="tags-input-wrapper">
-                                    <input type="text" id="tagsInput" placeholder="Digite uma tag e clique em adicionar" />
+                                    <input type="text" id="tagsInput" placeholder="Digite uma tag e pressione Enter" />
                                     <button type="button" class="btn-add-tag" onclick="adicionarTag()">
                                         <i class="fa-solid fa-plus"></i> Adicionar
                                     </button>
                                 </div>
-                                <small class="info-text">
-                                    <i class="fa-solid fa-tag"></i> Adicione tags para facilitar buscas futuras
-                                </small>
-                                <div id="tagsContainer" class="tags-container" style="display: none;"></div>
+                                <div id="tagsContainer" class="tags-container" style="display:none;"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- BOTÕES DE AÇÃO -->
                 <div class="form-actions">
                     <button type="button" class="btn-clear" onclick="confirmarLimparDados()">
-                        <i class="fa-solid fa-eraser"></i> Limpar Dados
+                        <i class="fa-solid fa-eraser"></i> Limpar
                     </button>
                     <button type="submit" class="btn-save">
                         <i class="fa-solid fa-check"></i> Salvar Cadastro

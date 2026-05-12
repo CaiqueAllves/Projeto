@@ -2,6 +2,190 @@
    CADASTRO DE EMPRESAS - ESTILO
 ======================================== */
 
+/* TIPO-CARDS */
+.cad-tipo-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cad-tipo-card {
+    cursor: pointer;
+    user-select: none;
+}
+
+.cad-tipo-card input[type="checkbox"] {
+    display: none;
+}
+
+.cad-tipo-inner {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+}
+
+.cad-tipo-inner i {
+    font-size: 13px;
+}
+
+.cad-tipo-card:hover .cad-tipo-inner {
+    border-color: #4776ec;
+    color: #4776ec;
+    background: #eff4ff;
+}
+
+.cad-tipo-card.selected .cad-tipo-inner {
+    border-color: #4776ec;
+    background: #4776ec;
+    color: #fff;
+}
+
+/* CONTATO DINÂMICO */
+.cad-contato-lista {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.cad-contato-header,
+.cad-contato-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 1fr 130px 28px;
+    gap: 0;
+}
+
+.cad-contato-header {
+    background: #f8f9fb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.cad-contato-header span,
+.cad-contato-row input {
+    padding: 0 6px;
+}
+
+.cad-contato-row {
+    border-bottom: 1px solid #f1f5f9;
+    align-items: center;
+}
+
+.cad-contato-row:last-child {
+    border-bottom: none;
+}
+
+.cad-contato-row input {
+    border: none;
+    border-right: 1px solid #f1f5f9;
+    border-radius: 0;
+    padding: 9px 8px;
+    font-size: 13px;
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.cad-contato-row input:last-of-type {
+    border-right: none;
+}
+
+.cad-contato-row input:focus {
+    background: #fafbff;
+}
+
+.cad-btn-remover {
+    background: none;
+    border: none;
+    color: #cbd5e1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 100%;
+    font-size: 13px;
+    transition: color 0.15s;
+}
+
+.cad-btn-remover:hover { color: #dc2626; }
+
+.cad-btn-add-contato {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 7px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    justify-content: center;
+}
+
+.cad-btn-add-contato:hover {
+    border-color: #4776ec;
+    color: #4776ec;
+    background: #f0f4ff;
+}
+
+/* FIN-BLOCO */
+.cad-fin-bloco {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.cad-fin-bloco--rec {
+    border-color: #e0edff;
+    background: #fafcff;
+}
+
+.cad-fin-titulo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+
+.cad-fin-bloco--rec .cad-fin-titulo {
+    color: #4776ec;
+}
+
+@media (max-width: 600px) {
+    .cad-tipo-cards { gap: 6px; }
+    .cad-contato-header,
+    .cad-contato-row { grid-template-columns: 90px 1fr 28px; }
+    .cad-contato-header span:nth-child(2),
+    .cad-contato-header span:nth-child(3),
+    .cad-contato-row input:nth-child(2),
+    .cad-contato-row input:nth-child(3) { display: none; }
+}
+
 .form-section-divider {
     display: flex;
     align-items: center;
@@ -113,23 +297,30 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 20px 24px;
   background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
+  border-bottom: 1px solid #eaecf0;
   flex-shrink: 0;
   border-radius: 0;
   margin-bottom: 0;
+  min-height: 72px;
+  box-sizing: border-box;
   z-index: 100;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .topbar-left h2 {
-  color: var(--azul);
-  font-size: 20px;
-  font-weight: 700;
+  color: var(--texto);
+  font-size: 16px;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.topbar-left h2 i {
+  color: var(--azul);
+  font-size: 15px;
 }
 
 .topbar-right {
@@ -200,8 +391,9 @@ main {
   flex-shrink: 0;
   padding: 12px 20px;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 10px 10px 0 0;
+  border-bottom: 1px solid #f0f2f5;
+  box-shadow: none;
   gap: 20px;
 }
 
@@ -718,17 +910,7 @@ form {
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
-/* ========================================
-   RODAPÉ
-======================================== */
-.dashboard-footer {
-  text-align: center;
-  padding: 16px;
-  color: #94a3b8;
-  font-size: 13px;
-  border-top: 2px solid #F1F5F9;
-  flex-shrink: 0;
-}
+/* RODAPÉ — definido em style-base.css */
 
 /* ========================================
    RESPONSIVIDADE - MOBILE
@@ -882,13 +1064,13 @@ form {
 .content {
   display: flex;
   flex-direction: column;
-  padding: 20px 20px 0 20px;
+  padding: 20px;
   background: #F6F7F9;
   flex: 1;
   min-height: 0;
   box-sizing: border-box;
   overflow: hidden;
-  gap: 16px;
+  gap: 0;
 }
 
 /* ========================================
@@ -896,8 +1078,8 @@ form {
 ======================================== */
 .empresas-lista {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.07);
   display: flex;
   flex-direction: column;
   flex: 1;

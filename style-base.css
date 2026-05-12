@@ -642,18 +642,28 @@ form small {
     box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
 }
 
-/* RODAPÉ */
-.dashboard-footer {
-  background: black;
-  border-radius: 8px;
-  align-items: center;
-  display: center;
-  width: 100%vh;
+/* Espaço para o footer fixo não cobrir o conteúdo */
+.content {
+    padding-bottom: 48px !important;
 }
 
-.dashboard-footer p {
-  color: var(--branco);
-  height: 10px;
+/* RODAPÉ */
+.dashboard-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    background: #1e293b;
+    color: #f1f5f9;
+    font-size: 12px;
+    z-index: 1001;
+}
+.footer-version {
+    display: none;
 }
 
 

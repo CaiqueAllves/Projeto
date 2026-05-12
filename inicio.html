@@ -86,7 +86,7 @@
                     <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
                     <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
                     <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
-                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
                     <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
                     <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
                     <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
@@ -186,7 +186,7 @@
             </div>
 
             <!-- TAREFAS PENDENTES -->
-            <div class="tasks-section">
+            <div class="tasks-section" id="tasks-section">
                 <div class="section-header">
                     <h3><i class="fa-solid fa-list-check"></i> Tarefas Pendentes <span class="tasks-count-badge" id="tarefasCountBadge"></span></h3>
                     <button class="btn-add-task" onclick="adicionarTarefa()">
@@ -199,8 +199,13 @@
                 </div>
             </div>
 
-            <!-- CARDS DE ESTATÍSTICAS RÁPIDAS -->
-            <div class="stats-section">
+            <!-- GRÁFICOS DE DASHBOARD -->
+            <div class="charts-section" id="charts-section">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-chart-pie"></i> Análises</h3>
+                </div>
+
+                <!-- Stat cards dentro das análises -->
                 <div class="stats-cards">
                     <div class="stat-card">
                         <div class="stat-icon" style="background: #dbeafe; color: #3b82f6;">
@@ -232,32 +237,61 @@
                         </div>
                     </div>
 
-                </div>
-            </div>
-
-            <!-- GRÁFICOS DE DASHBOARD -->
-            <div class="charts-section">
-                <div class="section-header">
-                    <h3><i class="fa-solid fa-chart-pie"></i> Análises</h3>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #f3e8ff; color: #9333ea;">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalProdutos">0</div>
+                            <div class="stat-label">Produtos Cadastrados</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="charts-grid">
-                    <!-- Gráfico de Empresas por Tipo -->
                     <div class="chart-card">
-                        <h4>Empresas por Tipo</h4>
+                        <div class="chart-card-header">
+                            <div class="chart-card-icon" style="background:#eff6ff;color:#3b82f6;">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </div>
+                            <div>
+                                <div class="chart-card-title">Parceiros por Tipo</div>
+                                <div class="chart-card-sub">Distribuição por categoria</div>
+                            </div>
+                        </div>
                         <canvas id="chartTipos"></canvas>
                     </div>
 
-                    <!-- Gráfico de Empresas por País -->
                     <div class="chart-card">
-                        <h4>Empresas por País</h4>
+                        <div class="chart-card-header">
+                            <div class="chart-card-icon" style="background:#f0fdf4;color:#22c55e;">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <div class="chart-card-title">Novos Cadastros</div>
+                                <div class="chart-card-sub">Últimos 6 meses</div>
+                            </div>
+                        </div>
+                        <canvas id="chartCadastros"></canvas>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <div class="chart-card-icon" style="background:#fef3c7;color:#f59e0b;">
+                                <i class="fa-solid fa-globe"></i>
+                            </div>
+                            <div>
+                                <div class="chart-card-title">Parceiros por País</div>
+                                <div class="chart-card-sub">Top 8 países</div>
+                            </div>
+                        </div>
                         <canvas id="chartEstados"></canvas>
                     </div>
                 </div>
             </div>
 
             <!-- ATIVIDADES RECENTES -->
-            <div class="recent-section">
+            <div class="recent-section" id="recent-section">
                 <div class="section-header">
                     <h3><i class="fa-solid fa-clock-rotate-left"></i> Atividades Recentes</h3>
                 </div>
@@ -268,7 +302,8 @@
             
             <!-- RODAPÉ -->
             <footer class="dashboard-footer">
-                <p>© 2026 Marpex - Todos os direitos reservados</p>
+                <span>© 2026 Marpex — Todos os direitos reservados</span>
+                <span class="footer-version">v3.0</span>
             </footer>
         </div>
     </main>

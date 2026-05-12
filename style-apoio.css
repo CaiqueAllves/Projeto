@@ -102,7 +102,7 @@ main, .content, .topbar, .section-card, table, button, input, select {
 ======================================== */
 .content {
     flex: 1;
-    padding: 28px 32px 0;
+    padding: 28px 16px 0;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -465,6 +465,80 @@ main, .content, .topbar, .section-card, table, button, input, select {
 }
 
 /* ========================================
+   LAYOUT DUAL (dois painéis lado a lado)
+======================================== */
+#cardDuplo {
+    flex: 1;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    min-height: 0;
+}
+
+.dual-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.dual-card-body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    min-height: 0;
+    padding: 0 !important;
+    overflow-x: auto;
+}
+
+.dual-card-body::-webkit-scrollbar { width: 6px; }
+.dual-card-body::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 4px;
+}
+.dual-card-body::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+.dual-busca-wrap {
+    position: relative;
+}
+
+.dual-busca-input {
+    padding: 8px 12px 8px 32px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    font-size: 12px;
+    color: #374151;
+    background: white;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    width: 160px;
+}
+.dual-busca-input:focus {
+    border-color: #f7931e;
+    box-shadow: 0 0 0 3px rgba(247,147,30,0.1);
+}
+
+.dual-busca-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 11px;
+    pointer-events: none;
+}
+
+.dual-card .apoio-table td:first-child {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: #374151;
+    background: none;
+    width: auto;
+    text-align: left;
+    border-right: none;
+}
+
+/* ========================================
    ANIMAÇÃO RESET
 ======================================== */
 .fade-reset {
@@ -476,17 +550,7 @@ main, .content, .topbar, .section-card, table, button, input, select {
     100% { opacity: 1;   transform: scale(1); }
 }
 
-/* ========================================
-   RODAPÉ
-======================================== */
-.dashboard-footer {
-    text-align: center;
-    padding: 14px 24px;
-    color: #64748b;
-    font-size: 13px;
-    flex-shrink: 0;
-    border-top: 1px solid #f1f5f9;
-}
+/* RODAPÉ — definido em style-base.css */
 
 /* ========================================
    WHATSAPP FLUTUANTE

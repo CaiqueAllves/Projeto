@@ -27,66 +27,108 @@ const TABELAS_CONFIG = {
         titulo:    'Portos e Armadores',
         descricao: 'Portos marítimos e armadores utilizados em operações de comércio exterior.',
         icone:     'fa-solid fa-anchor',
-        tabela:    'portos',
-        ordenar:   'nome',
-        fonte:     '',
-        colunas: [
-            { campo: 'codigo_unlo', label: 'LOCODE',    mono: true,  largura: '90px'  },
-            { campo: 'nome',        label: 'Nome',      mono: false, largura: ''      },
-            { campo: 'cidade',      label: 'Cidade',    mono: false, largura: '130px' },
-            { campo: 'pais_iso2',   label: 'País',      mono: true,  largura: '60px'  },
-            { campo: 'tipo',        label: 'Tipo',      mono: false, largura: '100px' },
-        ],
-        buscar_por: ['nome', 'codigo_unlo', 'cidade', 'pais_iso2'],
+        dual:      true,
+        tabela1: {
+            titulo:  'Portos',
+            icone:   'fa-solid fa-anchor',
+            tabela:  'apoio_portos',
+            ordenar: 'nome',
+            colunas: [
+                { campo: 'pais',   label: 'País',   mono: false, largura: '120px' },
+                { campo: 'cidade', label: 'Cidade', mono: false, largura: '120px' },
+                { campo: 'nome',   label: 'Nome',   mono: false, largura: ''      },
+                { campo: 'sigla',  label: 'Sigla',  mono: true,  largura: '80px'  },
+            ],
+            buscar_por: ['nome', 'cidade', 'pais', 'sigla'],
+        },
+        tabela2: {
+            titulo:  'Armadores',
+            icone:   'fa-solid fa-ship',
+            tabela:  'apoio_armadores',
+            ordenar: 'nome',
+            colunas: [
+                { campo: 'nome',   label: 'Nome',   mono: false, largura: ''      },
+                { campo: 'matriz', label: 'Matriz', mono: false, largura: '150px' },
+                { campo: 'cnpj',   label: 'CNPJ',   mono: false, largura: '140px' },
+            ],
+            buscar_por: ['nome', 'matriz', 'cnpj'],
+        },
     },
 
     aeroportos: {
         titulo:    'Aeroportos e Cias Aéreas',
-        descricao: 'Aeroportos internacionais e companhias aéreas para operações de importação e exportação.',
+        descricao: 'Aeroportos internacionais e companhias aéreas para operações de exportação.',
         icone:     'fa-solid fa-plane',
-        tabela:    'aeroportos',
-        ordenar:   'nome',
-        fonte:     '',
-        colunas: [
-            { campo: 'codigo_iata', label: 'IATA',      mono: true,  largura: '70px'  },
-            { campo: 'codigo_icao', label: 'ICAO',      mono: true,  largura: '70px'  },
-            { campo: 'nome',        label: 'Nome',      mono: false, largura: ''      },
-            { campo: 'cidade',      label: 'Cidade',    mono: false, largura: '130px' },
-            { campo: 'pais_iso2',   label: 'País',      mono: true,  largura: '60px'  },
-            { campo: 'tipo',        label: 'Tipo',      mono: false, largura: '110px' },
-        ],
-        buscar_por: ['nome', 'codigo_iata', 'codigo_icao', 'cidade'],
+        dual:      true,
+        tabela1: {
+            titulo:  'Aeroportos',
+            icone:   'fa-solid fa-plane-departure',
+            tabela:  'apoio_aeroportos',
+            ordenar: 'nome',
+            colunas: [
+                { campo: 'pais',   label: 'País',              mono: false, largura: '100px' },
+                { campo: 'nome',   label: 'Nome do Aeroporto', mono: false, largura: ''      },
+                { campo: 'codigo', label: 'Código',            mono: true,  largura: '70px'  },
+            ],
+            buscar_por: ['pais', 'codigo'],
+        },
+        tabela2: {
+            titulo:  'Cias Aéreas',
+            icone:   'fa-solid fa-plane-circle-check',
+            tabela:  'apoio_cias_aereas',
+            ordenar: 'nome',
+            colunas: [
+                { campo: 'nome',      label: 'Companhia', mono: false, largura: ''      },
+                { campo: 'icao_iata', label: 'ICAO/IATA', mono: false, largura: '90px'  },
+                { campo: 'cnpj',      label: 'CNPJ',      mono: false, largura: '130px' },
+            ],
+            buscar_por: ['nome', 'icao_iata'],
+        },
     },
 
     moedas: {
         titulo:    'Moedas',
         descricao: 'Moedas internacionais utilizadas em operações de comércio exterior.',
         icone:     'fa-solid fa-coins',
-        tabela:    'moedas',
+        tabela:    'apoio_moedas',
         ordenar:   'numero',
         fonte:     'Marinha Mercante - Atualizado em 2026',
         colunas: [
-            { campo: 'numero',    label: 'Nº',        mono: true,  largura: '60px'  },
             { campo: 'codigo',    label: 'Código',    mono: true,  largura: '100px' },
-            { campo: 'simbolo',   label: 'Símbolo',   mono: true,  largura: '80px'  },
             { campo: 'descricao', label: 'Descrição', mono: false, largura: ''      },
         ],
-        buscar_por: ['descricao', 'codigo', 'simbolo'],
+        buscar_por: ['descricao', 'codigo'],
     },
 
     embalagens: {
-        titulo:    'Embalagens',
-        descricao: 'Tipos de embalagens aceitas em operações de importação e exportação.',
+        titulo:    'Embalagens e Unidades de Medida',
+        descricao: 'Tipos de embalagens e unidades de medida utilizadas em operações de comércio exterior.',
         icone:     'fa-solid fa-box',
-        tabela:    'embalagens',
-        ordenar:   'descricao',
-        fonte:     '',
-        colunas: [
-            { campo: 'codigo',    label: 'Código',    mono: true,  largura: '90px'  },
-            { campo: 'descricao', label: 'Descrição', mono: false, largura: ''      },
-            { campo: 'unidade',   label: 'Unidade',   mono: true,  largura: '90px'  },
-        ],
-        buscar_por: ['descricao', 'codigo', 'unidade'],
+        dual:      true,
+        tabela1: {
+            titulo:  'Embalagens',
+            icone:   'fa-solid fa-box',
+            tabela:  'embalagens',
+            ordenar: 'descricao',
+            fonte:   'Marinha Mercante - Atualizado em 2026',
+            colunas: [
+                { campo: 'codigo',    label: 'Código',    mono: true,  largura: '90px' },
+                { campo: 'descricao', label: 'Descrição', mono: false, largura: ''     },
+            ],
+            buscar_por: ['descricao', 'codigo'],
+        },
+        tabela2: {
+            titulo:  'Unidades de Medida',
+            icone:   'fa-solid fa-ruler',
+            tabela:  'apoio_unidades_medida',
+            ordenar: 'descricao',
+            fonte:   'Marinha Mercante - Atualizado em 2026',
+            colunas: [
+                { campo: 'unidade',   label: 'Unidade',   mono: true,  largura: '100px' },
+                { campo: 'descricao', label: 'Descrição', mono: false, largura: ''      },
+            ],
+            buscar_por: ['unidade', 'descricao'],
+        },
     },
 
     'termos-pagamento': {
@@ -107,31 +149,28 @@ const TABELAS_CONFIG = {
         titulo:    'Acondicionamento',
         descricao: 'Tipos de acondicionamento utilizados no transporte de mercadorias.',
         icone:     'fa-solid fa-truck-ramp-box',
-        tabela:    'acondicionamento_tipos',
-        ordenar:   'descricao',
-        fonte:     '',
+        tabela:    'apoio_acondicionamento',
+        ordenar:   'numero',
+        fonte:     'Marinha Mercante - Atualizado em 2026',
         colunas: [
-            { campo: 'codigo',    label: 'Código',     mono: true,  largura: '100px' },
-            { campo: 'descricao', label: 'Descrição',  mono: false, largura: ''      },
-            { campo: 'tipo',      label: 'Tipo',       mono: false, largura: '140px' },
-            { campo: 'observacao',label: 'Observação', mono: false, largura: '200px' },
+            { campo: 'numero',    label: 'Nº',         mono: true,  largura: '70px' },
+            { campo: 'descricao', label: 'Descrição',  mono: false, largura: ''     },
         ],
-        buscar_por: ['codigo', 'descricao', 'tipo'],
+        buscar_por: ['numero', 'descricao'],
     },
 
     container: {
         titulo:    'Container',
         descricao: 'Tipos de containers utilizados no transporte de mercadorias.',
         icone:     'fa-solid fa-box-open',
-        tabela:    'acondicionamento',
-        ordenar:   'numero',
+        tabela:    'apoio_container',
+        ordenar:   'tipo',
         fonte:     'Marinha Mercante - Atualizado em 2026',
         colunas: [
-            { campo: 'numero',        label: 'Nº',            mono: true,  largura: '60px'  },
-            { campo: 'tipo',          label: 'Tipo',           mono: false, largura: '140px' },
-            { campo: 'identificacao', label: 'Identificação',  mono: true,  largura: '120px' },
-            { campo: 'descricao',     label: 'Descrição',      mono: false, largura: ''      },
-            { campo: 'capacidade',    label: 'Capacidade',     mono: false, largura: '100px' },
+            { campo: 'tipo',          label: 'Tipo',          mono: false, largura: '140px' },
+            { campo: 'identificacao', label: 'Identificação', mono: true,  largura: '120px' },
+            { campo: 'descricao',     label: 'Descrição',     mono: false, largura: ''      },
+            { campo: 'capacidade',    label: 'Capacidade',    mono: false, largura: '100px' },
         ],
         buscar_por: ['descricao', 'identificacao', 'capacidade', 'tipo'],
     },
@@ -209,6 +248,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     configAtual = config;
+
+    if (config.dual) {
+        inicializarDual(config);
+        carregarDadosDual(config);
+        return;
+    }
+
     inicializarTabela(config);
     carregarDados(config);
 });
@@ -252,7 +298,7 @@ function inicializarTabela(config) {
 
     // Listeners de busca
     elCampoBusca.addEventListener('input', () => {
-        termoBusca = elCampoBusca.value.toLowerCase().trim();
+        termoBusca = _norm(elCampoBusca.value.trim());
         aplicarFiltro();
         renderSugestoes();
     });
@@ -272,18 +318,38 @@ function inicializarTabela(config) {
 }
 
 // --------------------------------------------------
+// PAGINAÇÃO — busca todos os registros em lotes de 1000
+// --------------------------------------------------
+async function _fetchTodos(tabela, ordem) {
+    const lote = 1000;
+    let de = 0;
+    let todos = [];
+    while (true) {
+        const { data, error } = await supabaseClient
+            .from(tabela)
+            .select('*')
+            .order(ordem, { ascending: true })
+            .range(de, de + lote - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        todos = todos.concat(data);
+        if (data.length < lote) break;
+        de += lote;
+    }
+    return todos;
+}
+
+// --------------------------------------------------
 // CARREGAR DADOS DO SUPABASE
 // --------------------------------------------------
 async function carregarDados(config) {
     estadoCarregando(true);
 
     try {
-        const { data, error } = await supabaseClient
-            .from(config.tabela)
-            .select('*')
-            .order(config.ordenar || config.colunas[0].campo, { ascending: true });
-
-        if (error) throw error;
+        const data = await _fetchTodos(
+            config.tabela,
+            config.ordenar || config.colunas[0].campo
+        );
 
         dadosCompletos = data || [];
         dadosFiltrados = [...dadosCompletos];
@@ -331,6 +397,13 @@ function renderTabela(lista) {
 }
 
 // --------------------------------------------------
+// NORMALIZAÇÃO (remove acentos para busca)
+// --------------------------------------------------
+function _norm(str) {
+    return (str ?? '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+// --------------------------------------------------
 // FILTRO
 // --------------------------------------------------
 function aplicarFiltro() {
@@ -341,8 +414,9 @@ function aplicarFiltro() {
             ? (configAtual.buscar_por || configAtual.colunas.map(c => c.campo))
             : [campoBusca];
 
+        const termo = _norm(termoBusca);
         dadosFiltrados = dadosCompletos.filter(row =>
-            campos.some(c => (row[c] ?? '').toString().toLowerCase().includes(termoBusca))
+            campos.some(c => _norm(row[c]).includes(termo))
         );
     }
     renderTabela(dadosFiltrados);
@@ -468,6 +542,127 @@ function destacarMenuLateral(tab) {
         const arrow = menuPai.querySelector('.arrow');
         if (arrow) arrow.style.transform = 'rotate(180deg)';
     }
+}
+
+// --------------------------------------------------
+// DUAL LAYOUT — dois painéis lado a lado
+// --------------------------------------------------
+const _dualDados = { 1: [], 2: [] };
+
+function inicializarDual(config) {
+    elIcone.className        = config.icone;
+    elTitulo.innerHTML       = `<i class="${config.icone}"></i> ${config.titulo}`;
+    elDescricao.textContent  = config.descricao || '';
+    elTopbarTitulo.innerHTML = `<i class="${config.icone}"></i> ${config.titulo}`;
+    document.title           = `Marpex | ${config.titulo}`;
+
+    elCardTabela.style.display  = 'none';
+    elTelaInicial.style.display = 'none';
+    document.getElementById('cardDuplo').style.display = 'grid';
+
+    _setupDualPanel(1, config.tabela1);
+    _setupDualPanel(2, config.tabela2);
+}
+
+function _setupDualPanel(n, cfg) {
+    const elT = document.getElementById(`dual-titulo${n}`);
+    if (elT) elT.innerHTML = `<i class="${cfg.icone}" style="color:#f7931e"></i> ${cfg.titulo}`;
+
+    const head = document.getElementById(`dual-head${n}`);
+    if (head) {
+        head.innerHTML = `<tr>${cfg.colunas.map(c =>
+            `<th style="${c.largura ? `width:${c.largura}` : ''}">${c.label}</th>`
+        ).join('')}</tr>`;
+    }
+
+    const busca = document.getElementById(`dual-busca${n}`);
+    if (busca) {
+        busca.addEventListener('input', () => {
+            _filtrarDualPanel(n, cfg, busca.value.toLowerCase().trim());
+        });
+    }
+
+    if (cfg.fonte) {
+        const card = document.getElementById(`dualCard${n}`);
+        if (card && !card.querySelector('.dual-card-footer')) {
+            const footer = document.createElement('div');
+            footer.className = 'dual-card-footer section-card-footer';
+            footer.innerHTML = `<i class="fa-solid fa-circle-info"></i> Fonte: ${cfg.fonte}`;
+            card.appendChild(footer);
+        }
+    }
+}
+
+async function carregarDadosDual(config) {
+    await Promise.all([
+        _carregarDualPanel(1, config.tabela1),
+        _carregarDualPanel(2, config.tabela2),
+    ]);
+}
+
+async function _carregarDualPanel(n, cfg) {
+    document.getElementById(`dual-carregando${n}`).style.display = 'flex';
+    document.getElementById(`dual-vazio${n}`).style.display      = 'none';
+    document.getElementById(`dual-tabela${n}`).style.display     = 'none';
+
+    try {
+        const data = await _fetchTodos(
+            cfg.tabela,
+            cfg.ordenar || cfg.colunas[0].campo
+        );
+
+        _dualDados[n] = data || [];
+        _renderDualPanel(n, cfg, _dualDados[n]);
+    } catch (err) {
+        console.error(`[Apoio] Erro ao carregar painel ${n}:`, err);
+        document.getElementById(`dual-carregando${n}`).style.display = 'none';
+        const elV = document.getElementById(`dual-vazio${n}`);
+        elV.style.display = 'flex';
+        const semTabela = err?.code === '42P01' || err?.message?.includes('does not exist');
+        elV.innerHTML = semTabela
+            ? `<i class="fa-solid fa-database" style="font-size:24px; color:#94a3b8; margin-bottom:10px;"></i><br>
+               <strong style="color:#1e293b; font-size:13px;">Tabela não criada no Supabase</strong><br>
+               <span style="font-size:12px;">Execute o SQL de criação e insira os dados.</span>`
+            : `<i class="fa-solid fa-triangle-exclamation" style="font-size:24px; color:#f59e0b; margin-bottom:10px;"></i><br>
+               <strong style="color:#1e293b; font-size:13px;">Erro ao carregar dados</strong>`;
+    }
+}
+
+function _renderDualPanel(n, cfg, lista) {
+    document.getElementById(`dual-carregando${n}`).style.display = 'none';
+    const elV  = document.getElementById(`dual-vazio${n}`);
+    const elT  = document.getElementById(`dual-tabela${n}`);
+    const elC  = document.getElementById(`dual-contador${n}`);
+
+    if (lista.length === 0) {
+        elT.style.display = 'none';
+        elV.style.display = 'flex';
+        elV.innerHTML = '<i class="fa-solid fa-inbox" style="font-size:18px; margin-bottom:8px;"></i><br>Nenhum resultado.';
+        if (elC) elC.textContent = '0 registros';
+        return;
+    }
+
+    elV.style.display = 'none';
+    elT.style.display = '';
+    if (elC) elC.textContent = `${lista.length} registro${lista.length !== 1 ? 's' : ''}`;
+
+    document.getElementById(`dual-body${n}`).innerHTML = lista.map(row =>
+        `<tr>${cfg.colunas.map(col => {
+            const val   = row[col.campo] ?? '—';
+            const style = col.mono ? 'font-family:"Courier New",monospace; font-size:11px; font-weight:700;' : '';
+            return `<td style="${style}">${val}</td>`;
+        }).join('')}</tr>`
+    ).join('');
+}
+
+function _filtrarDualPanel(n, cfg, termo) {
+    const t = _norm(termo);
+    if (!t) { _renderDualPanel(n, cfg, _dualDados[n]); return; }
+    const campos   = cfg.buscar_por || cfg.colunas.map(c => c.campo);
+    const filtrado = _dualDados[n].filter(row =>
+        campos.some(c => _norm(row[c]).includes(t))
+    );
+    _renderDualPanel(n, cfg, filtrado);
 }
 
 // --------------------------------------------------

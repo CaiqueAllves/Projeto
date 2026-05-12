@@ -510,13 +510,7 @@
     min-width: 20px;
 }
 
-/* RODAPÉ */
-.dashboard-footer {
-    text-align: center;
-    padding: 24px 0;
-    color: var(--texto-claro);
-    font-size: 13px;
-}
+/* RODAPÉ — definido em style-base.css */
 
 /* RESPONSIVO */
 @media (max-width: 768px) {
