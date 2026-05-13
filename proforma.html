@@ -14,97 +14,7 @@
 <body>
 
 <div class="main-layout" style="display: flex;">
-    <aside>
-        <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
-        <ul>
-            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
-                <i class="fa-solid fa-chart-line"></i> Início
-            </li>
-
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-building"></i>Empresas
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="cadastros.html"><i class="fa-solid fa-users"></i> Cadastro</a>
-                    <a href="relatorios.html"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
-                </div>
-            </div>
-
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="produtos.html"><i class="fa-solid fa-plus"></i> Cadastro</a>
-                    <a href="#"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
-                </div>
-            </div>
-
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-file-lines"></i>Documentos
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="proforma.html" class="ativo"><i class="fa-solid fa-file-invoice-dollar"></i> Proformas</a>
-                    <a href="formularios.html"><i class="fa-solid fa-plus"></i> Cadastros</a>
-                </div>
-            </div>
-
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-ship"></i>Processos
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="processos.html"><i class="fa-solid fa-plus"></i> Cadastros</a>
-                    <a href="relatorios-processos.html"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
-                </div>
-            </div>
-
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-scale-balanced"></i>Termos
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="termos.html"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
-                </div>
-            </div>
-
-            <div class="menu-item" id="menu-apoio">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-book-open"></i>Apoio
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="apoio.html?tab=paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
-                    <a href="apoio.html?tab=portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
-                    <a href="apoio.html?tab=aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
-                    <a href="apoio.html?tab=moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
-                    <a href="apoio.html?tab=embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
-                    <a href="apoio.html?tab=termos-pagamento"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
-                    <a href="apoio.html?tab=acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
-                    <a href="apoio.html?tab=container"><i class="fa-solid fa-box-open"></i> Container</a>
-                    <a href="apoio.html?tab=ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
-                </div>
-            </div>
-
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-gear"></i>Configurações
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="perfil.html"><i class="fa-solid fa-user"></i> Perfil</a>
-                    <a href="permissoes.html"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
-                </div>
-            </div>
-        </ul>
-    </aside>
+    <aside></aside>
 
     <main>
         <!-- TOPBAR -->
@@ -137,10 +47,28 @@
                 <div class="header-left">
                     <div class="filter-wrapper">
                         <i class="fa-solid fa-magnifying-glass filter-icon"></i>
-                        <input type="text" id="filtroProformas" placeholder="Filtrar por número, exportador, importador..." oninput="profFiltrar()">
+                        <input type="text" id="filtroProformas" placeholder="Filtrar por código, país, incoterm, empresa..." oninput="profFiltrar()">
                     </div>
+                    <select id="filtroStatus" class="filter-select" onchange="profFiltrar()">
+                        <option value="">Todos os status</option>
+                        <option value="enviado">Enviado</option>
+                        <option value="aprovado">Aprovado</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="recusado">Recusado</option>
+                    </select>
                 </div>
                 <div class="header-right">
+                    <div id="profExcluidosWrapper">
+                        <button class="btn-excluidos" onclick="profToggleExcluidos()">
+                            <i class="fa-solid fa-trash-can"></i> Excluídos
+                        </button>
+                        <div class="prof-excluidos-panel" id="profExcluidosPanel">
+                            <div class="prof-excluidos-titulo">
+                                <i class="fa-solid fa-trash-can"></i> Proformas Excluídas
+                            </div>
+                            <div id="profExcluidosContainer"></div>
+                        </div>
+                    </div>
                     <button class="btn-cadastrar" onclick="window.open('formularios.html?tab=proposta', '_blank')">
                         <i class="fa-solid fa-plus"></i> Nova Proforma
                     </button>
@@ -151,7 +79,21 @@
             <div class="empresas-lista" id="proformasLista">
                 <div class="lista-header">
                     <span><i class="fa-solid fa-file-invoice-dollar"></i> Proformas Cadastradas</span>
-                    <span class="lista-count" id="listaCount">—</span>
+                    <div class="lista-header-counts">
+                        <span class="lista-count" id="listaCount">—</span>
+                        <span class="prof-count-badge prof-count-enviado" id="countEnviado" style="display:none;">
+                            <i class="fa-solid fa-paper-plane"></i> <span id="countEnviadoNum">0</span> enviadas
+                        </span>
+                        <span class="prof-count-badge prof-count-aprovado" id="countAprovado" style="display:none;">
+                            <i class="fa-solid fa-circle-check"></i> <span id="countAprovadoNum">0</span> aprovadas
+                        </span>
+                        <span class="prof-count-badge prof-count-pendente" id="countPendente" style="display:none;">
+                            <i class="fa-solid fa-clock"></i> <span id="countPendenteNum">0</span> pendentes
+                        </span>
+                        <span class="prof-count-badge prof-count-recusado" id="countRecusado" style="display:none;">
+                            <i class="fa-solid fa-circle-xmark"></i> <span id="countRecusadoNum">0</span> recusadas
+                        </span>
+                    </div>
                 </div>
                 <div id="listaContainer" class="lista-scroll">
                     <div class="lista-vazia">

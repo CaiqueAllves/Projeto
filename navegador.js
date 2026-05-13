@@ -1,12 +1,123 @@
 // ========================================
+// NAVEGAÇÃO - SIDEBAR CENTRALIZADO
+// ========================================
+
+const SIDEBAR_HTML = `
+    <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
+    <ul>
+        <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+            <i class="fa-solid fa-chart-line"></i> Início
+        </li>
+
+        <div class="menu-item">
+            <a href="#" class="menu-title">
+                <i class="fa-solid fa-building"></i>Empresas
+                <i class="fa-solid fa-chevron-down arrow"></i>
+            </a>
+            <div class="submenu">
+                <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <a href="#" class="menu-title">
+                <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                <i class="fa-solid fa-chevron-down arrow"></i>
+            </a>
+            <div class="submenu">
+                <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <a href="#" class="menu-title">
+                <i class="fa-solid fa-file-lines"></i>Proformas
+                <i class="fa-solid fa-chevron-down arrow"></i>
+            </a>
+            <div class="submenu">
+                <a href="proforma.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                <a href="relatorios-proforma.html" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <a href="#" class="menu-title">
+                <i class="fa-solid fa-ship"></i>Processos
+                <i class="fa-solid fa-chevron-down arrow"></i>
+            </a>
+            <div class="submenu">
+                <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <a href="#" class="menu-title">
+                <i class="fa-solid fa-scale-balanced"></i>Termos
+                <i class="fa-solid fa-chevron-down arrow"></i>
+            </a>
+            <div class="submenu">
+                <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+            </div>
+        </div>
+
+        <div class="menu-item" id="menu-apoio">
+            <a href="#" class="menu-title">
+                <i class="fa-solid fa-book-open"></i>Apoio
+                <i class="fa-solid fa-chevron-down arrow"></i>
+            </a>
+            <div class="submenu">
+                <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
+                <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <a href="#" class="menu-title">
+                <i class="fa-solid fa-gear"></i>Configurações
+                <i class="fa-solid fa-chevron-down arrow"></i>
+            </a>
+            <div class="submenu">
+                <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+            </div>
+        </div>
+
+    </ul>
+`;
+
+function injetarSidebar() {
+    const aside = document.querySelector('aside');
+    if (aside && !aside.querySelector('.menu-item')) {
+        aside.innerHTML = SIDEBAR_HTML;
+    }
+}
+
+// ========================================
 // NAVEGAÇÃO - DESTACAR ITEM ATIVO
 // ========================================
 
-document.addEventListener('DOMContentLoaded', function() {
+function _initNavegador() {
+    injetarSidebar();
     destacarMenuAtivo();
     inicializarMenuColapsavel();
     destacarInicio();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initNavegador);
+} else {
+    _initNavegador();
+}
 
 function destacarInicio() {
     const paginaAtual = window.location.pathname.split('/').pop().toLowerCase();
@@ -33,47 +144,34 @@ function destacarMenuAtivo() {
     
     // Mapeamento de páginas para menu
     const mapeamento = {
+        'inicio.html':    'menu-inicio',
         'dashboard.html': 'menu-inicio',
-        'inicio.html': 'menu-inicio',
-        '': 'menu-inicio', // Página em branco vai para início
-        
-        // Submenus - Empresa
-        'cadastros.html': 'submenu-clientes',
-        'clientes.html': 'submenu-clientes',
-        'fornecedores.html': 'submenu-fornecedores',
+        '':               'menu-inicio',
+
+        // Empresa
+        'cadastros.html':  'submenu-clientes',
         'relatorios.html': 'submenu-relatorios',
 
-        // Submenus - Documentos
-        'formularios.html': 'submenu-documentos-cadastro',
-
-        // Submenus - Processos
-        'processos.html': 'submenu-processos-cadastro',
-        
-        // Submenus - Produtos
+        // Produtos
         'produtos.html': 'submenu-produtos-cadastro',
-        'consulta.html': 'submenu-consulta',
-        'consulta.html': 'submenu-consulta',
-        
-        // Submenus - Termos
-        'termos.html':            'submenu-termos',
-        'termos-negociacao.html': 'submenu-termos-negociacao',
-        'termos-pagamentos.html': 'submenu-termos-pagamentos',
-        
-        // Submenus - Configurações
-        'perfil.html': 'submenu-perfil',
+
+        // Proformas
+        'proforma.html':            'submenu-documentos-cadastro',
+        'formularios.html':         'submenu-documentos-cadastro',
+        'relatorios-proforma.html': 'submenu-documentos-relatorios',
+
+        // Processos
+        'processos.html':           'submenu-processos-cadastro',
+        'relatorios-processos.html':'submenu-processos-relatorios',
+
+        // Termos
+        'termos.html': 'submenu-termos',
+
+        // Configurações
+        'perfil.html':     'submenu-perfil',
         'permissoes.html': 'submenu-permissoes',
-        
-        // Submenus - Apoio
-        'tabela-paises.html': 'submenu-paises',
-        'tabela-estados.html': 'submenu-estados',
-        'tabela-portos.html': 'submenu-portos',
-        'tabela-aeroportos.html': 'submenu-aeroportos',
-        'tabela-cias-aereas.html': 'submenu-cias',
-        'tabela-armadores.html': 'submenu-armadores',
-        'tabela-moedas.html': 'submenu-moedas',
-        'tabela-embalagens.html': 'submenu-embalagens',
-        'tabela-ncm.html': 'submenu-ncm',
-        'suporte.html': 'submenu-suporte'
+
+        // Apoio (por query param — tratado em apoio.js)
     };
     
     const idAtivo = mapeamento[paginaAtual];

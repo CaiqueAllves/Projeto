@@ -1,8 +1,8 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Marpex | Processos › Relatórios</title>
+    <title>Marpex | Proformas › Relatórios</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css">
     <link rel="stylesheet" href="style-navegador.css">
@@ -19,7 +19,7 @@
         <!-- TOPBAR -->
         <div class="topbar">
             <div class="topbar-left">
-                <h2><i class="fa-solid fa-chart-pie"></i> Processos: Relatórios</h2>
+                <h2><i class="fa-solid fa-file-lines"></i> Proformas: Relatórios</h2>
             </div>
             <div class="topbar-right">
                 <div class="user-info-card">
@@ -27,8 +27,8 @@
                         <i class="fa-solid fa-user"></i>
                     </div>
                     <div class="user-details">
-                        <div class="user-name" id="displayUsername">User...</div>
-                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                        <div class="user-name" id="displayUsername">—</div>
+                        <div class="user-email" id="userEmail">—</div>
                     </div>
                 </div>
                 <div class="logout" onclick="handleLogout()">
@@ -43,30 +43,12 @@
             <!-- STATS -->
             <div class="stats-row">
                 <div class="stat-card">
-                    <div class="stat-icon" style="background:#ede9fe; color:#7c3aed;">
-                        <i class="fa-solid fa-file-lines"></i>
-                    </div>
-                    <div>
-                        <div class="stat-value" id="totalProcessos">—</div>
-                        <div class="stat-label">Total de Processos</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;">
-                        <i class="fa-solid fa-folder-open"></i>
-                    </div>
-                    <div>
-                        <div class="stat-value" id="totalAbertos">—</div>
-                        <div class="stat-label">Abertos</div>
-                    </div>
-                </div>
-                <div class="stat-card">
                     <div class="stat-icon" style="background:#dbeafe; color:#3b82f6;">
-                        <i class="fa-solid fa-rotate"></i>
+                        <i class="fa-solid fa-file-invoice"></i>
                     </div>
                     <div>
-                        <div class="stat-value" id="totalAndamento">—</div>
-                        <div class="stat-label">Em Andamento</div>
+                        <div class="stat-value" id="totalProformas">—</div>
+                        <div class="stat-label">Proformas Emitidas</div>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -74,8 +56,26 @@
                         <i class="fa-solid fa-circle-check"></i>
                     </div>
                     <div>
-                        <div class="stat-value" id="totalConcluidos">—</div>
-                        <div class="stat-label">Concluídos</div>
+                        <div class="stat-value" id="totalAprovadas">—</div>
+                        <div class="stat-label">Aprovadas</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalPendentes">—</div>
+                        <div class="stat-label">Pendentes</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fee2e2; color:#dc2626;">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalRecusadas">—</div>
+                        <div class="stat-label">Recusadas</div>
                     </div>
                 </div>
             </div>
@@ -89,15 +89,15 @@
                 <div class="report-grid">
                     <!-- Card: Por Período -->
                     <div class="report-card">
-                        <div class="report-card-icon" style="background: linear-gradient(135deg,#7c3aed,#6366f1);">
+                        <div class="report-card-icon" style="background: linear-gradient(135deg,#4776ec,#6366f1);">
                             <i class="fa-solid fa-calendar"></i>
                         </div>
                         <h4>Relatório por Período</h4>
-                        <p>Processos abertos no intervalo de datas selecionado, com totais por status e modal.</p>
+                        <p>Proformas emitidas no período selecionado, com totais por status e empresa.</p>
                         <div class="report-preview" id="previewPeriodo">
                             <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                         </div>
-                        <button class="btn-report" style="background: linear-gradient(135deg,#7c3aed,#6366f1);" onclick="gerarRelatorio('periodo')">
+                        <button class="btn-report" style="background: linear-gradient(135deg,#4776ec,#6366f1);" onclick="gerarRelatorio('periodo')">
                             <i class="fa-solid fa-download"></i> Gerar
                         </button>
                     </div>
@@ -105,10 +105,10 @@
                     <!-- Card: Por Status -->
                     <div class="report-card">
                         <div class="report-card-icon" style="background: linear-gradient(135deg,#f59e0b,#f97316);">
-                            <i class="fa-solid fa-list-check"></i>
+                            <i class="fa-solid fa-chart-bar"></i>
                         </div>
                         <h4>Relatório por Status</h4>
-                        <p>Distribuição dos processos entre Aberto, Em andamento, Concluído e Cancelado.</p>
+                        <p>Distribuição das proformas entre aprovadas, pendentes e recusadas, com totais e percentuais.</p>
                         <div class="report-preview" id="previewStatus">
                             <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                         </div>
@@ -117,24 +117,24 @@
                         </button>
                     </div>
 
-                    <!-- Card: Por Tipo/Modal -->
+                    <!-- Card: Por Empresa -->
                     <div class="report-card">
-                        <div class="report-card-icon" style="background: linear-gradient(135deg,#0891b2,#06b6d4);">
-                            <i class="fa-solid fa-ship"></i>
+                        <div class="report-card-icon" style="background: linear-gradient(135deg,#22c55e,#16a34a);">
+                            <i class="fa-solid fa-building"></i>
                         </div>
-                        <h4>Relatório por Modal</h4>
-                        <p>Ranking dos modais de transporte (Marítimo, Aéreo, Rodoviário) mais utilizados.</p>
-                        <div class="report-preview" id="previewModal">
+                        <h4>Relatório por Empresa</h4>
+                        <p>Ranking das empresas com mais proformas emitidas no sistema.</p>
+                        <div class="report-preview" id="previewEmpresa">
                             <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                         </div>
-                        <button class="btn-report" style="background: linear-gradient(135deg,#0891b2,#06b6d4);" onclick="gerarRelatorio('modal')">
+                        <button class="btn-report" style="background: linear-gradient(135deg,#22c55e,#16a34a);" onclick="gerarRelatorio('empresa')">
                             <i class="fa-solid fa-download"></i> Gerar
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- HISTÓRICO (somente admin) -->
+            <!-- HISTÓRICO -->
             <div class="history-card" id="secaoHistorico" style="display:none;">
                 <div class="history-card-header">
                     <i class="fa-solid fa-clock-rotate-left" style="color:#94a3b8;"></i>
@@ -150,9 +150,7 @@
                             <th>Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="historicoBody">
-                        <!-- preenchido dinamicamente -->
-                    </tbody>
+                    <tbody id="historicoBody"></tbody>
                 </table>
             </div>
 
@@ -182,8 +180,6 @@
         </div>
 
         <div class="rel-modal-body">
-
-            <!-- Atalho de período -->
             <div class="rel-param-group">
                 <label class="rel-param-label"><i class="fa-solid fa-clock"></i> Período predefinido</label>
                 <div class="period-bar">
@@ -193,7 +189,6 @@
                 </div>
             </div>
 
-            <!-- Intervalo de datas -->
             <div class="rel-param-group">
                 <label class="rel-param-label"><i class="fa-solid fa-calendar-range"></i> Intervalo de datas</label>
                 <div class="rel-date-row">
@@ -208,17 +203,14 @@
                 </div>
             </div>
 
-            <!-- Parâmetros específicos por tipo -->
             <div id="relParamsEspecificos"></div>
 
-            <!-- Preview resumido -->
             <div class="rel-preview-box" id="relPreviewBox">
                 <div class="rel-preview-label"><i class="fa-solid fa-eye"></i> Prévia dos dados</div>
                 <div id="relPreviewConteudo" class="rel-preview-conteudo">
                     <i class="fa-solid fa-circle-notch fa-spin"></i>
                 </div>
             </div>
-
         </div>
 
         <div class="rel-modal-footer">
@@ -234,8 +226,7 @@
 <script src="supabase-api.js"></script>
 <script src="auth.js"></script>
 <script src="navegador.js"></script>
-<script src="relatorios-processos.js"></script>
+<script src="relatorios-proforma.js"></script>
 
 </body>
 </html>
-

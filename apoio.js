@@ -91,8 +91,8 @@ const TABELAS_CONFIG = {
         descricao: 'Moedas internacionais utilizadas em operações de comércio exterior.',
         icone:     'fa-solid fa-coins',
         tabela:    'apoio_moedas',
-        ordenar:   'numero',
-        fonte:     'Marinha Mercante - Atualizado em 2026',
+        ordenar:   'codigo',
+        fonte:     'ISO 4217 - Atualizado em 2026',
         colunas: [
             { campo: 'codigo',    label: 'Código',    mono: true,  largura: '100px' },
             { campo: 'descricao', label: 'Descrição', mono: false, largura: ''      },

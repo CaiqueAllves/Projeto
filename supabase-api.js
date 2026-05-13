@@ -962,9 +962,9 @@ async function contarPropostas() {
     try {
         const ano = new Date().getFullYear();
         const { count } = await supabaseClient
-            .from('propostas')
+            .from('proformas')
             .select('*', { count: 'exact', head: true })
-            .like('codigo', `PROPO${ano}%`);
+            .like('codigo', `PRO${ano}%`);
         return count || 0;
     } catch { return 0; }
 }
@@ -977,17 +977,17 @@ async function salvarPropostaDB(dados) {
         // Generate codigo server-side to avoid collisions from client-side caching
         const ano  = new Date().getFullYear();
         const cont = await contarPropostas();
-        const codigo = `PROPO${ano}${String(cont + 1).padStart(4, '0')}`;
+        const codigo = `PRO${ano}${String(cont + 1).padStart(6, '0')}`;
 
         const { data, error } = await supabaseClient
-            .from('propostas')
+            .from('proformas')
             .insert({
                 codigo:              codigo,
                 empresa_id:          usuario.empresa_id || null,
                 criado_por:          usuario.id,
                 tipo:                dados.tipo                || null,
                 proposito:           dados.proposito           || null,
-                status:              'ativo',
+                status:              'enviado',
                 emissor_tipo:        dados.emissor_tipo        || 'usuario',
                 parceiro_id:         dados.parceiro_id         || null,
                 documento:           dados.documento           || null,
@@ -1013,10 +1013,79 @@ async function salvarPropostaDB(dados) {
                 itens:               dados.itens               || [],
                 valor_total:         dados.valor_total         || 0,
                 moeda_principal:     dados.moeda_principal     || 'USD',
+                destinatario_id:         dados.destinatario_id         || null,
+                destinatario_razao_social: dados.destinatario_razao_social || null,
+                destinatario_doc:        dados.destinatario_doc         || null,
+                destinatario_doc_tipo:   dados.destinatario_doc_tipo    || null,
+                validade_dias:           dados.validade_dias            || null,
+                obs_status:              dados.obs_status               || null,
             })
             .select('id, codigo')
             .single();
 
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, data };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
+async function buscarProformaDB(id) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('proformas')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, data };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
+async function atualizarProformaDB(id, dados) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('proformas')
+            .update({
+                tipo:                     dados.tipo                     || null,
+                proposito:                dados.proposito                || null,
+                emissor_tipo:             dados.emissor_tipo             || 'usuario',
+                parceiro_id:              dados.parceiro_id              || null,
+                documento:                dados.documento                || null,
+                documento_tipo:           dados.documento_tipo           || null,
+                modal:                    dados.modal                    || null,
+                incoterm:                 dados.incoterm                 || null,
+                origem_pais:              dados.origem_pais              || null,
+                origem_pais_codigo:       dados.origem_pais_codigo       || null,
+                destino_pais:             dados.destino_pais             || null,
+                destino_pais_codigo:      dados.destino_pais_codigo      || null,
+                porto_origem:             dados.porto_origem             || null,
+                porto_destino:            dados.porto_destino            || null,
+                aeroporto_origem:         dados.aeroporto_origem         || null,
+                aeroporto_destino:        dados.aeroporto_destino        || null,
+                fronteira_saida:          dados.fronteira_saida          || null,
+                fronteira_entrada:        dados.fronteira_entrada        || null,
+                forma_pagamento:          dados.forma_pagamento          || null,
+                prazo_pagamento:          dados.prazo_pagamento          || null,
+                condicoes_obs:            dados.condicoes_obs            || null,
+                observacoes:              dados.observacoes              || null,
+                data_emissao:             dados.data_emissao             || null,
+                data_validade:            dados.data_validade            || null,
+                itens:                    dados.itens                    || [],
+                valor_total:              dados.valor_total              || 0,
+                moeda_principal:          dados.moeda_principal          || 'USD',
+                destinatario_id:          dados.destinatario_id          || null,
+                destinatario_razao_social: dados.destinatario_razao_social || null,
+                destinatario_doc:         dados.destinatario_doc         || null,
+                destinatario_doc_tipo:    dados.destinatario_doc_tipo    || null,
+                validade_dias:            dados.validade_dias            || null,
+                obs_status:               dados.obs_status               || null,
+            })
+            .eq('id', id)
+            .select('id, codigo')
+            .single();
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) {
@@ -1058,6 +1127,8 @@ window.supabaseAPI = {
     atualizarTenantEmpresa,
     buscarTenantEmpresa,
     salvarProposta: salvarPropostaDB,
+    buscarProforma: buscarProformaDB,
+    atualizarProforma: atualizarProformaDB,
     contarPropostas,
 };
 

@@ -219,7 +219,10 @@ async function confirmarSalvar() {
         const dados = _coletarDadosProposta();
         const btnSim = document.querySelector('#modal-confirmar-salvar .modal-confirm-sim');
 
-        const res = await window.supabaseAPI.salvarProposta(dados);
+        const editandoId = document.getElementById('prop-id')?.value || '';
+        const res = editandoId
+            ? await window.supabaseAPI.atualizarProforma(editandoId, dados)
+            : await window.supabaseAPI.salvarProposta(dados);
 
         const posModal = document.getElementById('modal-pos-salvo');
         posModal.dataset.origem = origem;
@@ -232,7 +235,7 @@ async function confirmarSalvar() {
             const codigoEl  = document.getElementById('pos-salvo-codigo');
             const pdfWrap   = document.getElementById('pos-salvo-pdf-wrap');
 
-            if (tituloEl)   tituloEl.textContent  = 'Proposta salva!';
+            if (tituloEl)   tituloEl.textContent  = editandoId ? 'Proforma atualizada!' : 'Proforma salva!';
             if (msgEl)      msgEl.textContent      = 'O que deseja fazer agora?';
             if (codigoEl)   codigoEl.textContent   = codigo;
             if (codigoWrap) codigoWrap.style.display = '';
@@ -364,6 +367,12 @@ function _coletarDadosProposta() {
         itens:               _propItens || [],
         valor_total:         (_propItens || []).reduce((s, i) => s + (i.qtd * i.preco), 0),
         moeda_principal:     _propItens?.find(i => i.moeda)?.moeda || 'USD',
+        destinatario_id:         g('prop-emp-dest-id') || null,
+        destinatario_razao_social: g('prop-emp-dest-razao') || null,
+        destinatario_doc:        g('prop-emp-dest-doc') || null,
+        destinatario_doc_tipo:   g('prop-emp-dest-doc-tipo') || null,
+        validade_dias:           g('prop-validade-dias') || null,
+        obs_status:              g('prop-obs-status') || null,
     };
 }
 
@@ -565,6 +574,26 @@ function _acMostrar(inputEl, listaEl, termo) {
 
 function _acFechar(listaEl) {
     listaEl.classList.remove('aberta');
+}
+
+function _acMostrarProformas(inputEl, listaEl, termo) {
+    const q = (termo || '').trim().toLowerCase();
+    const filtradas = q
+        ? _acPropostas.filter(p => (p.nome || '').toLowerCase().includes(q))
+        : _acPropostas;
+
+    if (filtradas.length === 0) {
+        listaEl.innerHTML = '<div class="autocomplete-vazio">Nenhuma proforma encontrada</div>';
+    } else {
+        listaEl.innerHTML = filtradas.slice(0, 30).map(p => `
+            <div class="autocomplete-item"
+                 data-id="${p.id}"
+                 data-nome="${(p.nome || '').replace(/"/g, '&quot;')}">
+                <span class="ac-nome">${p.nome || ''}</span>
+            </div>`).join('');
+    }
+    _acPosicionar(inputEl, listaEl);
+    listaEl.classList.add('aberta');
 }
 
 function _acPosicionar(inputEl, listaEl) {
@@ -1935,7 +1964,7 @@ function iniciarAutocompleteProcCliente() {
 }
 
 // ========================================
-// AUTOCOMPLETE — CÓDIGO DA PROPOSTA (PROCESSO)
+// AUTOCOMPLETE — CÓDIGO DA PROFORMA (PROCESSO)
 // ========================================
 
 let _acPropostas = [];
@@ -1944,11 +1973,69 @@ async function _acCarregarPropostas() {
     if (_acPropostas.length > 0) return;
     try {
         const usuario = obterUsuarioLogado();
-        let query = supabaseClient.from('propostas').select('id, codigo').order('created_at', { ascending: false });
+        let query = supabaseClient.from('proformas').select('id, codigo').neq('status', 'excluido').order('created_at', { ascending: false });
         if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         const { data } = await query;
         _acPropostas = (data || []).map(p => ({ id: p.id, nome: p.codigo, label: p.codigo }));
     } catch { _acPropostas = []; }
+}
+
+async function _procPreencherDaProforma(id) {
+    if (!id) return;
+    try {
+        const { data, error } = await supabaseClient.from('proformas').select('*').eq('id', id).single();
+        if (error || !data) return;
+
+        // Tipo
+        const tipoEl = document.getElementById('proc-tipo');
+        if (tipoEl && data.tipo) { tipoEl.value = data.tipo; tipoEl.dispatchEvent(new Event('change')); }
+
+        // Incoterm → dispara o handler que habilita/bloqueia Modal
+        const incotermEl = document.getElementById('proc-incoterm');
+        if (incotermEl && data.incoterm) {
+            incotermEl.value = data.incoterm;
+            incotermEl.dispatchEvent(new Event('change'));
+        }
+
+        // Modal (define depois do incoterm para não ser sobrescrito)
+        const modalEl = document.getElementById('proc-modal');
+        if (modalEl && data.modal) {
+            modalEl.value = data.modal;
+            modalEl.dispatchEvent(new Event('change'));
+        }
+
+        // País de Origem / Destino
+        const origemEl = document.getElementById('proc-origem-pais');
+        if (origemEl && data.origem_pais) origemEl.value = data.origem_pais;
+        const destinoEl = document.getElementById('proc-destino-pais');
+        if (destinoEl && data.destino_pais) destinoEl.value = data.destino_pais;
+
+        // Campos específicos por modal (porto, aeroporto, fronteira)
+        const _set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        _set('proc-porto-origem',     data.porto_origem);
+        _set('proc-porto-destino',    data.porto_destino);
+        _set('proc-aeroporto-origem', data.aeroporto_origem);
+        _set('proc-aeroporto-destino',data.aeroporto_destino);
+        _set('proc-fronteira-saida',  data.fronteira_saida);
+        _set('proc-fronteira-entrada',data.fronteira_entrada);
+
+        // Emissor / parceiro
+        if (data.emissor_tipo === 'terceiro' && data.parceiro_id) {
+            const radioTerceiro = document.getElementById('proc-emissor-terceiro');
+            if (radioTerceiro) {
+                radioTerceiro.checked = true;
+                radioTerceiro.dispatchEvent(new Event('change'));
+            }
+            // Preenche campo empresa/cliente com o nome do parceiro (buscado separadamente)
+            const { data: emp } = await supabaseClient.from('empresas').select('id, razao_social, nome_fantasia').eq('id', data.parceiro_id).single();
+            if (emp) {
+                const clienteEl = document.getElementById('proc-cliente');
+                const clienteIdEl = document.getElementById('proc-cliente-id');
+                if (clienteEl) clienteEl.value = emp.nome_fantasia || emp.razao_social;
+                if (clienteIdEl) clienteIdEl.value = emp.id;
+            }
+        }
+    } catch { /* silêncio */ }
 }
 
 function iniciarAutocompleteProcCodProposta() {
@@ -1959,20 +2046,22 @@ function iniciarAutocompleteProcCodProposta() {
 
     input.addEventListener('focus', async () => {
         await _acCarregarPropostas();
-        _acMostrar(input, lista, input.value);
+        _acMostrarProformas(input, lista, input.value);
     });
 
     input.addEventListener('input', () => {
         if (idOculto) idOculto.value = '';
-        _acMostrar(input, lista, input.value);
+        _acMostrarProformas(input, lista, input.value);
     });
 
     lista.addEventListener('mousedown', e => {
         const item = e.target.closest('.autocomplete-item');
         if (!item) return;
         input.value = item.getAttribute('data-nome');
-        if (idOculto) idOculto.value = item.getAttribute('data-id');
+        const selId = item.getAttribute('data-id');
+        if (idOculto) idOculto.value = selId;
         _acFechar(lista);
+        _procPreencherDaProforma(selId);
     });
 
     document.addEventListener('click', e => {
@@ -2523,9 +2612,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarTransportadoraPropria();
 
     // Proposta
-    propGerarCodigo();
-    const _propDataCriacao = document.getElementById('prop-data-emissao');
-    if (_propDataCriacao) _propDataCriacao.value = new Date().toISOString().slice(0, 10);
+    const _propIdEdicao = new URLSearchParams(window.location.search).get('id');
+    if (!_propIdEdicao) {
+        propGerarCodigo();
+        const _propDataCriacao = document.getElementById('prop-data-emissao');
+        if (_propDataCriacao) _propDataCriacao.value = new Date().toISOString().slice(0, 10);
+    }
     iniciarResumoProposta();
     iniciarEmissorProposta();
     iniciarModalIncotermProposta();
@@ -2538,6 +2630,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarAutocompleteAeroportos();
     iniciarAutocompletePortos();
     propIniciarItens();
+
+    if (_propIdEdicao) propCarregarEdicao(_propIdEdicao);
 
     // Modal info
     document.getElementById('proc-modal')?.addEventListener('change', function () {
@@ -3115,10 +3209,109 @@ async function _propPreencherPaisOrigem(valorPais) {
     if (paisCod) paisCod.value = pais ? pais.codigo : valorPais;
 }
 
+// ========================================
+// PROPOSTA — CARREGAR EDIÇÃO
+// ========================================
+
+async function propCarregarEdicao(id) {
+    const res = await window.supabaseAPI.buscarProforma(id);
+    if (!res.sucesso || !res.data) {
+        mostrarNotificacao('Proforma não encontrada.', 'erro');
+        return;
+    }
+    const d = res.data;
+    const g = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val ?? ''; };
+
+    // ID e código
+    g('prop-id',             d.id);
+    g('prop-codigo',         d.codigo);
+    const display = document.getElementById('prop-codigo-display');
+    if (display) display.textContent = d.codigo || '—';
+
+    // Campos simples
+    g('prop-tipo',           d.tipo);
+    g('prop-proposito',      d.proposito);
+    g('prop-documento',      d.documento);
+    g('prop-documento-tipo', d.documento_tipo);
+    g('prop-incoterm',       d.incoterm);
+    g('prop-origem-pais',    d.origem_pais);
+    g('prop-origem-pais-codigo', d.origem_pais_codigo);
+    g('prop-destino-pais',   d.destino_pais);
+    g('prop-destino-pais-codigo', d.destino_pais_codigo);
+    g('prop-porto-origem',   d.porto_origem);
+    g('prop-porto-destino',  d.porto_destino);
+    g('prop-aeroporto-origem',  d.aeroporto_origem);
+    g('prop-aeroporto-destino', d.aeroporto_destino);
+    g('prop-fronteira-saida',   d.fronteira_saida);
+    g('prop-fronteira-entrada', d.fronteira_entrada);
+    g('prop-forma-pagamento',   d.forma_pagamento);
+    g('prop-prazo-pagamento',   d.prazo_pagamento);
+    g('prop-condicoes-obs',     d.condicoes_obs);
+    g('prop-observacoes',       d.observacoes);
+    g('prop-data-emissao',      d.data_emissao);
+    g('prop-data-validade',     d.data_validade);
+    g('prop-validade-dias',     d.validade_dias);
+    g('prop-obs-status',        d.obs_status);
+
+    // Modal — dispara change para mostrar grupos corretos e habilitar incoterm
+    const modalEl = document.getElementById('prop-modal');
+    if (modalEl && d.modal) {
+        modalEl.value = d.modal;
+        modalEl.dispatchEvent(new Event('change'));
+    }
+
+    // Emissor
+    const emissorTipo = d.emissor_tipo || 'usuario';
+    const radioEl = document.querySelector(`input[name="prop-emissor-tipo"][value="${emissorTipo}"]`);
+    if (radioEl) {
+        radioEl.checked = true;
+        radioEl.dispatchEvent(new Event('change'));
+    }
+    if (emissorTipo === 'terceiro' && d.parceiro_id) {
+        g('prop-cliente-id', d.parceiro_id);
+    }
+
+    // Destinatário
+    if (d.destinatario_id) {
+        g('prop-emp-dest-id', d.destinatario_id);
+    }
+    if (d.destinatario_razao_social) {
+        g('prop-emp-dest-razao', d.destinatario_razao_social);
+        const razaoGroup = document.getElementById('prop-emp-dest-razao-group');
+        const buscaGroup = document.getElementById('prop-emp-dest-busca-group');
+        if (razaoGroup) razaoGroup.style.display = '';
+        if (buscaGroup) buscaGroup.style.display = 'none';
+    }
+    if (d.destinatario_doc) {
+        g('prop-emp-dest-doc',      d.destinatario_doc);
+        g('prop-emp-dest-doc-tipo', d.destinatario_doc_tipo);
+        const docGroup = document.getElementById('prop-emp-dest-doc-group');
+        if (docGroup) docGroup.style.display = '';
+    }
+
+    // Itens
+    if (Array.isArray(d.itens) && d.itens.length > 0) {
+        await Promise.all([_carregarMoedas(), _carregarUnidades()]);
+        _propItens = d.itens.map(it => ({
+            produto:  it.produto  || '',
+            qtd:      it.qtd      ?? it.quantidade ?? 1,
+            unidade:  it.unidade  || (_acUnidades[0]?.unidade || 'UN'),
+            preco:    it.preco    ?? it.preco_unit ?? 0,
+            moeda:    it.moeda    || (_acMoedas[0]?.descricao || 'USD'),
+        }));
+        propRenderizarItens();
+    }
+
+    // Indicar modo edição no botão salvar
+    const btnSalvar = document.querySelector('#form-proposta button[type="submit"]');
+    if (btnSalvar) btnSalvar.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Atualizar Proforma';
+}
+
 async function propGerarCodigo() {
-    const ano  = new Date().getFullYear();
+    const now  = new Date();
+    const ano  = String(now.getFullYear());
     const cont = await window.supabaseAPI.contarPropostas().catch(() => 0);
-    const codigo  = `PROPO${ano}${String(cont + 1).padStart(4, '0')}`;
+    const codigo  = `PRO${ano}${String(cont + 1).padStart(6, '0')}`;
     const hidden  = document.getElementById('prop-codigo');
     const display = document.getElementById('prop-codigo-display');
     if (hidden)  hidden.value        = codigo;

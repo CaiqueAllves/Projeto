@@ -2,28 +2,222 @@
    PROFORMA — ESTILOS ESPECÍFICOS
    ======================================== */
 
-/* ── Cards da lista ─────────────────────── */
+/* ── Contadores do header ────────────────── */
+.lista-header-counts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.prof-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.prof-count-enviado  { background:#eff6ff; color:#3b82f6; border-color:#bfdbfe; }
+.prof-count-aprovado { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+.prof-count-pendente { background:#fffbeb; color:#d97706; border-color:#fde68a; }
+.prof-count-recusado { background:#fef2f2; color:#dc2626; border-color:#fecaca; }
+
+/* ── Altura das linhas ───────────────────── */
+#listaContainer .empresa-tabela tbody tr {
+    height: auto;
+}
+
+#listaContainer .empresa-tabela td {
+    padding: 14px 12px;
+}
+
+/* ── Colunas da tabela ───────────────────── */
+.prof-col-codigo { min-width: 130px; }
+.prof-col-rota   { min-width: 160px; max-width: 220px; }
+
 .prof-card-num {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: #1e293b;
 }
 
-.prof-card-ref {
-    font-size: 12px;
+.prof-tipo-sub {
+    font-size: 11px;
     color: #94a3b8;
-    margin-left: 8px;
     font-weight: 400;
 }
 
-.resumo-sep {
+.prof-rota-arrow {
+    font-size: 10px;
     color: #94a3b8;
-    font-size: 12px;
+    margin: 0 4px;
 }
 
-.prof-badge-total {
-    background: #f0fdf4 !important;
-    border-color: #bbf7d0 !important;
-    color: #16a34a !important;
-    font-weight: 700 !important;
+.resumo-sep { color: #94a3b8; font-size: 12px; }
+
+/* ── Status select (badge-style) ─────────── */
+.prof-status-select {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 24px 4px 10px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    transition: opacity 0.15s;
+    background-repeat: no-repeat;
+    background-position: right 7px center;
+    background-size: 9px 9px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
+
+.prof-status-select:disabled { opacity: 0.6; cursor: wait; }
+
+.prof-status-select.prof-status-enviado    { background-color:#eff6ff; color:#3b82f6; border-color:#bfdbfe; }
+.prof-status-select.prof-status-aprovado { background-color:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+.prof-status-select.prof-status-pendente { background-color:#fffbeb; color:#d97706; border-color:#fde68a; }
+.prof-status-select.prof-status-recusado { background-color:#fef2f2; color:#dc2626; border-color:#fecaca; }
+
+/* ── Botão Excluídos ─────────────────────── */
+.btn-excluidos {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 16px;
+    height: 40px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.btn-excluidos:hover {
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
+/* ── Painel Excluídos ────────────────────── */
+#profExcluidosWrapper {
+    position: relative;
+}
+
+.prof-excluidos-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 360px;
+    max-height: 300px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    z-index: 200;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.prof-excluidos-panel.aberto { display: flex; }
+
+.prof-excluidos-titulo {
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+#profExcluidosContainer {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.prof-excluido-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f8fafc;
+    gap: 12px;
+}
+
+.prof-excluido-item:last-child { border-bottom: none; }
+
+.prof-excluido-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.prof-excluido-codigo {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.prof-excluido-rota {
+    font-size: 11px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.prof-excluido-restaurar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+
+.prof-excluido-restaurar:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+/* ── Filtro de status ────────────────────── */
+.filter-select {
+    height: 40px;
+    padding: 0 30px 0 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+    min-width: 140px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+.filter-select:focus { border-color: #4776ec; }
