@@ -608,14 +608,12 @@ function _acPosicionar(inputEl, listaEl) {
 // ========================================
 
 function iniciarAutocompletePaisOrigem() {
-    const input   = document.getElementById('proc-origem-pais');
-    const lista   = document.getElementById('proc-origem-pais-lista');
-    const codigo  = document.getElementById('proc-origem-pais-codigo');
-    const chkPais = document.getElementById('proc-origem-pais-editar');
+    const input  = document.getElementById('proc-origem-pais');
+    const lista  = document.getElementById('proc-origem-pais-lista');
+    const codigo = document.getElementById('proc-origem-pais-codigo');
     if (!input || !lista || !codigo) return;
 
     async function mostrarPaises() {
-        if (!chkPais?.checked) return;
         await _acCarregarPaises();
         const q = input.value.trim().toLowerCase();
         const filtrados = q
@@ -629,12 +627,6 @@ function iniciarAutocompletePaisOrigem() {
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
     }
-
-    chkPais?.addEventListener('change', () => {
-        input.readOnly = !chkPais.checked;
-        if (!chkPais.checked) _acFechar(lista);
-        else input.focus();
-    });
 
     input.addEventListener('focus', mostrarPaises);
     input.addEventListener('input', () => { codigo.value = ''; mostrarPaises(); });
@@ -1721,11 +1713,11 @@ function iniciarEmissor() {
         document.querySelector('input[name="proc-emissor-tipo"]:checked')
             ?.closest('.emissor-opcao')?.classList.add('ativo');
 
-        const tipoDocSelect = document.getElementById('proc-documento-tipo');
+        const grupoTipoDoc = document.getElementById('proc-documento-tipo-group');
 
         if (val === 'usuario') {
-            if (grupoEmp) grupoEmp.style.display = 'none';
-            if (tipoDocSelect) tipoDocSelect.style.display = '';
+            if (grupoEmp)    grupoEmp.style.display    = 'none';
+            if (grupoTipoDoc) grupoTipoDoc.style.display = '';
             if (docInput) {
                 docInput.readOnly    = false;
                 docInput.placeholder = 'Informe o CNPJ / CPF';
@@ -1737,8 +1729,8 @@ function iniciarEmissor() {
                 origemPais.placeholder = 'Selecione o país de origem';
             }
         } else {
-            if (grupoEmp) grupoEmp.style.display = '';
-            if (tipoDocSelect) tipoDocSelect.style.display = 'none';
+            if (grupoEmp)    grupoEmp.style.display    = '';
+            if (grupoTipoDoc) grupoTipoDoc.style.display = 'none';
             if (docInput) {
                 docInput.readOnly    = true;
                 docInput.placeholder = 'Preenchido automaticamente';
@@ -1990,6 +1982,10 @@ async function _procPreencherDaProforma(id) {
         const tipoEl = document.getElementById('proc-tipo');
         if (tipoEl && data.tipo) { tipoEl.value = data.tipo; tipoEl.dispatchEvent(new Event('change')); }
 
+        // Propósito
+        const propositoEl = document.getElementById('proc-proposito');
+        if (propositoEl && data.proposito) propositoEl.value = data.proposito;
+
         // Incoterm → dispara o handler que habilita/bloqueia Modal
         const incotermEl = document.getElementById('proc-incoterm');
         if (incotermEl && data.incoterm) {
@@ -2037,6 +2033,62 @@ async function _procPreencherDaProforma(id) {
         }
     } catch { /* silêncio */ }
 }
+
+// ========================================
+// CEP — AUTO-PREENCHIMENTO (ViaCEP)
+// ========================================
+
+function _cepMascara(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 8);
+    if (v.length > 5) v = v.slice(0, 5) + '-' + v.slice(5);
+    input.value = v;
+}
+
+async function procBuscarCep(input, prefixo) {
+    _cepMascara(input);
+    const cep = input.value.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+
+    try {
+        const res  = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await res.json();
+        if (data.erro) return;
+
+        set(`proc-${prefixo}-estado`,   data.uf);
+        set(`proc-${prefixo}-cidade`,   data.localidade);
+        set(`proc-${prefixo}-bairro`,   data.bairro);
+        set(`proc-${prefixo}-endereco`, data.logradouro);
+        document.getElementById(`proc-${prefixo}-numero`)?.focus();
+    } catch { /* CEP inválido ou sem conexão */ }
+}
+
+// ========================================
+// ENDEREÇO DE COLETA — ORIGEM
+// ========================================
+
+function procToggleColetaOrigem(mesmo) {
+    const campos  = document.getElementById('proc-origem-coleta-campos');
+    const resumo  = document.getElementById('proc-origem-coleta-resumo');
+    if (!campos || !resumo) return;
+
+    if (mesmo) {
+        const end  = document.getElementById('proc-origem-endereco')?.value   || '';
+        const num  = document.getElementById('proc-origem-numero')?.value      || '';
+        const comp = document.getElementById('proc-origem-complemento')?.value || '';
+        const bai  = document.getElementById('proc-origem-bairro')?.value      || '';
+        const cid  = document.getElementById('proc-origem-cidade')?.value      || '';
+        resumo.value = [end, num, comp, bai, cid].filter(Boolean).join(', ');
+        campos.style.display  = 'none';
+        resumo.style.display  = '';
+    } else {
+        campos.style.display = '';
+        resumo.style.display = 'none';
+        resumo.value = '';
+    }
+}
+
 
 function iniciarAutocompleteProcCodProposta() {
     const input    = document.getElementById('proc-codigo');
@@ -2150,9 +2202,6 @@ function toggleEmpresaDestino(modo) {
         ['proc-emp-dest-auto-doc','proc-emp-dest-auto-id'].forEach(id => {
             const el = document.getElementById(id); if (el) el.value = '';
         });
-        ['emp-dest-auto-doc-group','emp-dest-auto-id-group'].forEach(id => {
-            const el = document.getElementById(id); if (el) el.style.display = 'none';
-        });
     }
 }
 
@@ -2209,22 +2258,14 @@ function iniciarAutocompleteEmpresaDestino() {
         const docGrp  = document.getElementById('emp-dest-auto-doc-group');
         const idGrp   = document.getElementById('emp-dest-auto-id-group');
 
-        if (docEl && docGrp) {
-            docEl.value = doc;
-            docGrp.style.display = doc ? '' : 'none';
-        }
-        if (idEl && idGrp) {
-            idEl.value = idInt;
-            idGrp.style.display = idInt ? '' : 'none';
-        }
+        if (docEl) docEl.value = doc;
+        if (idEl) idEl.value = idInt;
 
         if (validarDocDestino(doc)) {
             input.value = '';
             if (idInput) idInput.value = '';
             if (docEl) docEl.value = '';
-            if (docGrp) docGrp.style.display = 'none';
             if (idEl) idEl.value = '';
-            if (idGrp) idGrp.style.display = 'none';
         }
     }
 
@@ -2232,10 +2273,6 @@ function iniciarAutocompleteEmpresaDestino() {
         ['proc-emp-dest-auto-doc', 'proc-emp-dest-auto-id'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
-        });
-        ['emp-dest-auto-doc-group', 'emp-dest-auto-id-group'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
         });
     }
 
@@ -2306,11 +2343,7 @@ function iniciarAutocompleteDestinoPais() {
     }
 
     function atualizarCEP() {
-        const cepGroup = document.getElementById('destino-cep-group');
-        if (!cepGroup) return;
-        const br = isBrasil();
-        cepGroup.style.display = br ? '' : 'none';
-        if (!br) {
+        if (!isBrasil()) {
             const cepEl = document.getElementById('proc-destino-cep');
             if (cepEl) { cepEl.value = ''; cepEl.style.borderColor = ''; }
             _destinoCepMsg('');
@@ -2653,44 +2686,96 @@ document.addEventListener('DOMContentLoaded', async function () {
 // ========================================
 
 function iniciarTransportadoraPropria() {
-    const tipoSelect  = document.getElementById('transp-tipo');
-    const nomeInput   = document.getElementById('transp-nome');
-    const cnpjInput   = document.getElementById('transp-cnpj');
-    const aviso       = _criarAvisoTransp();
+    const tipoSelect = document.getElementById('transp-tipo');
+    const nomeInput  = document.getElementById('transp-razao');
+    const nomeHidden = document.getElementById('transp-nome');
+    const nomeLista  = document.getElementById('transp-nome-lista');
+    const cnpjInput  = document.getElementById('transp-cnpj');
+    const aviso      = _criarAvisoTransp();
     if (!tipoSelect || !nomeInput) return;
 
-    tipoSelect.addEventListener('change', async function () {
-        if (this.value !== 'propria') { aviso.style.display = 'none'; return; }
+    let _transpCache = null;
 
+    async function _carregarTransps() {
+        if (_transpCache) return _transpCache;
         const usuario = obterUsuarioLogado();
-        if (!usuario) return;
-
+        if (!usuario) return [];
         try {
             const { data } = await supabaseClient
                 .from('empresas_cadastradas')
                 .select('id, nome_empresa, nome_fantasia, documento')
                 .eq('empresa_proprietaria_id', usuario.empresa_id)
                 .contains('tipos', ['transportadora']);
+            _transpCache = data || [];
+        } catch { _transpCache = []; }
+        return _transpCache;
+    }
 
-            if (!data?.length) {
-                aviso.textContent = 'Nenhuma transportadora cadastrada encontrada.';
-                aviso.style.display = 'block';
-                return;
-            }
+    function _selecionarTransp(item) {
+        const nome = item.nome_empresa || item.nome_fantasia || '';
+        nomeInput.value = nome;
+        if (nomeHidden) nomeHidden.value = nome;
+        if (cnpjInput) cnpjInput.value = item.documento || '';
+        if (nomeLista) nomeLista.classList.remove('aberta');
+    }
 
-            if (data.length === 1) {
-                nomeInput.value = data[0].nome_empresa || data[0].nome_fantasia || '';
-                if (cnpjInput) cnpjInput.value = data[0].documento || '';
-                aviso.textContent = 'Transportadora preenchida automaticamente.';
-                aviso.className = 'transp-aviso transp-aviso-ok';
-                aviso.style.display = 'block';
-                return;
-            }
+    async function _mostrarSugestoes() {
+        if (tipoSelect.value !== 'solicitada') return;
+        const lista = await _carregarTransps();
+        if (!lista.length || !nomeLista) return;
+        const q = nomeInput.value.trim().toLowerCase();
+        const filtradas = q
+            ? lista.filter(t => (t.nome_empresa || t.nome_fantasia || '').toLowerCase().includes(q))
+            : lista;
+        if (!filtradas.length) { nomeLista.classList.remove('aberta'); return; }
+        nomeLista.innerHTML = filtradas.slice(0, 20).map(t => `
+            <div class="autocomplete-item"
+                 data-nome="${(t.nome_empresa || t.nome_fantasia || '').replace(/"/g,'&quot;')}"
+                 data-doc="${t.documento || ''}">
+                <span class="ac-nome">${t.nome_empresa || t.nome_fantasia || '—'}</span>
+                ${t.nome_fantasia && t.nome_empresa ? `<span class="ac-fantasia">${t.nome_fantasia}</span>` : ''}
+            </div>`).join('');
+        _acPosicionar(nomeInput, nomeLista);
+        nomeLista.classList.add('aberta');
+    }
 
-            // Mais de 1 → mostra dropdown de escolha
-            aviso.style.display = 'none';
-            _mostrarDropdownTransp(data, nomeInput, cnpjInput);
-        } catch (_) {}
+    if (nomeLista) {
+        nomeInput.addEventListener('focus', _mostrarSugestoes);
+        nomeInput.addEventListener('input', _mostrarSugestoes);
+        nomeLista.addEventListener('mousedown', e => {
+            const item = e.target.closest('.autocomplete-item');
+            if (!item) return;
+            _selecionarTransp({ nome_empresa: item.dataset.nome, documento: item.dataset.doc });
+        });
+        document.addEventListener('click', e => {
+            if (!nomeInput.contains(e.target) && !nomeLista.contains(e.target))
+                nomeLista.classList.remove('aberta');
+        });
+    }
+
+    tipoSelect.addEventListener('change', async function () {
+        aviso.style.display = 'none';
+        if (nomeLista) nomeLista.classList.remove('aberta');
+        nomeInput.value = '';
+        if (nomeHidden) nomeHidden.value = '';
+        if (cnpjInput) cnpjInput.value = '';
+
+        if (this.value !== 'propria') return;
+
+        const lista = await _carregarTransps();
+        if (!lista.length) {
+            aviso.textContent = 'Nenhuma transportadora cadastrada encontrada.';
+            aviso.style.display = 'block';
+            return;
+        }
+        if (lista.length === 1) {
+            _selecionarTransp(lista[0]);
+            aviso.textContent = 'Transportadora preenchida automaticamente.';
+            aviso.className = 'transp-aviso transp-aviso-ok';
+            aviso.style.display = 'block';
+            return;
+        }
+        _mostrarDropdownTransp(lista, nomeInput, cnpjInput);
     });
 }
 

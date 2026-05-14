@@ -742,9 +742,9 @@
                                 <i class="fa-solid fa-chevron-down section-arrow"></i>
                             </div>
                             <div class="section-content">
-                                <div class="form-grid">
+                                <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
 
-                                    <!-- Linha 1: Código | Tipo -->
+                                    <!-- Linha 1: Código da Proforma | Tipo | Propósito -->
                                     <div class="form-group">
                                         <label for="proc-codigo">Código da Proforma</label>
                                         <div class="autocomplete-wrapper">
@@ -763,7 +763,21 @@
                                         </select>
                                     </div>
 
-                                    <!-- Emissor -->
+                                    <div class="form-group">
+                                        <label for="proc-proposito">Propósito</label>
+                                        <select id="proc-proposito" name="proposito">
+                                            <option value="">Selecione...</option>
+                                            <option value="vendas">Vendas</option>
+                                            <option value="amostra">Amostra</option>
+                                            <option value="troca">Troca</option>
+                                            <option value="doacao">Doação</option>
+                                            <option value="conserto">Conserto / Reparo</option>
+                                            <option value="retorno">Retorno</option>
+                                            <option value="exposicao">Exposição / Feira</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Linha 2: Emissor | Identificação da Empresa | Número de Identificação -->
                                     <div class="form-group">
                                         <label>Emissor <span class="required">*</span></label>
                                         <div class="emissor-toggle">
@@ -778,26 +792,17 @@
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="proc-documento">Identificação da Empresa</label>
-                                        <label style="font-size:12px;font-weight:500;color:#374151;margin-bottom:4px;display:flex;align-items:center;gap:5px;">
-                                            Número de Identificação
-                                            <span class="info-tooltip" data-tooltip="Documento de identificação da empresa: CNPJ (Cadastro Nacional de Pessoa Jurídica) e CPF (Cadastro de Pessoa Física)">
-                                                <i class="fa-solid fa-circle-info"></i>
-                                            </span>
-                                        </label>
-                                        <div class="doc-tipo-wrapper">
-                                            <select id="proc-documento-tipo" name="documento_tipo">
-                                                <option value="cnpj">CNPJ</option>
-                                                <option value="cpf">CPF</option>
-                                            </select>
-                                            <input type="text" id="proc-documento" name="documento" placeholder="Preenchido automaticamente" readonly>
-                                        </div>
+                                    <div class="form-group" id="proc-documento-tipo-group">
+                                        <label for="proc-documento-tipo">Identificação da Empresa</label>
+                                        <select id="proc-documento-tipo" name="documento_tipo">
+                                            <option value="cnpj">CNPJ</option>
+                                            <option value="cpf">CPF</option>
+                                        </select>
                                     </div>
 
-                                    <!-- Empresa vinculada — visível apenas quando Terceiro -->
+                                    <!-- Empresa vinculada — visível apenas quando Terceiro, ocupa o slot de Identificação da Empresa -->
                                     <div class="form-group" id="proc-emissor-empresa-group" style="display:none;">
-                                        <label for="proc-cliente">Empresa / Cliente <span class="required">*</span></label>
+                                        <label for="proc-cliente">Remetente <span class="required">*</span></label>
                                         <div class="autocomplete-wrapper">
                                             <input type="text" id="proc-cliente" name="cliente" placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
                                             <input type="hidden" id="proc-cliente-id">
@@ -805,22 +810,17 @@
                                         </div>
                                     </div>
 
-                                    <!-- Propósito -->
-                                    <div class="form-group full-width">
-                                        <label for="proc-proposito">Propósito</label>
-                                        <select id="proc-proposito" name="proposito">
-                                            <option value="">Selecione...</option>
-                                            <option value="vendas">Vendas</option>
-                                            <option value="amostra">Amostra</option>
-                                            <option value="troca">Troca</option>
-                                            <option value="doacao">Doação</option>
-                                            <option value="conserto">Conserto / Reparo</option>
-                                            <option value="retorno">Retorno</option>
-                                            <option value="exposicao">Exposição / Feira</option>
-                                        </select>
+                                    <div class="form-group">
+                                        <label for="proc-documento">
+                                            Número de Identificação
+                                            <span class="info-tooltip" data-tooltip="Documento de identificação da empresa: CNPJ (Cadastro Nacional de Pessoa Jurídica) e CPF (Cadastro de Pessoa Física)">
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            </span>
+                                        </label>
+                                        <input type="text" id="proc-documento" name="documento" placeholder="Preenchido automaticamente" readonly>
                                     </div>
 
-                                    <!-- Linha 3: Incoterm | Modal -->
+                                    <!-- Linha 3: Incoterm | Modal | Observações -->
                                     <div class="form-group">
                                         <label for="proc-incoterm">
                                             Incoterm
@@ -860,9 +860,7 @@
                                         <div class="incoterm-info" id="modal-info"></div>
                                     </div>
 
-
-                                    <!-- Linha 4: Observações -->
-                                    <div class="form-group full-width">
+                                    <div class="form-group">
                                         <label for="proc-observacoes">Observações</label>
                                         <textarea id="proc-observacoes" name="observacoes" placeholder="Informações adicionais sobre o processo..."></textarea>
                                     </div>
@@ -882,18 +880,119 @@
                                 <div class="form-grid">
 
                                     <!-- ORIGEM -->
-                                    <div class="form-group full-width form-inline-pair">
-                                        <div class="form-group">
-                                            <label for="proc-origem-pais">País de Origem</label>
-                                            <div class="autocomplete-wrapper">
-                                                <input type="text" id="proc-origem-pais" name="origem_pais" placeholder="Selecione o país de origem" autocomplete="off">
-                                                <input type="hidden" id="proc-origem-pais-codigo">
-                                                <div class="autocomplete-list" id="proc-origem-pais-lista"></div>
+
+                                    <!-- Linha 1: País | CEP | Estado | Cidade -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-4">
+                                            <div class="form-group">
+                                                <label for="proc-origem-pais">País de Origem</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="proc-origem-pais" name="origem_pais" placeholder="Selecione o país" autocomplete="off">
+                                                    <input type="hidden" id="proc-origem-pais-codigo">
+                                                    <div class="autocomplete-list" id="proc-origem-pais-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-origem-cep">CEP</label>
+                                                <input type="text" id="proc-origem-cep" name="origem_cep" placeholder="00000-000" maxlength="9" oninput="procBuscarCep(this,'origem')">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-origem-estado">Estado</label>
+                                                <input type="text" id="proc-origem-estado" name="origem_estado" placeholder="UF" maxlength="2">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-origem-cidade">Cidade</label>
+                                                <input type="text" id="proc-origem-cidade" name="origem_cidade" placeholder="Ex: Joinville">
                                             </div>
                                         </div>
-                                        <div class="form-group">
-                                            <label for="proc-origem-cidade">Cidade de Origem</label>
-                                            <input type="text" id="proc-origem-cidade" name="origem_cidade" placeholder="Ex: Joinville">
+                                    </div>
+
+                                    <!-- Linha 2: Bairro | Endereço | Número | Complemento -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-4">
+                                            <div class="form-group">
+                                                <label for="proc-origem-bairro">Bairro</label>
+                                                <input type="text" id="proc-origem-bairro" name="origem_bairro" placeholder="Ex: Centro">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-origem-endereco">Endereço</label>
+                                                <input type="text" id="proc-origem-endereco" name="origem_endereco" placeholder="Ex: Rua das Flores">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-origem-numero">Número</label>
+                                                <div class="input-com-sn">
+                                                    <input type="text" id="proc-origem-numero" name="origem_numero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')">
+                                                    <span class="sn-toggle-inner" onclick="const n=document.getElementById('proc-origem-numero');this.classList.toggle('ativo');const a=this.classList.contains('ativo');n.disabled=a;n.value=a?'S/N':'';n.placeholder=a?'':'Nº';">S/N</span>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-origem-complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
+                                                <input type="text" id="proc-origem-complemento" name="origem_complemento" placeholder="Sala, Andar, Bloco...">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 3: Endereço de Coleta -->
+                                    <div class="form-group full-width">
+                                        <div style="background:#fff3e0; border-radius:10px; padding:16px 20px;">
+                                            <div class="coleta-label-row">
+                                                <label>Endereço de Coleta</label>
+                                                <label class="sn-toggle">
+                                                    <input type="checkbox" id="proc-origem-coleta-mesmo" onchange="procToggleColetaOrigem(this.checked)">
+                                                    <span>Mesmo endereço acima</span>
+                                                </label>
+                                            </div>
+                                            <input type="text" id="proc-origem-coleta-resumo" placeholder="Mesmo endereço" readonly style="display:none; background:#ffe0b2; margin-top:8px;">
+                                            <div id="proc-origem-coleta-campos" class="form-rows" style="margin-top:12px;">
+                                                <div class="form-row-4">
+                                                    <div class="form-group">
+                                                        <label for="proc-origem-coleta-cep">CEP</label>
+                                                        <input type="text" id="proc-origem-coleta-cep" name="origem_coleta_cep" placeholder="00000-000" maxlength="9" oninput="procBuscarCep(this,'origem-coleta')">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="proc-origem-coleta-estado">Estado</label>
+                                                        <input type="text" id="proc-origem-coleta-estado" name="origem_coleta_estado" placeholder="UF" maxlength="2">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="proc-origem-coleta-cidade">Cidade</label>
+                                                        <input type="text" id="proc-origem-coleta-cidade" name="origem_coleta_cidade" placeholder="Cidade">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="proc-origem-coleta-bairro">Bairro</label>
+                                                        <input type="text" id="proc-origem-coleta-bairro" name="origem_coleta_bairro" placeholder="Bairro">
+                                                    </div>
+                                                </div>
+                                                <div class="form-row-3">
+                                                    <div class="form-group">
+                                                        <label for="proc-origem-coleta-endereco">Endereço</label>
+                                                        <input type="text" id="proc-origem-coleta-endereco" name="origem_coleta_endereco" placeholder="Rua, Av., etc.">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="proc-origem-coleta-numero">Número</label>
+                                                        <div class="input-com-sn">
+                                                            <input type="text" id="proc-origem-coleta-numero" name="origem_coleta_numero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')">
+                                                            <span class="sn-toggle-inner" onclick="const n=document.getElementById('proc-origem-coleta-numero');this.classList.toggle('ativo');const a=this.classList.contains('ativo');n.disabled=a;n.value=a?'S/N':'';n.placeholder=a?'':'Nº';">S/N</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="proc-origem-coleta-complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
+                                                        <input type="text" id="proc-origem-coleta-complemento" name="origem_coleta_complemento" placeholder="Sala, Andar, Bloco...">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Horários — sempre visíveis -->
+                                            <div class="form-row-3" style="margin-top:16px;">
+                                                <div class="form-group">
+                                                    <label for="proc-origem-coleta-horario">Horário de Coleta</label>
+                                                    <input type="text" id="proc-origem-coleta-horario" name="origem_coleta_horario" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric"
+                                                        oninput="const v=this.value.replace(/\D/g,'').slice(0,8);let o=v.slice(0,2);if(v.length>2)o+=':'+v.slice(2,4);if(v.length>4)o+=' às '+v.slice(4,6);if(v.length>6)o+=':'+v.slice(6,8);this.value=o;">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="proc-origem-coleta-intervalo">Horário de Intervalo</label>
+                                                    <input type="text" id="proc-origem-coleta-intervalo" name="origem_coleta_intervalo" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric"
+                                                        oninput="const v=this.value.replace(/\D/g,'').slice(0,8);let o=v.slice(0,2);if(v.length>2)o+=':'+v.slice(2,4);if(v.length>4)o+=' às '+v.slice(4,6);if(v.length>6)o+=':'+v.slice(6,8);this.value=o;">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -976,108 +1075,101 @@
                                         <input type="text" id="proc-fronteira-entrada" name="fronteira_entrada" placeholder="Ex: Ciudad del Este, Paso de los Libres...">
                                     </div>
 
-                                    <!-- Empresa de Destino -->
-                                    <div class="form-group full-width">
-                                        <div class="empresa-destino-header">
-                                            <label>Empresa de Destino</label>
-                                            <div class="empresa-destino-toggle">
-                                                <button type="button" class="emp-dest-btn ativo" id="btn-emp-dest-cadastrada" onclick="toggleEmpresaDestino('cadastrada')">
-                                                    <i class="fa-solid fa-magnifying-glass"></i> Buscar cadastrada
-                                                </button>
-                                                <button type="button" class="emp-dest-btn" id="btn-emp-dest-manual" onclick="toggleEmpresaDestino('manual')">
-                                                    <i class="fa-solid fa-pen"></i> Preencher manual
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <!-- Aviso mesmo CNPJ -->
                                     <div class="form-group full-width emp-dest-aviso" id="emp-dest-aviso-mesmo-cnpj" style="display:none;">
                                         <i class="fa-solid fa-triangle-exclamation"></i>
                                         O CNPJ/CPF da empresa de destino não pode ser o mesmo do emissor do processo.
                                     </div>
 
-                                    <!-- Busca em empresas cadastradas -->
+                                    <!-- Destinatário -->
                                     <div class="form-group full-width" id="emp-dest-busca-group">
-                                        <label for="proc-emp-dest-busca">Buscar Empresa</label>
-                                        <div class="autocomplete-wrapper">
-                                            <input type="text" id="proc-emp-dest-busca" name="emp_dest_busca" placeholder="Digite o nome ou CNPJ da empresa..." autocomplete="off">
-                                            <input type="hidden" id="proc-emp-dest-id">
-                                            <div class="autocomplete-list" id="proc-emp-dest-lista"></div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group" id="emp-dest-auto-doc-group" style="display:none;">
-                                        <label for="proc-emp-dest-auto-doc">CNPJ / CPF</label>
-                                        <input type="text" id="proc-emp-dest-auto-doc" name="emp_dest_auto_doc" readonly>
-                                    </div>
-                                    <div class="form-group" id="emp-dest-auto-id-group" style="display:none;">
-                                        <label for="proc-emp-dest-auto-id">Identificação Interna</label>
-                                        <input type="text" id="proc-emp-dest-auto-id" name="emp_dest_auto_id" readonly>
-                                    </div>
-
-                                    <!-- Preenchimento manual -->
-                                    <div class="form-group" id="emp-dest-razao-group" style="display:none;">
-                                        <label for="proc-emp-dest-razao">Razão Social</label>
-                                        <input type="text" id="proc-emp-dest-razao" name="emp_dest_razao" placeholder="Razão social da empresa">
-                                    </div>
-                                    <div class="form-group" id="emp-dest-fantasia-group" style="display:none;">
-                                        <label for="proc-emp-dest-fantasia">Nome Fantasia</label>
-                                        <input type="text" id="proc-emp-dest-fantasia" name="emp_dest_fantasia" placeholder="Nome fantasia">
-                                    </div>
-                                    <div class="form-group" id="emp-dest-doc-group" style="display:none;">
-                                        <label for="proc-emp-dest-doc">CNPJ / CPF</label>
-                                        <div class="doc-tipo-wrapper">
-                                            <select id="proc-emp-dest-doc-tipo">
-                                                <option value="cnpj">CNPJ</option>
-                                                <option value="cpf">CPF</option>
-                                            </select>
-                                            <input type="text" id="proc-emp-dest-doc" name="emp_dest_doc" placeholder="00.000.000/0001-00">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group full-width form-inline-pair">
-                                        <div class="form-group">
-                                            <label for="proc-destino-pais">País de Destino</label>
-                                            <div class="autocomplete-wrapper">
-                                                <input type="text" id="proc-destino-pais" name="destino_pais" placeholder="Digite para filtrar países..." autocomplete="off">
-                                                <input type="hidden" id="proc-destino-pais-codigo">
-                                                <div class="autocomplete-list" id="proc-destino-pais-lista"></div>
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="proc-emp-dest-busca">Destinatário</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="proc-emp-dest-busca" name="emp_dest_busca" placeholder="Digite o nome ou CNPJ da empresa..." autocomplete="off">
+                                                    <input type="hidden" id="proc-emp-dest-id">
+                                                    <div class="autocomplete-list" id="proc-emp-dest-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group" id="emp-dest-auto-doc-group">
+                                                <label for="proc-emp-dest-auto-doc">Número de Identificação</label>
+                                                <input type="text" id="proc-emp-dest-auto-doc" name="emp_dest_auto_doc" readonly placeholder="Auto-preenchido">
+                                            </div>
+                                            <div class="form-group" id="emp-dest-auto-id-group">
+                                                <label for="proc-emp-dest-auto-id">Código Interno</label>
+                                                <input type="text" id="proc-emp-dest-auto-id" name="emp_dest_auto_id" readonly placeholder="Auto-preenchido">
                                             </div>
                                         </div>
-                                        <div class="form-group" id="destino-cep-group" style="display:none;">
-                                            <label for="proc-destino-cep">CEP</label>
-                                            <input type="text" id="proc-destino-cep" name="destino_cep" placeholder="00000-000" maxlength="9">
+                                    </div>
+
+                                    <!-- Linha 1: País | CEP | Estado | Cidade -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-4">
+                                            <div class="form-group">
+                                                <label for="proc-destino-pais">País de Destino</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="proc-destino-pais" name="destino_pais" placeholder="Selecione o país" autocomplete="off">
+                                                    <input type="hidden" id="proc-destino-pais-codigo">
+                                                    <div class="autocomplete-list" id="proc-destino-pais-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group" id="destino-cep-group">
+                                                <label for="proc-destino-cep">CEP</label>
+                                                <input type="text" id="proc-destino-cep" name="destino_cep" placeholder="00000-000" maxlength="9" oninput="procBuscarCep(this,'destino')">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-destino-estado">Estado</label>
+                                                <input type="text" id="proc-destino-estado" name="destino_estado" placeholder="UF" maxlength="2">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-destino-cidade">Cidade</label>
+                                                <input type="text" id="proc-destino-cidade" name="destino_cidade" placeholder="Ex: São Paulo, Miami...">
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="proc-destino-estado">Estado / Província</label>
-                                        <input type="text" id="proc-destino-estado" name="destino_estado" placeholder="Ex: SP, Florida...">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="proc-destino-cidade">Cidade de Destino</label>
-                                        <input type="text" id="proc-destino-cidade" name="destino_cidade" placeholder="Ex: São Paulo, Miami...">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="proc-destino-bairro">Bairro</label>
-                                        <input type="text" id="proc-destino-bairro" name="destino_bairro" placeholder="Bairro">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="proc-destino-endereco">Endereço</label>
-                                        <input type="text" id="proc-destino-endereco" name="destino_endereco" placeholder="Rua, Av., etc.">
-                                    </div>
-
+                                    <!-- Linha 2: Bairro | Endereço | Número | Complemento -->
                                     <div class="form-group full-width">
-                                        <label for="proc-destino-complemento">Complemento</label>
-                                        <input type="text" id="proc-destino-complemento" name="destino_complemento" placeholder="Sala, Andar, Bloco...">
+                                        <div class="form-row-4">
+                                            <div class="form-group">
+                                                <label for="proc-destino-bairro">Bairro</label>
+                                                <input type="text" id="proc-destino-bairro" name="destino_bairro" placeholder="Bairro">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-destino-endereco">Endereço</label>
+                                                <input type="text" id="proc-destino-endereco" name="destino_endereco" placeholder="Rua, Av., etc.">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-destino-numero">Número</label>
+                                                <div class="input-com-sn">
+                                                    <input type="text" id="proc-destino-numero" name="destino_numero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')">
+                                                    <span class="sn-toggle-inner" onclick="const n=document.getElementById('proc-destino-numero');this.classList.toggle('ativo');const a=this.classList.contains('ativo');n.disabled=a;n.value=a?'S/N':'';n.placeholder=a?'':'Nº';">S/N</span>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-destino-complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
+                                                <input type="text" id="proc-destino-complemento" name="destino_complemento" placeholder="Sala, Andar, Bloco...">
+                                            </div>
+                                        </div>
                                     </div>
 
+                                    <!-- Linha 3: Responsável | Contato | E-mail -->
                                     <div class="form-group full-width">
-                                        <label for="proc-destino-responsavel">Responsável no Destino</label>
-                                        <input type="text" id="proc-destino-responsavel" name="destino_responsavel" placeholder="Nome da empresa ou pessoa responsável pelo recebimento">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="proc-destino-responsavel">Responsável no Destino</label>
+                                                <input type="text" id="proc-destino-responsavel" name="destino_responsavel" placeholder="Nome do responsável">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-destino-responsavel-contato">Contato do Responsável</label>
+                                                <input type="text" id="proc-destino-responsavel-contato" name="destino_responsavel_contato" placeholder="Ex: +55 47 99999-0000">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-destino-responsavel-email">E-mail do Responsável</label>
+                                                <input type="email" id="proc-destino-responsavel-email" name="destino_responsavel_email" placeholder="email@exemplo.com">
+                                            </div>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -1418,85 +1510,119 @@
                                 <i class="fa-solid fa-chevron-down section-arrow"></i>
                             </div>
                             <div class="section-content">
-
                                 <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="transp-nome">Transportadora</label>
-                                        <div class="doc-tipo-wrapper">
-                                            <select id="transp-tipo" name="transp_tipo">
-                                                <option value="solicitada">Solicitada</option>
-                                                <option value="propria">Própria do Cliente</option>
-                                            </select>
-                                            <input type="text" id="transp-nome" name="transp_nome" placeholder="Nome da transportadora">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transp-cnpj">CNPJ da Transportadora</label>
-                                        <input type="text" id="transp-cnpj" name="transp_cnpj" placeholder="00.000.000/0000-00" maxlength="18">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transp-num-coleta">Nº de Coleta <span class="campo-opcional">(se houver)</span></label>
-                                        <input type="text" id="transp-num-coleta" name="transp_num_coleta" placeholder="Número de coleta">
-                                    </div>
-                                </div>
 
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="transp-tipo-veiculo">Tipo de Veículo</label>
-                                        <select id="transp-tipo-veiculo" name="transp_tipo_veiculo">
-                                            <option value="">Selecione...</option>
-                                            <option value="caminhao_bau">Caminhão Baú</option>
-                                            <option value="caminhao_aberto">Caminhão Aberto (Carroceria)</option>
-                                            <option value="caminhao_frigorifico">Caminhão Frigorífico</option>
-                                            <option value="caminhao_tanque">Caminhão Tanque</option>
-                                            <option value="bitrem">Bitrem / Rodotrem</option>
-                                            <option value="van">Van / Utilitário</option>
-                                            <option value="outro">Outro</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transp-placa">Placa do Veículo</label>
-                                        <input type="text" id="transp-placa" name="transp_placa" placeholder="AAA-0000 ou AAA0A00" maxlength="8">
-                                    </div>
-                                </div>
-
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="transp-data-coleta">Data de Coleta</label>
-                                        <input type="date" id="transp-data-coleta" name="transp_data_coleta">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transp-data-entrega">Entrega Prevista</label>
-                                        <input type="date" id="transp-data-entrega" name="transp_data_entrega">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transp-frete-valor">Valor do Frete</label>
-                                        <div class="doc-tipo-wrapper">
-                                            <div class="autocomplete-wrapper" style="width:220px;flex-shrink:0;">
-                                                <input type="text" id="transp-frete-moeda-display" placeholder="Moeda..." autocomplete="off">
-                                                <input type="hidden" id="transp-frete-moeda" name="transp_frete_moeda">
-                                                <div class="autocomplete-dropdown" id="transp-frete-moeda-list" style="display:none;"></div>
-                                            </div>
-                                            <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00">
-                                        </div>
-                                    </div>
-                                    <div class="form-group" style="max-width:100px;">
-                                        <label for="transp-frete-incoterm">Incoterm</label>
-                                        <input type="text" id="transp-frete-incoterm" name="transp_frete_incoterm" class="transp-incoterm-tag" placeholder="—" readonly tabindex="-1">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transp-seguro">Seguro de Transporte <span class="campo-opcional">(se houver)</span></label>
-                                        <input type="text" id="transp-seguro" name="transp_seguro" placeholder="Nº apólice ou valor do seguro">
-                                    </div>
-                                </div>
-
-                                <div class="form-grid">
+                                    <!-- Linha 1: Transportadora | Razão Social | Documento Fiscal | Nº Coleta -->
                                     <div class="form-group full-width">
-                                        <label for="transp-obs">Observações</label>
-                                        <textarea id="transp-obs" name="transp_obs" placeholder="Informações adicionais sobre o transporte..."></textarea>
+                                        <div class="form-row-4">
+                                            <div class="form-group">
+                                                <label for="transp-tipo">Transportadora</label>
+                                                <select id="transp-tipo" name="transp_tipo">
+                                                    <option value="solicitada">Solicitada</option>
+                                                    <option value="propria">Própria do Cliente</option>
+                                                </select>
+                                                <input type="hidden" id="transp-nome" name="transp_nome">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-razao">Razão Social</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="transp-razao" name="transp_razao" placeholder="Nome da transportadora" autocomplete="off">
+                                                    <div class="autocomplete-list" id="transp-nome-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-cnpj">Documento Fiscal da Transportadora</label>
+                                                <input type="text" id="transp-cnpj" name="transp_cnpj" placeholder="00.000.000/0000-00" maxlength="18">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-num-coleta">Nº de Coleta <span class="campo-opcional">(se houver)</span></label>
+                                                <input type="text" id="transp-num-coleta" name="transp_num_coleta" placeholder="Número de coleta">
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
 
+                                    <!-- Linha 2: Tipo de Veículo | Placa -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3" style="grid-template-columns: repeat(2, 1fr);">
+                                            <div class="form-group">
+                                                <label for="transp-tipo-veiculo">Tipo de Veículo</label>
+                                                <select id="transp-tipo-veiculo" name="transp_tipo_veiculo">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="caminhao_bau">Caminhão Baú</option>
+                                                    <option value="caminhao_aberto">Caminhão Aberto (Carroceria)</option>
+                                                    <option value="caminhao_frigorifico">Caminhão Frigorífico</option>
+                                                    <option value="caminhao_tanque">Caminhão Tanque</option>
+                                                    <option value="bitrem">Bitrem / Rodotrem</option>
+                                                    <option value="van">Van / Utilitário</option>
+                                                    <option value="outro">Outro</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-placa">Placa do Veículo</label>
+                                                <input type="text" id="transp-placa" name="transp_placa" placeholder="AAA-0000 ou AAA0A00" maxlength="8">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 3: Motorista | CNH | Contato -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="transp-motorista">Motorista</label>
+                                                <input type="text" id="transp-motorista" name="transp_motorista" placeholder="Nome do motorista">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-motorista-cnh">CNH do Motorista</label>
+                                                <input type="text" id="transp-motorista-cnh" name="transp_motorista_cnh" placeholder="Número da CNH">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-motorista-contato">Contato do Motorista</label>
+                                                <input type="text" id="transp-motorista-contato" name="transp_motorista_contato" placeholder="Ex: +55 47 99999-0000">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 4: Data de Coleta | Entrega Prevista -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3" style="grid-template-columns: repeat(2, 1fr);">
+                                            <div class="form-group">
+                                                <label for="transp-data-coleta">Data de Coleta</label>
+                                                <input type="date" id="transp-data-coleta" name="transp_data_coleta">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-data-entrega">Entrega Prevista</label>
+                                                <input type="date" id="transp-data-entrega" name="transp_data_entrega">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 5: Valor do Frete | Seguro | Observações -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="transp-frete-valor">Valor do Frete</label>
+                                                <div class="doc-tipo-wrapper" style="align-items:flex-end;">
+                                                    <div class="autocomplete-wrapper" style="width:140px;flex-shrink:0;">
+                                                        <input type="text" id="transp-frete-moeda-display" placeholder="Moeda..." autocomplete="off">
+                                                        <input type="hidden" id="transp-frete-moeda" name="transp_frete_moeda">
+                                                        <div class="autocomplete-dropdown" id="transp-frete-moeda-list" style="display:none;"></div>
+                                                    </div>
+                                                    <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00">
+                                                    <input type="text" id="transp-frete-incoterm" name="transp_frete_incoterm" class="transp-incoterm-tag" placeholder="—" readonly tabindex="-1" style="width:70px;flex-shrink:0;">
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-seguro">Seguro de Transporte <span class="campo-opcional">(se houver)</span></label>
+                                                <input type="text" id="transp-seguro" name="transp_seguro" placeholder="Nº apólice ou valor do seguro">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-obs">Observações</label>
+                                                <textarea id="transp-obs" name="transp_obs" placeholder="Informações adicionais sobre o transporte..." style="height:38px;resize:vertical;"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
                             </div>
                         </div>
 

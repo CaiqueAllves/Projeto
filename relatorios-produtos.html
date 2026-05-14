@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Produtos › Relatórios</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-relatorios.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside></aside>
+
+    <main>
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-boxes-stacked"></i> Produtos: Relatórios</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user" id="topbarAvatarIcon"></i>
+                        <img id="topbarAvatarImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">—</div>
+                        <div class="user-email" id="userEmail">—</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO -->
+        <div class="content">
+
+            <!-- STATS -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#ede9fe; color:#7c3aed;">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalProdutos">—</div>
+                        <div class="stat-label">Total de Produtos</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#dcfce7; color:#22c55e;">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalAtivos">—</div>
+                        <div class="stat-label">Ativos</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#f1f5f9; color:#94a3b8;">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalInativos">—</div>
+                        <div class="stat-label">Inativos</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalEstoqueBaixo">—</div>
+                        <div class="stat-label">Estoque Baixo</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIPOS DE RELATÓRIO -->
+            <div>
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-file-lines"></i> Gerar Relatório</h3>
+                </div>
+
+                <div class="report-grid">
+                    <!-- Card: Por Categoria -->
+                    <div class="report-card">
+                        <div class="report-card-icon" style="background: linear-gradient(135deg,#7c3aed,#6366f1);">
+                            <i class="fa-solid fa-tag"></i>
+                        </div>
+                        <h4>Relatório por Categoria</h4>
+                        <p>Ranking das categorias com mais produtos cadastrados no sistema.</p>
+                        <div class="report-preview" id="previewCategoria">
+                            <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                        </div>
+                        <button class="btn-report" style="background: linear-gradient(135deg,#7c3aed,#6366f1);" onclick="gerarRelatorio('categoria')">
+                            <i class="fa-solid fa-download"></i> Gerar
+                        </button>
+                    </div>
+
+                    <!-- Card: Por Status -->
+                    <div class="report-card">
+                        <div class="report-card-icon" style="background: linear-gradient(135deg,#f59e0b,#f97316);">
+                            <i class="fa-solid fa-chart-bar"></i>
+                        </div>
+                        <h4>Relatório por Status</h4>
+                        <p>Distribuição dos produtos entre ativos e inativos, com percentuais por categoria.</p>
+                        <div class="report-preview" id="previewStatus">
+                            <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                        </div>
+                        <button class="btn-report" style="background: linear-gradient(135deg,#f59e0b,#f97316);" onclick="gerarRelatorio('status')">
+                            <i class="fa-solid fa-download"></i> Gerar
+                        </button>
+                    </div>
+
+                    <!-- Card: Por Estoque -->
+                    <div class="report-card">
+                        <div class="report-card-icon" style="background: linear-gradient(135deg,#0891b2,#06b6d4);">
+                            <i class="fa-solid fa-warehouse"></i>
+                        </div>
+                        <h4>Relatório de Estoque</h4>
+                        <p>Produtos com estoque abaixo do mínimo, posição atual e alertas de reposição.</p>
+                        <div class="report-preview" id="previewEstoque">
+                            <div class="preview-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                        </div>
+                        <button class="btn-report" style="background: linear-gradient(135deg,#0891b2,#06b6d4);" onclick="gerarRelatorio('estoque')">
+                            <i class="fa-solid fa-download"></i> Gerar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTÓRICO -->
+            <div class="history-card" id="secaoHistorico" style="display:none;">
+                <div class="history-card-header">
+                    <i class="fa-solid fa-clock-rotate-left" style="color:#94a3b8;"></i>
+                    Histórico de Relatórios
+                </div>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Usuário</th>
+                            <th>Data de Geração</th>
+                            <th>Formato</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historicoBody"></tbody>
+                </table>
+            </div>
+
+            <footer class="dashboard-footer">
+                <span>© 2026 Marpex — Todos os direitos reservados</span>
+                <span class="footer-version">v3.0</span>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL: PARÂMETROS DO RELATÓRIO -->
+<div class="rel-modal-overlay" id="modalRelatorio" onclick="fecharModalRelatorio()">
+    <div class="rel-modal" onclick="event.stopPropagation()">
+
+        <div class="rel-modal-header">
+            <div class="rel-modal-title">
+                <div class="rel-modal-icon" id="modalRelIcon"></div>
+                <div>
+                    <div class="rel-modal-nome" id="modalRelNome">Relatório</div>
+                    <div class="rel-modal-sub">Configure os parâmetros e baixe em PDF</div>
+                </div>
+            </div>
+            <button class="rel-modal-close" onclick="fecharModalRelatorio()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="rel-modal-body">
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-clock"></i> Período predefinido</label>
+                <div class="period-bar">
+                    <button class="period-btn active" onclick="setPeriod(this,'mensal')">Mensal</button>
+                    <button class="period-btn" onclick="setPeriod(this,'trimestral')">Trimestral</button>
+                    <button class="period-btn" onclick="setPeriod(this,'anual')">Anual</button>
+                </div>
+            </div>
+
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-calendar-range"></i> Intervalo de datas</label>
+                <div class="rel-date-row">
+                    <div class="rel-date-field">
+                        <span>De</span>
+                        <input type="date" id="relDataInicio" />
+                    </div>
+                    <div class="rel-date-field">
+                        <span>Até</span>
+                        <input type="date" id="relDataFim" />
+                    </div>
+                </div>
+            </div>
+
+            <div id="relParamsEspecificos"></div>
+
+            <div class="rel-preview-box" id="relPreviewBox">
+                <div class="rel-preview-label"><i class="fa-solid fa-eye"></i> Prévia dos dados</div>
+                <div id="relPreviewConteudo" class="rel-preview-conteudo">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="rel-modal-footer">
+            <button class="rel-btn-cancelar" onclick="fecharModalRelatorio()">Cancelar</button>
+            <button class="rel-btn-pdf" onclick="baixarPDF()">
+                <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="relatorios-produtos.js"></script>
+
+</body>
+</html>

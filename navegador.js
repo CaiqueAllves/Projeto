@@ -27,7 +27,7 @@ const SIDEBAR_HTML = `
             </a>
             <div class="submenu">
                 <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
-                <a href="#" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                <a href="relatorios-produtos.html" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
             </div>
         </div>
 
@@ -153,7 +153,8 @@ function destacarMenuAtivo() {
         'relatorios.html': 'submenu-relatorios',
 
         // Produtos
-        'produtos.html': 'submenu-produtos-cadastro',
+        'produtos.html':            'submenu-produtos-cadastro',
+        'relatorios-produtos.html': 'submenu-produtos-relatorios',
 
         // Proformas
         'proforma.html':            'submenu-documentos-cadastro',
