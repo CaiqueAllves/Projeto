@@ -367,32 +367,23 @@
                             <div class="section-content">
                                 <div id="emp-marcas-lista"></div>
                                 <div class="marca-footer">
-                                    <button type="button" class="btn-add-marca" id="btn-add-marca" onclick="empAdicionarMarca()">
-                                        <i class="fa-solid fa-plus"></i> Adicionar Marca
-                                    </button>
-                                    <div class="tipo-cards-group">
-                                        <label class="tipo-card">
-                                            <input type="checkbox" id="emp-sem-marca-global" name="marca_sem_marca" onchange="toggleSemMarcaGlobal(this)">
-                                            <div class="tipo-card-inner">
-                                                <i class="fa-solid fa-ban"></i>
-                                                <span>Sem Marca</span>
-                                            </div>
-                                        </label>
-                                        <label class="tipo-card">
-                                            <input type="checkbox" id="emp-private-label" name="marca_private_label">
-                                            <div class="tipo-card-inner">
-                                                <i class="fa-solid fa-tag"></i>
-                                                <span>Private Label</span>
-                                            </div>
-                                        </label>
-                                        <label class="tipo-card">
-                                            <input type="checkbox" id="emp-white-label" name="marca_white_label">
-                                            <div class="tipo-card-inner">
-                                                <i class="fa-solid fa-box"></i>
-                                                <span>White Label</span>
-                                            </div>
-                                        </label>
-                                    </div>
+                                    <label class="tipo-card" id="btn-add-marca" onclick="empAdicionarMarca()">
+                                        <div class="tipo-card-inner">
+                                            <i class="fa-solid fa-plus"></i>
+                                            <span>Adicionar Marca</span>
+                                        </div>
+                                    </label>
+                                    <label class="tipo-card">
+                                        <input type="checkbox" id="emp-sem-marca-global" name="marca_sem_marca" onchange="toggleSemMarcaGlobal(this)">
+                                        <div class="tipo-card-inner">
+                                            <i class="fa-solid fa-ban"></i>
+                                            <span>Sem Marca
+                                                <span class="info-balao" data-tooltip="Private Label / White Label / Marca Branca" style="margin-left:4px;">
+                                                    <i class="fa-solid fa-circle-info"></i>
+                                                </span>
+                                            </span>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -663,9 +654,14 @@
                                         <input type="hidden" id="emp-tags" name="tags">
                                     </div>
 
-                                    <div class="form-group full-width">
-                                        <label for="emp-obs">Observações</label>
-                                        <textarea id="emp-obs" name="observacoes" placeholder="Anotações internas sobre esta empresa..."></textarea>
+                                    <div class="form-group full-width prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="emp-obs" name="observacoes" placeholder="Anotações internas sobre esta empresa..."></textarea>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -860,9 +856,14 @@
                                         <div class="incoterm-info" id="modal-info"></div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="proc-observacoes">Observações</label>
-                                        <textarea id="proc-observacoes" name="observacoes" placeholder="Informações adicionais sobre o processo..."></textarea>
+                                    <div class="form-group prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="proc-observacoes" name="observacoes" placeholder="Informações adicionais sobre o processo..."></textarea>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -1220,9 +1221,14 @@
                                         <input type="date" id="proc-data-cancelamento" name="data_cancelamento">
                                     </div>
 
-                                    <div class="form-group full-width" data-show-for="aberto,em_andamento,aguardando,liberado,encerrado,cancelado">
-                                        <label for="proc-obs-prazos">Observações</label>
-                                        <textarea id="proc-obs-prazos" name="obs_prazos" placeholder="Informações adicionais sobre prazos e status..."></textarea>
+                                    <div class="form-group full-width prod-obs-wrapper" data-show-for="aberto,em_andamento,aguardando,liberado,encerrado,cancelado">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="proc-obs-prazos" name="obs_prazos" placeholder="Informações adicionais sobre prazos e status..."></textarea>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1784,9 +1790,14 @@
                                     </div>
 
                                     <!-- Observações -->
-                                    <div class="form-group full-width">
-                                        <label for="prop-observacoes">Observações</label>
-                                        <textarea id="prop-observacoes" name="observacoes" placeholder="Informações adicionais sobre a proposta..."></textarea>
+                                    <div class="form-group full-width prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="prop-observacoes" name="observacoes" placeholder="Informações adicionais sobre a proposta..."></textarea>
+                                        </div>
                                     </div>
 
                                     <!-- DIVISOR: Rota -->
@@ -1925,9 +1936,14 @@
                                             <input type="date" id="prop-data-validade" name="data_validade" readonly placeholder="Data de vencimento">
                                         </div>
                                     </div>
-                                    <div class="form-group full-width">
-                                        <label for="prop-obs-status">Observações</label>
-                                        <textarea id="prop-obs-status" name="obs_status" placeholder="Informações adicionais sobre o status da proposta..."></textarea>
+                                    <div class="form-group full-width prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="prop-obs-status" name="obs_status" placeholder="Informações adicionais sobre o status da proposta..."></textarea>
+                                        </div>
                                     </div>
 
                                     <!-- Código da Proforma -->
@@ -2009,9 +2025,14 @@
                                         <label for="prop-prazo-personalizado">Condição Personalizada</label>
                                         <input type="text" id="prop-prazo-personalizado" name="prazo_personalizado" placeholder="Ex: 50% antecipado + 50% contra entrega">
                                     </div>
-                                    <div class="form-group full-width">
-                                        <label for="prop-condicoes-obs">Observações da Proposta</label>
-                                        <textarea id="prop-condicoes-obs" name="condicoes_obs" placeholder="Condições especiais, notas de negociação, validade da oferta..."></textarea>
+                                    <div class="form-group full-width prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações da Proposta</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="prop-condicoes-obs" name="condicoes_obs" placeholder="Condições especiais, notas de negociação, validade da oferta..."></textarea>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2143,63 +2164,126 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
-                                    <div class="form-group">
-                                        <label for="prod-sku">SKU <span class="required">*</span></label>
-                                        <input type="text" id="prod-sku" name="sku" placeholder="Código único do produto">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-status">Status</label>
-                                        <select id="prod-status" name="status">
-                                            <option value="">Selecione...</option>
-                                            <option value="ativo">Ativo</option>
-                                            <option value="inativo">Inativo</option>
-                                            <option value="descontinuado">Descontinuado</option>
-                                            <option value="em_revisao">Em Revisão</option>
-                                        </select>
-                                    </div>
-
+                                    <!-- Linha 1: SKU | NCM | CEST -->
                                     <div class="form-group full-width">
-                                        <label for="prod-nome">Nome do Produto <span class="required">*</span></label>
-                                        <input type="text" id="prod-nome" name="nome" placeholder="Nome completo do produto">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="prod-sku">Código SKU <span class="required">*</span></label>
+                                                <input type="text" id="prod-sku" name="sku" placeholder="Código único do produto">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-ncm">Código NCM</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prod-ncm" name="ncm" placeholder="Ex: 8471.30.12" autocomplete="off">
+                                                    <div class="autocomplete-list" id="prod-ncm-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-cest">Código CEST</label>
+                                                <input type="text" id="prod-cest" name="cest" placeholder="Ex: 28.038.00">
+                                            </div>
+                                        </div>
                                     </div>
 
+                                    <!-- Linha 2: GTIN/EAN | Status -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3" style="grid-template-columns: repeat(2, 1fr);">
+                                            <div class="form-group">
+                                                <label for="prod-gtin">Código GTIN / EAN</label>
+                                                <input type="text" id="prod-gtin" name="gtin" placeholder="Ex: 7891000315507" maxlength="14">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-status">Status</label>
+                                                <select id="prod-status" name="status">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="ativo">Ativo</option>
+                                                    <option value="pendente">Pendente</option>
+                                                    <option value="pausado">Pausado</option>
+                                                    <option value="inativo">Inativo</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 3: Nome | URL Imagem | Upload Imagem -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="prod-nome">Nome do Produto <span class="required">*</span></label>
+                                                <input type="text" id="prod-nome" name="nome" placeholder="Nome completo do produto">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-imagem-url">URL da Imagem</label>
+                                                <input type="url" id="prod-imagem-url" name="imagem_url" placeholder="https://..." data-no-caps>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-imagem-file">Upload de Imagem</label>
+                                                <div class="prod-img-row">
+                                                    <label class="prod-img-upload-btn" for="prod-imagem-file">
+                                                        <i class="fa-solid fa-image"></i>
+                                                        <span id="prod-img-label">Selecionar imagem</span>
+                                                        <input type="file" id="prod-imagem-file" name="imagem_file" accept="image/png,image/jpeg,image/jpg" style="display:none" onchange="prodPreviewImagem(this)">
+                                                    </label>
+                                                    <div class="prod-img-acoes" id="prod-img-acoes" style="display:none;">
+                                                        <button type="button" class="prod-img-acao-btn" title="Visualizar imagem" onclick="prodVerImagem()">
+                                                            <i class="fa-solid fa-eye"></i>
+                                                        </button>
+                                                        <button type="button" class="prod-img-acao-btn prod-img-acao-excluir" title="Remover imagem" onclick="prodRemoverImagem()">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 4: Descrição -->
                                     <div class="form-group full-width">
                                         <label for="prod-descricao">Descrição</label>
                                         <textarea id="prod-descricao" name="descricao" placeholder="Descrição detalhada do produto..."></textarea>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="prod-categoria">Categoria</label>
-                                        <input type="text" id="prod-categoria" name="categoria" placeholder="Ex: Eletrônicos, Alimentos...">
+                                    <!-- Linha 5: Categoria | Tipo | Marca | Unidade de Medida -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-4">
+                                            <div class="form-group">
+                                                <label for="prod-categoria">Categoria</label>
+                                                <input type="text" id="prod-categoria" name="categoria" placeholder="Ex: Eletrônicos">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-tipo">Tipo</label>
+                                                <input type="text" id="prod-tipo" name="tipo" placeholder="Ex: Produto acabado">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-marca">Marca / Fabricante</label>
+                                                <input type="text" id="prod-marca" name="marca" placeholder="Marca ou fabricante">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-unidade">Unidade de Medida</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prod-unidade" name="unidade_medida" placeholder="Ex: UN, KG..." autocomplete="off">
+                                                    <div class="autocomplete-list" id="prod-unidade-lista"></div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="prod-marca">Marca / Fabricante</label>
-                                        <input type="text" id="prod-marca" name="marca" placeholder="Marca ou fabricante">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-ncm">NCM</label>
-                                        <input type="text" id="prod-ncm" name="ncm" placeholder="Ex: 8471.30.12">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-unidade">Unidade de Medida</label>
-                                        <select id="prod-unidade" name="unidade_medida">
-                                            <option value="">Selecione...</option>
-                                            <option value="un">UN (Unidade)</option>
-                                            <option value="kg">KG (Quilograma)</option>
-                                            <option value="g">G (Grama)</option>
-                                            <option value="l">L (Litro)</option>
-                                            <option value="ml">ML (Mililitro)</option>
-                                            <option value="m">M (Metro)</option>
-                                            <option value="m2">M² (Metro Quadrado)</option>
-                                            <option value="m3">M³ (Metro Cúbico)</option>
-                                            <option value="cx">CX (Caixa)</option>
-                                            <option value="pc">PC (Peça)</option>
-                                            <option value="par">PAR</option>
-                                        </select>
+                                    <!-- Linha 6: Lote | Data de Fabricação | Data de Validade -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="prod-lote">Lote</label>
+                                                <input type="text" id="prod-lote" name="lote" placeholder="Número do lote" data-no-caps>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-data-fabricacao">Data de Fabricação</label>
+                                                <input type="date" id="prod-data-fabricacao" name="data_fabricacao">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-data-validade">Data de Validade</label>
+                                                <input type="date" id="prod-data-validade" name="data_validade">
+                                            </div>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -2216,46 +2300,79 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
-                                    <div class="form-group">
-                                        <label for="prod-moeda">Moeda</label>
-                                        <select id="prod-moeda" name="moeda">
-                                            <option value="">Selecione...</option>
-                                            <option value="BRL">BRL — Real Brasileiro</option>
-                                            <option value="USD">USD — Dólar Americano</option>
-                                            <option value="EUR">EUR — Euro</option>
-                                            <option value="GBP">GBP — Libra Esterlina</option>
-                                            <option value="CNY">CNY — Yuan Chinês</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-custo">Custo</label>
-                                        <input type="number" id="prod-custo" name="custo" step="0.01" min="0" placeholder="0,00">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-margem">Margem (%)</label>
-                                        <input type="number" id="prod-margem" name="margem" step="0.01" min="0" max="100" placeholder="0,00">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-preco-venda">Preço de Venda</label>
-                                        <input type="number" id="prod-preco-venda" name="preco_venda" step="0.01" min="0" placeholder="0,00">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-desconto-max">Desconto Máximo (%)</label>
-                                        <input type="number" id="prod-desconto-max" name="desconto_max" step="0.01" min="0" max="100" placeholder="0,00">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-lead-time">Lead Time (dias)</label>
-                                        <input type="number" id="prod-lead-time" name="lead_time" min="0" placeholder="Dias">
-                                    </div>
-
+                                    <!-- Linha 1: Preço de Custo | Custos Fixos e Variáveis | Custo de Venda (Taxas) -->
                                     <div class="form-group full-width">
-                                        <label for="prod-obs-preco">Observações sobre Preço</label>
-                                        <textarea id="prod-obs-preco" name="obs_preco" placeholder="Condições especiais, tabelas, notas..."></textarea>
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="prod-preco-custo">
+                                                    Preço de Custo
+                                                    <span class="info-balao baixo" data-tooltip="O valor exato que você paga ao fornecedor ou o custo de fabricação do produto.">
+                                                        <i class="fa-solid fa-circle-info"></i>
+                                                    </span>
+                                                </label>
+                                                <input type="text" inputmode="decimal" id="prod-preco-custo" name="preco_custo" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this);prodCalcularResultados()">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-custos-fixos">
+                                                    Custos Fixos e Variáveis
+                                                    <span class="info-balao baixo" data-tooltip="Gastos proporcionais por unidade, como impostos, frete (envio para o cliente) e embalagem.">
+                                                        <i class="fa-solid fa-circle-info"></i>
+                                                    </span>
+                                                </label>
+                                                <input type="text" inputmode="decimal" id="prod-custos-fixos" name="custos_fixos" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this);prodCalcularResultados()">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-imposto">
+                                                    Custo de Venda (Taxas)
+                                                    <span class="info-balao baixo" data-tooltip="Tarifas de plataformas de marketplace (como Mercado Livre ou Shopee) ou taxas de operadora de cartão.">
+                                                        <i class="fa-solid fa-circle-info"></i>
+                                                    </span>
+                                                </label>
+                                                <input type="text" inputmode="decimal" id="prod-imposto" name="imposto" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this);prodCalcularResultados()">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 2: Preço de Venda | Margem de Lucro (%) | Lucro Líquido (R$) | Moeda -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-4">
+                                            <div class="form-group">
+                                                <label for="prod-preco-venda">Preço de Venda</label>
+                                                <input type="text" inputmode="decimal" id="prod-preco-venda" name="preco_venda" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this);prodCalcularResultados()">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-margem">Margem de Lucro (%)</label>
+                                                <input type="text" id="prod-margem" name="margem" placeholder="—" readonly style="background:#f8faff; cursor:default;">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-lucro-liquido">
+                                                    Lucro Líquido (em R$)
+                                                    <span class="info-balao" data-tooltip="O valor monetário exato que sobra no seu bolso após todas as deduções.">
+                                                        <i class="fa-solid fa-circle-info"></i>
+                                                    </span>
+                                                </label>
+                                                <input type="text" id="prod-lucro-liquido" name="lucro_liquido" placeholder="—" readonly style="background:#f8faff; cursor:default;">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-moeda">Moeda</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prod-moeda" placeholder="Ex: Real Brasileiro, Dólar..." autocomplete="off">
+                                                    <input type="hidden" id="prod-moeda-codigo" name="moeda">
+                                                    <div class="autocomplete-list" id="prod-moeda-lista"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 3: Observações (colapsável) -->
+                                    <div class="form-group full-width prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="prod-obs-preco" name="obs_preco" placeholder="Condições especiais, tabelas, notas..." style="height:60px;resize:vertical;"></textarea>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -2272,38 +2389,58 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
+                                    <!-- Linha 1: Configurações (botões estilo marca) -->
                                     <div class="form-group full-width">
                                         <label>Configurações de Estoque</label>
-                                        <div class="checkbox-group">
-                                            <label class="checkbox-item">
-                                                <input type="checkbox" name="controla_estoque" checked>
-                                                Controla Estoque
+                                        <div class="estoque-config-row">
+                                            <label class="tipo-card">
+                                                <input type="checkbox" id="prod-controla-estoque" name="controla_estoque" checked onchange="prodAtualizarEstoqueConfig()">
+                                                <div class="tipo-card-inner">
+                                                    <i class="fa-solid fa-boxes-stacked"></i>
+                                                    <span>Controla Estoque</span>
+                                                </div>
                                             </label>
-                                            <label class="checkbox-item">
-                                                <input type="checkbox" name="venda_sem_estoque">
-                                                Permite Venda sem Estoque
+                                            <label class="tipo-card">
+                                                <input type="checkbox" id="prod-venda-sem-estoque" name="venda_sem_estoque" onchange="prodAtualizarEstoqueConfig()">
+                                                <div class="tipo-card-inner">
+                                                    <i class="fa-solid fa-cart-arrow-down"></i>
+                                                    <span>Permite Venda sem Estoque</span>
+                                                </div>
                                             </label>
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="prod-estoque-atual">Estoque Atual</label>
-                                        <input type="number" id="prod-estoque-atual" name="estoque_atual" min="0" step="0.001" placeholder="0">
+                                    <!-- Linha 2: Estoque Atual | Mínimo | Máximo | Nível % -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-4">
+                                            <div>
+                                                <label for="prod-estoque-atual">Estoque Atual</label>
+                                                <input type="number" id="prod-estoque-atual" name="estoque_atual" min="0" step="any" placeholder="0" oninput="prodCalcularNivelEstoque()">
+                                            </div>
+                                            <div>
+                                                <label for="prod-estoque-minimo">Estoque Mínimo</label>
+                                                <input type="number" id="prod-estoque-minimo" name="estoque_minimo" min="0" step="any" placeholder="0" oninput="prodCalcularNivelEstoque()">
+                                            </div>
+                                            <div>
+                                                <label for="prod-estoque-maximo">Estoque Máximo</label>
+                                                <input type="number" id="prod-estoque-maximo" name="estoque_maximo" min="0" step="any" placeholder="0" oninput="prodCalcularNivelEstoque()">
+                                            </div>
+                                            <div>
+                                                <label for="prod-nivel-estoque">Nível de Estoque</label>
+                                                <input type="text" id="prod-nivel-estoque" name="nivel_estoque" readonly placeholder="—" style="background:#f8faff;cursor:default;">
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="prod-estoque-minimo">Estoque Mínimo</label>
-                                        <input type="number" id="prod-estoque-minimo" name="estoque_minimo" min="0" step="0.001" placeholder="0">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-localizacao">Localização no Estoque</label>
-                                        <input type="text" id="prod-localizacao" name="localizacao" placeholder="Ex: Galpão A, Prateleira 3">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-lote-validade">Lote / Validade</label>
-                                        <input type="text" id="prod-lote-validade" name="lote_validade" placeholder="Número do lote ou data de validade">
+                                    <!-- Linha 3: Observações (colapsável) -->
+                                    <div class="form-group full-width prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="prod-obs-estoque" name="obs_estoque" placeholder="Observações sobre estoque, localização, controle..." style="height:60px;resize:vertical;"></textarea>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -2320,44 +2457,73 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
-                                    <div class="form-group">
-                                        <label for="prod-peso-bruto">Peso Bruto (kg)</label>
-                                        <input type="number" id="prod-peso-bruto" name="peso_bruto" step="0.001" min="0" placeholder="0,000">
+                                    <!-- Linha 1: Tipo de Embalagem | Tipo de Acondicionamento | Descrição (condicional) -->
+                                    <div class="form-group full-width">
+                                        <div id="prod-acond-row" class="form-row-3" style="grid-template-columns: 1fr 1fr;">
+                                            <div class="form-group">
+                                                <label for="prod-embalagem">Tipo de Embalagem</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prod-embalagem" name="embalagem" placeholder="Buscar embalagem..." autocomplete="off">
+                                                    <input type="hidden" id="prod-embalagem-codigo" name="embalagem_codigo">
+                                                    <div class="autocomplete-list" id="prod-embalagem-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-acondicionamento">Tipo de Acondicionamento</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prod-acondicionamento" name="acondicionamento" placeholder="Buscar acondicionamento..." autocomplete="off">
+                                                    <input type="hidden" id="prod-acondicionamento-numero" name="acondicionamento_numero">
+                                                    <div class="autocomplete-list" id="prod-acondicionamento-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group" id="prod-acond-outros-wrapper" style="display:none;">
+                                                <label for="prod-acond-descricao">Descrição <span style="color:#ef4444;">*</span></label>
+                                                <input type="text" id="prod-acond-descricao" name="acondicionamento_descricao" placeholder="Descreva o tipo de acondicionamento...">
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="prod-peso-liquido">Peso Líquido (kg)</label>
-                                        <input type="number" id="prod-peso-liquido" name="peso_liquido" step="0.001" min="0" placeholder="0,000">
+                                    <!-- Linha 2: Comprimento | Largura | Altura -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="prod-comprimento">Comprimento (cm)</label>
+                                                <input type="text" inputmode="decimal" id="prod-comprimento" name="comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-largura">Largura (cm)</label>
+                                                <input type="text" inputmode="decimal" id="prod-largura" name="largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-altura">Altura (cm)</label>
+                                                <input type="text" inputmode="decimal" id="prod-altura" name="altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="prod-altura">Altura (cm)</label>
-                                        <input type="number" id="prod-altura" name="altura" step="0.01" min="0" placeholder="0,00">
+                                    <!-- Linha 3: Peso Bruto | Peso Líquido -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3" style="grid-template-columns: 1fr 1fr;">
+                                            <div class="form-group">
+                                                <label for="prod-peso-bruto">Peso Bruto (kg)</label>
+                                                <input type="text" inputmode="decimal" id="prod-peso-bruto" name="peso_bruto" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-peso-liquido">Peso Líquido (kg)</label>
+                                                <input type="text" inputmode="decimal" id="prod-peso-liquido" name="peso_liquido" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="prod-largura">Largura (cm)</label>
-                                        <input type="number" id="prod-largura" name="largura" step="0.01" min="0" placeholder="0,00">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-comprimento">Comprimento (cm)</label>
-                                        <input type="number" id="prod-comprimento" name="comprimento" step="0.01" min="0" placeholder="0,00">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="prod-embalagem">Tipo de Embalagem</label>
-                                        <select id="prod-embalagem" name="embalagem">
-                                            <option value="">Selecione...</option>
-                                            <option value="caixa">Caixa de Papelão</option>
-                                            <option value="pallet">Pallet</option>
-                                            <option value="saco">Saco / Big Bag</option>
-                                            <option value="tambor">Tambor / Barril</option>
-                                            <option value="container">Container</option>
-                                            <option value="blister">Blister</option>
-                                            <option value="envolto">Envolto em Filme</option>
-                                            <option value="outro">Outro</option>
-                                        </select>
+                                    <!-- Linha 4: Observações (colapsável) -->
+                                    <div class="form-group full-width prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="prod-obs-logistica" name="obs_logistica" placeholder="Informações adicionais sobre embalagem, transporte ou manuseio..." style="height:60px;resize:vertical;"></textarea>
+                                        </div>
                                     </div>
 
                                 </div>

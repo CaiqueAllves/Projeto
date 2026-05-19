@@ -1096,6 +1096,7 @@ const _EMP_DOC_TIPOS = [
     'Inscrição no MAPA',
     'Inscrição no ANVISA',
     'Certificado',
+    'Catálogo',
     'Número CRLV',
     'Número RCTR-C',
     'Número RCF-DC',
@@ -1155,7 +1156,16 @@ function empAdicionarDocumento() {
             </button>
         </div>
 
-        <div class="emp-doc-file-area">
+        <div class="emp-doc-fonte-toggle">
+            <button type="button" class="emp-doc-fonte-btn ativo" id="emp-doc-fonte-arquivo-${id}" onclick="empToggleFonteDoc(${id},'arquivo')">
+                <i class="fa-solid fa-file-arrow-up"></i> Arquivo local
+            </button>
+            <button type="button" class="emp-doc-fonte-btn" id="emp-doc-fonte-link-${id}" onclick="empToggleFonteDoc(${id},'link')">
+                <i class="fa-solid fa-link"></i> Link externo
+            </button>
+        </div>
+
+        <div class="emp-doc-file-area" id="emp-doc-area-arquivo-${id}">
             <div class="emp-doc-upload-zone" id="emp-doc-upload-zone-${id}">
                 <label class="emp-doc-upload-btn" for="emp-doc-file-${id}">
                     <i class="fa-solid fa-file-arrow-up"></i> Selecionar PDF
@@ -1186,6 +1196,26 @@ function empAdicionarDocumento() {
             </div>
         </div>
 
+        <div class="emp-doc-file-area" id="emp-doc-area-link-${id}" style="display:none;">
+            <div class="emp-doc-link-wrapper">
+                <i class="fa-solid fa-cloud emp-doc-link-icon"></i>
+                <div class="emp-doc-link-fields">
+                    <input type="url" id="emp-doc-url-${id}" name="doc_url_${id}"
+                        placeholder="Cole aqui o link do Google Drive, Dropbox, OneDrive..."
+                        data-no-caps oninput="empAtualizarPreviewLink(${id})">
+                    <span class="emp-doc-link-hint">O link deve estar configurado como "qualquer pessoa com o link pode visualizar"</span>
+                </div>
+            </div>
+            <div class="emp-doc-uploaded-actions" id="emp-doc-link-actions-${id}" style="display:none;">
+                <button type="button" class="emp-doc-action-btn emp-doc-btn-ver" onclick="empAbrirLinkDoc(${id})">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir link
+                </button>
+                <button type="button" class="emp-doc-action-btn emp-doc-btn-excluir" onclick="empLimparLinkDoc(${id})">
+                    <i class="fa-solid fa-xmark"></i> Remover
+                </button>
+            </div>
+        </div>
+
         <div class="emp-doc-footer">
             <i class="fa-solid fa-user"></i>
             <span>${usuario}</span>
@@ -1194,6 +1224,40 @@ function empAdicionarDocumento() {
             <span id="emp-doc-data-${id}">${dataStr}</span>
         </div>`;
     lista.appendChild(div);
+}
+
+function empToggleFonteDoc(id, fonte) {
+    const areaArquivo = document.getElementById(`emp-doc-area-arquivo-${id}`);
+    const areaLink    = document.getElementById(`emp-doc-area-link-${id}`);
+    const btnArquivo  = document.getElementById(`emp-doc-fonte-arquivo-${id}`);
+    const btnLink     = document.getElementById(`emp-doc-fonte-link-${id}`);
+    if (!areaArquivo || !areaLink) return;
+
+    const isLink = fonte === 'link';
+    areaArquivo.style.display = isLink ? 'none' : '';
+    areaLink.style.display    = isLink ? '' : 'none';
+    btnArquivo.classList.toggle('ativo', !isLink);
+    btnLink.classList.toggle('ativo', isLink);
+}
+
+function empAtualizarPreviewLink(id) {
+    const input   = document.getElementById(`emp-doc-url-${id}`);
+    const actions = document.getElementById(`emp-doc-link-actions-${id}`);
+    if (!input || !actions) return;
+    const val = input.value.trim();
+    actions.style.display = val ? '' : 'none';
+}
+
+function empAbrirLinkDoc(id) {
+    const url = document.getElementById(`emp-doc-url-${id}`)?.value.trim();
+    if (url) window.open(url, '_blank', 'noopener');
+}
+
+function empLimparLinkDoc(id) {
+    const input   = document.getElementById(`emp-doc-url-${id}`);
+    const actions = document.getElementById(`emp-doc-link-actions-${id}`);
+    if (input)   input.value = '';
+    if (actions) actions.style.display = 'none';
 }
 
 function empTipoDocChange(sel, id) {
@@ -2574,6 +2638,379 @@ function iniciarIncotermModal() {
 // INICIALIZAÇÃO
 // ========================================
 
+// ========================================
+// PRODUTO — CÁLCULO DE MARGEM
+// ========================================
+
+function prodToggleObs(toggle) {
+    const content = toggle.nextElementSibling;
+    const aberto  = toggle.classList.contains('aberto');
+    toggle.classList.toggle('aberto', !aberto);
+    content.style.display = aberto ? 'none' : 'block';
+}
+
+function prodMascaraDecimal(el) {
+    const cursor = el.selectionStart;
+    const oldLen = el.value.length;
+    let raw = el.value.replace(/[^\d,]/g, '');
+    const partes = raw.split(',');
+    if (partes.length > 2) raw = partes[0] + ',' + partes.slice(1).join('');
+    el.value = raw;
+    const diff = el.value.length - oldLen;
+    el.setSelectionRange(cursor + diff, cursor + diff);
+}
+
+function prodMascaraMonetaria(el) {
+    const cursor = el.selectionStart;
+    const oldLen = el.value.length;
+    let raw = el.value.replace(/[^\d,]/g, '');
+    const partes = raw.split(',');
+    if (partes.length > 2) raw = partes[0] + ',' + partes.slice(1).join('');
+    const p = raw.split(',');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    el.value = p.join(',');
+    const diff = el.value.length - oldLen;
+    el.setSelectionRange(cursor + diff, cursor + diff);
+}
+
+function _prodValorMonetario(el) {
+    if (!el) return 0;
+    return parseFloat((el.value || '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function prodCalcularResultados() {
+    const preco       = _prodValorMonetario(document.getElementById('prod-preco-venda'));
+    const custo       = _prodValorMonetario(document.getElementById('prod-preco-custo'));
+    const fixos       = _prodValorMonetario(document.getElementById('prod-custos-fixos'));
+    const taxas       = _prodValorMonetario(document.getElementById('prod-imposto'));
+    const totalCusto  = custo + fixos + taxas;
+    const lucro       = preco - totalCusto;
+
+    const campoMargem = document.getElementById('prod-margem');
+    const campoLucro  = document.getElementById('prod-lucro-liquido');
+
+    if (campoMargem) {
+        if (preco <= 0) { campoMargem.value = '—'; }
+        else { campoMargem.value = ((lucro / preco) * 100).toFixed(2) + '%'; }
+    }
+    if (campoLucro) {
+        if (preco <= 0) { campoLucro.value = '—'; }
+        else {
+            const sinal = lucro >= 0 ? '' : '-';
+            campoLucro.value = sinal + 'R$ ' + Math.abs(lucro).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    }
+}
+
+function prodCalcularNivelEstoque() {
+    const atual  = parseFloat(document.getElementById('prod-estoque-atual')?.value)  || 0;
+    const minimo = parseFloat(document.getElementById('prod-estoque-minimo')?.value) || 0;
+    const maximo = parseFloat(document.getElementById('prod-estoque-maximo')?.value) || 0;
+    const campo  = document.getElementById('prod-nivel-estoque');
+    if (!campo) return;
+    if (maximo <= minimo) { campo.value = '—'; return; }
+    const nivel = ((atual - minimo) / (maximo - minimo)) * 100;
+    campo.value = Math.min(100, Math.max(0, nivel)).toFixed(1) + '%';
+}
+
+// ========================================
+// PRODUTO — MOEDA AUTOCOMPLETE
+// ========================================
+
+function iniciarAutocompleteMoedaProduto() {
+    const input   = document.getElementById('prod-moeda');
+    const hidden  = document.getElementById('prod-moeda-codigo');
+    const lista   = document.getElementById('prod-moeda-lista');
+    if (!input || !lista) return;
+
+    async function mostrar() {
+        await _carregarMoedas();
+        const q = input.value.trim().toLowerCase();
+        const filtradas = q
+            ? _acMoedas.filter(m => (m.descricao || '').toLowerCase().includes(q))
+            : _acMoedas;
+        if (!filtradas.length) { lista.classList.remove('aberta'); return; }
+        lista.innerHTML = filtradas.slice(0, 30).map(m => `
+            <div class="autocomplete-item" data-codigo="${m.codigo || ''}" data-descricao="${m.descricao || ''}">
+                <span class="ac-nome">${m.descricao || ''}</span>
+                <span class="ac-fantasia">${m.codigo || ''}</span>
+            </div>`).join('');
+        _acPosicionar(input, lista);
+        lista.classList.add('aberta');
+    }
+
+    let _selecionando = false;
+
+    input.addEventListener('input', () => { if (!_selecionando) mostrar(); });
+    input.addEventListener('focus', mostrar);
+    lista.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        _selecionando = true;
+        input.value = item.dataset.descricao;
+        if (hidden) hidden.value = item.dataset.codigo;
+        lista.classList.remove('aberta');
+        setTimeout(() => { _selecionando = false; }, 0);
+    });
+    document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta');
+    });
+}
+
+// ========================================
+// PRODUTO — NCM AUTOCOMPLETE
+// ========================================
+
+function iniciarAutocompleteNcmProduto() {
+    const input = document.getElementById('prod-ncm');
+    const lista = document.getElementById('prod-ncm-lista');
+    if (!input || !lista) return;
+
+    async function mostrar() {
+        const q = input.value.trim().toLowerCase();
+        if (q.length < 2) { lista.classList.remove('aberta'); return; }
+        try {
+            const { data } = await supabaseClient
+                .from('apoio_ncm')
+                .select('codigo, descricao_concatenada')
+                .or(`codigo.ilike.%${q}%,descricao_concatenada.ilike.%${q}%`)
+                .limit(20);
+            if (!data?.length) { lista.classList.remove('aberta'); return; }
+            lista.innerHTML = data.map(n => `
+                <div class="autocomplete-item" data-codigo="${n.codigo}">
+                    <span class="ac-nome">${n.codigo}</span>
+                    <span class="ac-fantasia">${n.descricao_concatenada || ''}</span>
+                </div>`).join('');
+            _acPosicionar(input, lista);
+            lista.classList.add('aberta');
+        } catch { lista.classList.remove('aberta'); }
+    }
+
+    input.addEventListener('input', mostrar);
+    input.addEventListener('focus', mostrar);
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        input.value = item.dataset.codigo;
+        lista.classList.remove('aberta');
+    });
+    document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta');
+    });
+}
+
+// ========================================
+// PRODUTO — UNIDADE DE MEDIDA AUTOCOMPLETE
+// ========================================
+
+function iniciarAutocompleteUnidadeProduto() {
+    const input = document.getElementById('prod-unidade');
+    const lista = document.getElementById('prod-unidade-lista');
+    if (!input || !lista) return;
+
+    async function mostrar() {
+        await _carregarUnidades();
+        const q = input.value.trim().toLowerCase();
+        const filtradas = q
+            ? _acUnidades.filter(u => (u.unidade || '').toLowerCase().includes(q) || (u.descricao || '').toLowerCase().includes(q))
+            : _acUnidades;
+        if (!filtradas.length) { lista.classList.remove('aberta'); return; }
+        lista.innerHTML = filtradas.slice(0, 30).map(u => `
+            <div class="autocomplete-item" data-valor="${u.unidade}">
+                <span class="ac-nome">${u.unidade}</span>
+                <span class="ac-fantasia">${u.descricao || ''}</span>
+            </div>`).join('');
+        _acPosicionar(input, lista);
+        lista.classList.add('aberta');
+    }
+
+    input.addEventListener('input', mostrar);
+    input.addEventListener('focus', mostrar);
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        input.value = item.dataset.valor;
+        lista.classList.remove('aberta');
+    });
+    document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta');
+    });
+}
+
+// ========================================
+// PRODUTO — PREVIEW IMAGEM
+// ========================================
+
+let _prodImgDataUrl = null;
+
+function prodPreviewImagem(fileInput) {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        _prodImgDataUrl = e.target.result;
+        const label = document.getElementById('prod-img-label');
+        const acoes = document.getElementById('prod-img-acoes');
+        if (label) label.textContent = file.name;
+        if (acoes) acoes.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+}
+
+function prodVerImagem() {
+    if (!_prodImgDataUrl) return;
+    const win = window.open('', '_blank');
+    win.document.write(`<img src="${_prodImgDataUrl}" style="max-width:100%;display:block;margin:auto;">`);
+}
+
+function prodRemoverImagem() {
+    _prodImgDataUrl = null;
+    const fileInput = document.getElementById('prod-imagem-file');
+    const label     = document.getElementById('prod-img-label');
+    const acoes     = document.getElementById('prod-img-acoes');
+    if (fileInput) fileInput.value = '';
+    if (label)     label.textContent = 'Selecionar imagem';
+    if (acoes)     acoes.style.display = 'none';
+}
+
+// ========================================
+// PRODUTO — EMBALAGEM AUTOCOMPLETE
+// ========================================
+
+function iniciarAutocompleteEmbalagemProduto() {
+    const input  = document.getElementById('prod-embalagem');
+    const hidden = document.getElementById('prod-embalagem-codigo');
+    const lista  = document.getElementById('prod-embalagem-lista');
+    if (!input || !lista) return;
+
+    async function mostrar() {
+        const q = input.value.trim().toLowerCase();
+        try {
+            let query = supabaseClient.from('embalagens').select('codigo, descricao').order('descricao');
+            if (q) query = query.or(`descricao.ilike.%${q}%,codigo.ilike.%${q}%`);
+            const { data } = await query.limit(30);
+            if (!data?.length) { lista.classList.remove('aberta'); return; }
+            lista.innerHTML = data.map(e => `
+                <div class="autocomplete-item" data-codigo="${e.codigo || ''}" data-descricao="${(e.descricao || '').replace(/"/g, '&quot;')}">
+                    <span class="ac-nome">${e.descricao || ''}</span>
+                    <span class="ac-fantasia">${e.codigo || ''}</span>
+                </div>`).join('');
+            _acPosicionar(input, lista);
+            lista.classList.add('aberta');
+        } catch { lista.classList.remove('aberta'); }
+    }
+
+    let _sel = false;
+    input.addEventListener('input', () => { if (!_sel) mostrar(); });
+    input.addEventListener('focus', mostrar);
+    lista.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        _sel = true;
+        input.value = item.dataset.descricao;
+        if (hidden) hidden.value = item.dataset.codigo;
+        lista.classList.remove('aberta');
+        setTimeout(() => { _sel = false; }, 0);
+    });
+    document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta');
+    });
+}
+
+// ========================================
+// PRODUTO — ACONDICIONAMENTO AUTOCOMPLETE
+// ========================================
+
+function iniciarAutocompleteAcondicionamentoProduto() {
+    const input  = document.getElementById('prod-acondicionamento');
+    const hidden = document.getElementById('prod-acondicionamento-numero');
+    const lista  = document.getElementById('prod-acondicionamento-lista');
+    if (!input || !lista) return;
+
+    async function mostrar() {
+        const q = input.value.trim().toLowerCase();
+        try {
+            let query = supabaseClient.from('apoio_acondicionamento').select('numero, descricao').order('descricao');
+            if (q) query = query.or(`descricao.ilike.%${q}%,numero.ilike.%${q}%`);
+            const { data } = await query.limit(30);
+            if (!data?.length) { lista.classList.remove('aberta'); return; }
+            lista.innerHTML = data.map(a => `
+                <div class="autocomplete-item" data-numero="${a.numero || ''}" data-descricao="${(a.descricao || '').replace(/"/g, '&quot;')}">
+                    <span class="ac-nome">${a.descricao || ''}</span>
+                    <span class="ac-fantasia">${a.numero || ''}</span>
+                </div>`).join('');
+            _acPosicionar(input, lista);
+            lista.classList.add('aberta');
+        } catch { lista.classList.remove('aberta'); }
+    }
+
+    const outrosWrapper = document.getElementById('prod-acond-outros-wrapper');
+    const outrosInput   = document.getElementById('prod-acond-descricao');
+    const row           = document.getElementById('prod-acond-row');
+
+    function _toggleOutros(descricao) {
+        const isOutros = /^outros?$/i.test(descricao.trim());
+        if (outrosWrapper) outrosWrapper.style.display = isOutros ? '' : 'none';
+        if (outrosInput)   outrosInput.required = isOutros;
+        if (!isOutros && outrosInput) outrosInput.value = '';
+        if (row) row.style.gridTemplateColumns = isOutros ? '1fr 1fr 1fr' : '1fr 1fr';
+    }
+
+    let _sel = false;
+    input.addEventListener('input', () => {
+        if (!_sel) { _toggleOutros(''); mostrar(); }
+    });
+    input.addEventListener('focus', mostrar);
+    lista.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        _sel = true;
+        input.value = item.dataset.descricao;
+        if (hidden) hidden.value = item.dataset.numero;
+        _toggleOutros(item.dataset.descricao);
+        lista.classList.remove('aberta');
+        setTimeout(() => { _sel = false; }, 0);
+    });
+    document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta');
+    });
+}
+
+function prodAtualizarEstoqueConfig() {
+    const controla = document.getElementById('prod-controla-estoque');
+    const campos   = ['prod-estoque-atual', 'prod-estoque-minimo', 'prod-estoque-maximo'];
+    const desativa = controla && !controla.checked;
+    campos.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = desativa;
+        el.style.opacity = desativa ? '0.4' : '';
+    });
+}
+
+function _ativarMaiusculas(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    const seletores = 'input[type="text"], input[type="tel"], textarea';
+    form.querySelectorAll(seletores).forEach(el => {
+        if (el.readOnly || el.dataset.noCaps) return;
+        el.addEventListener('input', () => { el.value = el.value.toUpperCase(); });
+    });
+    new MutationObserver(mutations => {
+        mutations.forEach(m => m.addedNodes.forEach(node => {
+            if (node.nodeType !== 1) return;
+            node.querySelectorAll?.(seletores).forEach(el => {
+                if (el.readOnly || el.dataset.noCaps || el._capsAtivado) return;
+                el._capsAtivado = true;
+                el.addEventListener('input', () => { el.value = el.value.toUpperCase(); });
+            });
+        }));
+    }).observe(form, { childList: true, subtree: true });
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
     window._usuarioLogado = obterUsuarioLogado() || {};
 
@@ -2607,6 +3044,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     empContatoIniciar();
     onModeloChange('empresa');
     empAdicionarDocumento();
+    _ativarMaiusculas('form-empresa');
+    _ativarMaiusculas('form-processo');
+    _ativarMaiusculas('form-proposta');
+    _ativarMaiusculas('form-produto');
     _carregarMoedas().then(moedas => {
         const sel = document.getElementById('fin-rec-moeda');
         if (!sel || !moedas) return;
@@ -2643,6 +3084,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     _carregarUnidades();
     carregarMoedasTransporte();
     iniciarTransportadoraPropria();
+
+    // Produto
+    iniciarAutocompleteNcmProduto();
+    iniciarAutocompleteUnidadeProduto();
+    iniciarAutocompleteMoedaProduto();
+    iniciarAutocompleteEmbalagemProduto();
+    iniciarAutocompleteAcondicionamentoProduto();
 
     // Proposta
     const _propIdEdicao = new URLSearchParams(window.location.search).get('id');
