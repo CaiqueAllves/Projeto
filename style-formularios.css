@@ -1369,7 +1369,10 @@ form {
         padding: 20px 16px;
     }
 
-    .form-grid {
+    .form-grid,
+    .form-row-3,
+    .form-row-4,
+    .form-inline-pair {
         grid-template-columns: 1fr;
     }
 
@@ -1379,6 +1382,7 @@ form {
 
     .form-tabs {
         gap: 6px;
+        flex-wrap: wrap;
     }
 
     .tab-btn {
@@ -1399,6 +1403,12 @@ form {
     .btn-save,
     .btn-clear {
         justify-content: center;
+    }
+
+    /* Proposta items table — allow horizontal scroll */
+    .prop-itens-table {
+        display: block;
+        overflow-x: auto;
     }
 }
 

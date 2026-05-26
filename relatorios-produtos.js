@@ -17,18 +17,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const usuario = obterUsuarioLogado();
     if (!usuario) { window.location.href = 'login.html'; return; }
 
-    const nameEl  = document.getElementById('displayUsername');
-    const emailEl = document.getElementById('userEmail');
-    const iconEl  = document.getElementById('topbarAvatarIcon');
-    const imgEl   = document.getElementById('topbarAvatarImg');
-    if (nameEl)  nameEl.textContent  = usuario.nome  || usuario.email || '—';
-    if (emailEl) emailEl.textContent = usuario.email || '—';
-    if (usuario.avatar_url && imgEl && iconEl) {
-        imgEl.src = usuario.avatar_url;
-        imgEl.style.display  = 'block';
-        iconEl.style.display = 'none';
-    }
-
     verificarPermissoes();
     todosProdutos = lerProdutos();
     carregarStats();

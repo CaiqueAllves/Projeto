@@ -83,11 +83,7 @@ function atualizarInformacoesUsuario() {
             welcomeUsername.textContent = primeiroNome;
         }
         
-        // Atualizar email
-        const userEmail = document.getElementById('userEmail');
-        if (userEmail) {
-            userEmail.textContent = `${usuario.username}@${usuario.empresa.toLowerCase().replace(/\s+/g, '')}.com`;
-        }
+        // email é preenchido pelo auth.js
     }
 }
 

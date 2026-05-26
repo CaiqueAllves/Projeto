@@ -31,17 +31,70 @@ function limparForm(formId) {
 
 let _empEditandoId = null;
 
-async function salvarEmpresa(e) {
-    e.preventDefault();
+async function salvarEmpresa(event) {
+    event.preventDefault();
+
+    // Detectar modelo
+    const modelo = document.querySelector('input[name="emp_modelo"]:checked')?.value || 'empresa';
+
+    // Limpar bordas vermelhas anteriores
+    document.querySelectorAll('#form-empresa .campo-invalido').forEach(el => el.classList.remove('campo-invalido'));
+
+    const _camposBase = [
+        { id: 'emp-documento', label: 'Número de Identificação' },
+        { id: 'emp-nome',      label: 'Razão Social' },
+        { id: 'emp-estado',    label: 'Estado' },
+        { id: 'emp-cidade',    label: 'Cidade' },
+        { id: 'emp-bairro',    label: 'Bairro' },
+        { id: 'emp-endereco',  label: 'Endereço' },
+        { id: 'emp-numero',    label: 'Número' },
+    ];
+
+    const _obrigatoriosPorModelo = {
+        empresa: [
+            ..._camposBase,
+            { id: 'emp-ie', label: 'Inscrição Estadual' },
+        ],
+        transportadora: [
+            ..._camposBase,
+            { id: 'emp-ie',         label: 'Inscrição Estadual' },
+            { id: 'emp-frota-tipo', label: 'Tipo de Frota' },
+        ],
+        company: [
+            { id: 'emp-documento', label: 'Número de Identificação' },
+            { id: 'emp-nome',      label: 'Razão Social' },
+            { id: 'emp-pais',      label: 'País' },
+            { id: 'emp-estado',    label: 'Estado / Província' },
+            { id: 'emp-cidade',    label: 'Cidade' },
+            { id: 'emp-bairro',    label: 'Bairro / Distrito' },
+            { id: 'emp-endereco',  label: 'Endereço' },
+            { id: 'emp-numero',    label: 'Número' },
+        ],
+        outros: [
+            ..._camposBase,
+            { id: 'emp-pais', label: 'País' },
+        ],
+    };
+
+    const obrigatorios = _obrigatoriosPorModelo[modelo] || _obrigatoriosPorModelo.empresa;
+
+    const faltando = [];
+    for (const { id, label } of obrigatorios) {
+        const el = document.getElementById(id);
+        if (!el || !el.value.trim()) {
+            if (el) el.classList.add('campo-invalido');
+            faltando.push(label);
+        }
+    }
+    if (faltando.length > 0) {
+        mostrarNotificacao('Campos obrigatórios não preenchidos: ' + faltando.join(' | '), 'erro');
+        return;
+    }
 
     const tipos = [];
     ['fabricante','cliente','fornecedor','transportadora','remetente'].forEach(t => {
         if (document.querySelector(`[name="tipo_${t}"]`)?.checked) tipos.push(t);
     });
-    if (tipos.length === 0) {
-        mostrarNotificacao('Selecione pelo menos um tipo de empresa.', 'warning');
-        return;
-    }
 
     const dados = {
         tipos,
@@ -299,6 +352,46 @@ function fecharGuiaProcesso() { fecharGuia(); }
 
 function salvarProposta(e) {
     e.preventDefault();
+
+    // Limpar marcações anteriores
+    document.querySelectorAll('#form-proposta .campo-invalido').forEach(el => el.classList.remove('campo-invalido'));
+
+    const g = id => (document.getElementById(id)?.value || '').trim();
+    const erros = [];
+
+    const obrigatorios = [
+        { id: 'prop-tipo',             label: 'Tipo da Proforma' },
+        { id: 'prop-modal',            label: 'Modal' },
+        { id: 'prop-origem-pais',      label: 'País de Origem' },
+        { id: 'prop-destino-pais',     label: 'País de Destino' },
+        { id: 'prop-validade-dias',    label: 'Validade da Proposta' },
+        { id: 'prop-forma-pagamento',  label: 'Forma de Pagamento' },
+        { id: 'prop-prazo-pagamento',  label: 'Prazo de Pagamento' },
+    ];
+
+    for (const { id, label } of obrigatorios) {
+        if (!g(id)) {
+            document.getElementById(id)?.classList.add('campo-invalido');
+            erros.push(label);
+        }
+    }
+
+    // Destinatário: busca ou manual
+    if (!g('prop-emp-dest-busca') && !g('prop-emp-dest-razao')) {
+        document.getElementById('prop-emp-dest-busca')?.classList.add('campo-invalido');
+        erros.push('Destinatário');
+    }
+
+    // Pelo menos 1 item
+    if (!_propItens || _propItens.length === 0) {
+        erros.push('Adicione pelo menos um item à proforma');
+    }
+
+    if (erros.length > 0) {
+        mostrarNotificacao('Campos obrigatórios: ' + erros.join(' | '), 'erro');
+        return;
+    }
+
     const modal = document.getElementById('modal-confirmar-salvar');
     modal.dataset.origem = 'proposta';
     const titulo = modal.querySelector('.modal-confirm-title');
@@ -309,11 +402,333 @@ function salvarProposta(e) {
 }
 
 // ========================================
-// PDF — PROPOSTA (stub)
+// PDF — PROPOSTA
 // ========================================
 
 function gerarPDFProposta() {
-    alert('Geração de PDF para proposta em breve. (integração pendente)');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const W  = 210;
+    const ML = 14;
+    const MR = 196;
+    let   Y  = 0;
+
+    const TEAL       = [15,  118, 110];
+    const TEAL_CLARO = [240, 253, 250];
+    const CINZA      = [100, 116, 139];
+    const CINZA_BG   = [248, 250, 252];
+    const BORDA      = [226, 232, 240];
+    const PRETO      = [15,  23,  42];
+
+    function setFont(style, size, color) {
+        doc.setFont('helvetica', style);
+        doc.setFontSize(size);
+        doc.setTextColor(...(color || PRETO));
+    }
+
+    function linha(x1, y, x2, cor, esp) {
+        doc.setDrawColor(...(cor || BORDA));
+        doc.setLineWidth(esp || 0.3);
+        doc.line(x1, y, x2, y);
+    }
+
+    function rect(x, y, w, h, cor, raio) {
+        doc.setFillColor(...cor);
+        doc.setDrawColor(...cor);
+        if (raio) doc.roundedRect(x, y, w, h, raio, raio, 'F');
+        else      doc.rect(x, y, w, h, 'F');
+    }
+
+    function campo(label, valor, x, y, w) {
+        setFont('bold', 7, CINZA);
+        doc.text(label.toUpperCase(), x, y);
+        setFont('normal', 9, PRETO);
+        const txt = doc.splitTextToSize(String(valor || '—'), w);
+        doc.text(txt[0], x, y + 5);
+    }
+
+    function secHeader(titulo) {
+        Y += 4;
+        rect(ML, Y, W - ML * 2, 7, TEAL_CLARO);
+        setFont('bold', 9, TEAL);
+        doc.text(titulo.toUpperCase(), ML + 3, Y + 5);
+        Y += 10;
+    }
+
+    function checkPage(needed) {
+        if (Y + needed > 275) { doc.addPage(); Y = 20; }
+    }
+
+    function val(id) {
+        const el = document.getElementById(id);
+        if (!el) return '—';
+        if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '—';
+        return el.value?.trim() || '—';
+    }
+
+    function rawVal(id) {
+        return document.getElementById(id)?.value?.trim() || '';
+    }
+
+    function fmtData(raw) {
+        if (!raw) return '—';
+        const d = new Date(raw + 'T00:00:00');
+        return isNaN(d.getTime()) ? raw : d.toLocaleDateString('pt-BR');
+    }
+
+    // ══ CABEÇALHO ════════════════════════════
+    rect(0, 0, W, 28, TEAL);
+
+    setFont('bold', 18, [255, 255, 255]);
+    doc.text('MARPEX', ML, 12);
+
+    setFont('normal', 8, [167, 243, 208]);
+    doc.text('Gestão de Comércio Exterior', ML, 18);
+
+    setFont('bold', 12, [255, 255, 255]);
+    doc.text('PROFORMA INVOICE', W - ML, 10, { align: 'right' });
+
+    const codigo = rawVal('prop-codigo') || 'SEM-CÓDIGO';
+    setFont('normal', 9, [167, 243, 208]);
+    doc.text(codigo, W - ML, 17, { align: 'right' });
+
+    const dataGeracao = new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+    setFont('normal', 7, [110, 231, 183]);
+    doc.text('Gerado em: ' + dataGeracao, W - ML, 24, { align: 'right' });
+
+    Y = 34;
+
+    // ══ BARRA TIPO / MODAL / INCOTERM / DATAS ═
+    const tipoEl   = document.getElementById('prop-tipo');
+    const tipoTxt  = tipoEl?.options[tipoEl?.selectedIndex]?.text || '—';
+    const modalEl  = document.getElementById('prop-modal');
+    const modalTxt = modalEl?.options[modalEl?.selectedIndex]?.text || '—';
+    const modalVal = rawVal('prop-modal');
+    const incoterm = rawVal('prop-incoterm') || '—';
+    const dataEmissao  = fmtData(rawVal('prop-data-emissao'));
+    const dataValidade = fmtData(rawVal('prop-data-validade'));
+
+    rect(ML, Y, 48, 7, TEAL, 2);
+    setFont('bold', 8, [255, 255, 255]);
+    doc.text(tipoTxt, ML + 24, Y + 5, { align: 'center' });
+
+    setFont('normal', 8, CINZA);   doc.text('Modal:',     ML + 52,  Y + 5);
+    setFont('bold',   8, PRETO);   doc.text(modalTxt,     ML + 65,  Y + 5);
+    setFont('normal', 8, CINZA);   doc.text('Incoterm:',  ML + 100, Y + 5);
+    setFont('bold',   8, PRETO);   doc.text(incoterm,     ML + 118, Y + 5);
+    setFont('normal', 8, CINZA);   doc.text('Emissão:',   ML + 135, Y + 5);
+    setFont('bold',   8, PRETO);   doc.text(dataEmissao,  ML + 150, Y + 5);
+    setFont('normal', 8, CINZA);   doc.text('Val.:',      ML + 168, Y + 5);
+    setFont('bold',   8, PRETO);   doc.text(dataValidade, ML + 176, Y + 5);
+
+    Y += 12;
+    linha(ML, Y, MR, BORDA, 0.3);
+    Y += 4;
+
+    // ══ VENDEDOR | COMPRADOR ══════════════════
+    const colMid = W / 2;
+    const colGap = 5;
+    const colW   = colMid - ML - colGap / 2;
+
+    const emissorTipo = document.querySelector('input[name="prop-emissor-tipo"]:checked')?.value || 'usuario';
+    const emissorNome = emissorTipo === 'terceiro'
+        ? (rawVal('prop-cliente') || '—')
+        : (window._usuarioLogado?.nome || window._usuarioLogado?.empresa || window._usuarioLogado?.email || '—');
+    const docEmissor     = rawVal('prop-documento') || '—';
+    const docTipoEmissor = rawVal('prop-documento-tipo') || 'Documento';
+    const propositoTxt   = val('prop-proposito');
+
+    const destRazao  = rawVal('prop-emp-dest-razao') || rawVal('prop-emp-dest-busca') || '—';
+    const destDoc    = rawVal('prop-emp-dest-doc') || '—';
+    const destDocTipo= val('prop-emp-dest-doc-tipo');
+
+    rect(ML,              Y, colW,                     7, TEAL_CLARO);
+    rect(colMid + colGap / 2, Y, MR - colMid - colGap / 2, 7, TEAL_CLARO);
+    setFont('bold', 9, TEAL);
+    doc.text('VENDEDOR / EMISSOR',          ML + 3,                Y + 5);
+    doc.text('COMPRADOR / DESTINATÁRIO',    colMid + colGap / 2 + 3, Y + 5);
+    Y += 11;
+
+    campo('Nome / Razão Social', emissorNome, ML,                   Y, colW - 2);
+    campo('Nome / Razão Social', destRazao,   colMid + colGap / 2, Y, colW - 2);
+    Y += 10;
+
+    campo(docTipoEmissor !== '—' ? docTipoEmissor : 'Documento', docEmissor, ML,                   Y, colW - 2);
+    campo(destDocTipo    !== '—' ? destDocTipo    : 'Documento', destDoc,    colMid + colGap / 2, Y, colW - 2);
+    Y += 10;
+
+    if (propositoTxt !== '—') {
+        campo('Propósito', propositoTxt, ML, Y, colW - 2);
+        Y += 10;
+    }
+
+    linha(ML, Y, MR, BORDA, 0.3);
+    Y += 4;
+
+    // ══ ROTA ══════════════════════════════════
+    checkPage(25);
+    secHeader('Rota');
+
+    campo('País de Origem',  rawVal('prop-origem-pais')  || '—', ML,      Y, 55);
+    campo('País de Destino', rawVal('prop-destino-pais') || '—', ML + 60, Y, 55);
+
+    if (modalVal === 'maritimo') {
+        campo('Porto de Origem',  rawVal('prop-porto-origem')  || '—', ML + 120, Y, 38);
+        campo('Porto de Destino', rawVal('prop-porto-destino') || '—', ML + 161, Y, 34);
+    } else if (modalVal === 'aereo') {
+        campo('Aeroporto de Origem',  rawVal('prop-aeroporto-origem')  || '—', ML + 120, Y, 38);
+        campo('Aeroporto de Destino', rawVal('prop-aeroporto-destino') || '—', ML + 161, Y, 34);
+    } else if (modalVal === 'terrestre') {
+        campo('Fronteira de Saída',   rawVal('prop-fronteira-saida')   || '—', ML + 120, Y, 38);
+        campo('Fronteira de Entrada', rawVal('prop-fronteira-entrada') || '—', ML + 161, Y, 34);
+    }
+    Y += 14;
+
+    // ══ ITENS ══════════════════════════════════
+    checkPage(30);
+    secHeader('Produtos / Serviços');
+
+    const COL = {
+        num:   ML,
+        prod:  ML + 8,
+        qtd:   ML + 98,
+        un:    ML + 108,
+        preco: ML + 136,
+        moeda: ML + 152,
+        total: MR,
+    };
+
+    rect(ML, Y, W - ML * 2, 7, TEAL);
+    setFont('bold', 8, [255, 255, 255]);
+    doc.text('#',               COL.num  + 1,  Y + 5);
+    doc.text('PRODUTO / DESCRIÇÃO', COL.prod,  Y + 5);
+    doc.text('QTD',             COL.qtd,       Y + 5, { align: 'right' });
+    doc.text('UN',              COL.un,        Y + 5);
+    doc.text('PREÇO UNIT.',     COL.preco,     Y + 5, { align: 'right' });
+    doc.text('MOEDA',           COL.moeda,     Y + 5);
+    doc.text('TOTAL',           COL.total,     Y + 5, { align: 'right' });
+    Y += 9;
+
+    const totaisPorMoeda = {};
+
+    (_propItens || []).forEach((item, i) => {
+        checkPage(9);
+        rect(ML, Y, W - ML * 2, 8, i % 2 === 0 ? CINZA_BG : [255, 255, 255]);
+
+        const total    = (item.qtd || 0) * (item.preco || 0);
+        const precoFmt = item.preco ? item.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—';
+        const totalFmt = total      ? total.toLocaleString('pt-BR',      { minimumFractionDigits: 2 }) : '—';
+
+        setFont('normal', 8, PRETO);
+        doc.text(String(i + 1), COL.num + 1, Y + 5.5);
+
+        const prodLines = doc.splitTextToSize(item.produto || '—', COL.qtd - COL.prod - 3);
+        doc.text(prodLines[0], COL.prod, Y + 5.5);
+
+        doc.text(String(item.qtd ?? 0), COL.qtd,   Y + 5.5, { align: 'right' });
+        doc.text(item.unidade || '—',   COL.un,    Y + 5.5);
+        doc.text(precoFmt,              COL.preco, Y + 5.5, { align: 'right' });
+        doc.text(item.moeda || '—',     COL.moeda, Y + 5.5);
+        setFont('bold', 8, PRETO);
+        doc.text(totalFmt,              COL.total, Y + 5.5, { align: 'right' });
+
+        if (total && item.moeda) {
+            totaisPorMoeda[item.moeda] = (totaisPorMoeda[item.moeda] || 0) + total;
+        }
+        Y += 8;
+    });
+
+    linha(ML, Y, MR, BORDA, 0.5);
+    Y += 2;
+
+    const totaisKeys = Object.keys(totaisPorMoeda);
+    if (totaisKeys.length > 0) {
+        checkPage(10);
+        rect(ML, Y, W - ML * 2, 8, TEAL_CLARO);
+        setFont('bold', 9, TEAL);
+        doc.text('TOTAL GERAL', ML + 3, Y + 5.5);
+        const totaisStr = totaisKeys
+            .map(m => totaisPorMoeda[m].toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' ' + m)
+            .join('   +   ');
+        doc.text(totaisStr, MR, Y + 5.5, { align: 'right' });
+        Y += 10;
+    }
+
+    // ══ CONDIÇÕES COMERCIAIS ══════════════════
+    checkPage(25);
+    secHeader('Condições Comerciais');
+
+    const formaPagto  = val('prop-forma-pagamento');
+    const prazoPagtoEl = document.getElementById('prop-prazo-pagamento');
+    const prazoPagto  = prazoPagtoEl?.value === 'personalizado'
+        ? (rawVal('prop-prazo-personalizado') || 'Personalizado')
+        : (prazoPagtoEl?.options[prazoPagtoEl.selectedIndex]?.text || '—');
+
+    campo('Forma de Pagamento', formaPagto, ML,      Y, 85);
+    campo('Prazo de Pagamento', prazoPagto, ML + 90, Y, 85);
+    Y += 14;
+
+    const condicoesObs = rawVal('prop-condicoes-obs');
+    if (condicoesObs) {
+        checkPage(15);
+        setFont('bold', 7, CINZA);
+        doc.text('CONDIÇÕES E OBSERVAÇÕES', ML, Y);
+        Y += 4;
+        setFont('normal', 9, PRETO);
+        doc.splitTextToSize(condicoesObs, W - ML * 2 - 6).forEach(l => {
+            checkPage(6);
+            doc.text(l, ML + 3, Y);
+            Y += 5;
+        });
+        Y += 3;
+    }
+
+    // ══ OBSERVAÇÕES GERAIS ════════════════════
+    const obs = rawVal('prop-observacoes');
+    if (obs) {
+        checkPage(20);
+        secHeader('Observações Gerais');
+        setFont('normal', 9, PRETO);
+        doc.splitTextToSize(obs, W - ML * 2 - 6).forEach(l => {
+            checkPage(6);
+            doc.text(l, ML + 3, Y);
+            Y += 5;
+        });
+        Y += 3;
+    }
+
+    // ══ ASSINATURAS ══════════════════════════
+    checkPage(40);
+    Y += 12;
+    const sigW = 72;
+    linha(ML,       Y, ML + sigW,   BORDA, 0.5);
+    linha(MR - sigW, Y, MR,         BORDA, 0.5);
+    Y += 4;
+    setFont('normal', 8, CINZA);
+    doc.text('Emissor / Vendedor',       ML,          Y);
+    doc.text('Destinatário / Comprador', MR - sigW,  Y);
+    Y += 5;
+    setFont('normal', 7, CINZA);
+    doc.text(doc.splitTextToSize(emissorNome, sigW)[0], ML,         Y);
+    doc.text(doc.splitTextToSize(destRazao,   sigW)[0], MR - sigW, Y);
+
+    // ══ RODAPÉ (todas as páginas) ═════════════
+    const totalPags = doc.getNumberOfPages();
+    for (let p = 1; p <= totalPags; p++) {
+        doc.setPage(p);
+        linha(ML, 284, MR, BORDA, 0.3);
+        setFont('normal', 7, CINZA);
+        doc.text('Marpex — Gestão de Comércio Exterior', ML, 289);
+        doc.text(`Página ${p} de ${totalPags}`, W / 2, 289, { align: 'center' });
+        doc.text(dataGeracao, MR, 289, { align: 'right' });
+    }
+
+    const nomeArq = `proforma_${codigo !== 'SEM-CÓDIGO' ? codigo : 'sem-codigo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(nomeArq);
 }
 
 // ========================================
@@ -941,10 +1356,7 @@ function onModeloChange(modelo) {
         if (ieGroup)    ieGroup.style.display = 'none';
         if (sufrGroup)  sufrGroup.style.display = 'none';
         if (tipoCadSel) {
-            Array.from(tipoCadSel.options).forEach(o => {
-                o.style.display = (o.value === 'cnpj' || o.value === 'cpf') ? 'none' : '';
-            });
-            if (tipoCadSel.value === 'cnpj' || tipoCadSel.value === 'cpf') tipoCadSel.value = 'outros';
+            Array.from(tipoCadSel.options).forEach(o => { o.style.display = ''; });
         }
         if (window._empPaisAtualizar) window._empPaisAtualizar();
     } else {
@@ -2875,6 +3287,59 @@ function prodRemoverImagem() {
 }
 
 // ========================================
+// PRODUTO — EMPRESA AUTOCOMPLETE
+// ========================================
+
+function iniciarAutocompleteEmpresaProduto() {
+    const input  = document.getElementById('prod-empresa');
+    const hidden = document.getElementById('prod-empresa-id');
+    const docEl  = document.getElementById('prod-empresa-doc');
+    const lista  = document.getElementById('prod-empresa-lista');
+    if (!input || !lista) return;
+
+    async function mostrar() {
+        const q = input.value.trim();
+        if (q.length < 2) { lista.classList.remove('aberta'); return; }
+        try {
+            const { data } = await supabaseClient
+                .from('parceiros')
+                .select('id, nome, documento')
+                .or(`nome.ilike.%${q}%,documento.ilike.%${q}%`)
+                .limit(20);
+            if (!data?.length) { lista.classList.remove('aberta'); return; }
+            lista.innerHTML = data.map(e => `
+                <div class="autocomplete-item"
+                     data-id="${e.id}"
+                     data-nome="${(e.nome || '').replace(/"/g, '&quot;')}"
+                     data-doc="${(e.documento || '').replace(/"/g, '&quot;')}">
+                    <span class="ac-nome">${e.nome || ''}</span>
+                    <span class="ac-fantasia">${e.documento || ''}</span>
+                </div>`).join('');
+            _acPosicionar(input, lista);
+            lista.classList.add('aberta');
+        } catch { lista.classList.remove('aberta'); }
+    }
+
+    let _sel = false;
+    input.addEventListener('input', () => { if (!_sel) mostrar(); });
+    input.addEventListener('focus', () => { if (input.value.length >= 2) mostrar(); });
+    lista.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        _sel = true;
+        input.value = item.dataset.nome;
+        if (hidden) hidden.value = item.dataset.id;
+        if (docEl)  docEl.value  = item.dataset.doc;
+        lista.classList.remove('aberta');
+        setTimeout(() => { _sel = false; }, 0);
+    });
+    document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta');
+    });
+}
+
+// ========================================
 // PRODUTO — EMBALAGEM AUTOCOMPLETE
 // ========================================
 
@@ -3086,6 +3551,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarTransportadoraPropria();
 
     // Produto
+    iniciarAutocompleteEmpresaProduto();
     iniciarAutocompleteNcmProduto();
     iniciarAutocompleteUnidadeProduto();
     iniciarAutocompleteMoedaProduto();

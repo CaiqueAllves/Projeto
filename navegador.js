@@ -103,6 +103,49 @@ function injetarSidebar() {
 }
 
 // ========================================
+// HAMBURGER — MENU MOBILE
+// ========================================
+
+function _toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+}
+
+function _closeSidebar() {
+    document.body.classList.remove('sidebar-open');
+}
+
+function _initHamburger() {
+    // Inject hamburger button into topbar-left
+    const topbarLeft = document.querySelector('.topbar-left');
+    if (topbarLeft && !document.getElementById('nav-hamburger')) {
+        const btn = document.createElement('button');
+        btn.id = 'nav-hamburger';
+        btn.setAttribute('aria-label', 'Abrir menu');
+        btn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+        btn.addEventListener('click', _toggleSidebar);
+        topbarLeft.prepend(btn);
+    }
+
+    // Inject overlay backdrop
+    if (!document.getElementById('nav-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'nav-overlay';
+        overlay.addEventListener('click', _closeSidebar);
+        document.body.appendChild(overlay);
+    }
+
+    // Close sidebar when a nav link is clicked on mobile
+    const aside = document.querySelector('aside');
+    if (aside) {
+        aside.addEventListener('click', function(e) {
+            if (window.innerWidth <= 768 && e.target.closest('a, li[onclick]')) {
+                _closeSidebar();
+            }
+        });
+    }
+}
+
+// ========================================
 // NAVEGAÇÃO - DESTACAR ITEM ATIVO
 // ========================================
 
@@ -111,6 +154,7 @@ function _initNavegador() {
     destacarMenuAtivo();
     inicializarMenuColapsavel();
     destacarInicio();
+    _initHamburger();
 }
 
 if (document.readyState === 'loading') {

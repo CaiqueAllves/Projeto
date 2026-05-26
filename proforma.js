@@ -256,7 +256,11 @@ async function profConfirmarExcluir() {
     try {
         const { error } = await supabaseClient
             .from('proformas')
-            .update({ status: 'excluido' })
+            .update({
+                status: 'excluido',
+                excluido_em: new Date().toISOString(),
+                excluido_por: window._usuarioLogado?.nome || window._usuarioLogado?.email || 'Usuário'
+            })
             .eq('id', _profExcluirId);
         if (error) throw error;
         profFecharModalExcluir();
@@ -290,7 +294,7 @@ async function profCarregarExcluidos() {
         const usuario = obterUsuarioLogado();
         let query = supabaseClient
             .from('proformas')
-            .select('id, codigo, origem_pais, destino_pais, created_at')
+            .select('id, codigo, origem_pais, destino_pais, created_at, excluido_em, excluido_por')
             .eq('status', 'excluido')
             .order('created_at', { ascending: false });
         if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
@@ -303,17 +307,30 @@ async function profCarregarExcluidos() {
             return;
         }
 
-        container.innerHTML = data.map(p => `
+        container.innerHTML = data.map(p => {
+            const excluido = p.excluido_em ? new Date(p.excluido_em) : null;
+            const diasPassados = excluido ? Math.floor((Date.now() - excluido) / 86400000) : null;
+            const diasRestantes = excluido ? 7 - diasPassados : null;
+            const corDias = diasRestantes !== null && diasRestantes <= 2 ? 'color:#ef4444;font-weight:600;' : '';
+            const dataExclusao = excluido ? excluido.toLocaleDateString('pt-BR') : '—';
+            const responsavel = p.excluido_por || '—';
+            const diasInfo = diasRestantes !== null
+                ? `<span style="${corDias}">${diasRestantes > 0 ? diasRestantes + ' dia(s) restante(s)' : 'Expira hoje'}</span>`
+                : '';
+            return `
             <div class="prof-excluido-item">
                 <div class="prof-excluido-info">
                     <span class="prof-excluido-codigo">${p.codigo || '—'}</span>
                     <span class="prof-excluido-rota">${p.origem_pais || '—'} → ${p.destino_pais || '—'}</span>
+                    <span class="prof-excluido-rota">Excluído em: ${dataExclusao} por ${responsavel}</span>
+                    <span class="prof-excluido-rota">${diasInfo}</span>
                 </div>
                 <button class="prof-excluido-restaurar" onclick="profRestaurar('${p.id}')">
                     <i class="fa-solid fa-rotate-left"></i> Restaurar
                 </button>
             </div>
-        `).join('');
+        `;
+        }).join('');
     } catch (err) {
         container.innerHTML = `<div style="padding:16px;color:#dc2626;font-size:13px;">Erro: ${err.message}</div>`;
     }
@@ -345,18 +362,6 @@ document.addEventListener('click', function(e) {
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = obterUsuarioLogado();
     if (!usuario) { window.location.href = 'login.html'; return; }
-
-    const nameEl  = document.getElementById('displayUsername');
-    const emailEl = document.getElementById('userEmail');
-    const iconEl  = document.getElementById('topbarAvatarIcon');
-    const imgEl   = document.getElementById('topbarAvatarImg');
-    if (nameEl)  nameEl.textContent  = usuario.nome  || usuario.email || '—';
-    if (emailEl) emailEl.textContent = usuario.email || '—';
-    if (usuario.avatar_url && imgEl && iconEl) {
-        imgEl.src            = usuario.avatar_url;
-        imgEl.style.display  = 'block';
-        iconEl.style.display = 'none';
-    }
 
     document.getElementById('btnConfirmarExcluirProforma')?.addEventListener('click', profConfirmarExcluir);
 

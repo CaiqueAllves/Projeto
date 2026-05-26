@@ -42,6 +42,11 @@ function verificarAutenticacao() {
             empresaNome.textContent = usuarioAtual.empresa;
         }
 
+        const userEmailEl = document.getElementById('userEmail');
+        if (userEmailEl) {
+            userEmailEl.textContent = usuarioAtual.email || '';
+        }
+
         // Avatar na topbar (todas as páginas)
         if (usuarioAtual.avatar_url) {
             const avatarWrap = document.querySelector('.user-avatar');

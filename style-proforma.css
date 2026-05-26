@@ -118,7 +118,7 @@
     top: calc(100% + 8px);
     right: 0;
     width: 360px;
-    max-height: 300px;
+    max-height: 380px;
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -198,6 +198,25 @@
 .prof-excluido-restaurar:hover {
     border-color: #3b82f6;
     background: #eff6ff;
+}
+
+.prof-excluidos-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #92400e;
+    margin-bottom: 12px;
+}
+
+.prof-excluidos-aviso i {
+    color: #f97316;
+    margin-top: 1px;
+    flex-shrink: 0;
 }
 
 /* ── Filtro de status ────────────────────── */

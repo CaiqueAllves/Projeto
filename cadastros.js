@@ -171,6 +171,24 @@ async function carregarEmpresas() {
     renderizarEmpresas(todasEmpresas);
 }
 
+function _tiposDeEmpresa(e) {
+    const mapa = [
+        { key: 'is_fabricante',    label: 'Fabricante',    css: 'fabricante' },
+        { key: 'is_cliente',       label: 'Cliente',       css: 'cliente' },
+        { key: 'is_fornecedor',    label: 'Fornecedor',    css: 'fornecedor' },
+        { key: 'is_transportadora',label: 'Transportadora',css: 'transportadora' },
+        { key: 'is_remetente',     label: 'Remetente',     css: 'remetente' },
+    ];
+    return mapa.filter(m => e[m.key]);
+}
+
+function _avatarCor(nome) {
+    const cores = ['#4776ec','#f7931e','#16a34a','#7c3aed','#0891b2','#d97706','#dc2626'];
+    let h = 0;
+    for (const c of (nome || '?')) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+    return cores[Math.abs(h) % cores.length];
+}
+
 function renderizarEmpresas(lista) {
     const container = document.getElementById('listaContainer');
     const count     = document.getElementById('listaCount');
@@ -191,44 +209,61 @@ function renderizarEmpresas(lista) {
         <table class="empresa-tabela">
             <thead>
                 <tr>
-                    <th class="col-tipo"></th>
-                    <th class="col-razao">Razão Social</th>
-                    <th class="col-fantasia">Nome Fantasia</th>
+                    <th class="col-empresa">Empresa</th>
+                    <th class="col-tipo">Tipo</th>
                     <th class="col-doc">Documento</th>
-                    <th class="col-loc">País / Estado</th>
+                    <th class="col-loc">Localização</th>
                     <th class="col-tags">Tags</th>
-                    <th class="col-acoes" style="text-align:center;">Ações</th>
+                    <th class="col-acoes">Ações</th>
                 </tr>
             </thead>
             <tbody>
-                ${lista.map(e => `
-                    <tr>
-                        <td class="col-tipo">
-                            <div class="tipo-badges">
-                                ${(e.tipos || []).map(t => `<span class="tag-tipo tag-${t.toLowerCase()}" title="${t}">${t.charAt(0).toUpperCase()}</span>`).join('')}
+                ${lista.map(e => {
+                    const tipos  = _tiposDeEmpresa(e);
+                    const cor    = _avatarCor(e.razao_social);
+                    const letra  = (e.razao_social || '?').charAt(0).toUpperCase();
+                    const loc    = [e.cidade, e.estado, e.pais].filter(Boolean).join(', ') || '—';
+                    return `
+                    <tr onclick="editarEmpresa('${e.id}')" class="empresa-row">
+                        <td class="col-empresa">
+                            <div class="empresa-cell">
+                                <div class="empresa-avatar" style="background:${cor}">${letra}</div>
+                                <div class="empresa-info">
+                                    <span class="empresa-nome">${e.razao_social || '—'}</span>
+                                    ${e.nome_fantasia ? `<span class="empresa-fantasia">${e.nome_fantasia}</span>` : ''}
+                                </div>
                             </div>
                         </td>
-                        <td class="col-razao"><span class="empresa-nome">${e.razao_social || '—'}</span></td>
-                        <td class="col-fantasia"><span class="empresa-fantasia">${e.nome_fantasia || '<span class="cell-vazio">—</span>'}</span></td>
-                        <td class="col-doc cell-nowrap">${e.documento || '—'}</td>
-                        <td class="col-loc cell-nowrap">${[e.pais, e.estado].filter(Boolean).join(' / ') || '—'}</td>
-                        <td class="col-tags">${(e.tags && e.tags.length) ? renderTagsMini(e.tags) : '<span class="cell-vazio">—</span>'}</td>
-                        <td class="col-acoes" style="text-align:center;white-space:nowrap;">
-                            <button class="btn-acao btn-editar" onclick="editarEmpresa('${e.id}')" title="Editar">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                            <button class="btn-acao btn-excluir" onclick="excluirEmpresa('${e.id}')" title="Excluir">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                        <td class="col-tipo">
+                            <div class="tipo-badges">
+                                ${tipos.map(t => `<span class="tag-tipo tag-${t.css}" title="${t.label}">${t.label.charAt(0)}</span>`).join('') || '<span class="cell-vazio">—</span>'}
+                            </div>
                         </td>
-                    </tr>
-                `).join('')}
+                        <td class="col-doc">
+                            ${e.documento ? `<code class="doc-code">${e.documento}</code>` : '<span class="cell-vazio">—</span>'}
+                        </td>
+                        <td class="col-loc">${loc}</td>
+                        <td class="col-tags">${(e.tags && e.tags.length) ? renderTagsMini(e.tags) : '<span class="cell-vazio">—</span>'}</td>
+                        <td class="col-acoes" onclick="event.stopPropagation()">
+                            <div class="acoes-grupo">
+                                <button class="btn-acao btn-editar" onclick="editarEmpresa('${e.id}')" title="Editar">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn-acao btn-excluir" onclick="excluirEmpresa('${e.id}')" title="Excluir">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('')}
             </tbody>
         </table>`;
 }
 
 function renderTagsMini(tags) {
-    return tags.slice(0, 2).map(t => `<span class="tag-item-mini">${t}</span>`).join('');
+    const visiveis = tags.slice(0, 2).map(t => `<span class="tag-item-mini">${t}</span>`).join('');
+    const extra = tags.length > 2 ? `<span class="tag-item-mini tag-extra">+${tags.length - 2}</span>` : '';
+    return visiveis + extra;
 }
 
 function filtrarEmpresas(valor) {

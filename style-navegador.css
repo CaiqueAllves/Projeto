@@ -172,13 +172,82 @@ aside .menu-title i:first-child {
     text-align: center;
 }
 
-/* RESPONSIVIDADE */
+/* ========================================
+   TOPBAR-LEFT H2 — PADRÃO ÚNICO
+   (sobrescreve variações por CSS de página)
+======================================== */
+.topbar-left h2 {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: var(--azul) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 !important;
+}
+
+.topbar-left h2 i {
+    font-size: 20px;
+    color: var(--azul);
+}
+
+/* HAMBURGER BUTTON — hidden on desktop */
+#nav-hamburger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--texto);
+    font-size: 18px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+#nav-hamburger:hover {
+    background: var(--cinza-claro);
+}
+
+/* OVERLAY — shown on mobile when sidebar is open */
+#nav-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1005;
+}
+
+/* MOBILE */
 @media (max-width: 768px) {
+    /* Slide aside in/out */
+    aside {
+        transform: translateX(-260px);
+        transition: transform 0.3s ease;
+        z-index: 1010;
+    }
+
+    body.sidebar-open aside {
+        transform: translateX(0);
+    }
+
+    body.sidebar-open #nav-overlay {
+        display: block;
+    }
+
+    /* Show hamburger */
+    #nav-hamburger {
+        display: flex;
+    }
+
     aside .submenu a {
         padding-left: 20px;
         font-size: 13px;
     }
-    
+
     aside .submenu a:hover {
         padding-left: 25px;
     }

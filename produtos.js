@@ -113,6 +113,13 @@ function statusProdBadge(s) {
         : '<span class="prod-badge ativo">Ativo</span>';
 }
 
+function _prodAvatarCor(nome) {
+    const cores = ['#4776ec','#f7931e','#16a34a','#7c3aed','#0891b2','#d97706','#dc2626'];
+    let h = 0;
+    for (const c of (nome || '?')) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+    return cores[Math.abs(h) % cores.length];
+}
+
 function renderTabela(filtro) {
     const container = document.getElementById('listaContainer');
     const count     = document.getElementById('listaCount');
@@ -139,33 +146,49 @@ function renderTabela(filtro) {
         <table class="prod-tabela">
             <thead>
                 <tr>
-                    <th>SKU</th>
-                    <th>Nome</th>
-                    <th>Categoria</th>
-                    <th>Marca</th>
-                    <th>NCM</th>
-                    <th>Status</th>
-                    <th>Ações</th>
+                    <th class="pcol-produto">Produto</th>
+                    <th class="pcol-cat">Categoria</th>
+                    <th class="pcol-marca">Marca</th>
+                    <th class="pcol-ncm">NCM</th>
+                    <th class="pcol-status">Status</th>
+                    <th class="pcol-acoes">Ações</th>
                 </tr>
             </thead>
             <tbody>
-                ${list.map(p => `
-                <tr>
-                    <td><span class="prod-sku">${escapeHtml(p.sku || '—')}</span></td>
-                    <td>${escapeHtml(p.nome || '—')}</td>
-                    <td>${escapeHtml(p.categoria || '—')}</td>
-                    <td>${escapeHtml(p.marca || '—')}</td>
-                    <td>${escapeHtml(p.ncm || '—')}</td>
-                    <td>${statusProdBadge(p.statusAtivo)}</td>
-                    <td>
-                        <button class="btn-acao btn-editar" data-action="editar" data-id="${escapeHtml(p.id)}" title="Editar">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button class="btn-acao btn-excluir" data-action="excluir" data-id="${escapeHtml(p.id)}" title="Excluir">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>`).join('')}
+                ${list.map(p => {
+                    const cor   = _prodAvatarCor(p.nome);
+                    const letra = (p.nome || '?').charAt(0).toUpperCase();
+                    return `
+                    <tr class="prod-row" data-id="${escapeHtml(p.id)}">
+                        <td class="pcol-produto">
+                            <div class="prod-cell">
+                                <div class="prod-avatar" style="background:${cor}">${letra}</div>
+                                <div class="prod-info">
+                                    <span class="prod-nome">${escapeHtml(p.nome || '—')}</span>
+                                    <code class="prod-sku">${escapeHtml(p.sku || '—')}</code>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="pcol-cat">
+                            ${p.categoria ? `<span class="prod-cat-badge">${escapeHtml(p.categoria)}</span>` : '<span class="cell-vazio">—</span>'}
+                        </td>
+                        <td class="pcol-marca">${escapeHtml(p.marca || '—') !== '—' ? escapeHtml(p.marca) : '<span class="cell-vazio">—</span>'}</td>
+                        <td class="pcol-ncm">
+                            ${p.ncm ? `<code class="doc-code">${escapeHtml(p.ncm)}</code>` : '<span class="cell-vazio">—</span>'}
+                        </td>
+                        <td class="pcol-status">${statusProdBadge(p.statusAtivo)}</td>
+                        <td class="pcol-acoes" onclick="event.stopPropagation()">
+                            <div class="acoes-grupo">
+                                <button class="btn-acao btn-editar" data-action="editar" data-id="${escapeHtml(p.id)}" title="Editar">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn-acao btn-excluir" data-action="excluir" data-id="${escapeHtml(p.id)}" title="Excluir">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('')}
             </tbody>
         </table>`;
 }
@@ -412,11 +435,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cliques na tabela
     document.getElementById('listaContainer')?.addEventListener('click', e => {
         const btn = e.target.closest('button[data-action]');
-        if (!btn) return;
-        const action = btn.getAttribute('data-action');
-        const id     = btn.getAttribute('data-id');
-        if (action === 'editar')  abrirModalProduto(id);
-        if (action === 'excluir') abrirModalExcluir(id);
+        if (btn) {
+            const action = btn.getAttribute('data-action');
+            const id     = btn.getAttribute('data-id');
+            if (action === 'editar')  abrirModalProduto(id);
+            if (action === 'excluir') abrirModalExcluir(id);
+            return;
+        }
+        const row = e.target.closest('.prod-row');
+        if (row) abrirModalProduto(row.dataset.id);
     });
 
     // Limpar dados

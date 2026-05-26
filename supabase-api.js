@@ -300,6 +300,9 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
 
         if (errParceiro) {
             console.error('Erro ao salvar parceiro:', errParceiro);
+            if (errParceiro?.code === '23505') {
+                return { sucesso: false, erro: 'Já existe uma empresa cadastrada com este número de identificação (CNPJ/CPF).' };
+            }
             return { sucesso: false, mensagem: 'Erro ao salvar cadastro: ' + errParceiro.message };
         }
 

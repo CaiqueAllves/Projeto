@@ -807,19 +807,38 @@ form small {
     .main-layout {
         flex-direction: column;
     }
-    
-    aside {
-        width: 100%;
-        min-height: auto;
-    }
-    
+
+    /* aside is handled by style-navegador.css (slide-in) */
     aside h2 {
         font-size: 20px;
     }
-    
+
+    /* topbar spans full width; hamburger lives inside .topbar-left */
     .topbar {
-        flex-direction: column;
-        gap: 16px;
+        left: 0 !important;
+        flex-direction: row;
+        gap: 8px;
+        padding: 0 16px;
+    }
+
+    .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .topbar-left h2 {
+        font-size: 20px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* main no longer needs left margin */
+    main {
+        margin-left: 0 !important;
     }
     
     .actions {

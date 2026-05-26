@@ -25,8 +25,7 @@
             <div class="topbar-right">
                 <div class="user-info-card">
                     <div class="user-avatar">
-                        <i class="fa-solid fa-user" id="topbarAvatarIcon"></i>
-                        <img id="topbarAvatarImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                        <i class="fa-solid fa-user"></i>
                     </div>
                     <div class="user-details">
                         <div class="user-name" id="displayUsername">—</div>
@@ -142,7 +141,7 @@
                                     <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="emp-tipo-cadastro">Identificação da Empresa <span class="required">*</span></label>
-                                                <select id="emp-tipo-cadastro" name="tipo_cadastro" required>
+                                                <select id="emp-tipo-cadastro" name="tipo_cadastro">
                                                     <option value="">Selecione...</option>
                                                     <option value="cnpj">CNPJ</option>
                                                     <option value="cpf">CPF</option>
@@ -155,7 +154,7 @@
                                                         <i class="fa-solid fa-circle-info"></i>
                                                     </span>
                                                 </label>
-                                                <input type="text" id="emp-documento" name="documento" placeholder="Selecione o tipo primeiro" inputmode="numeric" required>
+                                                <input type="text" id="emp-documento" name="documento" placeholder="Selecione o tipo primeiro" inputmode="numeric">
                                             </div>
                                             <div class="form-group" id="emp-codigo-group">
                                                 <label for="emp-codigo">Código Interno
@@ -179,7 +178,7 @@
                                     <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="emp-ie">Inscrição Estadual <span class="required">*</span></label>
-                                                <input type="text" id="emp-ie" name="inscricao_estadual" placeholder="000.000.00-0" inputmode="numeric" maxlength="15" oninput="this.value=_mascaraIE(this.value)" required>
+                                                <input type="text" id="emp-ie" name="inscricao_estadual" placeholder="000.000.00-0" inputmode="numeric" maxlength="15" oninput="this.value=_mascaraIE(this.value)">
                                             </div>
                                             <div class="form-group" id="emp-im-group" style="display:none;">
                                                 <label for="emp-im">Inscrição Municipal</label>
@@ -199,7 +198,7 @@
                                     <div class="form-grid">
                                         <div class="form-group">
                                             <label for="emp-nome">Razão Social <span class="required">*</span></label>
-                                            <input type="text" id="emp-nome" name="nome_empresa" placeholder="Nome da Empresa" required>
+                                            <input type="text" id="emp-nome" name="nome_empresa" placeholder="Nome da Empresa">
                                         </div>
                                         <div class="form-group">
                                             <label for="emp-fantasia">Nome Fantasia</label>
@@ -211,7 +210,7 @@
                                     <div class="form-group">
                                         <label for="emp-pais">País <span class="required">*</span></label>
                                         <div class="autocomplete-wrapper">
-                                            <input type="text" id="emp-pais" name="pais" placeholder="Digite para filtrar países..." autocomplete="off" required>
+                                            <input type="text" id="emp-pais" name="pais" placeholder="Digite para filtrar países..." autocomplete="off">
                                             <input type="hidden" id="emp-pais-codigo">
                                             <div class="autocomplete-list" id="emp-pais-lista"></div>
                                         </div>
@@ -224,19 +223,19 @@
                                     <div class="form-row-4">
                                             <div class="form-group">
                                                 <label for="emp-cep">CEP <span class="required">*</span></label>
-                                                <input type="text" id="emp-cep" name="cep" placeholder="00000-000" required>
+                                                <input type="text" id="emp-cep" name="cep" placeholder="00000-000">
                                             </div>
                                             <div class="form-group">
                                                 <label for="emp-estado">Estado <span class="required">*</span></label>
-                                                <input type="text" id="emp-estado" name="estado" placeholder="Estado ou Província" required>
+                                                <input type="text" id="emp-estado" name="estado" placeholder="Estado ou Província">
                                             </div>
                                             <div class="form-group">
                                                 <label for="emp-cidade">Cidade <span class="required">*</span></label>
-                                                <input type="text" id="emp-cidade" name="cidade" placeholder="Cidade" required>
+                                                <input type="text" id="emp-cidade" name="cidade" placeholder="Cidade">
                                             </div>
                                             <div class="form-group">
                                                 <label for="emp-bairro">Bairro <span class="required">*</span></label>
-                                                <input type="text" id="emp-bairro" name="bairro" placeholder="Bairro" required>
+                                                <input type="text" id="emp-bairro" name="bairro" placeholder="Bairro">
                                             </div>
                                         </div>
 
@@ -244,12 +243,12 @@
                                     <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="emp-endereco">Endereço <span class="required">*</span></label>
-                                                <input type="text" id="emp-endereco" name="endereco" placeholder="Rua, Av., etc." required>
+                                                <input type="text" id="emp-endereco" name="endereco" placeholder="Rua, Av., etc.">
                                             </div>
                                             <div class="form-group">
                                                 <label for="emp-numero">Número <span class="required">*</span></label>
                                                 <div class="input-com-sn">
-                                                    <input type="text" id="emp-numero" name="numero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')" required>
+                                                    <input type="text" id="emp-numero" name="numero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')">
                                                     <span class="sn-toggle-inner" onclick="const n=document.getElementById('emp-numero');this.classList.toggle('ativo');const a=this.classList.contains('ativo');n.disabled=a;n.value=a?'S/N':'';n.placeholder=a?'':'Nº';">S/N</span>
                                                 </div>
                                             </div>
@@ -2163,6 +2162,24 @@
                             </div>
                             <div class="section-content">
                                 <div class="form-grid">
+
+                                    <!-- Linha 0: Identificação da Empresa | Número de Identificação -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3" style="grid-template-columns: 1fr 1fr;">
+                                            <div class="form-group">
+                                                <label for="prod-empresa">Identificação da Empresa</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prod-empresa" placeholder="Buscar por nome ou CNPJ..." autocomplete="off">
+                                                    <input type="hidden" id="prod-empresa-id" name="empresa_id">
+                                                    <div class="autocomplete-list" id="prod-empresa-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-empresa-doc">Número de Identificação</label>
+                                                <input type="text" id="prod-empresa-doc" name="empresa_documento" placeholder="Preenchido automaticamente" readonly style="background:#f8faff;cursor:default;" data-no-caps>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <!-- Linha 1: SKU | NCM | CEST -->
                                     <div class="form-group full-width">
