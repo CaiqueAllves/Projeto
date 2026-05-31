@@ -7,10 +7,34 @@ let periodoAtual = 'mensal';
 let todasEmpresas = [];
 const HISTORICO_KEY = 'relatoriosHistorico';
 
+// Helpers — campos booleanos da tabela
+const _eCliente     = e => !!e.is_cliente;
+const _eFornecedor  = e => !!e.is_fornecedor;
+const _eFabricante  = e => !!e.is_fabricante;
+const _eTransp      = e => !!e.is_transportadora;
+const _eRemetente   = e => !!e.is_remetente;
+const _tiposStr     = e => {
+    const t = [];
+    if (e.is_fabricante)     t.push('Fabricante');
+    if (e.is_cliente)        t.push('Cliente');
+    if (e.is_fornecedor)     t.push('Fornecedor');
+    if (e.is_transportadora) t.push('Transportadora');
+    if (e.is_remetente)      t.push('Remetente');
+    return t.join(', ') || '—';
+};
+
+// Deriva o modelo da empresa a partir dos campos disponíveis
+const _modeloEmpresa = e => {
+    if (e.is_transportadora) return 'transportadora';
+    const p = (e.pais || '').toLowerCase().trim();
+    if (p && p !== 'br' && p !== 'brasil' && p !== 'brazil') return 'company';
+    return 'empresa';
+};
+
 document.addEventListener('DOMContentLoaded', async function () {
     verificarPermissoes();
 
-    const resultado = await buscarEmpresasCadastradas();
+    const resultado = await window.supabaseAPI.buscarEmpresas();
     todasEmpresas = resultado.sucesso ? resultado.data : [];
 
     carregarStats(todasEmpresas);
@@ -39,8 +63,8 @@ function verificarPermissoes() {
 
 function carregarStats(empresas) {
     const total       = empresas.length;
-    const clientes    = empresas.filter(e => e.tipos && e.tipos.includes('cliente')).length;
-    const fornecedores= empresas.filter(e => e.tipos && e.tipos.includes('fornecedor')).length;
+    const clientes    = empresas.filter(_eCliente).length;
+    const fornecedores= empresas.filter(_eFornecedor).length;
     const paises      = new Set(empresas.map(e => e.pais).filter(Boolean)).size;
 
     document.getElementById('totalEmpresas').textContent    = total;
@@ -63,9 +87,9 @@ function renderPreviewPeriodo(empresas) {
     const corte = new Date();
     corte.setDate(corte.getDate() - dias);
 
-    const doPeriodo = empresas.filter(e => e.criado_em && new Date(e.criado_em) >= corte);
-    const clientes   = doPeriodo.filter(e => e.tipos && e.tipos.includes('cliente')).length;
-    const fornecedores = doPeriodo.filter(e => e.tipos && e.tipos.includes('fornecedor')).length;
+    const doPeriodo    = empresas.filter(e => e.created_at && new Date(e.created_at) >= corte);
+    const fabricantes  = doPeriodo.filter(_eFabricante).length;
+    const fornecedores = doPeriodo.filter(_eFornecedor).length;
 
     el.innerHTML = `
         <div class="preview-stat-row">
@@ -73,7 +97,7 @@ function renderPreviewPeriodo(empresas) {
             <span class="preview-label">empresas no período</span>
         </div>
         <div class="preview-sub-row">
-            <span class="preview-chip" style="background:#eff6ff;color:#3b82f6;">${clientes} cliente${clientes !== 1 ? 's' : ''}</span>
+            <span class="preview-chip" style="background:#dcfce7;color:#15803d;">${fabricantes} fabricante${fabricantes !== 1 ? 's' : ''}</span>
             <span class="preview-chip" style="background:#fefce8;color:#ca8a04;">${fornecedores} fornecedor${fornecedores !== 1 ? 'es' : ''}</span>
         </div>
     `;
@@ -83,18 +107,18 @@ function renderPreviewTipo(empresas) {
     const el = document.getElementById('previewTipo');
     if (!el) return;
 
-    const total = empresas.length || 1;
-    const clientes    = empresas.filter(e => e.tipos && e.tipos.includes('cliente') && !(e.tipos.includes('fornecedor'))).length;
-    const fornecedores= empresas.filter(e => e.tipos && e.tipos.includes('fornecedor') && !(e.tipos.includes('cliente'))).length;
-    const ambos       = empresas.filter(e => e.tipos && e.tipos.includes('cliente') && e.tipos.includes('fornecedor')).length;
+    const total       = empresas.length || 1;
+    const fabricantes = empresas.filter(e => _eFabricante(e) && !_eFornecedor(e)).length;
+    const fornecedores= empresas.filter(e => _eFornecedor(e) && !_eFabricante(e)).length;
+    const ambos       = empresas.filter(e => _eFabricante(e) && _eFornecedor(e)).length;
 
     const pct = n => Math.round((n / total) * 100);
 
     el.innerHTML = `
         <div class="preview-bar-item">
-            <span class="preview-bar-label"><span style="color:#22c55e;">●</span> Clientes</span>
-            <div class="preview-bar-track"><div class="preview-bar-fill" style="width:${pct(clientes)}%;background:#22c55e;"></div></div>
-            <span class="preview-bar-val">${clientes}</span>
+            <span class="preview-bar-label"><span style="color:#22c55e;">●</span> Fabricantes</span>
+            <div class="preview-bar-track"><div class="preview-bar-fill" style="width:${pct(fabricantes)}%;background:#22c55e;"></div></div>
+            <span class="preview-bar-val">${fabricantes}</span>
         </div>
         <div class="preview-bar-item">
             <span class="preview-bar-label"><span style="color:#f59e0b;">●</span> Fornecedores</span>
@@ -175,11 +199,19 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-calendar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Tipo de Empresa</label>
+                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Tipo</label>
                 <div class="rel-check-row">
-                    <label class="rel-check"><input type="checkbox" value="cliente" checked> Clientes</label>
-                    <label class="rel-check"><input type="checkbox" value="fornecedor" checked> Fornecedores</label>
-                    <label class="rel-check"><input type="checkbox" value="ambos" checked> Ambos</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-tipo" value="fabricante" checked> Fabricantes</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-tipo" value="fornecedor" checked> Fornecedores</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-tipo" value="ambos" checked> Ambos (Fab. + Forn.)</label>
+                </div>
+            </div>
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-building"></i> Modelo</label>
+                <div class="rel-check-row">
+                    <label class="rel-check"><input type="checkbox" name="rel-modelo" value="empresa" checked> Empresa (Nacional)</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-modelo" value="company" checked> Company (Estrangeira)</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-modelo" value="transportadora" checked> Transportadora</label>
                 </div>
             </div>`
     },
@@ -189,11 +221,19 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-chart-bar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Incluir tipos</label>
+                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Tipo</label>
                 <div class="rel-check-row">
-                    <label class="rel-check"><input type="checkbox" value="cliente" checked> Clientes</label>
-                    <label class="rel-check"><input type="checkbox" value="fornecedor" checked> Fornecedores</label>
-                    <label class="rel-check"><input type="checkbox" value="ambos" checked> Ambos (Cliente + Fornecedor)</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-tipo" value="fabricante" checked> Fabricantes</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-tipo" value="fornecedor" checked> Fornecedores</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-tipo" value="ambos" checked> Ambos (Fab. + Forn.)</label>
+                </div>
+            </div>
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-building"></i> Modelo</label>
+                <div class="rel-check-row">
+                    <label class="rel-check"><input type="checkbox" name="rel-modelo" value="empresa" checked> Empresa (Nacional)</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-modelo" value="company" checked> Company (Estrangeira)</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-modelo" value="transportadora" checked> Transportadora</label>
                 </div>
             </div>`
     },
@@ -275,8 +315,8 @@ function filtrarEmpresasPorDatas() {
     const inicio = new Date(di);
     const fim    = new Date(df + 'T23:59:59');
     return todasEmpresas.filter(e => {
-        if (!e.criado_em) return true;
-        const d = new Date(e.criado_em);
+        if (!e.created_at) return true;
+        const d = new Date(e.created_at);
         return d >= inicio && d <= fim;
     });
 }
@@ -288,29 +328,67 @@ function atualizarPreviewModal() {
     const empresas = filtrarEmpresasPorDatas();
 
     if (tipoRelatorioAtual === 'periodo') {
-        const tipos = [...document.querySelectorAll('#relParamsEspecificos input[type=checkbox]:checked')].map(c => c.value);
-        const filtradas = empresas.filter(e => {
-            if (!e.tipos) return false;
-            if (tipos.includes('ambos') && e.tipos.includes('cliente') && e.tipos.includes('fornecedor')) return true;
-            if (tipos.includes('cliente') && e.tipos.includes('cliente') && !e.tipos.includes('fornecedor')) return true;
-            if (tipos.includes('fornecedor') && e.tipos.includes('fornecedor') && !e.tipos.includes('cliente')) return true;
+        const tiposSel   = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-tipo"]:checked')].map(c => c.value);
+        const modelosSel = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-modelo"]:checked')].map(c => c.value);
+
+        const porTipo = empresas.filter(e => {
+            if (tiposSel.includes('ambos')      && _eFabricante(e) && _eFornecedor(e))  return true;
+            if (tiposSel.includes('fabricante') && _eFabricante(e) && !_eFornecedor(e)) return true;
+            if (tiposSel.includes('fornecedor') && _eFornecedor(e) && !_eFabricante(e)) return true;
             return false;
         });
+
+        const filtradas = modelosSel.length
+            ? porTipo.filter(e => modelosSel.includes(_modeloEmpresa(e)))
+            : porTipo;
+
+        const fab  = filtradas.filter(e => _eFabricante(e) && !_eFornecedor(e)).length;
+        const forn = filtradas.filter(e => _eFornecedor(e) && !_eFabricante(e)).length;
+        const amb  = filtradas.filter(e => _eFabricante(e) && _eFornecedor(e)).length;
+
         el.innerHTML = `
             <div class="prev-linha"><span>Total no período</span><strong>${filtradas.length} empresa${filtradas.length !== 1 ? 's' : ''}</strong></div>
+            <div class="prev-linha"><span>Fabricantes</span><strong>${fab}</strong></div>
+            <div class="prev-linha"><span>Fornecedores</span><strong>${forn}</strong></div>
+            <div class="prev-linha"><span>Ambos</span><strong>${amb}</strong></div>
             <div class="prev-linha"><span>Países distintos</span><strong>${new Set(filtradas.map(e => e.pais).filter(Boolean)).size}</strong></div>
         `;
 
     } else if (tipoRelatorioAtual === 'tipo') {
-        const total = empresas.length;
-        const c = empresas.filter(e => e.tipos?.includes('cliente') && !e.tipos?.includes('fornecedor')).length;
-        const f = empresas.filter(e => e.tipos?.includes('fornecedor') && !e.tipos?.includes('cliente')).length;
-        const a = empresas.filter(e => e.tipos?.includes('cliente') && e.tipos?.includes('fornecedor')).length;
+        const tiposSel   = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-tipo"]:checked')].map(c => c.value);
+        const modelosSel = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-modelo"]:checked')].map(c => c.value);
+
+        const porTipo = empresas.filter(e => {
+            if (tiposSel.includes('ambos')      && _eFabricante(e) && _eFornecedor(e))  return true;
+            if (tiposSel.includes('fabricante') && _eFabricante(e) && !_eFornecedor(e)) return true;
+            if (tiposSel.includes('fornecedor') && _eFornecedor(e) && !_eFabricante(e)) return true;
+            return false;
+        });
+
+        const filtradas = modelosSel.length
+            ? porTipo.filter(e => modelosSel.includes(_modeloEmpresa(e)))
+            : porTipo;
+
+        const fab  = filtradas.filter(e => _eFabricante(e) && !_eFornecedor(e)).length;
+        const forn = filtradas.filter(e => _eFornecedor(e) && !_eFabricante(e)).length;
+        const amb  = filtradas.filter(e => _eFabricante(e) && _eFornecedor(e)).length;
+
+        const porModelo = {
+            empresa:       filtradas.filter(e => _modeloEmpresa(e) === 'empresa').length,
+            company:       filtradas.filter(e => _modeloEmpresa(e) === 'company').length,
+            transportadora:filtradas.filter(e => _modeloEmpresa(e) === 'transportadora').length,
+        };
+
         el.innerHTML = `
-            <div class="prev-linha"><span>Total</span><strong>${total}</strong></div>
-            <div class="prev-linha"><span>Clientes</span><strong>${c}</strong></div>
-            <div class="prev-linha"><span>Fornecedores</span><strong>${f}</strong></div>
-            <div class="prev-linha"><span>Ambos</span><strong>${a}</strong></div>
+            <div class="prev-linha"><span>Total filtrado</span><strong>${filtradas.length}</strong></div>
+            <div class="prev-linha"><span>Fabricantes</span><strong>${fab}</strong></div>
+            <div class="prev-linha"><span>Fornecedores</span><strong>${forn}</strong></div>
+            <div class="prev-linha"><span>Ambos</span><strong>${amb}</strong></div>
+            <div class="prev-linha" style="border-top:1px solid #f1f5f9;margin-top:6px;padding-top:6px;">
+                <span>Nacional (Empresa)</span><strong>${porModelo.empresa}</strong>
+            </div>
+            <div class="prev-linha"><span>Estrangeira (Company)</span><strong>${porModelo.company}</strong></div>
+            <div class="prev-linha"><span>Transportadora</span><strong>${porModelo.transportadora}</strong></div>
         `;
 
     } else if (tipoRelatorioAtual === 'pais') {
@@ -349,15 +427,52 @@ function baixarPDF() {
 
     let conteudoTabela = '';
 
-    if (tipoRelatorioAtual === 'periodo' || tipoRelatorioAtual === 'tipo') {
+    const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora' }[m] || m);
+
+    if (tipoRelatorioAtual === 'periodo') {
+        const tiposSel   = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-tipo"]:checked')].map(c => c.value);
+        const modelosSel = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-modelo"]:checked')].map(c => c.value);
+        let lista = empresas.filter(e => {
+            if (tiposSel.includes('ambos')      && _eFabricante(e) && _eFornecedor(e))  return true;
+            if (tiposSel.includes('fabricante') && _eFabricante(e) && !_eFornecedor(e)) return true;
+            if (tiposSel.includes('fornecedor') && _eFornecedor(e) && !_eFabricante(e)) return true;
+            return false;
+        });
+        if (modelosSel.length) lista = lista.filter(e => modelosSel.includes(_modeloEmpresa(e)));
         conteudoTabela = `
             <table>
-                <thead><tr><th>Empresa</th><th>Tipo</th><th>País</th><th>Documento</th></tr></thead>
+                <thead><tr><th>Empresa</th><th>Tipo</th><th>Modelo</th><th>País</th><th>Documento</th></tr></thead>
                 <tbody>
-                    ${empresas.map(e => `
+                    ${lista.map(e => `
                         <tr>
-                            <td>${e.nome_empresa || '—'}</td>
-                            <td>${(e.tipos || []).join(', ') || '—'}</td>
+                            <td>${e.razao_social || '—'}</td>
+                            <td>${_tiposStr(e)}</td>
+                            <td>${_modeloLabel(_modeloEmpresa(e))}</td>
+                            <td>${e.pais || '—'}</td>
+                            <td>${e.documento || '—'}</td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>`;
+    } else if (tipoRelatorioAtual === 'tipo') {
+        const tiposSel   = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-tipo"]:checked')].map(c => c.value);
+        const modelosSel = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-modelo"]:checked')].map(c => c.value);
+        let lista = empresas.filter(e => {
+            if (tiposSel.includes('ambos')      && _eFabricante(e) && _eFornecedor(e))  return true;
+            if (tiposSel.includes('fabricante') && _eFabricante(e) && !_eFornecedor(e)) return true;
+            if (tiposSel.includes('fornecedor') && _eFornecedor(e) && !_eFabricante(e)) return true;
+            return false;
+        });
+        if (modelosSel.length) lista = lista.filter(e => modelosSel.includes(_modeloEmpresa(e)));
+        const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora' }[m] || m);
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>Empresa</th><th>Tipo</th><th>Modelo</th><th>País</th><th>Documento</th></tr></thead>
+                <tbody>
+                    ${lista.map(e => `
+                        <tr>
+                            <td>${e.razao_social || '—'}</td>
+                            <td>${_tiposStr(e)}</td>
+                            <td>${_modeloLabel(_modeloEmpresa(e))}</td>
                             <td>${e.pais || '—'}</td>
                             <td>${e.documento || '—'}</td>
                         </tr>`).join('')}

@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style-mobile.css">
 </head>
 
 <body>
@@ -127,22 +128,22 @@
                     </div>
 
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: #dcfce7; color: #22C55E;">
-                            <i class="fa-solid fa-users"></i>
+                        <div class="stat-icon" style="background: #fce7f3; color: #db2777;">
+                            <i class="fa-solid fa-file-invoice"></i>
                         </div>
                         <div class="stat-info">
-                            <div class="stat-value" id="totalClientes">0</div>
-                            <div class="stat-label">Clientes</div>
+                            <div class="stat-value" id="totalProformas">0</div>
+                            <div class="stat-label">Proformas</div>
                         </div>
                     </div>
 
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: #fef3c7; color: #f59e0b;">
-                            <i class="fa-solid fa-truck"></i>
+                        <div class="stat-icon" style="background: #ede9fe; color: #7c3aed;">
+                            <i class="fa-solid fa-file-lines"></i>
                         </div>
                         <div class="stat-info">
-                            <div class="stat-value" id="totalFornecedores">0</div>
-                            <div class="stat-label">Fornecedores</div>
+                            <div class="stat-value" id="totalProcessos">0</div>
+                            <div class="stat-label">Processos</div>
                         </div>
                     </div>
 
@@ -157,44 +158,71 @@
                     </div>
                 </div>
 
-                <div class="charts-grid">
-                    <div class="chart-card">
-                        <div class="chart-card-header">
-                            <div class="chart-card-icon" style="background:#eff6ff;color:#3b82f6;">
-                                <i class="fa-solid fa-chart-pie"></i>
-                            </div>
-                            <div>
-                                <div class="chart-card-title">Parceiros por Tipo</div>
-                                <div class="chart-card-sub">Distribuição por categoria</div>
-                            </div>
-                        </div>
-                        <canvas id="chartTipos"></canvas>
+                <!-- Grupo: Parceiros -->
+                <div class="analise-grupo">
+                    <div class="analise-grupo-label">
+                        <i class="fa-solid fa-handshake"></i> Parceiros
                     </div>
-
-                    <div class="chart-card">
-                        <div class="chart-card-header">
-                            <div class="chart-card-icon" style="background:#f0fdf4;color:#22c55e;">
-                                <i class="fa-solid fa-chart-line"></i>
+                    <div class="charts-grid charts-grid-2">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-card-icon" style="background:#eff6ff;color:#3b82f6;">
+                                    <i class="fa-solid fa-chart-pie"></i>
+                                </div>
+                                <div>
+                                    <div class="chart-card-title">Parceiros por Tipo</div>
+                                    <div class="chart-card-sub">Distribuição por categoria</div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="chart-card-title">Novos Cadastros</div>
-                                <div class="chart-card-sub">Últimos 6 meses</div>
-                            </div>
+                            <canvas id="chartTipos"></canvas>
                         </div>
-                        <canvas id="chartCadastros"></canvas>
+
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-card-icon" style="background:#fef3c7;color:#f59e0b;">
+                                    <i class="fa-solid fa-globe"></i>
+                                </div>
+                                <div>
+                                    <div class="chart-card-title">Parceiros por País</div>
+                                    <div class="chart-card-sub">Top 8 países</div>
+                                </div>
+                            </div>
+                            <canvas id="chartEstados"></canvas>
+                        </div>
                     </div>
+                </div>
 
-                    <div class="chart-card">
-                        <div class="chart-card-header">
-                            <div class="chart-card-icon" style="background:#fef3c7;color:#f59e0b;">
-                                <i class="fa-solid fa-globe"></i>
+                <!-- Grupo: Operações -->
+                <div class="analise-grupo">
+                    <div class="analise-grupo-label">
+                        <i class="fa-solid fa-gears"></i> Operações
+                    </div>
+                    <div class="charts-grid charts-grid-2">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-card-icon" style="background:#ede9fe;color:#7c3aed;">
+                                    <i class="fa-solid fa-file-lines"></i>
+                                </div>
+                                <div>
+                                    <div class="chart-card-title">Processos por Status</div>
+                                    <div class="chart-card-sub">Distribuição atual</div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="chart-card-title">Parceiros por País</div>
-                                <div class="chart-card-sub">Top 8 países</div>
-                            </div>
+                            <canvas id="chartProcessos"></canvas>
                         </div>
-                        <canvas id="chartEstados"></canvas>
+
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-card-icon" style="background:#fce7f3;color:#db2777;">
+                                    <i class="fa-solid fa-file-invoice"></i>
+                                </div>
+                                <div>
+                                    <div class="chart-card-title">Proformas por Status</div>
+                                    <div class="chart-card-sub">Distribuição atual</div>
+                                </div>
+                            </div>
+                            <canvas id="chartProformas"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>

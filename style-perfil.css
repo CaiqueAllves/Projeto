@@ -1588,7 +1588,14 @@
 .perfil-form-group-row4 {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: 2fr 1.5fr 2fr 1.5fr;
+    gap: 14px 20px;
+}
+
+.perfil-form-group-row3-end {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 3fr 1.2fr 2.5fr;
     gap: 14px 20px;
 }
 

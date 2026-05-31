@@ -2,6 +2,14 @@
 //  FORMULÁRIOS — JS
 // ========================================
 
+// Normaliza país para código interno — Brasil sempre como 'BRASIL'
+function _normalizarPais(valor) {
+    if (!valor) return '';
+    const v = valor.trim().toUpperCase();
+    if (['BR', 'BRA', 'BRASIL', 'BRAZIL'].includes(v)) return 'BRASIL';
+    return valor.trim();
+}
+
 // Trocar aba
 function mudarTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -22,6 +30,14 @@ function toggleSection(titleEl) {
     content.style.display = isActive ? 'none' : 'block';
 }
 
+function toggleLogSub(headerEl) {
+    const section = headerEl.closest('.log-sub-section');
+    const body = section.querySelector('.log-sub-body');
+    const isActive = section.classList.contains('active');
+    section.classList.toggle('active');
+    body.style.display = isActive ? 'none' : 'block';
+}
+
 // Limpar formulário
 function limparForm(formId) {
     if (confirm('Deseja limpar todos os campos?')) {
@@ -34,12 +50,79 @@ let _empEditandoId = null;
 async function salvarEmpresa(e) {
     e.preventDefault();
 
+    // Modo tenant: salva direto na tabela empresas e volta para perfil
+    if (window._tenantEmpresaId) {
+        function val(id) { return (document.getElementById(id)?.value || '').trim(); }
+        const dados = {
+            razao_social:  val('emp-nome'),
+            nome_fantasia: val('emp-fantasia'),
+            ie:            val('emp-ie'),
+            im:            val('emp-im'),
+            suframa:       val('emp-suframa'),
+            cep:           val('emp-cep').replace(/\D/g, '') || null,
+            estado:        val('emp-estado'),
+            cidade:        val('emp-cidade'),
+            endereco:      val('emp-endereco'),
+            numero:        val('emp-numero') || null,
+            complemento:   val('emp-complemento') || null,
+        };
+        const res = await window.supabaseAPI.atualizarTenantEmpresa(dados);
+        if (res.sucesso) {
+            mostrarNotificacao('Dados da empresa atualizados!', 'sucesso');
+            setTimeout(() => window.location.href = 'perfil.html?empresa_atualizada=1', 1200);
+        } else {
+            mostrarNotificacao('Erro ao salvar: ' + res.mensagem, 'erro');
+        }
+        return;
+    }
+
+    const modelo = document.querySelector('[name="emp_modelo"]:checked')?.value || 'empresa';
+
+    // ── Tipos ────────────────────────────────
     const tipos = [];
-    ['fabricante','cliente','fornecedor','transportadora','remetente'].forEach(t => {
-        if (document.querySelector(`[name="tipo_${t}"]`)?.checked) tipos.push(t);
-    });
-    if (tipos.length === 0) {
-        mostrarNotificacao('Selecione pelo menos um tipo de empresa.', 'warning');
+    if (modelo === 'transportadora') {
+        tipos.push('transportadora');
+    } else {
+        ['fabricante','cliente','fornecedor','remetente'].forEach(t => {
+            if (document.querySelector(`[name="tipo_${t}"]`)?.checked) tipos.push(t);
+        });
+        if (tipos.length === 0) {
+            mostrarNotificacao('Selecione pelo menos um Tipo de empresa.', 'warning');
+            return;
+        }
+    }
+
+    // ── Validação por campo ───────────────────
+    function val(id) { return (document.getElementById(id)?.value || '').trim(); }
+    function marcar(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.borderColor = '#dc2626';
+        el.addEventListener('input',  () => { el.style.borderColor = ''; }, { once: true });
+        el.addEventListener('change', () => { el.style.borderColor = ''; }, { once: true });
+    }
+    function checar(id, msg) {
+        if (!val(id)) { marcar(id); mostrarNotificacao(msg, 'warning'); return false; }
+        return true;
+    }
+
+    if (!checar('emp-tipo-cadastro', 'Selecione o tipo de identificação da empresa (CNPJ, CPF ou Outros).')) return;
+    if (!checar('emp-documento',     'Informe o Número de Identificação da empresa.')) return;
+    if (!checar('emp-nome',          'Informe a Razão Social da empresa.')) return;
+
+    const isBrasil = modelo === 'empresa' || modelo === 'transportadora';
+    if (!isBrasil && !checar('emp-pais', 'Informe o País da empresa.')) return;
+    if (isBrasil  && !checar('emp-ie',   'Informe a Inscrição Estadual.')) return;
+
+    if (!checar('emp-estado',   'Informe o Estado.')) return;
+    if (!checar('emp-cidade',   'Informe a Cidade.')) return;
+    if (!checar('emp-bairro',   'Informe o Bairro.')) return;
+    if (!checar('emp-endereco', 'Informe o Endereço.')) return;
+
+    const numEl = document.getElementById('emp-numero');
+    if (!numEl?.disabled && !val('emp-numero')) {
+        marcar('emp-numero');
+        mostrarNotificacao('Informe o Número do endereço (ou marque S/N).', 'warning');
         return;
     }
 
@@ -51,7 +134,7 @@ async function salvarEmpresa(e) {
         nome_fantasia:       document.getElementById('emp-fantasia')?.value         || '',
         inscricao_estadual:  document.getElementById('emp-ie')?.value              || '',
         suframa:             document.getElementById('emp-suframa')?.value          || '',
-        pais:                document.getElementById('emp-pais')?.value             || '',
+        pais:                _normalizarPais(document.getElementById('emp-pais-codigo')?.value || document.getElementById('emp-pais')?.value || ''),
         cep:                 document.getElementById('emp-cep')?.value              || '',
         estado:              document.getElementById('emp-estado')?.value           || '',
         cidade:              document.getElementById('emp-cidade')?.value           || '',
@@ -299,21 +382,661 @@ function fecharGuiaProcesso() { fecharGuia(); }
 
 function salvarProposta(e) {
     e.preventDefault();
-    const modal = document.getElementById('modal-confirmar-salvar');
-    modal.dataset.origem = 'proposta';
-    const titulo = modal.querySelector('.modal-confirm-title');
-    const msg    = modal.querySelector('.modal-confirm-msg');
+
+    const erros = [];
+    let primeiroEl = null;
+
+    function marcar(id, mensagem) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.borderColor = '#dc2626';
+            const limpar = () => { el.style.borderColor = ''; };
+            el.addEventListener('input',  limpar, { once: true });
+            el.addEventListener('change', limpar, { once: true });
+            if (!primeiroEl) primeiroEl = el;
+        }
+        erros.push(mensagem);
+    }
+
+    function checar(id, msg) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const vazio = el.tagName === 'SELECT' ? !el.value : !el.value?.trim();
+        if (vazio) marcar(id, msg);
+    }
+
+    // ── Dados da Proforma ──────────────────
+    checar('prop-tipo',      'Selecione o Tipo da proforma.');
+    checar('prop-proposito', 'Selecione o Propósito da proforma.');
+
+    const emissorTipo = document.querySelector('input[name="prop-emissor-tipo"]:checked')?.value || 'usuario';
+    if (emissorTipo === 'terceiro') {
+        checar('prop-cliente', 'Selecione o Remetente (Terceiro).');
+    }
+
+    checar('prop-documento', 'Informe o Número de Identificação do emissor.');
+    checar('prop-modal',     'Selecione o Modal de transporte.');
+
+    const modal = document.getElementById('prop-modal')?.value;
+    checar('prop-incoterm',  'Selecione o Incoterm.');
+
+    // ── Rota ──────────────────────────────
+    checar('prop-origem-pais',  'Informe o País de Origem.');
+    checar('prop-destino-pais', 'Informe o País de Destino.');
+
+    if (modal === 'maritimo') {
+        checar('prop-porto-origem',  'Informe o Porto de Origem.');
+        checar('prop-porto-destino', 'Informe o Porto de Destino.');
+    } else if (modal === 'aereo') {
+        checar('prop-aeroporto-origem',  'Informe o Aeroporto de Origem.');
+        checar('prop-aeroporto-destino', 'Informe o Aeroporto de Destino.');
+    } else if (modal === 'terrestre') {
+        checar('prop-fronteira-saida',   'Informe a Fronteira de Saída.');
+        checar('prop-fronteira-entrada', 'Informe a Fronteira de Entrada.');
+    }
+
+    // ── Destinatário ──────────────────────
+    const btnCad = document.getElementById('prop-btn-emp-dest-cadastrada');
+    if (btnCad?.classList.contains('ativo')) {
+        checar('prop-emp-dest-busca', 'Selecione o Destinatário.');
+    } else {
+        checar('prop-emp-dest-razao', 'Informe a Razão Social do Destinatário.');
+    }
+    if (!btnCad?.classList.contains('ativo')) {
+        checar('prop-emp-dest-doc', 'Informe a identificação fiscal do Destinatário.');
+    }
+
+    // ── Datas ─────────────────────────────
+    checar('prop-validade-dias', 'Selecione a Validade da proposta.');
+
+    // ── Itens ─────────────────────────────
+    if (!_propItens || _propItens.length === 0) {
+        erros.push('Adicione pelo menos um item à proforma.');
+    } else {
+        _propItens.forEach((item, i) => {
+            if (!item.produto?.trim()) erros.push(`Item ${i + 1}: informe o nome do produto.`);
+            if (!(item.qtd  > 0))     erros.push(`Item ${i + 1}: a quantidade deve ser maior que zero.`);
+            if (!(item.preco > 0))    erros.push(`Item ${i + 1}: o preço deve ser maior que zero.`);
+        });
+    }
+
+    // ── Condições Comerciais ───────────────
+    checar('prop-forma-pagamento', 'Selecione a Forma de Pagamento.');
+    checar('prop-prazo-pagamento', 'Selecione o Prazo de Pagamento.');
+
+    if (document.getElementById('prop-prazo-pagamento')?.value === 'personalizado') {
+        checar('prop-prazo-personalizado', 'Informe a condição de pagamento personalizada.');
+    }
+
+    // ── Resultado ─────────────────────────
+    if (erros.length > 0) {
+        mostrarNotificacao(erros[0], 'warning');
+        primeiroEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
+    // ── Abre modal de confirmação ──
+    const modalEl = document.getElementById('modal-confirmar-salvar');
+    modalEl.dataset.origem = 'proposta';
+    const titulo = modalEl.querySelector('.modal-confirm-title');
+    const msg    = modalEl.querySelector('.modal-confirm-msg');
     if (titulo) titulo.textContent = 'Salvar Proposta';
     if (msg)    msg.textContent    = 'Deseja salvar as informações desta proposta?';
-    modal.style.display = 'flex';
+    modalEl.style.display = 'flex';
 }
 
 // ========================================
-// PDF — PROPOSTA (stub)
+// PDF — PROPOSTA
 // ========================================
 
-function gerarPDFProposta() {
-    alert('Geração de PDF para proposta em breve. (integração pendente)');
+async function gerarPDFProposta() {
+    const jsPDFLib = window.jspdf;
+    if (!jsPDFLib) {
+        alert('Biblioteca jsPDF não carregada. Recarregue a página e tente novamente.');
+        return;
+    }
+    const { jsPDF } = jsPDFLib;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const W  = 210;
+    const ML = 14;
+    const MR = 196;
+    let   Y  = 0;
+
+    // ── Paleta ────────────────────────────────
+    const NAVY       = [10,  40,  90];
+    const AZUL       = [30,  86, 160];
+    const AZUL_MED   = [59, 130, 246];
+    const AZUL_CLARO = [219, 234, 254];
+    const CINZA      = [100, 116, 139];
+    const CINZA_BG   = [248, 250, 252];
+    const CINZA_IMG  = [220, 226, 235];
+    const BORDA      = [209, 219, 234];
+    const PRETO      = [15,  23,  42];
+    const BRANCO     = [255, 255, 255];
+
+    // ── Helpers ───────────────────────────────
+    function setFont(style, size, color) {
+        doc.setFont('helvetica', style);
+        doc.setFontSize(size);
+        doc.setTextColor(...(color || PRETO));
+    }
+
+    function linhav(x, y1, y2, cor, esp) {
+        doc.setDrawColor(...(cor || BORDA));
+        doc.setLineWidth(esp || 0.2);
+        doc.line(x, y1, x, y2);
+    }
+
+    function rect(x, y, w, h, cor, raio) {
+        doc.setFillColor(...cor);
+        doc.setDrawColor(...cor);
+        if (raio) doc.roundedRect(x, y, w, h, raio, raio, 'F');
+        else      doc.rect(x, y, w, h, 'F');
+    }
+
+    function campo(label, valor, x, y, maxW) {
+        setFont('bold', 6.5, CINZA);
+        doc.text(label.toUpperCase(), x, y);
+        setFont('normal', 9, PRETO);
+        const v = String(valor || '—');
+        doc.text(maxW ? doc.splitTextToSize(v, maxW)[0] : v, x, y + 4.5);
+    }
+
+    function secHeader(titulo) {
+        checarPagina(14);
+        Y += 4;
+        rect(ML,     Y, 3,              6, AZUL);
+        rect(ML + 3, Y, W - ML * 2 - 3, 6, AZUL_CLARO);
+        setFont('bold', 8, AZUL);
+        doc.text(titulo.toUpperCase(), ML + 7, Y + 4.2);
+        Y += 9;
+    }
+
+    function checarPagina(altura) {
+        if (Y + altura > 272) { doc.addPage(); Y = 20; }
+    }
+
+    function val(id) {
+        const el = document.getElementById(id);
+        if (!el) return '—';
+        if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '—';
+        return el.value?.trim() || '—';
+    }
+
+    function txtArea(id) {
+        return document.getElementById(id)?.value?.trim() || '';
+    }
+
+    function _enderecoLinha(d) {
+        if (!d) return '—';
+        const p = [d.endereco, d.numero ? `nº ${d.numero}` : null, d.complemento, d.bairro].filter(Boolean);
+        return p.length ? p.join(', ') : '—';
+    }
+
+    function _cidadeEstado(d) {
+        if (!d) return '—';
+        const p = [d.cidade, d.estado].filter(Boolean);
+        return p.length ? p.join(' — ') : '—';
+    }
+
+    // ── Pré-carregamento de imagens ────────────
+    const imageCache = {};
+    const itensComImg = (_propItens || []).filter(it => it.imagem_url);
+    if (itensComImg.length > 0) {
+        await Promise.allSettled(itensComImg.map(async it => {
+            try {
+                const blob = await (await fetch(it.imagem_url)).blob();
+                await new Promise(res => {
+                    const r = new FileReader();
+                    r.onloadend = () => { imageCache[it.imagem_url] = r.result; res(); };
+                    r.readAsDataURL(blob);
+                });
+            } catch {}
+        }));
+    }
+
+    const dataGeracao = new Date().toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    });
+    const codigo      = val('prop-codigo');
+    const responsavel = window._usuarioLogado?.nome || window._usuarioLogado?.email || '';
+
+    // ════════════════════════════════════════
+    // CABEÇALHO
+    // ════════════════════════════════════════
+    rect(0, 0, W, 36, NAVY);
+    rect(0, 0, 4, 36, AZUL_MED);
+
+    setFont('bold', 20, BRANCO);
+    doc.text('MARPEX', ML + 3, 13);
+    setFont('normal', 7.5, [160, 190, 240]);
+    doc.text('Gestão de Comércio Exterior', ML + 3, 19.5);
+
+    setFont('bold', 13, BRANCO);
+    doc.text('PROFORMA INVOICE', W - ML, 11, { align: 'right' });
+    setFont('normal', 9, [160, 190, 240]);
+    doc.text(codigo !== '—' ? codigo : 'Sem código', W - ML, 19, { align: 'right' });
+    setFont('normal', 7, [120, 160, 220]);
+    doc.text('Gerado em: ' + dataGeracao, W - ML, 26, { align: 'right' });
+    if (responsavel) {
+        doc.text('Responsável: ' + responsavel, W - ML, 32, { align: 'right' });
+    }
+
+    Y = 41;
+
+    // ════════════════════════════════════════
+    // BARRA DE INFO RÁPIDA (5 colunas)
+    // ════════════════════════════════════════
+    const tipoEl   = document.getElementById('prop-tipo');
+    const tipoTxt  = tipoEl?.options[tipoEl?.selectedIndex]?.text || '—';
+    const modalEl  = document.getElementById('prop-modal');
+    const modal    = modalEl?.value || '';
+    const modalTxt = modalEl?.options[modalEl?.selectedIndex]?.text || '—';
+    const incoterm    = document.getElementById('prop-incoterm')?.value || '—';
+    const proposito   = val('prop-proposito');
+    const dataEmissao  = val('prop-data-emissao');
+    const dataValidade = val('prop-data-validade');
+
+    doc.setFillColor(...CINZA_BG);
+    doc.setDrawColor(...BORDA);
+    doc.setLineWidth(0.3);
+    doc.rect(ML, Y, W - ML * 2, 15, 'FD');
+
+    const colW5 = (W - ML * 2) / 5;
+    for (let i = 1; i <= 4; i++) linhav(ML + colW5 * i, Y + 2, Y + 13, BORDA, 0.2);
+
+    [
+        { label: 'Tipo',      valor: tipoTxt   },
+        { label: 'Propósito', valor: proposito },
+        { label: 'Modal',     valor: modalTxt  },
+        { label: 'Incoterm',  valor: incoterm  },
+        { label: 'Emissão',   valor: dataEmissao },
+    ].forEach((info, i) => {
+        const cx = ML + colW5 * i + colW5 / 2;
+        setFont('bold', 6.5, CINZA);
+        doc.text(info.label.toUpperCase(), cx, Y + 6, { align: 'center' });
+        setFont('bold', 8.5, AZUL);
+        doc.text(doc.splitTextToSize(info.valor, colW5 - 4)[0], cx, Y + 12, { align: 'center' });
+    });
+
+    Y += 19;
+
+    // ════════════════════════════════════════
+    // EMISSOR + DESTINATÁRIO (lado a lado)
+    // ════════════════════════════════════════
+    checarPagina(56);
+
+    const emissorTipo   = document.querySelector('input[name="prop-emissor-tipo"]:checked')?.value || 'usuario';
+    const emissorNome   = emissorTipo === 'usuario' ? val('prop-usuario-empresa') : val('prop-cliente');
+    const docEmissor    = val('prop-documento');
+
+    const emDados    = window._dadosEmpresaTenant || {};
+    const emEndereco = _enderecoLinha(emDados);
+    const emCidEst   = _cidadeEstado(emDados);
+    const emCep      = emDados.cep || '—';
+    const emPais     = emDados.pais || val('prop-origem-pais') || '—';
+
+    const btnCad        = document.getElementById('prop-btn-emp-dest-cadastrada');
+    const isCad         = btnCad?.classList.contains('ativo');
+    const razaoDest     = isCad ? val('prop-emp-dest-busca') : val('prop-emp-dest-razao');
+    const docDestTipoEl = document.getElementById('prop-emp-dest-doc-tipo');
+    const docDestTipo   = docDestTipoEl?.options[docDestTipoEl?.selectedIndex]?.text || '';
+    const docDest       = val('prop-emp-dest-doc');
+    const docDestLabel  = docDestTipo && docDest !== '—' ? `${docDestTipo}: ${docDest}` : docDest;
+
+    const destId      = document.getElementById('prop-emp-dest-id')?.value;
+    const destDados   = destId ? (_acEmpresas.find(e => e.id === destId) || null) : null;
+    const destEndereco= _enderecoLinha(destDados);
+    const destCidEst  = _cidadeEstado(destDados);
+    const destCep     = destDados?.cep || '—';
+    const destPais    = destDados?.pais || val('prop-destino-pais') || '—';
+
+    const hW  = (W - ML * 2 - 5) / 2;
+    const boxH = 52;
+    const bY   = Y;
+
+    doc.setFillColor(...BRANCO);
+    doc.setDrawColor(...BORDA);
+    doc.setLineWidth(0.3);
+    doc.rect(ML,          bY, hW, boxH, 'FD');
+    doc.rect(ML + hW + 5, bY, hW, boxH, 'FD');
+
+    rect(ML,          bY, 3,      8, AZUL);
+    rect(ML + 3,      bY, hW - 3, 8, AZUL_CLARO);
+    rect(ML + hW + 5, bY, 3,      8, AZUL);
+    rect(ML + hW + 8, bY, hW - 3, 8, AZUL_CLARO);
+
+    setFont('bold', 8, AZUL);
+    doc.text('EMISSOR',      ML + 7,       bY + 5.5);
+    doc.text('DESTINATÁRIO', ML + hW + 10, bY + 5.5);
+
+    const cYb = bY + 12;
+    campo('Empresa / Nome',    emissorNome,  ML + 4,       cYb,      hW - 8);
+    campo('Identificação',     docEmissor,   ML + 4,       cYb + 10, hW - 8);
+    campo('País',              emPais,       ML + 4,       cYb + 20, hW - 8);
+    campo('Endereço',          emEndereco,   ML + 4,       cYb + 30, hW - 8);
+    campo('Cidade / Estado',   emCidEst,     ML + 4,       cYb + 40, hW - 8);
+
+    campo('Razão Social / Nome',  razaoDest,    ML + hW + 9, cYb,      hW - 8);
+    campo('Identificação Fiscal', docDestLabel, ML + hW + 9, cYb + 10, hW - 8);
+    campo('País',                 destPais,     ML + hW + 9, cYb + 20, hW - 8);
+    campo('Endereço',             destEndereco, ML + hW + 9, cYb + 30, hW - 8);
+    campo('Cidade / Estado',      destCidEst,   ML + hW + 9, cYb + 40, hW - 8);
+
+    Y += boxH + 4;
+
+    // ════════════════════════════════════════
+    // ROTA DE EXPORTAÇÃO
+    // ════════════════════════════════════════
+    secHeader('Rota de Exportação');
+
+    checarPagina(16);
+    const rMid = W / 2;
+    campo('País de Origem',  val('prop-origem-pais'),  ML,        Y, 70);
+    campo('País de Destino', val('prop-destino-pais'), rMid + 10, Y, 70);
+
+    setFont('normal', 14, AZUL_MED);
+    doc.text('→', rMid, Y + 5, { align: 'center' });
+    doc.setDrawColor(...BORDA);
+    doc.setLineWidth(0.2);
+    doc.setLineDashPattern([1.5, 1], 0);
+    doc.line(ML + 66, Y + 2.5, rMid - 7, Y + 2.5);
+    doc.line(rMid + 7, Y + 2.5, rMid + 9, Y + 2.5);
+    doc.setLineDashPattern([], 0);
+    Y += 11;
+
+    if (modal === 'maritimo') {
+        checarPagina(12);
+        campo('Porto de Origem',  val('prop-porto-origem'),  ML,        Y, 80);
+        campo('Porto de Destino', val('prop-porto-destino'), rMid + 10, Y, 80);
+        Y += 11;
+    } else if (modal === 'aereo') {
+        checarPagina(12);
+        campo('Aeroporto de Origem',  val('prop-aeroporto-origem'),  ML,        Y, 80);
+        campo('Aeroporto de Destino', val('prop-aeroporto-destino'), rMid + 10, Y, 80);
+        Y += 11;
+    } else if (modal === 'terrestre') {
+        checarPagina(12);
+        campo('Fronteira de Saída',   val('prop-fronteira-saida'),   ML,        Y, 80);
+        campo('Fronteira de Entrada', val('prop-fronteira-entrada'), rMid + 10, Y, 80);
+        Y += 11;
+    }
+    Y += 3;
+
+    // ════════════════════════════════════════
+    // ITENS DA PROFORMA
+    // ════════════════════════════════════════
+    if (_propItens && _propItens.length > 0) {
+        secHeader('Itens da Proforma');
+        checarPagina(14);
+
+        // Colunas (total = MR - ML = 182mm):
+        // IMG(10) SKU(16) PRODUTO(26) DESCRIÇÃO(50) QTD(10) UN(10) PREÇO(21) MOEDA(14) TOTAL(25) = 182
+        const IMG_W   = 10;
+        const SKU_W   = 16;
+        const PROD_W  = 26;
+        const DESC_W  = 50;
+        const QTD_W   = 10;
+        const UN_W    = 10;
+        const PRECO_W = 21;
+        const MOEDA_W = 14;
+        const TOTAL_W = 25;
+
+        const xImg   = ML;
+        const xSku   = xImg   + IMG_W;
+        const xProd  = xSku   + SKU_W;
+        const xDesc  = xProd  + PROD_W;
+        const xQtd   = xDesc  + DESC_W;
+        const xUn    = xQtd   + QTD_W;
+        const xPreco = xUn    + UN_W;
+        const xMoeda = xPreco + PRECO_W;
+        const xTotal = xMoeda + MOEDA_W;  // xTotal + TOTAL_W = MR
+
+        function desenharCabecalhoItens() {
+            rect(ML, Y, W - ML * 2, 8, NAVY);
+            setFont('bold', 6.5, BRANCO);
+            doc.text('IMG',         xImg  + IMG_W / 2,   Y + 5.5, { align: 'center' });
+            doc.text('CÓD. SKU',    xSku  + 2,           Y + 5.5);
+            doc.text('PRODUTO',     xProd + 2,           Y + 5.5);
+            doc.text('DESCRIÇÃO',   xDesc + 2,           Y + 5.5);
+            doc.text('QTD',         xQtd  + QTD_W - 1,  Y + 5.5, { align: 'right' });
+            doc.text('UN',          xUn   + 2,           Y + 5.5);
+            doc.text('PREÇO UNIT.', xPreco + 2,          Y + 5.5);
+            doc.text('MOEDA',       xMoeda + 2,          Y + 5.5);
+            doc.text('TOTAL',       MR - 1,              Y + 5.5, { align: 'right' });
+            Y += 9;
+        }
+
+        desenharCabecalhoItens();
+
+        let totalGeral = 0;
+        let totalMoeda = '';
+        let paginaAtual = doc.getNumberOfPages();
+
+        _propItens.forEach((item, i) => {
+            const prodLinhas = doc.splitTextToSize(item.produto || '—', PROD_W - 3);
+            const descLinhas = item.descricao
+                ? doc.splitTextToSize(item.descricao, DESC_W - 3)
+                : [];
+            const maxLinhas = Math.max(prodLinhas.length, descLinhas.length, 1);
+            const rowH = Math.max(12, maxLinhas * 4.5 + 4);
+
+            checarPagina(rowH + 2);
+
+            if (doc.getNumberOfPages() > paginaAtual) {
+                paginaAtual = doc.getNumberOfPages();
+                desenharCabecalhoItens();
+            }
+
+            rect(ML, Y, W - ML * 2, rowH, i % 2 === 0 ? CINZA_BG : BRANCO);
+            doc.setDrawColor(...BORDA);
+            doc.setLineWidth(0.15);
+            doc.line(ML, Y + rowH, MR, Y + rowH);
+
+            const divisores = [xSku, xProd, xDesc, xQtd, xUn, xPreco, xMoeda, xTotal];
+            divisores.forEach(cx => linhav(cx, Y, Y + rowH, BORDA, 0.1));
+
+            const total = (item.qtd || 0) * (item.preco || 0);
+            totalGeral += total;
+            if (!totalMoeda && item.moeda) totalMoeda = item.moeda;
+
+            const tY = Y + 4.5;
+
+            // Imagem
+            const imgBase64 = item.imagem_url ? imageCache[item.imagem_url] : null;
+            const imgBoxW = IMG_W - 2;
+            const imgBoxH = rowH - 2;
+            if (imgBase64) {
+                try {
+                    const imgFmt = (item.imagem_url || '').toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
+                    doc.addImage(imgBase64, imgFmt, xImg + 1, Y + 1, imgBoxW, imgBoxH);
+                } catch {
+                    rect(xImg + 1, Y + 1, imgBoxW, imgBoxH, CINZA_IMG);
+                }
+            } else {
+                rect(xImg + 1, Y + 1, imgBoxW, imgBoxH, CINZA_IMG);
+            }
+
+            // SKU
+            setFont('bold', 7, AZUL);
+            doc.text(doc.splitTextToSize(item.sku || '—', SKU_W - 3)[0], xSku + 2, tY);
+
+            // Produto (multi-linha)
+            setFont('normal', 7.5, PRETO);
+            prodLinhas.forEach((ln, li) => doc.text(ln, xProd + 2, tY + li * 4.5));
+
+            // Descrição (multi-linha)
+            setFont('normal', 7, CINZA);
+            descLinhas.forEach((ln, li) => doc.text(ln, xDesc + 2, tY + li * 4.5));
+
+            // QTD
+            setFont('bold', 7.5, PRETO);
+            doc.text(String(item.qtd ?? 0), xQtd + QTD_W - 2, tY, { align: 'right' });
+
+            // UN
+            setFont('normal', 7, CINZA);
+            doc.text(String(item.unidade || '—'), xUn + 2, tY);
+
+            // Preço
+            setFont('normal', 7.5, PRETO);
+            doc.text(
+                (item.preco || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                xPreco + 2, tY
+            );
+
+            // Moeda
+            setFont('normal', 7, CINZA);
+            doc.text(item.moeda || '—', xMoeda + 2, tY);
+
+            // Total
+            setFont('bold', 8, PRETO);
+            doc.text(
+                total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                MR - 2, tY, { align: 'right' }
+            );
+
+            Y += rowH;
+        });
+
+        checarPagina(10);
+        rect(ML, Y, W - ML * 2, 9, NAVY);
+        setFont('bold', 7.5, [160, 190, 240]);
+        doc.text('TOTAL GERAL', xImg + 2, Y + 6);
+        if (totalMoeda) { setFont('normal', 7.5, [160, 190, 240]); doc.text(totalMoeda, xMoeda + 2, Y + 6); }
+        setFont('bold', 10, BRANCO);
+        doc.text(
+            totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            MR - 2, Y + 6.5, { align: 'right' }
+        );
+        Y += 12;
+    }
+
+    // ════════════════════════════════════════
+    // CONDIÇÕES COMERCIAIS + DATAS (lado a lado)
+    // ════════════════════════════════════════
+    checarPagina(38);
+
+    const formaPag  = val('prop-forma-pagamento');
+    const prazoPag  = val('prop-prazo-pagamento');
+    const prazoPers = val('prop-prazo-personalizado');
+    const prazoFinal = document.getElementById('prop-prazo-pagamento')?.value === 'personalizado'
+        ? (prazoPers !== '—' ? prazoPers : prazoPag)
+        : prazoPag;
+
+    const ccHW = (W - ML * 2 - 5) / 2;
+    const ccY  = Y;
+
+    rect(ML,            ccY, 3,        6, AZUL);
+    rect(ML + 3,        ccY, ccHW - 3,  6, AZUL_CLARO);
+    rect(ML + ccHW + 5, ccY, 3,        6, AZUL);
+    rect(ML + ccHW + 8, ccY, ccHW - 3,  6, AZUL_CLARO);
+    setFont('bold', 7.5, AZUL);
+    doc.text('CONDIÇÕES COMERCIAIS', ML + 6,        ccY + 4.2);
+    doc.text('DATAS',                ML + ccHW + 9, ccY + 4.2);
+
+    Y = ccY + 9;
+    campo('Forma de Pagamento', formaPag,                  ML + 4,        Y,      ccHW - 8);
+    campo('Prazo de Pagamento', prazoFinal,                ML + 4,        Y + 12, ccHW - 8);
+    campo('Data de Emissão',    dataEmissao,               ML + ccHW + 9, Y,      ccHW - 8);
+    campo('Data de Vencimento', dataValidade,              ML + ccHW + 9, Y + 12, ccHW - 8);
+    campo('Validade',           val('prop-validade-dias'), ML + ccHW + 9, Y + 24, ccHW - 8);
+    Y += 32;
+
+    // ════════════════════════════════════════
+    // OBSERVAÇÕES
+    // ════════════════════════════════════════
+    const obsGeral  = txtArea('prop-observacoes');
+    const obsStatus = txtArea('prop-obs-status');
+    const obsCond   = txtArea('prop-condicoes-obs');
+
+    if (obsGeral || obsStatus || obsCond) {
+        secHeader('Observações');
+
+        const renderObs = (titulo, texto) => {
+            if (!texto) return;
+            checarPagina(14);
+            setFont('bold', 7, CINZA);
+            doc.text(titulo.toUpperCase(), ML + 3, Y);
+            Y += 4;
+            setFont('normal', 8.5, PRETO);
+            const linhas = doc.splitTextToSize(texto, W - ML * 2 - 6);
+            checarPagina(linhas.length * 5 + 4);
+            doc.text(linhas, ML + 3, Y);
+            Y += linhas.length * 5 + 4;
+        };
+
+        renderObs('Observações Gerais',                  obsGeral);
+        renderObs('Observações de Status',               obsStatus);
+        renderObs('Observações — Condições Comerciais',  obsCond);
+    }
+
+    // ════════════════════════════════════════
+    // NUMERAÇÃO DE DOCUMENTOS
+    // ════════════════════════════════════════
+    const docsIds = [
+        { id: 'prop-doc-num-proforma',   label: 'Proforma Invoice' },
+        { id: 'prop-doc-num-commercial', label: 'Commercial Invoice' },
+        { id: 'prop-doc-num-packing',    label: 'Packing List' },
+        { id: 'prop-doc-num-awb',        label: 'AWB' },
+        { id: 'prop-doc-num-bl',         label: 'BL — Bill of Lading' },
+        { id: 'prop-doc-num-crt',        label: 'CRT' },
+    ];
+
+    const docsPreenchidos = docsIds.filter(d => document.getElementById(d.id)?.value?.trim());
+
+    if (docsPreenchidos.length > 0) {
+        secHeader('Numeração de Documentos');
+        const colW3 = (W - ML * 2) / 3;
+        docsPreenchidos.forEach((d, i) => {
+            const col = i % 3;
+            const row = Math.floor(i / 3);
+            if (col === 0) checarPagina(14);
+            campo(d.label, document.getElementById(d.id).value, ML + col * colW3 + 2, Y + row * 14, colW3 - 6);
+        });
+        Y += Math.ceil(docsPreenchidos.length / 3) * 14 + 4;
+    }
+
+    // ════════════════════════════════════════
+    // ÁREA DE ASSINATURA
+    // ════════════════════════════════════════
+    checarPagina(28);
+    Y += 6;
+    const sigW = (W - ML * 2 - 10) / 2;
+
+    doc.setDrawColor(...BORDA);
+    doc.setLineWidth(0.4);
+    doc.line(ML,             Y + 14, ML + sigW,            Y + 14);
+    doc.line(ML + sigW + 10, Y + 14, ML + sigW * 2 + 10,   Y + 14);
+
+    setFont('normal', 7.5, CINZA);
+    doc.text(emissorNome !== '—' ? emissorNome : 'Emissor',      ML + sigW / 2,             Y + 19, { align: 'center' });
+    doc.text(razaoDest   !== '—' ? razaoDest   : 'Destinatário', ML + sigW + 10 + sigW / 2, Y + 19, { align: 'center' });
+    setFont('bold', 6.5, CINZA);
+    doc.text('ASSINATURA DO EMISSOR',      ML + sigW / 2,             Y + 24, { align: 'center' });
+    doc.text('ASSINATURA DO DESTINATÁRIO', ML + sigW + 10 + sigW / 2, Y + 24, { align: 'center' });
+
+    // ════════════════════════════════════════
+    // RODAPÉ
+    // ════════════════════════════════════════
+    const totalPags = doc.getNumberOfPages();
+    for (let p = 1; p <= totalPags; p++) {
+        doc.setPage(p);
+        rect(0, 282, W, 15, NAVY);
+        rect(0, 282, 4, 15, AZUL_MED);
+        setFont('bold', 7.5, BRANCO);
+        doc.text('MARPEX', ML + 3, 288);
+        setFont('normal', 6.5, [160, 190, 240]);
+        doc.text('Gestão de Comércio Exterior', ML + 3, 293);
+        setFont('normal', 7, [160, 190, 240]);
+        doc.text(`Página ${p} de ${totalPags}`, W / 2, 291, { align: 'center' });
+        setFont('normal', 6.5, [160, 190, 240]);
+        doc.text(dataGeracao, W - ML, 291, { align: 'right' });
+    }
+
+    const nomeArq = `proforma_${codigo !== '—' ? codigo : 'sem-codigo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(nomeArq);
 }
 
 // ========================================
@@ -903,6 +1626,8 @@ function onModeloChange(modelo) {
     const imGroup        = document.getElementById('emp-im-group');
 
     const isTransp = modelo === 'transportadora';
+    const isCompany = modelo === 'company';
+    const ieInput = document.getElementById('emp-ie');
 
     // Highlight active modelo card
     document.querySelectorAll('.modelo-card').forEach(card => {
@@ -933,18 +1658,19 @@ function onModeloChange(modelo) {
             if (tipoCadSel.value === 'outros') tipoCadSel.value = '';
         }
         if (window._empPaisAtualizar) window._empPaisAtualizar();
-    } else if (modelo === 'company') {
+    } else if (isCompany) {
         // Foreign only — clear country, show picker but exclude Brasil
         if (paisInput)  { paisInput.value = ''; paisInput.setAttribute('data-excluir-brasil', '1'); }
         if (paisCodigo) paisCodigo.value = '';
         if (paisGroup)  paisGroup.style.display = '';
         if (ieGroup)    ieGroup.style.display = 'none';
+        if (ieInput)    ieInput.value = '';
         if (sufrGroup)  sufrGroup.style.display = 'none';
         if (tipoCadSel) {
             Array.from(tipoCadSel.options).forEach(o => {
-                o.style.display = (o.value === 'cnpj' || o.value === 'cpf') ? 'none' : '';
+                o.style.display = o.value === 'outros' ? 'none' : '';
             });
-            if (tipoCadSel.value === 'cnpj' || tipoCadSel.value === 'cpf') tipoCadSel.value = 'outros';
+            if (tipoCadSel.value === 'outros') tipoCadSel.value = '';
         }
         if (window._empPaisAtualizar) window._empPaisAtualizar();
     } else {
@@ -1438,9 +2164,64 @@ function aplicarMascaraDocumento() {
 
     docInput.addEventListener('input', () => {
         docInput.value = mascarar(docInput.value, tipoSelect.value || 'cnpj');
+        if (tipoSelect.value === 'cnpj') {
+            const digits = docInput.value.replace(/\D/g, '');
+            if (digits.length === 14) _empBuscarCNPJ(digits);
+        }
     });
 
     atualizar();
+}
+
+async function _empBuscarCNPJ(cnpj) {
+    const set = (id, val) => {
+        if (!val) return;
+        const el = document.getElementById(id);
+        if (el && !el.readOnly) el.value = String(val).trim().toUpperCase();
+    };
+
+    const docInput = document.getElementById('emp-documento');
+    if (docInput) { docInput.style.background = '#fffbeb'; docInput.title = 'Consultando CNPJ...'; }
+
+    try {
+        const res  = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+        if (!res.ok) throw new Error('CNPJ não encontrado');
+        const d = await res.json();
+
+        set('emp-nome',        d.razao_social);
+        set('emp-fantasia',    d.nome_fantasia);
+        set('emp-ie',          d.inscricao_estadual || d.inscricoes_estaduais?.[0]?.inscricao_estadual);
+        set('emp-estado',      d.uf);
+        set('emp-cidade',      d.municipio);
+        set('emp-bairro',      d.bairro);
+        set('emp-endereco',    d.logradouro);
+        set('emp-complemento', d.complemento);
+
+        // Número
+        const numEl = document.getElementById('emp-numero');
+        if (numEl && d.numero && !numEl.disabled) numEl.value = d.numero;
+
+        // CEP — dispara o autocomplete de endereço já existente
+        const cepEl = document.getElementById('emp-cep');
+        if (cepEl && d.cep) {
+            cepEl.value = d.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2');
+        }
+
+        // Contato (e-mail e telefone do 1º contato)
+        const primeiroContato = document.querySelector('#emp-contato-rows .contato-lista-row');
+        if (primeiroContato) {
+            const ins = primeiroContato.querySelectorAll('input');
+            if (ins[2] && d.email)    ins[2].value = d.email.toLowerCase();
+            if (ins[3] && d.ddd_telefone_1) ins[3].value = (d.ddd_telefone_1 || '').replace(/\D/g, '');
+        }
+
+        mostrarNotificacao('Dados do CNPJ preenchidos automaticamente.', 'sucesso');
+        if (docInput) { docInput.style.background = '#f0fdf4'; docInput.title = ''; }
+
+    } catch (err) {
+        mostrarNotificacao('CNPJ não encontrado na Receita Federal.', 'aviso');
+        if (docInput) { docInput.style.background = ''; docInput.title = ''; }
+    }
 }
 
 // ========================================
@@ -2642,6 +3423,88 @@ function iniciarIncotermModal() {
 // PRODUTO — CÁLCULO DE MARGEM
 // ========================================
 
+// ── Idiomas do produto ────────────────────
+let _prodIdiomaCount    = 0; // nomes: começa sem extras; máx 3
+let _prodDescIdiomaCount = 0; // descrições: nenhum extra visível; máx 3
+
+function prodAdicionarIdioma() {
+    if (_prodIdiomaCount >= 3) return;
+    _prodIdiomaCount++;
+
+    // 1º clique — revelar o Idioma 2 já existente no HTML
+    if (_prodIdiomaCount === 1) {
+        const g2 = document.getElementById('prod-nome-idioma2-grupo');
+        if (g2) g2.style.display = '';
+        return;
+    }
+
+    // 2º e 3º cliques — criar Idioma 3 e 4 dinamicamente
+    const num = _prodIdiomaCount + 1;
+    const container = document.getElementById('prod-idiomas-extras');
+    if (!container) return;
+
+    const div = document.createElement('div');
+    div.id = `prod-idioma-grupo-${num}`;
+    div.style.cssText = 'display:flex;align-items:flex-end;gap:6px;flex:1;min-width:200px;';
+    div.innerHTML = `
+        <div class="form-group" style="flex:1;margin-bottom:0;">
+            <label for="prod-nome-idioma${num}">Idioma ${num}</label>
+            <input type="text" id="prod-nome-idioma${num}" name="nome_idioma${num}" placeholder="Nome em outro idioma">
+        </div>
+        <button type="button" onclick="prodRemoverIdioma(${num})" class="btn-acao btn-excluir" title="Remover" style="margin-bottom:2px;">
+            <i class="fa-solid fa-xmark"></i>
+        </button>`;
+    container.appendChild(div);
+
+    if (_prodIdiomaCount >= 3) {
+        document.getElementById('btn-add-idioma').style.display = 'none';
+    }
+}
+
+function prodRemoverIdioma(num) {
+    if (num === 2) {
+        const g2 = document.getElementById('prod-nome-idioma2-grupo');
+        if (g2) g2.style.display = 'none';
+    } else {
+        document.getElementById(`prod-idioma-grupo-${num}`)?.remove();
+    }
+    _prodIdiomaCount--;
+    const btn = document.getElementById('btn-add-idioma');
+    if (btn) btn.style.display = '';
+}
+
+function prodAdicionarDescIdioma() {
+    if (_prodDescIdiomaCount >= 3) return;
+    _prodDescIdiomaCount++;
+
+    const num = _prodDescIdiomaCount + 1; // idioma 2, 3 ou 4
+    const container = document.getElementById('prod-desc-idiomas-extras');
+    if (!container) return;
+
+    const div = document.createElement('div');
+    div.id = `prod-desc-idioma-grupo-${num}`;
+    div.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <label for="prod-descricao-idioma${num}">Idioma ${num}</label>
+            <button type="button" onclick="prodRemoverDescIdioma(${num})" class="btn-acao btn-excluir" title="Remover" style="width:22px;height:22px;font-size:10px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <textarea id="prod-descricao-idioma${num}" name="descricao_idioma${num}" placeholder="Descrição em outro idioma..." maxlength="100"></textarea>`;
+    container.appendChild(div);
+
+    if (_prodDescIdiomaCount >= 3) {
+        document.getElementById('btn-add-desc-idioma').style.display = 'none';
+    }
+}
+
+function prodRemoverDescIdioma(num) {
+    document.getElementById(`prod-desc-idioma-grupo-${num}`)?.remove();
+    _prodDescIdiomaCount--;
+    const btn = document.getElementById('btn-add-desc-idioma');
+    if (btn) btn.style.display = '';
+}
+
 function prodToggleObs(toggle) {
     const content = toggle.nextElementSibling;
     const aberto  = toggle.classList.contains('aberto');
@@ -2717,6 +3580,47 @@ function prodCalcularNivelEstoque() {
 // PRODUTO — MOEDA AUTOCOMPLETE
 // ========================================
 
+function iniciarAutocompleteEmpresaProduto() {
+    const input    = document.getElementById('prod-empresa-busca');
+    const lista    = document.getElementById('prod-empresa-lista');
+    const idOculto = document.getElementById('prod-empresa-id');
+    const docEl    = document.getElementById('prod-empresa-doc');
+    if (!input || !lista || !idOculto) return;
+
+    async function mostrar() {
+        await _acCarregarEmpresas();
+        const q = input.value.trim().toLowerCase();
+        const filtradas = q
+            ? _acEmpresas.filter(e =>
+                (e.razao_social || '').toLowerCase().includes(q) ||
+                (e.nome_fantasia || '').toLowerCase().includes(q) ||
+                (e.documento || '').replace(/\D/g,'').includes(q.replace(/\D/g,''))
+              )
+            : _acEmpresas;
+        lista.innerHTML = filtradas.length
+            ? filtradas.map(e => `<div class="autocomplete-item" data-id="${e.id}" data-nome="${e.nome_fantasia || e.razao_social}" data-doc="${e.documento || ''}">${e.nome_fantasia || e.razao_social}${e.documento ? `<span class="autocomplete-sub">${e.documento}</span>` : ''}</div>`).join('')
+            : '<div class="autocomplete-vazio">Nenhuma empresa encontrada</div>';
+        lista.style.display = 'block';
+    }
+
+    input.addEventListener('focus', mostrar);
+    input.addEventListener('input', () => { idOculto.value = ''; if (docEl) docEl.value = ''; mostrar(); });
+
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        input.value    = item.getAttribute('data-nome');
+        idOculto.value = item.getAttribute('data-id');
+        if (docEl) docEl.value = item.getAttribute('data-doc');
+        lista.style.display = 'none';
+    });
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#prod-empresa-busca') && !e.target.closest('#prod-empresa-lista'))
+            lista.style.display = 'none';
+    });
+}
+
 function iniciarAutocompleteMoedaProduto() {
     const input   = document.getElementById('prod-moeda');
     const hidden  = document.getElementById('prod-moeda-codigo');
@@ -2764,24 +3668,46 @@ function iniciarAutocompleteMoedaProduto() {
 
 function iniciarAutocompleteNcmProduto() {
     const input = document.getElementById('prod-ncm');
-    const lista = document.getElementById('prod-ncm-lista');
+    const lista  = document.getElementById('prod-ncm-lista');
     if (!input || !lista) return;
+
+    function limparCamposNcm() {
+        ['prod-ncm-descricao', 'prod-ncm-descricao-completa', 'prod-ncm-utrib'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+    }
+
+    function preencherCamposNcm(item) {
+        const desc    = document.getElementById('prod-ncm-descricao');
+        const full    = document.getElementById('prod-ncm-descricao-completa');
+        const utrib   = document.getElementById('prod-ncm-utrib');
+        if (desc)  desc.value  = item.dataset.descricao || '';
+        if (full)  full.value  = item.dataset.descricaoCompleta || '';
+        if (utrib) utrib.value = item.dataset.utrib || '';
+    }
 
     async function mostrar() {
         const q = input.value.trim().toLowerCase();
-        if (q.length < 2) { lista.classList.remove('aberta'); return; }
+        if (q.length < 2) { lista.classList.remove('aberta'); limparCamposNcm(); return; }
         try {
             const { data } = await supabaseClient
                 .from('apoio_ncm')
-                .select('codigo, descricao_concatenada')
-                .or(`codigo.ilike.%${q}%,descricao_concatenada.ilike.%${q}%`)
+                .select('ncm, descricao, descricao_concat, utrib_abrev, utrib_descricao')
+                .or(`ncm.ilike.%${q}%,descricao_concat.ilike.%${q}%,descricao.ilike.%${q}%`)
                 .limit(20);
             if (!data?.length) { lista.classList.remove('aberta'); return; }
-            lista.innerHTML = data.map(n => `
-                <div class="autocomplete-item" data-codigo="${n.codigo}">
-                    <span class="ac-nome">${n.codigo}</span>
-                    <span class="ac-fantasia">${n.descricao_concatenada || ''}</span>
-                </div>`).join('');
+            lista.innerHTML = data.map(n => {
+                const utrib = n.utrib_abrev ? `${n.utrib_abrev}${n.utrib_descricao ? ' — ' + n.utrib_descricao : ''}` : '';
+                return `<div class="autocomplete-item"
+                    data-ncm="${n.ncm}"
+                    data-descricao="${(n.descricao || '').replace(/"/g, '&quot;')}"
+                    data-descricao-completa="${(n.descricao_concat || '').replace(/"/g, '&quot;')}"
+                    data-utrib="${utrib.replace(/"/g, '&quot;')}">
+                    <span class="ac-nome">${n.ncm}</span>
+                    <span class="ac-fantasia">${n.descricao_concat || n.descricao || ''}</span>
+                </div>`;
+            }).join('');
             _acPosicionar(input, lista);
             lista.classList.add('aberta');
         } catch { lista.classList.remove('aberta'); }
@@ -2792,7 +3718,8 @@ function iniciarAutocompleteNcmProduto() {
     lista.addEventListener('mousedown', e => {
         const item = e.target.closest('.autocomplete-item');
         if (!item) return;
-        input.value = item.dataset.codigo;
+        input.value = item.dataset.ncm;
+        preencherCamposNcm(item);
         lista.classList.remove('aberta');
     });
     document.addEventListener('click', e => {
@@ -2816,7 +3743,7 @@ function iniciarAutocompleteUnidadeProduto() {
             ? _acUnidades.filter(u => (u.unidade || '').toLowerCase().includes(q) || (u.descricao || '').toLowerCase().includes(q))
             : _acUnidades;
         if (!filtradas.length) { lista.classList.remove('aberta'); return; }
-        lista.innerHTML = filtradas.slice(0, 30).map(u => `
+        lista.innerHTML = filtradas.slice(0, 100).map(u => `
             <div class="autocomplete-item" data-valor="${u.unidade}">
                 <span class="ac-nome">${u.unidade}</span>
                 <span class="ac-fantasia">${u.descricao || ''}</span>
@@ -3011,6 +3938,177 @@ function _ativarMaiusculas(formId) {
     }).observe(form, { childList: true, subtree: true });
 }
 
+function _empPreencherEdicao(dados) {
+    if (!dados) return;
+
+    _empEditandoId = dados.id;
+
+    const set = (id, val) => {
+        if (!val && val !== 0) return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        const v = String(val).trim();
+        el.value = el.type === 'text' && !el.readOnly && !el.dataset.noCaps ? v.toUpperCase() : v;
+    };
+
+    // Modelo
+    let modelo = 'empresa';
+    if (dados.is_transportadora) modelo = 'transportadora';
+    else if (dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase())) modelo = 'company';
+    const modeloRadio = document.querySelector(`[name="emp_modelo"][value="${modelo}"]`);
+    if (modeloRadio) { modeloRadio.checked = true; onModeloChange(modelo); }
+
+    // Tipos
+    ['fabricante', 'fornecedor'].forEach(t => {
+        const cb = document.querySelector(`[name="tipo_${t}"]`);
+        if (cb) cb.checked = !!dados[`is_${t}`];
+    });
+
+    // Tipo de identificação
+    const tipoCadEl = document.getElementById('emp-tipo-cadastro');
+    if (tipoCadEl && dados.tipo_cadastro) {
+        tipoCadEl.value = dados.tipo_cadastro;
+        tipoCadEl.dispatchEvent(new Event('change'));
+    }
+
+    // Documento formatado
+    const digitos = String(dados.documento || '').replace(/\D/g, '');
+    let docFmt = digitos;
+    if (digitos.length === 14) docFmt = digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    else if (digitos.length === 11) docFmt = digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    set('emp-documento', docFmt);
+
+    set('emp-nome',        dados.razao_social);
+    set('emp-fantasia',    dados.nome_fantasia);
+    set('emp-ie',          dados.inscricao_estadual);
+    set('emp-suframa',     dados.suframa);
+    set('emp-cep',         dados.cep);
+    set('emp-estado',      dados.estado);
+    set('emp-cidade',      dados.cidade);
+    set('emp-bairro',      dados.bairro);
+    set('emp-endereco',    dados.endereco);
+    set('emp-complemento', dados.complemento);
+    set('emp-codigo',      dados.codigo);
+
+    // País estrangeiro
+    if (dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase())) {
+        set('emp-pais', dados.pais);
+        const paisCodEl = document.getElementById('emp-pais-codigo');
+        if (paisCodEl) paisCodEl.value = dados.pais;
+    }
+
+    // Número
+    if (String(dados.numero || '').toUpperCase() === 'S/N') {
+        const snToggle = document.querySelector('#form-empresa .sn-toggle-inner');
+        if (snToggle && !snToggle.classList.contains('ativo')) snToggle.click();
+    } else {
+        set('emp-numero', dados.numero);
+    }
+
+    // Tags
+    if (dados.tags && dados.tags.length > 0) {
+        _empTagsArray = [...dados.tags];
+        empRenderizarTags();
+    }
+
+    // Contatos
+    if (dados.contatos && dados.contatos.length > 0) {
+        _empContatoCount = 0;
+        document.getElementById('emp-contato-rows').innerHTML = '';
+        dados.contatos.forEach(c => {
+            empContatoAdicionar();
+            const rows = document.querySelectorAll('#emp-contato-rows .contato-lista-row');
+            const row  = rows[rows.length - 1];
+            if (row) {
+                const ins = row.querySelectorAll('input');
+                if (ins[0]) ins[0].value = (c.tipo     || '').toUpperCase();
+                if (ins[1]) ins[1].value = (c.nome     || '').toUpperCase();
+                if (ins[2]) ins[2].value =  c.email    || '';
+                if (ins[3]) ins[3].value =  c.telefone || '';
+            }
+        });
+    }
+}
+
+function _empAtivarModoVisualizar() {
+    const form = document.getElementById('form-empresa');
+    if (!form) return;
+
+    // Desabilita todos os campos
+    form.querySelectorAll('input, select, textarea, button[type="button"]').forEach(el => {
+        el.disabled = true;
+    });
+
+    // Esconde o botão de salvar e botões de ação internos
+    form.querySelector('.btn-save')?.closest('.form-actions')?.style && (form.querySelector('.btn-save').closest('.form-actions').style.display = 'none');
+    form.querySelectorAll('.btn-save, #btn-add-contato, #btn-add-idioma, #btn-add-desc-idioma, .btn-remover-contato, .btn-tag-remover, .emp-doc-upload-btn').forEach(el => {
+        el.style.display = 'none';
+    });
+
+    // Banner de aviso no topo do formulário
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:#1d4ed8;font-weight:600;';
+    banner.innerHTML = '<i class="fa-solid fa-eye"></i> Modo visualização — os campos estão somente para leitura.';
+    form.prepend(banner);
+}
+
+function _empPreencherDoUpload(dados) {
+    if (!dados || !Object.keys(dados).length) return;
+
+    const set = (id, val) => {
+        if (!val && val !== 0) return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        const v = String(val).trim();
+        el.value = el.type === 'text' && !el.readOnly && !el.dataset.noCaps ? v.toUpperCase() : v;
+    };
+
+    // Modelo: empresa nacional (padrão) ou company se país estrangeiro
+    const modelo = dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase()) ? 'company' : 'empresa';
+    const modeloRadio = document.querySelector(`[name="emp_modelo"][value="${modelo}"]`);
+    if (modeloRadio) { modeloRadio.checked = true; onModeloChange(modelo); }
+
+    // Tipo de identificação — disparar change para habilitar o campo documento
+    const tipoCadEl = document.getElementById('emp-tipo-cadastro');
+    if (tipoCadEl && dados.tipo_cadastro) {
+        tipoCadEl.value = dados.tipo_cadastro;
+        tipoCadEl.dispatchEvent(new Event('change'));
+    }
+
+    set('emp-documento',   dados.documento);
+    set('emp-nome',        dados.razao_social);
+    set('emp-fantasia',    dados.nome_fantasia);
+    set('emp-ie',          dados.inscricao_estadual);
+    set('emp-suframa',     dados.suframa);
+    set('emp-cep',         dados.cep);
+    set('emp-estado',      dados.estado);
+    set('emp-cidade',      dados.cidade);
+    set('emp-bairro',      dados.bairro);
+    set('emp-endereco',    dados.endereco);
+    set('emp-complemento', dados.complemento);
+
+    // País (autocomplete — preencher o campo de texto)
+    if (dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase())) {
+        set('emp-pais', dados.pais);
+    }
+
+    // Número
+    if (dados.numero) {
+        if (String(dados.numero).toUpperCase() === 'S/N') {
+            const snToggle = document.querySelector('#form-empresa .sn-toggle-inner');
+            if (snToggle && !snToggle.classList.contains('ativo')) snToggle.click();
+        } else {
+            set('emp-numero', dados.numero);
+        }
+    }
+
+    // Se tiver CEP mas não endereço, dispara busca automática
+    const cepEl = document.getElementById('emp-cep');
+    if (cepEl && cepEl.value.replace(/\D/g, '').length === 8 && !dados.estado) {
+        cepEl.dispatchEvent(new Event('input'));
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
     window._usuarioLogado = obterUsuarioLogado() || {};
 
@@ -3042,8 +4140,50 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarMascaraCEPColeta();
     empIniciarTags();
     empContatoIniciar();
-    onModeloChange('empresa');
+    onModeloChange('');
     empAdicionarDocumento();
+
+    // Edição da empresa proprietária (vindo de perfil.html)
+    const _empModoTenant = new URLSearchParams(window.location.search).get('modo') === 'tenant';
+    if (_empModoTenant) {
+        const raw = sessionStorage.getItem('_tenantEmpresaEdicao');
+        if (raw) {
+            sessionStorage.removeItem('_tenantEmpresaEdicao');
+            const dados = JSON.parse(raw);
+            window._tenantEmpresaId = dados._tenantId;
+            _empPreencherEdicao(dados);
+            // Oculta campos de tipo (não se aplica à empresa própria)
+            document.querySelector('.emp-modelo-row')?.style.setProperty('display', 'none');
+            document.querySelector('.emp-tipos-row')?.style.setProperty('display', 'none');
+            // Banner informativo
+            const form = document.getElementById('form-empresa');
+            if (form) form.insertAdjacentHTML('afterbegin',
+                '<div style="background:#eff6ff;border-left:3px solid #4776ec;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#3b82f6;">' +
+                '<i class="fa-solid fa-circle-info" style="margin-right:6px;"></i>Você está editando os dados da sua própria empresa.</div>');
+        }
+    }
+
+    // Edição / Visualização via empresa_id (vindo de cadastros.html)
+    const _empIdEdicaoParam = new URLSearchParams(window.location.search).get('empresa_id');
+    const _empModoVisualizar = new URLSearchParams(window.location.search).get('modo') === 'visualizar';
+    if (_empIdEdicaoParam) {
+        const res = await window.supabaseAPI.buscarEmpresaPorId(_empIdEdicaoParam);
+        if (res.sucesso && res.data) {
+            _empPreencherEdicao(res.data);
+            if (_empModoVisualizar) _empAtivarModoVisualizar();
+        } else {
+            mostrarNotificacao('Empresa não encontrada.', 'erro');
+        }
+    }
+
+    // Pré-preenchimento via upload (vindo de cadastros.html)
+    if (new URLSearchParams(window.location.search).get('from_upload') === '1') {
+        const dadosRaw = sessionStorage.getItem('_uploadEmpresaDados');
+        if (dadosRaw) {
+            sessionStorage.removeItem('_uploadEmpresaDados');
+            _empPreencherDoUpload(JSON.parse(dadosRaw));
+        }
+    }
     _ativarMaiusculas('form-empresa');
     _ativarMaiusculas('form-processo');
     _ativarMaiusculas('form-proposta');
@@ -3067,6 +4207,19 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarCamposStatus();
     iniciarAutocompleteProcCliente();
     iniciarAutocompleteProcCodProposta();
+
+    // Pré-preenchimento via proforma_id (botão "Seguir com Processo?")
+    const _procProformaIdParam = new URLSearchParams(window.location.search).get('proforma_id');
+    if (_procProformaIdParam) {
+        await _acCarregarPropostas();
+        const proformaAc = _acPropostas.find(x => x.id === _procProformaIdParam);
+        const codigoEl   = document.getElementById('proc-codigo');
+        const idOcultoEl = document.getElementById('proc-proposta-id');
+        if (codigoEl)   codigoEl.value   = proformaAc?.nome || '';
+        if (idOcultoEl) idOcultoEl.value = _procProformaIdParam;
+        await _procPreencherDaProforma(_procProformaIdParam);
+    }
+
     iniciarAutocompletePaisOrigem();
     iniciarAutocompletePaisDestino();
     iniciarAutocompleteContainer();
@@ -3086,6 +4239,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarTransportadoraPropria();
 
     // Produto
+    iniciarAutocompleteEmpresaProduto();
     iniciarAutocompleteNcmProduto();
     iniciarAutocompleteUnidadeProduto();
     iniciarAutocompleteMoedaProduto();
@@ -3287,7 +4441,8 @@ async function _carregarUnidades() {
         const { data } = await supabaseClient
             .from('apoio_unidades_medida')
             .select('unidade, descricao')
-            .order('unidade', { ascending: true });
+            .order('unidade', { ascending: true })
+            .limit(10000);
         _acUnidades = data || [];
     } catch { _acUnidades = []; }
 }
@@ -3683,7 +4838,7 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
         const doc   = item.dataset.doc   || '';
         const idInt = item.dataset.idint || '';
 
-        const docEl = document.getElementById('prop-emp-dest-auto-doc');
+        const docEl = document.getElementById('prop-emp-dest-doc');
         const idEl  = document.getElementById('prop-emp-dest-auto-id');
         const idGrp = document.getElementById('prop-emp-dest-auto-id-group');
 

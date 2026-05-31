@@ -287,7 +287,6 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
                 cep:                  dadosEmpresa.cep ? dadosEmpresa.cep.replace(/\D/g, '') : null,
                 estado:               dadosEmpresa.estado      || null,
                 cidade:               dadosEmpresa.cidade      || null,
-                bairro:               dadosEmpresa.bairro      || null,
                 endereco:             dadosEmpresa.endereco    || null,
                 numero:               dadosEmpresa.numero      || null,
                 complemento:          dadosEmpresa.complemento || null,
@@ -300,6 +299,9 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
 
         if (errParceiro) {
             console.error('Erro ao salvar parceiro:', errParceiro);
+            if (errParceiro.code === '23505') {
+                return { sucesso: false, mensagem: 'Já existe uma empresa cadastrada com este número de identificação (CNPJ/CPF).' };
+            }
             return { sucesso: false, mensagem: 'Erro ao salvar cadastro: ' + errParceiro.message };
         }
 
@@ -375,13 +377,27 @@ async function buscarEmpresasCadastradas() {
     }
 }
 
+async function buscarEmpresaPorId(id) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('vw_parceiros_completo')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) return { sucesso: false, mensagem: 'Empresa não encontrada' };
+        return { sucesso: true, data };
+    } catch (err) {
+        return { sucesso: false, mensagem: 'Erro ao buscar empresa' };
+    }
+}
+
 async function editarEmpresaCadastrada(id, dadosEmpresa) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
         // 1. Atualizar tabela principal
-        const { error: errParceiro } = await supabaseClient
+        let updateQuery = supabaseClient
             .from('parceiros')
             .update({
                 is_fabricante:        dadosEmpresa.tipos.includes('fabricante'),
@@ -399,7 +415,6 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
                 cep:                  dadosEmpresa.cep ? dadosEmpresa.cep.replace(/\D/g, '') : null,
                 estado:               dadosEmpresa.estado      || null,
                 cidade:               dadosEmpresa.cidade      || null,
-                bairro:               dadosEmpresa.bairro      || null,
                 endereco:             dadosEmpresa.endereco    || null,
                 numero:               dadosEmpresa.numero      || null,
                 complemento:          dadosEmpresa.complemento || null,
@@ -407,8 +422,13 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
                 horario_atendimento:  dadosEmpresa.horario_atendimento || null,
                 tags:                 dadosEmpresa.tags || [],
             })
-            .eq('id', id)
-            .eq('created_by', usuario.id);
+            .eq('id', id);
+
+        updateQuery = usuario.empresa_id
+            ? updateQuery.eq('empresa_id', usuario.empresa_id)
+            : updateQuery.eq('created_by', usuario.id);
+
+        const { error: errParceiro } = await updateQuery;
 
         if (errParceiro) return { sucesso: false, mensagem: 'Erro ao atualizar: ' + errParceiro.message };
 
@@ -456,11 +476,12 @@ async function excluirEmpresaCadastrada(id) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        const { error } = await supabaseClient
-            .from('parceiros')
-            .delete()
-            .eq('id', id)
-            .eq('created_by', usuario.id);
+        let query = supabaseClient.from('parceiros').delete().eq('id', id);
+        query = usuario.empresa_id
+            ? query.eq('empresa_id', usuario.empresa_id)
+            : query.eq('created_by', usuario.id);
+
+        const { error } = await query;
 
         if (error) return { sucesso: false, mensagem: 'Erro ao excluir: ' + error.message };
         return { sucesso: true };
@@ -610,7 +631,7 @@ async function buscarDadosPerfilCompleto() {
 
         const { data, error } = await supabaseClient
             .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, cargo, telefone, avatar_url, ultimo_login, criado_em, empresa_id, empresas(razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, bairro, endereco, numero, complemento, plano, chave_empresa)')
+            .select('id, cpf, nome_completo, email, perfil, ativo, cargo, telefone, avatar_url, ultimo_login, criado_em, empresa_id, empresas(id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento)')
             .eq('id', usuario.id)
             .single();
 
@@ -912,24 +933,16 @@ async function atualizarTenantEmpresa(dados) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada' };
+
+        // Só inclui campos explicitamente presentes em dados (evita sobrescrever com null)
+        const campos = ['razao_social','nome_fantasia','cnpj','ie','im','suframa',
+                        'cep','estado','cidade','endereco','numero','complemento'];
+        const update = {};
+        campos.forEach(c => { if (c in dados) update[c] = dados[c] ?? null; });
+
         const { error } = await supabaseClient
             .from('empresas')
-            .update({
-                razao_social:  dados.razao_social  ?? null,
-                nome_fantasia: dados.nome_fantasia ?? null,
-                cnpj:          dados.cnpj          ?? null,
-                nome:          dados.nome          ?? null,
-                ie:            dados.ie            ?? null,
-                im:            dados.im            ?? null,
-                suframa:       dados.suframa       ?? null,
-                cep:           dados.cep           ?? null,
-                estado:        dados.estado        ?? null,
-                cidade:        dados.cidade        ?? null,
-                bairro:        dados.bairro        ?? null,
-                endereco:      dados.endereco      ?? null,
-                numero:        dados.numero        ?? null,
-                complemento:   dados.complemento   ?? null,
-            })
+            .update(update)
             .eq('id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
@@ -944,7 +957,7 @@ async function buscarTenantEmpresa() {
         if (!usuario?.empresa_id) return { sucesso: false };
         const { data, error } = await supabaseClient
             .from('empresas')
-            .select('id, razao_social, nome_fantasia, nome, cnpj, ie, im, suframa, email, cep, estado, cidade, bairro, endereco, numero, complemento, plano, chave_empresa')
+            .select('id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento')
             .eq('id', usuario.empresa_id)
             .single();
         if (error) return { sucesso: false };
@@ -1104,6 +1117,7 @@ window.supabaseAPI = {
     editarEmpresa: editarEmpresaCadastrada,
     excluirEmpresa: excluirEmpresaCadastrada,
     buscarEmpresas: buscarEmpresasCadastradas,
+    buscarEmpresaPorId,
     buscarSolicitacoes: buscarSolicitacoesPendentes,
     responderSolicitacao: responderSolicitacao,
     buscarUsuarios: buscarUsuariosDaEmpresa,

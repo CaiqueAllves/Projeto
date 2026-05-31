@@ -1,0 +1,384 @@
+/* ========================================
+   MARPEX — RESPONSIVIDADE MOBILE
+   Aplica APENAS em telas <= 768px.
+   Não afeta nenhum layout desktop.
+======================================== */
+
+/* ── Hamburger button ─────────────────── */
+.mob-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 8px;
+    color: #374151;
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.mob-hamburger:hover { background: #f3f4f6; }
+
+/* ── Overlay do sidebar ───────────────── */
+.mob-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.mob-overlay.ativo {
+    display: block;
+    opacity: 1;
+}
+
+/* ========================================
+   MOBILE: <= 768px
+======================================== */
+@media (max-width: 768px) {
+
+    /* ── Hamburger visível ─────────────── */
+    .mob-hamburger { display: flex; align-items: center; }
+
+    /* ── Sidebar como drawer ───────────── */
+    aside {
+        transform: translateX(-260px) !important;
+        transition: transform 0.3s ease !important;
+        z-index: 1001 !important;
+    }
+    aside.mob-aberto {
+        transform: translateX(0) !important;
+    }
+
+    /* ── Topbar: largura total ─────────── */
+    .topbar {
+        left: 0 !important;
+        padding: 0 12px !important;
+        height: 60px !important;
+        min-height: 60px !important;
+        flex-direction: row !important;
+        gap: 0 !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+
+    .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .topbar-left h2 {
+        font-size: 14px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    /* Esconder nome/email do usuário no topbar — ocupa espaço demais */
+    .user-details { display: none; }
+    .user-info-card { gap: 0; background: none; padding: 0; }
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+
+    /* ── Main: sem margin-left ─────────── */
+    main {
+        margin-left: 0 !important;
+        padding-top: 60px !important;
+    }
+
+    /* ── Conteúdo interno com padding menor */
+    .content { padding: 12px !important; }
+    .perfil-content { padding: 12px 16px !important; }
+
+    /* ── Page headers ──────────────────── */
+    .page-header {
+        flex-direction: column !important;
+        gap: 10px !important;
+        align-items: stretch !important;
+    }
+    .header-left, .header-right {
+        width: 100%;
+    }
+    .header-right {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .header-right button, .header-right .btn-cadastrar, .header-right .btn-upload {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
+    }
+    .filter-wrapper { width: 100%; }
+    .filter-wrapper input { width: 100%; }
+
+    /* ── Actions bar ───────────────────── */
+    .actions { flex-direction: column !important; }
+    .actions button { width: 100%; justify-content: center; }
+
+    /* ── Form grids → 1 coluna ─────────── */
+    .form-grid,
+    .form-row-2,
+    .form-row-3,
+    .form-row-4,
+    [class*="form-row"],
+    .perfil-form-group-row4,
+    .perfil-form-group-row3,
+    .perfil-form-group-row2 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── full-width já funciona, mas garantir */
+    .form-group.full-width { grid-column: 1 !important; }
+
+    /* ── Perfil: layout duas colunas → 1 coluna */
+    .perfil-layout {
+        grid-template-columns: 1fr !important;
+    }
+    .perfil-sidebar {
+        position: static !important;
+    }
+
+    /* ── Tabs em formulários ───────────── */
+    .tab-nav, .tabs-nav {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .tab-btn, .tab-item {
+        flex: 1;
+        min-width: 80px;
+        font-size: 12px;
+        padding: 8px 6px !important;
+        text-align: center;
+    }
+
+    /* ── Modais: tela cheia no mobile ──── */
+    .modal, .modal-overlay { padding: 8px !important; }
+    .modal-content,
+    .modal-box,
+    .formulario-modal,
+    [class*="-modal"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        border-radius: 12px 12px 0 0 !important;
+        max-height: 92vh !important;
+        overflow-y: auto !important;
+    }
+
+    /* Posicionar modais na base da tela */
+    .modal, .modal-overlay {
+        align-items: flex-end !important;
+    }
+
+    /* ── Tabelas: scroll horizontal ────── */
+    table {
+        display: block !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+    th, td { padding: 10px 8px !important; font-size: 13px !important; }
+
+    /* Wrapper de tabela com scroll */
+    .table-wrapper, .tabela-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Filtros ───────────────────────── */
+    .filtros-container {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+    .filtros-btns { width: 100%; flex-wrap: wrap; }
+    .filtro-btn { flex: 1; text-align: center; min-width: 80px; }
+    .busca-container { max-width: 100% !important; }
+
+    /* ── Cards de cadastro ─────────────── */
+    .cad-contato-header,
+    .cad-contato-row {
+        grid-template-columns: 100px 1fr 1fr 100px 28px !important;
+        font-size: 12px;
+    }
+    .cad-contato-header span,
+    .cad-contato-row input {
+        font-size: 12px;
+    }
+
+    /* ── Proforma itens ────────────────── */
+    .prop-item-bottom {
+        flex-wrap: wrap;
+    }
+    .prop-item-field--qtd   { width: 60px; }
+    .prop-item-field--preco { width: 100px; }
+    .prop-item-field--moeda { min-width: 120px; }
+
+    /* ── Tipo cards de cadastro ────────── */
+    .cad-tipo-cards { gap: 6px; }
+    .cad-tipo-inner { font-size: 12px; padding: 6px 10px; }
+
+    /* ── Modelos de empresa (radio cards) */
+    .emp-modelo-cards { flex-wrap: wrap !important; gap: 6px !important; }
+    .emp-modelo-card  { flex: 1 1 calc(50% - 6px) !important; min-width: 120px !important; }
+
+    /* ── Configurações layout ──────────── */
+    .config-layout, .config-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── Relatorios ────────────────────── */
+    .relatorio-filtros {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    /* ── Autocomplete ──────────────────── */
+    .autocomplete-wrapper { width: 100% !important; }
+    .autocomplete-list    { width: 100% !important; }
+
+    /* ── Notificações full width ───────── */
+    .notificacao {
+        left: 8px !important;
+        right: 8px !important;
+        max-width: calc(100% - 16px) !important;
+        font-size: 13px;
+    }
+
+    /* ── Proforma: painel excluídos ────── */
+    .prof-excluidos-panel { max-height: none !important; }
+
+    /* ── Footer fixa: ajustar com sidebar */
+    .dashboard-footer { left: 0 !important; }
+
+    /* ── WhatsApp float ────────────────── */
+    .whatsapp-float { bottom: 16px; right: 16px; width: 50px; height: 50px; font-size: 26px; }
+    .whatsapp-chat  { width: calc(100% - 32px); right: 16px; left: 16px; }
+
+    /* ── Apoio: grids de tabelas ───────── */
+    .apoio-grid, .apoio-cards {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── Permissões ────────────────────── */
+    .permissoes-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── Processos ─────────────────────── */
+    .processos-steps { flex-direction: column !important; gap: 8px !important; }
+
+    /* ── Input/select: garantir largura total */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="date"],
+    input[type="password"],
+    select,
+    textarea {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* ── doc-tipo wrapper em mobile ────── */
+    .doc-tipo-wrapper {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .doc-tipo-wrapper select {
+        width: 80px !important;
+    }
+    .doc-tipo-wrapper input {
+        min-width: 0;
+        flex: 1;
+    }
+
+    /* ── validade wrapper ──────────────── */
+    .validade-wrapper { flex-wrap: wrap; }
+
+    /* ── prop-codigo wrapper ───────────── */
+    .prop-codigo-wrapper { flex-wrap: wrap; }
+
+    /* ── Botões do formulário ──────────── */
+    .form-actions, .btn-group {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    .form-actions button, .btn-group button {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* ── Configurações: tabs laterais → topo */
+    .config-tabs-lateral {
+        flex-direction: column !important;
+    }
+    .config-tab-nav {
+        flex-direction: row !important;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    .config-tab-btn {
+        flex-shrink: 0;
+        font-size: 12px;
+        padding: 8px 12px !important;
+    }
+
+    /* ── Ocultar colunas opcionais em tabelas pequenas */
+    .hide-mobile { display: none !important; }
+
+    /* ── Início / Dashboard cards ──────── */
+    .dashboard-cards, .inicio-cards, .stats-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+    }
+    .dashboard-card, .stat-card {
+        padding: 16px !important;
+    }
+
+    /* ── Section spacing ───────────────── */
+    .section, .card, .panel {
+        padding: 16px !important;
+        margin-bottom: 12px !important;
+    }
+}
+
+/* ── Muito pequeno: <= 480px ─────────── */
+@media (max-width: 480px) {
+    .topbar-left h2 { font-size: 13px !important; }
+
+    .dashboard-cards, .inicio-cards, .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .cad-contato-header,
+    .cad-contato-row {
+        grid-template-columns: 80px 1fr 80px 28px !important;
+    }
+    /* Esconder coluna email em contatos no mobile pequeno */
+    .cad-contato-email { display: none !important; }
+
+    .emp-modelo-card { flex: 1 1 100% !important; }
+
+    .tab-btn, .tab-item { font-size: 11px; padding: 7px 4px !important; }
+
+    th, td { font-size: 12px !important; padding: 8px 6px !important; }
+}

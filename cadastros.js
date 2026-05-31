@@ -171,6 +171,38 @@ async function carregarEmpresas() {
     renderizarEmpresas(todasEmpresas);
 }
 
+const _TIPO_LABELS = { fabricante: 'Fabricante', cliente: 'Cliente', fornecedor: 'Fornecedor', transportadora: 'Transportadora', remetente: 'Remetente' };
+
+function _normalizarPais(pais) {
+    if (!pais) return '';
+    const upper = pais.trim().toUpperCase();
+    if (['BR', 'BRA', 'BRASIL', 'BRAZIL'].includes(upper)) return 'BRASIL';
+    return pais.trim();
+}
+
+function _isBrasil(pais) {
+    if (!pais) return true;
+    return ['br', 'bra', 'brasil', 'brazil'].includes(pais.toLowerCase().trim());
+}
+
+function _modeloBadge(e) {
+    if (e.is_transportadora)
+        return '<span class="tag-modelo tag-modelo-transportadora">Transportadora</span>';
+    if (!_isBrasil(e.pais))
+        return '<span class="tag-modelo tag-modelo-estrangeira">Estrangeira</span>';
+    return '<span class="tag-modelo tag-modelo-nacional">Nacional</span>';
+}
+
+function _tiposBadges(e) {
+    const tipos = [];
+    if (e.is_fabricante)     tipos.push('fabricante');
+    if (e.is_cliente)        tipos.push('cliente');
+    if (e.is_fornecedor)     tipos.push('fornecedor');
+    if (e.is_transportadora) tipos.push('transportadora');
+    if (e.is_remetente)      tipos.push('remetente');
+    return tipos.map(t => `<span class="tag-tipo tag-${t}">${_TIPO_LABELS[t]}</span>`).join('');
+}
+
 function renderizarEmpresas(lista) {
     const container = document.getElementById('listaContainer');
     const count     = document.getElementById('listaCount');
@@ -191,7 +223,8 @@ function renderizarEmpresas(lista) {
         <table class="empresa-tabela">
             <thead>
                 <tr>
-                    <th class="col-tipo"></th>
+                    <th class="col-modelo">Modelo</th>
+                    <th class="col-tipo">Tipo</th>
                     <th class="col-razao">Razão Social</th>
                     <th class="col-fantasia">Nome Fantasia</th>
                     <th class="col-doc">Documento</th>
@@ -203,17 +236,21 @@ function renderizarEmpresas(lista) {
             <tbody>
                 ${lista.map(e => `
                     <tr>
+                        <td class="col-modelo">${_modeloBadge(e)}</td>
                         <td class="col-tipo">
                             <div class="tipo-badges">
-                                ${(e.tipos || []).map(t => `<span class="tag-tipo tag-${t.toLowerCase()}" title="${t}">${t.charAt(0).toUpperCase()}</span>`).join('')}
+                                ${_tiposBadges(e) || '<span class="cell-vazio">—</span>'}
                             </div>
                         </td>
                         <td class="col-razao"><span class="empresa-nome">${e.razao_social || '—'}</span></td>
                         <td class="col-fantasia"><span class="empresa-fantasia">${e.nome_fantasia || '<span class="cell-vazio">—</span>'}</span></td>
                         <td class="col-doc cell-nowrap">${e.documento || '—'}</td>
-                        <td class="col-loc cell-nowrap">${[e.pais, e.estado].filter(Boolean).join(' / ') || '—'}</td>
+                        <td class="col-loc cell-nowrap">${[_normalizarPais(e.pais), e.estado].filter(Boolean).join(' / ') || '—'}</td>
                         <td class="col-tags">${(e.tags && e.tags.length) ? renderTagsMini(e.tags) : '<span class="cell-vazio">—</span>'}</td>
                         <td class="col-acoes" style="text-align:center;white-space:nowrap;">
+                            <button class="btn-acao btn-visualizar" onclick="visualizarEmpresa('${e.id}')" title="Visualizar">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
                             <button class="btn-acao btn-editar" onclick="editarEmpresa('${e.id}')" title="Editar">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
@@ -253,11 +290,16 @@ function filtrarEmpresas(valor) {
 // EDITAR EMPRESA
 // ========================================
 
-async function editarEmpresa(id) {
-    const resultado = await window.supabaseAPI.buscarEmpresas();
-    if (!resultado.sucesso) return;
+function visualizarEmpresa(id) {
+    window.open(`formularios.html?tab=empresa&empresa_id=${id}&modo=visualizar`, '_blank');
+}
 
-    const empresa = resultado.data.find(e => e.id === id);
+function editarEmpresa(id) {
+    window.open(`formularios.html?tab=empresa&empresa_id=${id}`, '_blank');
+}
+
+async function _editarEmpresaModal(id) {
+    const empresa = todasEmpresas.find(e => e.id === id);
     if (!empresa) return;
 
     limparFormulario();
@@ -336,28 +378,34 @@ async function editarEmpresa(id) {
 // ========================================
 
 function excluirEmpresa(id) {
-    const empresa = todasEmpresas.find(e => e.id === id);
-    if (!empresa) return;
-
     empresaExcluindoId = id;
-    const localizacao = [empresa.pais, empresa.estado].filter(Boolean).join(' / ') || '—';
 
-    document.getElementById('excluirEmpresaInfo').innerHTML = `
-        <div class="excluir-info-row excluir-razao">
-            <i class="fa-solid fa-building"></i>
-            <span>${empresa.razao_social || '—'}</span>
-        </div>
-        ${empresa.nome_fantasia ? `<div class="excluir-info-fantasia"><i class="fa-solid fa-tag"></i> ${empresa.nome_fantasia}</div>` : ''}
-        <div class="excluir-info-grid">
-            <div class="excluir-info-item">
-                <span class="excluir-label">Documento</span>
-                <span class="excluir-valor">${empresa.documento || '—'}</span>
-            </div>
-            <div class="excluir-info-item">
-                <span class="excluir-label">País / Estado</span>
-                <span class="excluir-valor">${localizacao}</span>
-            </div>
-        </div>`;
+    const empresa = todasEmpresas.find(e => String(e.id) === String(id));
+    const infoEl  = document.getElementById('excluirEmpresaInfo');
+
+    if (infoEl) {
+        if (empresa) {
+            const loc = [_normalizarPais(empresa.pais), empresa.estado].filter(Boolean).join(' / ') || '—';
+            infoEl.innerHTML = `
+                <div class="excluir-info-row excluir-razao">
+                    <i class="fa-solid fa-building"></i>
+                    <span>${empresa.razao_social || '—'}</span>
+                </div>
+                ${empresa.nome_fantasia ? `<div class="excluir-info-fantasia"><i class="fa-solid fa-tag"></i> ${empresa.nome_fantasia}</div>` : ''}
+                <div class="excluir-info-grid">
+                    <div class="excluir-info-item">
+                        <span class="excluir-label">Documento</span>
+                        <span class="excluir-valor">${empresa.documento || '—'}</span>
+                    </div>
+                    <div class="excluir-info-item">
+                        <span class="excluir-label">País / Estado</span>
+                        <span class="excluir-valor">${loc}</span>
+                    </div>
+                </div>`;
+        } else {
+            infoEl.innerHTML = `<span style="color:#6b7280;font-size:13px;">ID: ${id}</span>`;
+        }
+    }
 
     document.getElementById('btnConfirmarExcluir').onclick = confirmarExclusao;
     document.getElementById('modalExcluir').classList.add('active');
@@ -767,7 +815,7 @@ async function salvarCadastro() {
         nome_fantasia:        get('nomeFantasia'),
         inscricao_estadual:   get('inscricaoEstadual'),
         suframa:              get('suframa'),
-        pais:                 get('pais'),
+        pais:                 _normalizarPais(get('pais')),
         cep:                  get('cep'),
         estado:               get('estado'),
         cidade:               get('cidade'),
@@ -816,11 +864,16 @@ async function salvarCadastro() {
 // UPLOAD DE ARQUIVO
 // ========================================
 
-function processarUpload(input) {
+// ========================================
+// UPLOAD — LEITURA E PREENCHIMENTO AUTO
+// ========================================
+
+async function processarUpload(input) {
     const arquivo = input.files[0];
     if (!arquivo) return;
+
     const ext = arquivo.name.split('.').pop().toLowerCase();
-    if (!['xlsx','xls','pdf'].includes(ext)) {
+    if (!['xlsx', 'xls', 'pdf'].includes(ext)) {
         mostrarNotificacao('Apenas Excel ou PDF são permitidos.', 'error');
         input.value = ''; return;
     }
@@ -828,8 +881,289 @@ function processarUpload(input) {
         mostrarNotificacao('O arquivo deve ter no máximo 10MB.', 'error');
         input.value = ''; return;
     }
-    mostrarNotificacao(`Processando "${arquivo.name}"...`, 'info');
+
+    mostrarNotificacao('Lendo arquivo, aguarde...', 'info');
     input.value = '';
+
+    let dados = {};
+    try {
+        dados = ['xlsx', 'xls'].includes(ext)
+            ? await _uploadLerExcel(arquivo)
+            : await _uploadLerPDF(arquivo);
+    } catch (err) {
+        console.error('Erro ao processar upload:', err);
+        mostrarNotificacao('Não foi possível ler o arquivo. Verifique o formato.', 'error');
+        return;
+    }
+
+    sessionStorage.setItem('_uploadEmpresaDados', JSON.stringify(dados));
+    window.open('formularios.html?tab=empresa&from_upload=1', '_blank');
+
+    const qtd = Object.entries(dados)
+        .filter(([k, v]) => v && String(v).trim() && !['tipo_cadastro', 'pais'].includes(k)).length;
+
+    mostrarNotificacao(
+        qtd > 0
+            ? `${qtd} campo(s) identificado(s). O formulário foi aberto com os dados preenchidos.`
+            : 'Nenhum dado identificado no arquivo. Preencha manualmente.',
+        qtd > 0 ? 'success' : 'warning'
+    );
+}
+
+// ── Leitura Excel ─────────────────────────────────────────────
+
+async function _uploadLerExcel(arquivo) {
+    if (typeof XLSX === 'undefined') throw new Error('SheetJS não carregado');
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                resolve(_uploadParsearExcel(rows));
+            } catch (err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(arquivo);
+    });
+}
+
+function _uploadParsearExcel(rows) {
+    if (!rows || !rows.length) return {};
+
+    const norm = s => String(s || '').toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+    const ALIASES = {
+        'razao social': 'razao_social', 'razao': 'razao_social', 'empresa': 'razao_social',
+        'nome fantasia': 'nome_fantasia', 'fantasia': 'nome_fantasia',
+        'cnpj': 'cnpj_raw', 'cpf': 'cpf_raw', 'documento': 'cnpj_raw',
+        'ie': 'inscricao_estadual', 'inscricao estadual': 'inscricao_estadual',
+        'suframa': 'suframa', 'cep': 'cep',
+        'estado': 'estado', 'uf': 'estado',
+        'cidade': 'cidade', 'municipio': 'cidade',
+        'bairro': 'bairro',
+        'endereco': 'endereco', 'logradouro': 'endereco', 'rua': 'endereco',
+        'numero': 'numero', 'num': 'numero',
+        'complemento': 'complemento',
+        'site': 'site', 'website': 'site',
+        'email': 'email_contato', 'e-mail': 'email_contato',
+        'telefone': 'telefone_contato', 'fone': 'telefone_contato', 'celular': 'telefone_contato',
+        'horario': 'horario_atendimento', 'horario atendimento': 'horario_atendimento',
+    };
+
+    // Formato chave/valor (col A = label, col B = valor)
+    const kv = {};
+    rows.forEach(row => {
+        const chave = norm(row[0]);
+        const valor = String(row[1] || '').trim();
+        if (chave && valor && ALIASES[chave]) kv[ALIASES[chave]] = valor;
+    });
+    if (Object.keys(kv).length >= 2) return _uploadNormalizar(kv);
+
+    // Formato tabular (linha 0 = cabeçalhos, linha 1 = dados)
+    let headerIdx = -1, headerMap = {};
+    for (let i = 0; i < Math.min(5, rows.length); i++) {
+        const mapped = {};
+        rows[i].forEach((cell, idx) => {
+            const n = norm(cell);
+            if (ALIASES[n]) mapped[ALIASES[n]] = idx;
+        });
+        if (Object.keys(mapped).length >= 2) { headerIdx = i; headerMap = mapped; break; }
+    }
+    if (headerIdx >= 0 && rows[headerIdx + 1]) {
+        const dr = rows[headerIdx + 1];
+        const tab = {};
+        Object.entries(headerMap).forEach(([field, idx]) => {
+            const v = String(dr[idx] || '').trim();
+            if (v) tab[field] = v;
+        });
+        return _uploadNormalizar(tab);
+    }
+
+    // Fallback: texto livre
+    return _uploadParsearTexto(rows.flat().map(c => String(c || '')).join(' '));
+}
+
+// ── Leitura PDF ───────────────────────────────────────────────
+
+async function _uploadLerPDF(arquivo) {
+    if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js não carregado');
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async e => {
+            try {
+                const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) }).promise;
+                let texto = '';
+                for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    texto += content.items.map(item => item.str).join(' ') + '\n';
+                }
+                if (texto.trim().length < 30) {
+                    resolve({});  // PDF escaneado — sem texto legível
+                } else {
+                    resolve(_uploadParsearTexto(texto));
+                }
+            } catch (err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(arquivo);
+    });
+}
+
+// ── Extração por regex (PDF e fallback Excel) ─────────────────
+
+function _uploadParsearTexto(texto) {
+    const d = {};
+    const t = texto.replace(/\s+/g, ' ');
+
+    // CNPJ
+    const cnpjM = t.match(/\d{2}[.\s]?\d{3}[.\s]?\d{3}[/\s]?\d{4}[-\s]?\d{2}/);
+    if (cnpjM && cnpjM[0].replace(/\D/g, '').length === 14) d.cnpj_raw = cnpjM[0].replace(/\D/g, '');
+
+    // CPF (só se não tiver CNPJ)
+    if (!d.cnpj_raw) {
+        const cpfM = t.match(/\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}(?!\d)/);
+        if (cpfM && cpfM[0].replace(/\D/g, '').length === 11) d.cpf_raw = cpfM[0].replace(/\D/g, '');
+    }
+
+    // Razão Social
+    const razaoM = t.match(/(?:Raz[aã]o\s*Social|Nome\s*Empresarial)[:\s]+([A-ZÀ-Ú][A-Za-zÀ-ú0-9\s&.,'"()-]{2,80}?)(?=\s{2,}|CNPJ|CPF|Endere|Inscri|Bairro|$)/i);
+    if (razaoM) d.razao_social = razaoM[1].trim().replace(/\s+/g, ' ');
+
+    // Nome Fantasia
+    const fantasiaM = t.match(/(?:Nome\s*Fantasia|Fantasia)[:\s]+([A-Za-zÀ-ú0-9\s&.,'"()-]{2,60}?)(?=\s{2,}|CNPJ|CPF|Endere|$)/i);
+    if (fantasiaM) d.nome_fantasia = fantasiaM[1].trim().replace(/\s+/g, ' ');
+
+    // IE
+    const ieM = t.match(/(?:Inscri[cç][aã]o\s*Estadual|I\.?E\.?)[:\s]+([0-9.\-/ISENTOisento]{3,20})/i);
+    if (ieM) d.inscricao_estadual = ieM[1].trim();
+
+    // CEP
+    const cepM = t.match(/\b\d{5}-\d{3}\b/);
+    if (cepM) d.cep = cepM[0];
+
+    // UF
+    const ufM = t.match(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/);
+    if (ufM) d.estado = ufM[1];
+
+    // Cidade
+    const cidadeM = t.match(/(?:Cidade|Munic[ií]pio)[:\s]+([A-Za-zÀ-ú\s]{3,40}?)(?=[-,/\s]{0,3}(?:AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO|\d))/i);
+    if (cidadeM) d.cidade = cidadeM[1].trim();
+
+    // Bairro
+    const bairroM = t.match(/Bairro[:\s]+([A-Za-zÀ-ú\s]{3,40}?)(?=\s{2,}|CEP|Cidade|\d{5})/i);
+    if (bairroM) d.bairro = bairroM[1].trim();
+
+    // Endereço / Logradouro
+    const endM = t.match(/(?:Endere[cç]o|Logradouro)[:\s]+([A-Za-zÀ-ú0-9\s.,°ª-]{5,80}?)(?=\s{2,}|Bairro|CEP|\d{5})/i);
+    if (endM) d.endereco = endM[1].trim().replace(/\s+/g, ' ');
+
+    // Número
+    const numM = t.match(/(?:N[uú]mero|N[°º]\.?)[:\s]*(\d{1,6}|S\/N)/i);
+    if (numM) d.numero = numM[1];
+
+    // E-mail
+    const emailM = t.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    if (emailM) d.email_contato = emailM[0];
+
+    // Telefone
+    const telM = t.match(/\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}/);
+    if (telM) d.telefone_contato = telM[0].replace(/\D/g, '');
+
+    // Site
+    const siteM = t.match(/(?:www\.|https?:\/\/)[^\s,;]{4,60}/i);
+    if (siteM) d.site = siteM[0];
+
+    return _uploadNormalizar(d);
+}
+
+// ── Normalizar documento (formatar + detectar tipo) ───────────
+
+function _uploadNormalizar(raw) {
+    const d = { ...raw };
+
+    const formatarCNPJ = n => n.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    const formatarCPF  = n => n.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+
+    if (d.cnpj_raw) {
+        const n = String(d.cnpj_raw).replace(/\D/g, '');
+        if (n.length === 14) { d.tipo_cadastro = 'cnpj'; d.documento = formatarCNPJ(n); }
+        delete d.cnpj_raw;
+    } else if (d.cpf_raw) {
+        const n = String(d.cpf_raw).replace(/\D/g, '');
+        if (n.length === 11) { d.tipo_cadastro = 'cpf'; d.documento = formatarCPF(n); }
+        delete d.cpf_raw;
+    } else if (d.documento) {
+        const n = String(d.documento).replace(/\D/g, '');
+        if (n.length === 14) { d.tipo_cadastro = 'cnpj'; d.documento = formatarCNPJ(n); }
+        else if (n.length === 11) { d.tipo_cadastro = 'cpf'; d.documento = formatarCPF(n); }
+    }
+
+    return d;
+}
+
+// ── Preencher formulário com os dados extraídos ───────────────
+
+function _uploadPreencherFormulario(dados) {
+    if (!dados || !Object.keys(dados).length) return;
+
+    const set = (id, val) => {
+        if (!val && val !== 0) return;
+        const el = document.getElementById(id);
+        if (el) el.value = String(val).trim();
+    };
+
+    // País (Brasil como padrão)
+    document.getElementById('pais').value = dados.pais || 'BR';
+    onPaisChange();
+
+    // Identificação (setar tipo antes, pois alterarTipoCadastro limpa o campo)
+    if (dados.tipo_cadastro) {
+        document.getElementById('tipoCadastro').value = dados.tipo_cadastro;
+        alterarTipoCadastro();
+        if (dados.documento) document.getElementById('documento').value = dados.documento;
+    }
+
+    set('nomeEmpresa',       dados.razao_social);
+    set('nomeFantasia',      dados.nome_fantasia);
+    set('inscricaoEstadual', dados.inscricao_estadual);
+    set('suframa',           dados.suframa);
+    set('cep',               dados.cep);
+    set('estado',            dados.estado);
+    set('cidade',            dados.cidade);
+    set('bairro',            dados.bairro);
+    set('endereco',          dados.endereco);
+    set('complemento',       dados.complemento);
+    set('cadSite',           dados.site);
+    set('cadHorario',        dados.horario_atendimento);
+
+    // Número
+    if (dados.numero) {
+        if (String(dados.numero).toUpperCase() === 'S/N') {
+            document.getElementById('semNumero').checked = true;
+            toggleNumero();
+        } else {
+            set('numero', dados.numero);
+        }
+    }
+
+    // Contato
+    if (dados.email_contato || dados.telefone_contato) {
+        _preencherContatos([{
+            tipo: 'Principal', nome: '',
+            email: dados.email_contato || '',
+            telefone: dados.telefone_contato || '',
+        }]);
+    }
+
+    // Se só tiver CEP mas não endereço, busca automática
+    const cepEl = document.getElementById('cep');
+    if (cepEl && cepEl.value.replace(/\D/g, '').length === 8 && !dados.estado) {
+        setTimeout(buscarCEP, 300);
+    }
 }
 
 // ========================================

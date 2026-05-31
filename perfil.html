@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="style-permissoes.css">
     <link rel="stylesheet" href="style-perfil.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
 </head>
 
 <body>
@@ -29,8 +30,8 @@
                         <img id="topbarAvatarImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
                     </div>
                     <div class="user-details">
-                        <div class="user-name" id="displayUsername">—</div>
-                        <div class="user-email" id="userEmail">—</div>
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
                     </div>
                 </div>
                 <div class="logout" onclick="handleLogout()">
@@ -248,9 +249,39 @@
                                 <i class="fa-solid fa-pen"></i> Editar
                             </button>
                         </div>
-                        <div class="section-card-body" id="empresaBody">
-                            <div class="empresa-info-grid" id="empresaInfoGrid">
-                                <!-- preenchido via JS -->
+                        <div class="perfil-section-body" id="empresaBody">
+                            <div class="perfil-form-grid">
+
+                                <!-- Razão Social | Nome Fantasia -->
+                                <div class="perfil-form-group">
+                                    <label>Razão Social</label>
+                                    <input type="text" id="empView-razao" disabled>
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Nome Fantasia</label>
+                                    <input type="text" id="empView-fantasia" disabled>
+                                </div>
+
+                                <!-- Tipo | Documento -->
+                                <div class="perfil-form-group">
+                                    <label>Tipo <span class="label-readonly">somente leitura</span></label>
+                                    <input type="text" id="empView-tipo" disabled>
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label id="empView-doc-label">Documento <span class="label-readonly">somente leitura</span></label>
+                                    <input type="text" id="empView-doc" disabled>
+                                </div>
+
+                                <!-- País | Perfil na Empresa -->
+                                <div class="perfil-form-group">
+                                    <label>País</label>
+                                    <input type="text" id="empView-pais" disabled>
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Perfil na Empresa <span class="label-readonly">somente leitura</span></label>
+                                    <input type="text" id="empView-perfil" disabled>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -420,7 +451,7 @@
 
                             <!-- Identificação | Número de Identificação -->
                             <div class="perfil-form-group">
-                                <label>Identificação da Empresa <span class="required">*</span></label>
+                                <label>Identificação da Empresa <span class="label-readonly">somente leitura</span></label>
                                 <select id="editEmpTipoCadastro" onchange="editEmpAlterarTipo()">
                                     <option value="">Selecione...</option>
                                     <option value="cnpj">CNPJ</option>
@@ -428,7 +459,7 @@
                                 </select>
                             </div>
                             <div class="perfil-form-group">
-                                <label>Número de Identificação <span class="required">*</span></label>
+                                <label>Número de Identificação <span class="label-readonly">somente leitura</span></label>
                                 <input type="text" id="editEmpDocumento" placeholder="Selecione o tipo primeiro" disabled maxlength="18" oninput="this.value=_mascaraDocBR(this.value)">
                             </div>
 
@@ -474,15 +505,11 @@
                                 </div>
                             </div>
 
-                            <!-- Endereço | Bairro | Número | Complemento -->
-                            <div class="perfil-form-group-row4">
+                            <!-- Endereço | Número | Complemento -->
+                            <div class="perfil-form-group-row3-end">
                                 <div class="perfil-form-group">
                                     <label>Endereço</label>
                                     <input type="text" id="editEmpEndereco" placeholder="Rua, Av., etc.">
-                                </div>
-                                <div class="perfil-form-group">
-                                    <label>Bairro</label>
-                                    <input type="text" id="editEmpBairro" placeholder="Bairro">
                                 </div>
                                 <div class="perfil-form-group">
                                     <label>Número</label>

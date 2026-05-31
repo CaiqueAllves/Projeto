@@ -51,13 +51,37 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     atualizarTopbar();
 
-    // Busca dados completos do DB (inclui ultimo_login, criado_em, cargo, telefone)
+    // Busca dados completos do DB
     const res = await buscarDadosPerfilCompleto();
-    dadosPerfil = res.sucesso ? res.data : null;
+    dadosPerfil = res.sucesso ? res.data : {};
 
-    preencherSidebar();
-    preencherFormulario();
-    preencherEmpresa();
+    console.log('[Perfil] dadosPerfil.empresa_id:', dadosPerfil?.empresa_id);
+    console.log('[Perfil] usuarioAtual.empresa_id:', usuarioAtual?.empresa_id);
+    console.log('[Perfil] dadosPerfil.empresas (join):', dadosPerfil?.empresas);
+
+    // Usa join do buscarDadosPerfilCompleto se retornou dados
+    // Caso contrário, tenta query direta na tabela empresas
+    if (!dadosPerfil.empresas) {
+        const empresaId = dadosPerfil.empresa_id || usuarioAtual?.empresa_id;
+        if (empresaId) {
+            const { data: empData, error: empErr } = await supabaseClient
+                .from('empresas')
+                .select('id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento')
+                .eq('id', empresaId)
+                .single();
+            console.log('[Perfil] query direta empresas:', { empData, empErr });
+            if (!empErr && empData) dadosPerfil.empresas = empData;
+        }
+    }
+
+    // Limpa flag de atualização da URL se presente
+    if (new URLSearchParams(window.location.search).get('empresa_atualizada') === '1') {
+        window.history.replaceState({}, '', 'perfil.html');
+    }
+
+    try { preencherSidebar(); }    catch(e) { console.error('[Perfil] preencherSidebar:', e); }
+    try { preencherFormulario(); } catch(e) { console.error('[Perfil] preencherFormulario:', e); }
+    try { preencherEmpresa(); }    catch(e) { console.error('[Perfil] preencherEmpresa:', e); }
     atualizarTopbar(); // atualiza avatar no topbar após ter dadosPerfil
 
     // Preencher dados mascarados nos canais de segurança
@@ -202,93 +226,34 @@ function preencherFormulario() {
 // ========================================
 
 function preencherEmpresa() {
-    const u = dadosPerfil || {};
-    const empresa = u.empresas || {};
-    const nomeEmpresa = empresa.razao_social || usuarioAtual.empresa || '—';
-    const isAdmin = usuarioAtual.perfil === 'admin';
-    const isSub = !isAdmin;
-    const grid = document.getElementById('empresaInfoGrid');
+    const empresa = dadosPerfil?.empresas || {};
+    const isAdmin = usuarioAtual?.perfil === 'admin';
 
-    if (isSub) {
-        document.getElementById('empresaSubtitulo').textContent =
-            'Empresa ao qual sua conta está vinculada.';
-    }
-
-    const cnpjRaw = (empresa.cnpj || '').replace(/\D/g, '');
-    const tipoDoc = cnpjRaw.length === 14 ? 'CNPJ' : cnpjRaw.length === 11 ? 'CPF' : null;
-    const docFormatado = cnpjRaw ? formatarCnpj(cnpjRaw) : '—';
-
-    const temEndereco = empresa.cep || empresa.estado || empresa.cidade || empresa.endereco;
-
-    const item = (icon, label, valor) => valor ? `
-        <div class="empresa-info-item">
-            <div class="empresa-info-label"><i class="fa-solid ${icon}"></i> ${label}</div>
-            <div class="empresa-info-valor">${valor}</div>
-        </div>` : '';
-
-    const secao = (label) => `
-        <div class="empresa-info-full" style="grid-column:1/-1; border-top:1px solid #f1f5f9; padding-top:12px; margin-top:4px;">
-            <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#94a3b8;">${label}</span>
-        </div>`;
-
-    const roleBadges = {
-        admin:   '<span class="empresa-role-badge role-admin">Administrador</span>',
-        gerente: '<span class="empresa-role-badge role-gerente">Gerente</span>',
-        usuario: '<span class="empresa-role-badge role-usuario">Usuário</span>',
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
     };
 
-    grid.innerHTML = `
-        ${secao('Identificação')}
-        ${item('id-card', 'Tipo', tipoDoc)}
-        ${item('file-invoice', tipoDoc || 'Documento', docFormatado)}
-        ${item('building', 'Razão Social', nomeEmpresa)}
-        ${empresa.nome_fantasia ? item('tag', 'Nome Fantasia', empresa.nome_fantasia) : ''}
+    const cnpjRaw = (empresa.cnpj || '').replace(/\D/g, '');
+    const tipoDoc = cnpjRaw.length === 14 ? 'CNPJ' : cnpjRaw.length === 11 ? 'CPF' : '';
+    const docFormatado = cnpjRaw ? formatarCnpj(cnpjRaw) : '';
 
-        ${(empresa.ie || empresa.im || empresa.suframa) ? `
-        ${secao('Registros Fiscais')}
-        ${item('receipt', 'Inscrição Estadual', empresa.ie || null)}
-        ${item('landmark', 'Inscrição Municipal', empresa.im || null)}
-        ${item('barcode', 'SUFRAMA', empresa.suframa || null)}
-        ` : ''}
+    const perfis = { admin: 'Administrador', gerente: 'Gerente', usuario: 'Usuário' };
 
-        ${temEndereco ? `
-        ${secao('Endereço')}
-        ${item('location-dot', 'Endereço', empresa.endereco ? `${empresa.endereco}${empresa.numero ? ', ' + empresa.numero : ''}${empresa.complemento ? ' — ' + empresa.complemento : ''}` : null)}
-        ${item('map', 'Bairro', empresa.bairro || null)}
-        ${item('city', 'Cidade / Estado', empresa.cidade ? `${empresa.cidade}${empresa.estado ? ' — ' + empresa.estado : ''}` : empresa.estado || null)}
-        ${item('envelope', 'CEP', empresa.cep ? empresa.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2') : null)}
-        ` : ''}
+    set('empView-razao',    empresa.razao_social || usuarioAtual?.empresa || '');
+    set('empView-fantasia', empresa.nome_fantasia);
+    set('empView-tipo',     tipoDoc);
+    set('empView-doc',      docFormatado);
+    set('empView-pais',     empresa.pais || 'BRASIL');
+    set('empView-perfil',   perfis[usuarioAtual?.perfil] || '');
 
-        ${secao('Acesso')}
-        <div class="empresa-info-item">
-            <div class="empresa-info-label"><i class="fa-solid fa-id-card"></i> Perfil na Empresa</div>
-            <div class="empresa-info-valor">${roleBadges[usuarioAtual.perfil] || '—'}</div>
-        </div>
+    // Label do documento atualiza com o tipo correto
+    const docLabel = document.getElementById('empView-doc-label');
+    if (docLabel && tipoDoc) docLabel.innerHTML = `${tipoDoc} <span class="label-readonly">somente leitura</span>`;
 
-        ${isAdmin && empresa.chave_empresa ? `
-        <div class="empresa-info-item empresa-info-full">
-            <div class="empresa-info-label"><i class="fa-solid fa-key"></i> Chave de Acesso da Empresa</div>
-            <div class="empresa-chave-row">
-                <span class="empresa-chave-valor">${empresa.chave_empresa}</span>
-                <button class="btn-copiar-chave" onclick="copiarChave('${empresa.chave_empresa}')">
-                    <i class="fa-solid fa-copy"></i> Copiar
-                </button>
-            </div>
-        </div>
-        ` : ''}
-
-        ${isSub ? `
-        <div class="empresa-info-item empresa-info-full">
-            <div class="empresa-membro-banner">
-                <i class="fa-solid fa-people-group"></i>
-                <div>
-                    <div class="empresa-membro-titulo">Você faz parte do time <strong>${nomeEmpresa}</strong></div>
-                    <div class="empresa-membro-desc">Sua conta está vinculada a esta empresa. Entre em contato com o administrador para informações sobre o plano.</div>
-                </div>
-            </div>
-        </div>
-        ` : ''}
-    `;
+    // Botão editar (só admin)
+    const btnEditar = document.getElementById('btnEditarEmpresa');
+    if (btnEditar) btnEditar.style.display = isAdmin ? '' : 'none';
 }
 
 function copiarChave(chave) {
@@ -302,49 +267,30 @@ function copiarChave(chave) {
 let _dadosEmpresaCarregados = null;
 
 async function abrirEditarEmpresa() {
-    const modal = document.getElementById('modalEditarEmpresa');
-    if (!modal) return;
-
     const empresa = dadosPerfil?.empresas || {};
-
-    // Tipo de cadastro (CNPJ = 14 dígitos, CPF = 11)
     const cnpjRaw = (empresa.cnpj || '').replace(/\D/g, '');
-    const tipoEl  = document.getElementById('editEmpTipoCadastro');
-    if (tipoEl) {
-        tipoEl.value = cnpjRaw.length === 11 ? 'cpf' : (cnpjRaw.length === 14 ? 'cnpj' : '');
-        editEmpAlterarTipo();
-    }
-    document.getElementById('editEmpDocumento').value    = cnpjRaw ? formatarCnpj(cnpjRaw) : '';
-    document.getElementById('editEmpIE').value           = empresa.ie          || '';
-    document.getElementById('editEmpIM').value           = empresa.im          || '';
-    document.getElementById('editEmpSuframa').value      = empresa.suframa     || '';
-    document.getElementById('editEmpRazaoSocial').value  = empresa.razao_social || '';
-    document.getElementById('editEmpNomeFantasia').value = empresa.nome_fantasia || '';
-    const cepRaw = (empresa.cep || '').replace(/\D/g, '');
-    document.getElementById('editEmpCep').value          = cepRaw ? cepRaw.replace(/^(\d{5})(\d{3})$/, '$1-$2') : '';
-    document.getElementById('editEmpEstado').value       = empresa.estado      || '';
-    document.getElementById('editEmpCidade').value       = empresa.cidade      || '';
-    document.getElementById('editEmpBairro').value       = empresa.bairro      || '';
-    document.getElementById('editEmpEndereco').value     = empresa.endereco    || '';
-    document.getElementById('editEmpNumero').value       = empresa.numero      || '';
-    document.getElementById('editEmpComplemento').value  = empresa.complemento || '';
 
-    // Campos de identificação são bloqueados após o cadastro
-    const bloqueado = !!(cnpjRaw || empresa.razao_social);
-    ['editEmpTipoCadastro', 'editEmpDocumento', 'editEmpRazaoSocial'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.disabled = bloqueado;
-        el.closest('.perfil-form-group')?.classList.toggle('campo-bloqueado', bloqueado);
-    });
+    // Mapeia empresas → formato esperado pelo formulário de parceiro
+    const dadosForm = {
+        _tenantId:             empresa.id,
+        tipo_cadastro:         cnpjRaw.length === 11 ? 'cpf' : 'cnpj',
+        documento:             cnpjRaw,
+        razao_social:          empresa.razao_social   || '',
+        nome_fantasia:         empresa.nome_fantasia  || '',
+        inscricao_estadual:    empresa.ie             || '',
+        inscricao_municipal:   empresa.im             || '',
+        suframa:               empresa.suframa        || '',
+        email_contato:         empresa.email          || '',
+        cep:                   (empresa.cep || '').replace(/\D/g, ''),
+        estado:                empresa.estado         || '',
+        cidade:                empresa.cidade         || '',
+        endereco:              empresa.endereco       || '',
+        numero:                empresa.numero         || '',
+        complemento:           empresa.complemento   || '',
+    };
 
-    modal.style.display = 'flex';
-    const primeiroEditavel = bloqueado
-        ? document.getElementById('editEmpNomeFantasia')
-        : document.getElementById('editEmpRazaoSocial');
-    primeiroEditavel?.focus();
-
-    carregarDocumentosEmpresa();
+    sessionStorage.setItem('_tenantEmpresaEdicao', JSON.stringify(dadosForm));
+    window.location.href = 'formularios.html?tab=empresa&modo=tenant';
 }
 
 function fecharEditarEmpresa(event) {
@@ -370,7 +316,6 @@ async function salvarEdicaoEmpresa() {
         cep:           (document.getElementById('editEmpCep')?.value || '').replace(/\D/g, '') || null,
         estado:        document.getElementById('editEmpEstado')?.value.trim() || null,
         cidade:        document.getElementById('editEmpCidade')?.value.trim() || null,
-        bairro:        document.getElementById('editEmpBairro')?.value.trim() || null,
         endereco:      document.getElementById('editEmpEndereco')?.value.trim() || null,
         numero:        document.getElementById('editEmpNumero')?.value.trim() || null,
         complemento:   document.getElementById('editEmpComplemento')?.value.trim() || null,
@@ -1086,9 +1031,11 @@ function _mascaraIM(valor) {
 // ========================================
 
 function editEmpAlterarTipo() {
-    const tipo  = document.getElementById('editEmpTipoCadastro')?.value;
-    const input = document.getElementById('editEmpDocumento');
+    const tipoEl = document.getElementById('editEmpTipoCadastro');
+    const tipo   = tipoEl?.value;
+    const input  = document.getElementById('editEmpDocumento');
     if (!input) return;
+    if (tipoEl?.disabled) return;  // campos bloqueados — não reabilitar
     input.disabled = !tipo;
     input.value = '';
     if (tipo === 'cnpj') {

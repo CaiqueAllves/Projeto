@@ -120,20 +120,33 @@ async function carregarEstatisticas(empresas) {
     const arquivos = JSON.parse(localStorage.getItem('arquivosUpload') || '[]');
 
     const totalEmpresas = empresas.length;
-    const totalClientes = empresas.filter(e => e.tipos && e.tipos.includes('cliente')).length;
-    const totalFornecedores = empresas.filter(e => e.tipos && e.tipos.includes('fornecedor')).length;
+    const totalClientes = empresas.filter(e => e.is_cliente).length;
+    const totalFornecedores = empresas.filter(e => e.is_fornecedor).length;
 
     const umaSemanaAtras = new Date();
     umaSemanaAtras.setDate(umaSemanaAtras.getDate() - 7);
 
     const novasEmpresasSemana = empresas.filter(e => {
-        const dataCadastro = new Date(e.criado_em);
+        const dataCadastro = new Date(e.created_at);
         return dataCadastro > umaSemanaAtras;
     }).length;
 
     document.getElementById('totalEmpresas').textContent = totalEmpresas;
-    document.getElementById('totalClientes').textContent = totalClientes;
-    document.getElementById('totalFornecedores').textContent = totalFornecedores;
+
+    try {
+        const usuario = obterUsuarioLogado();
+        const [{ count: countProc }, { count: countProd }, { count: countProf }] = await Promise.all([
+            supabaseClient.from('processos').select('*', { count: 'exact', head: true }).eq('empresa_proprietaria_id', usuario.empresa_id),
+            supabaseClient.from('produtos').select('*', { count: 'exact', head: true }).eq('empresa_proprietaria_id', usuario.empresa_id),
+            supabaseClient.from('proformas').select('*', { count: 'exact', head: true }).eq('empresa_id', usuario.empresa_id)
+        ]);
+        const elProc = document.getElementById('totalProcessos');
+        if (elProc) elProc.textContent = countProc || 0;
+        const elProd = document.getElementById('totalProdutos');
+        if (elProd) elProd.textContent = countProd || 0;
+        const elProf = document.getElementById('totalProformas');
+        if (elProf) elProf.textContent = countProf || 0;
+    } catch { /* silencioso */ }
 
     document.getElementById('badgeNovasEmpresas').textContent =
         novasEmpresasSemana > 0 ? `+${novasEmpresasSemana} esta semana` : 'Nenhuma esta semana';
@@ -141,15 +154,6 @@ async function carregarEstatisticas(empresas) {
     document.getElementById('badgeArquivos').textContent =
         arquivos.length > 0 ? `${arquivos.length} arquivo${arquivos.length > 1 ? 's' : ''} enviado${arquivos.length > 1 ? 's' : ''}` : 'Nenhum arquivo';
 
-    try {
-        const usuario = obterUsuarioLogado();
-        const { count } = await supabaseClient
-            .from('produtos')
-            .select('*', { count: 'exact', head: true })
-            .eq('empresa_proprietaria_id', usuario.empresa_id);
-        const el = document.getElementById('totalProdutos');
-        if (el) el.textContent = count || 0;
-    } catch { /* silencioso */ }
 }
 
 // ========================================
@@ -482,39 +486,49 @@ function formatarDataAtividade(dataISO) {
 // GRÁFICOS
 // ========================================
 
-function inicializarGraficos(empresas) {
+async function inicializarGraficos(empresas) {
     criarGraficoTipos(empresas);
-    criarGraficoCadastros(empresas);
     criarGraficoEstados(empresas);
+
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id) return;
+        const [resProc, resProf] = await Promise.all([
+            supabaseClient.from('processos').select('status').eq('empresa_proprietaria_id', usuario.empresa_id),
+            supabaseClient.from('proformas').select('status').eq('empresa_id', usuario.empresa_id)
+        ]);
+        criarGraficoProcessos(resProc.data || []);
+        criarGraficoProformas(resProf.data || []);
+    } catch (e) { console.error('Gráficos operações:', e); }
 }
 
-// Gráfico de Empresas por Tipo
+// Gráfico de Parceiros por Tipo
 function criarGraficoTipos(empresas) {
     const ctx = document.getElementById('chartTipos');
     if (!ctx) return;
-    
-    const clientes = empresas.filter(e => Array.isArray(e.tipos) && e.tipos.includes('cliente')).length;
-    const fornecedores = empresas.filter(e => Array.isArray(e.tipos) && e.tipos.includes('fornecedor')).length;
-    const ambos = empresas.filter(e => Array.isArray(e.tipos) && e.tipos.includes('cliente') && e.tipos.includes('fornecedor')).length;
-    
+
+    const counts = [
+        empresas.filter(e => e.is_cliente).length,
+        empresas.filter(e => e.is_fornecedor).length,
+        empresas.filter(e => e.is_fabricante).length,
+        empresas.filter(e => e.is_transportadora).length,
+        empresas.filter(e => e.is_remetente).length,
+    ];
+
     new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Apenas Clientes', 'Apenas Fornecedores', 'Ambos'],
+            labels: ['Clientes', 'Fornecedores', 'Fabricantes', 'Transportadoras', 'Remetentes'],
             datasets: [{
-                data: [clientes - ambos, fornecedores - ambos, ambos],
-                backgroundColor: ['#22C55E', '#f59e0b', '#4776ec'],
+                data: counts,
+                backgroundColor: ['#22C55E', '#f59e0b', '#4776ec', '#06b6d4', '#f43f5e'],
                 borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
@@ -631,10 +645,18 @@ function criarGraficoEstados(empresas) {
     const ctx = document.getElementById('chartEstados');
     if (!ctx) return;
     
+    // Normaliza código de país para nome de exibição
+    const normalizarPais = p => {
+        if (!p) return 'Não informado';
+        const upper = p.trim().toUpperCase();
+        if (['BR', 'BRA', 'BRASIL', 'BRAZIL'].includes(upper)) return 'BRASIL';
+        return p.trim();
+    };
+
     // Agrupar por país
     const estados = {};
     empresas.forEach(empresa => {
-        const estado = empresa.pais || 'Não informado';
+        const estado = normalizarPais(empresa.pais);
         estados[estado] = (estados[estado] || 0) + 1;
     });
     
@@ -688,6 +710,63 @@ function criarGraficoEstados(empresas) {
                     ticks: { stepSize: 1, color: '#94a3b8', font: { size: 11 } }
                 }
             }
+        }
+    });
+}
+
+// Gráfico de Processos por Status
+function criarGraficoProcessos(processos) {
+    const ctx = document.getElementById('chartProcessos');
+    if (!ctx) return;
+
+    const labels = ['Aberto', 'Em Andamento', 'Ag. Documentos', 'Concluído', 'Cancelado'];
+    const keys   = ['aberto', 'em_andamento', 'aguardando_documentos', 'concluido', 'cancelado'];
+    const colors = ['#4776ec', '#f59e0b', '#06b6d4', '#22c55e', '#ef4444'];
+    const counts = keys.map(k => processos.filter(p => p.status === k).length);
+
+    if (counts.every(c => c === 0)) {
+        ctx.parentElement.insertAdjacentHTML('beforeend', '<p class="chart-sem-dados">Nenhum processo cadastrado</p>');
+        ctx.style.display = 'none';
+        return;
+    }
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderWidth: 0 }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+}
+
+// Gráfico de Proformas por Status
+function criarGraficoProformas(proformas) {
+    const ctx = document.getElementById('chartProformas');
+    if (!ctx) return;
+
+    const labels = ['Enviado', 'Aprovado', 'Pendente', 'Recusado'];
+    const keys   = ['enviado', 'aprovado', 'pendente', 'recusado'];
+    const colors = ['#4776ec', '#22c55e', '#f59e0b', '#ef4444'];
+    const counts = keys.map(k => proformas.filter(p => p.status === k).length);
+
+    if (counts.every(c => c === 0)) {
+        ctx.parentElement.insertAdjacentHTML('beforeend', '<p class="chart-sem-dados">Nenhuma proforma cadastrada</p>');
+        ctx.style.display = 'none';
+        return;
+    }
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{ data: counts, backgroundColor: colors, borderWidth: 0 }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }

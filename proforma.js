@@ -149,7 +149,8 @@ function profRenderizarLista(lista) {
                 </select>
             </td>
             <td class="col-acoes">
-                <div style="display:flex;gap:6px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    ${status === 'aprovado' ? `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Seguir com Processo?</button>` : ''}
                     <button class="btn-acao btn-editar" onclick="profEditar('${p.id}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
                     </button>
@@ -195,6 +196,21 @@ async function profAlterarStatus(id, selectEl) {
         const p = _profTodos.find(x => x.id === id);
         if (p) p.status = novoStatus;
         profAtualizarContadores(_profListaAtual);
+
+        const row = document.getElementById(`prof-card-${id}`);
+        if (row) {
+            const acoesDiv  = row.querySelector('.col-acoes > div');
+            const btnExiste = row.querySelector('.btn-seguir-processo');
+            if (novoStatus === 'aprovado' && !btnExiste && acoesDiv) {
+                const btn = document.createElement('button');
+                btn.className = 'btn-seguir-processo';
+                btn.textContent = 'Seguir com Processo?';
+                btn.onclick = () => profSeguirProcesso(id);
+                acoesDiv.prepend(btn);
+            } else if (novoStatus !== 'aprovado' && btnExiste) {
+                btnExiste.remove();
+            }
+        }
     } catch (err) {
         alert('Erro ao atualizar status: ' + err.message);
         selectEl.value     = statusAntes;
@@ -229,6 +245,11 @@ function profEditar(id) {
     window.open(`formularios.html?tab=proposta&id=${id}`, '_blank');
 }
 
+// ── Seguir com Processo ───────────────────
+function profSeguirProcesso(id) {
+    window.open(`formularios.html?tab=processo&proforma_id=${id}`, '_blank');
+}
+
 // ── Excluir (soft delete) ─────────────────
 function profAbrirModalExcluir(id) {
     _profExcluirId = id;
@@ -254,9 +275,14 @@ async function profConfirmarExcluir() {
     const btn = document.getElementById('btnConfirmarExcluirProforma');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Excluindo...'; }
     try {
+        const usuario = obterUsuarioLogado();
         const { error } = await supabaseClient
             .from('proformas')
-            .update({ status: 'excluido' })
+            .update({
+                status:      'excluido',
+                excluido_em: new Date().toISOString(),
+                excluido_por: usuario?.nome || usuario?.email || 'Desconhecido',
+            })
             .eq('id', _profExcluirId);
         if (error) throw error;
         profFecharModalExcluir();
@@ -290,9 +316,9 @@ async function profCarregarExcluidos() {
         const usuario = obterUsuarioLogado();
         let query = supabaseClient
             .from('proformas')
-            .select('id, codigo, origem_pais, destino_pais, created_at')
+            .select('id, codigo, origem_pais, destino_pais, excluido_em, excluido_por')
             .eq('status', 'excluido')
-            .order('created_at', { ascending: false });
+            .order('excluido_em', { ascending: false });
         if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
 
         const { data, error } = await query;
@@ -303,17 +329,37 @@ async function profCarregarExcluidos() {
             return;
         }
 
-        container.innerHTML = data.map(p => `
+        const agora = Date.now();
+        container.innerHTML = data.map(p => {
+            let metaHtml = '';
+            if (p.excluido_em) {
+                const exclMs   = new Date(p.excluido_em).getTime();
+                const diasPassados = Math.floor((agora - exclMs) / 86400000);
+                const diasRestantes = 7 - diasPassados;
+                const dataFmt  = new Date(p.excluido_em).toLocaleDateString('pt-BR');
+                const corDias  = diasRestantes <= 2 ? '#dc2626' : '#94a3b8';
+                metaHtml = `
+                    <span class="prof-excluido-rota">
+                        <i class="fa-solid fa-calendar-xmark" style="font-size:10px;"></i> ${dataFmt}
+                        ${p.excluido_por ? `· ${p.excluido_por}` : ''}
+                    </span>
+                    <span class="prof-excluido-rota" style="color:${corDias};">
+                        <i class="fa-solid fa-clock" style="font-size:10px;"></i>
+                        ${diasRestantes > 0 ? `${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''} restante${diasRestantes !== 1 ? 's' : ''}` : 'Expira hoje'}
+                    </span>`;
+            }
+            return `
             <div class="prof-excluido-item">
                 <div class="prof-excluido-info">
                     <span class="prof-excluido-codigo">${p.codigo || '—'}</span>
                     <span class="prof-excluido-rota">${p.origem_pais || '—'} → ${p.destino_pais || '—'}</span>
+                    ${metaHtml}
                 </div>
                 <button class="prof-excluido-restaurar" onclick="profRestaurar('${p.id}')">
                     <i class="fa-solid fa-rotate-left"></i> Restaurar
                 </button>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     } catch (err) {
         container.innerHTML = `<div style="padding:16px;color:#dc2626;font-size:13px;">Erro: ${err.message}</div>`;
     }

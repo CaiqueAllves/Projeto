@@ -102,6 +102,54 @@ function injetarSidebar() {
     }
 }
 
+// ── Mobile: hamburger + overlay ──────────────────────────────
+function _injetarMobile() {
+    // Overlay (fundo escuro quando sidebar aberta)
+    if (!document.getElementById('mob-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'mob-overlay';
+        overlay.className = 'mob-overlay';
+        overlay.addEventListener('click', _fecharSidebarMobile);
+        document.body.appendChild(overlay);
+    }
+
+    // Hamburger no topbar
+    const topbar = document.querySelector('.topbar');
+    if (topbar && !topbar.querySelector('.mob-hamburger')) {
+        const btn = document.createElement('button');
+        btn.className = 'mob-hamburger';
+        btn.setAttribute('aria-label', 'Abrir menu');
+        btn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+        btn.addEventListener('click', _toggleSidebarMobile);
+        topbar.insertBefore(btn, topbar.firstChild);
+    }
+
+    // Fechar sidebar ao clicar em qualquer link/item do menu no mobile
+    const aside = document.querySelector('aside');
+    if (aside) {
+        aside.addEventListener('click', function(e) {
+            if (window.innerWidth <= 768 && (e.target.closest('a') || e.target.closest('li'))) {
+                _fecharSidebarMobile();
+            }
+        });
+    }
+}
+
+function _toggleSidebarMobile() {
+    const aside   = document.querySelector('aside');
+    const overlay = document.getElementById('mob-overlay');
+    if (!aside) return;
+    const aberto = aside.classList.toggle('mob-aberto');
+    if (overlay) overlay.classList.toggle('ativo', aberto);
+}
+
+function _fecharSidebarMobile() {
+    const aside   = document.querySelector('aside');
+    const overlay = document.getElementById('mob-overlay');
+    if (aside)   aside.classList.remove('mob-aberto');
+    if (overlay) overlay.classList.remove('ativo');
+}
+
 // ========================================
 // NAVEGAÇÃO - DESTACAR ITEM ATIVO
 // ========================================
@@ -111,6 +159,7 @@ function _initNavegador() {
     destacarMenuAtivo();
     inicializarMenuColapsavel();
     destacarInicio();
+    _injetarMobile();
 }
 
 if (document.readyState === 'loading') {

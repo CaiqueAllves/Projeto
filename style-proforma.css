@@ -2,6 +2,31 @@
    PROFORMA — ESTILOS ESPECÍFICOS
    ======================================== */
 
+/* ── Botão "Seguir com Processo?" ────────── */
+.btn-seguir-processo {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 0 12px;
+    height: 32px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-seguir-processo:hover {
+    background: #16a34a;
+    color: white;
+    border-color: #16a34a;
+}
+.empresa-tabela .col-acoes {
+    width: auto;
+}
+
 /* ── Contadores do header ────────────────── */
 .lista-header-counts {
     display: flex;
@@ -118,7 +143,7 @@
     top: calc(100% + 8px);
     right: 0;
     width: 360px;
-    max-height: 300px;
+    max-height: 380px;
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -139,6 +164,25 @@
     letter-spacing: 0.04em;
     border-bottom: 1px solid #f1f5f9;
     flex-shrink: 0;
+}
+
+.prof-excluidos-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    font-size: 11px;
+    color: #92400e;
+    line-height: 1.5;
+    flex-shrink: 0;
+}
+
+.prof-excluidos-aviso i {
+    color: #f59e0b;
+    flex-shrink: 0;
+    margin-top: 1px;
 }
 
 #profExcluidosContainer {
