@@ -193,16 +193,19 @@
         gap: 8px !important;
         align-items: center !important;
         padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
     }
 
     .header-left {
-        flex: 1 !important;
+        flex: 1 1 auto !important;
         width: auto !important;
         min-width: 0 !important;
     }
 
     .header-right {
         display: flex !important;
+        flex-direction: row !important;
         flex-wrap: nowrap !important;
         gap: 6px !important;
         justify-content: flex-end !important;
@@ -212,9 +215,10 @@
 
     /* ── Botões só com ícones em mobile ── */
     .header-right button {
-        flex: 0 0 auto !important;
+        flex: 0 0 44px !important;
         width: 44px !important;
         height: 44px !important;
+        min-width: 44px !important;
         padding: 0 !important;
         display: flex !important;
         align-items: center !important;
@@ -258,11 +262,12 @@
 
     /* ── Input de pesquisa ────────────── */
     .filter-wrapper {
-        flex: 1 !important;
+        flex: 1 1 auto !important;
         position: relative !important;
         display: flex !important;
         align-items: center !important;
-        width: 100% !important;
+        width: auto !important;
+        min-width: 0 !important;
     }
 
     .filter-wrapper input {
@@ -274,6 +279,7 @@
         border-radius: 8px !important;
         background: white !important;
         color: #374151 !important;
+        box-sizing: border-box !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
     }
 
