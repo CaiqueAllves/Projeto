@@ -306,11 +306,26 @@
         width: 100% !important;
         border-collapse: collapse !important;
     }
+
+    /* EXCEÇÃO: empresa-tabela não tem scroll */
+    table.empresa-tabela {
+        overflow-x: visible !important;
+        white-space: normal !important;
+    }
+
     th, td {
         padding: 10px 8px !important;
         font-size: 12px !important;
         min-width: 80px !important;
     }
+
+    /* EXCEÇÃO: empresa-tabela override */
+    .empresa-tabela th,
+    .empresa-tabela td {
+        padding: 0 !important;
+        min-width: auto !important;
+    }
+
     th {
         background: #f8fafc !important;
         font-weight: 600 !important;
@@ -325,6 +340,7 @@
         overflow: visible !important;
         white-space: normal !important;
         width: 100% !important;
+        border-collapse: separate !important;
     }
 
     .empresa-tabela thead {
@@ -336,6 +352,7 @@
         flex-direction: column !important;
         gap: 12px !important;
         width: 100% !important;
+        white-space: normal !important;
     }
 
     .empresa-tabela tbody tr {
@@ -352,14 +369,19 @@
         gap: 8px !important;
     }
 
+    .empresa-tabela th,
     .empresa-tabela td {
         padding: 0 !important;
         border: none !important;
+        min-width: auto !important;
+        white-space: normal !important;
+    }
+
+    .empresa-tabela td {
         display: flex !important;
         justify-content: flex-start !important;
         align-items: center !important;
         font-size: 13px !important;
-        min-width: auto !important;
         flex-wrap: wrap !important;
         gap: 8px !important;
     }
