@@ -109,9 +109,12 @@ function _injetarMobile() {
         const overlay = document.createElement('div');
         overlay.id = 'mob-overlay';
         overlay.className = 'mob-overlay';
-        overlay.addEventListener('click', () => {
-            _fecharSidebarMobile();
-            _fecharContaMobile();
+        overlay.addEventListener('click', (e) => {
+            // Só fecha se clicou no overlay mesmo (não no sidebar)
+            if (e.target.id === 'mob-overlay') {
+                _fecharSidebarMobile();
+                _fecharContaMobile();
+            }
         });
         document.body.appendChild(overlay);
     }
@@ -171,7 +174,10 @@ function _injetarMobile() {
     if (aside) {
         aside.addEventListener('click', function(e) {
             if (window.innerWidth <= 768 && (e.target.closest('a') || e.target.closest('li'))) {
-                _fecharSidebarMobile();
+                // Delay pequeno para garantir que a navegação começa antes de fechar
+                setTimeout(() => {
+                    _fecharSidebarMobile();
+                }, 50);
             }
         });
     }
