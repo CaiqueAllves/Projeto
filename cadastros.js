@@ -236,18 +236,18 @@ function renderizarEmpresas(lista) {
             <tbody>
                 ${lista.map(e => `
                     <tr>
-                        <td class="col-modelo">${_modeloBadge(e)}</td>
-                        <td class="col-tipo">
+                        <td class="col-modelo" data-label="Modelo:">${_modeloBadge(e)}</td>
+                        <td class="col-tipo" data-label="Tipo:">
                             <div class="tipo-badges">
                                 ${_tiposBadges(e) || '<span class="cell-vazio">—</span>'}
                             </div>
                         </td>
-                        <td class="col-razao"><span class="empresa-nome">${e.razao_social || '—'}</span></td>
-                        <td class="col-fantasia"><span class="empresa-fantasia">${e.nome_fantasia || '<span class="cell-vazio">—</span>'}</span></td>
-                        <td class="col-doc cell-nowrap">${e.documento || '—'}</td>
-                        <td class="col-loc cell-nowrap">${[_normalizarPais(e.pais), e.estado].filter(Boolean).join(' / ') || '—'}</td>
-                        <td class="col-tags">${(e.tags && e.tags.length) ? renderTagsMini(e.tags) : '<span class="cell-vazio">—</span>'}</td>
-                        <td class="col-acoes" style="text-align:center;white-space:nowrap;">
+                        <td class="col-razao" data-label="Razão Social:"><span class="empresa-nome">${e.razao_social || '—'}</span></td>
+                        <td class="col-fantasia" data-label="Nome Fantasia:"><span class="empresa-fantasia">${e.nome_fantasia || '<span class="cell-vazio">—</span>'}</span></td>
+                        <td class="col-doc cell-nowrap" data-label="Documento:">${e.documento || '—'}</td>
+                        <td class="col-loc cell-nowrap" data-label="Localização:">${[_normalizarPais(e.pais), e.estado].filter(Boolean).join(' / ') || '—'}</td>
+                        <td class="col-tags" data-label="Tags:">${(e.tags && e.tags.length) ? renderTagsMini(e.tags) : '<span class="cell-vazio">—</span>'}</td>
+                        <td class="col-acoes" style="text-align:center;white-space:nowrap;" data-label="">
                             <button class="btn-acao btn-visualizar" onclick="visualizarEmpresa('${e.id}')" title="Visualizar">
                                 <i class="fa-solid fa-eye"></i>
                             </button>

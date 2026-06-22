@@ -317,17 +317,102 @@
     }
     tbody tr { height: auto !important; }
 
-    /* Lista de produtos mobile */
-    .prod-tabela { width: 100% !important; }
-    .prod-tabela td { padding: 8px !important; }
-    .prod-sku { font-size: 11px !important; }
-    .prod-badge { font-size: 10px !important; padding: 3px 8px !important; }
-    .btn-acao { width: 24px !important; height: 24px !important; font-size: 11px !important; }
+    /* ── Tabela de Empresas em Cards Mobile ── */
+    .empresa-tabela {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        overflow: visible !important;
+        white-space: normal !important;
+        width: 100% !important;
+    }
 
-    /* Wrapper de tabela com scroll */
-    .table-wrapper, .tabela-wrapper {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+    .empresa-tabela thead {
+        display: none !important;
+    }
+
+    .empresa-tabela tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    .empresa-tabela tbody tr {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 14px !important;
+        background: white !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+        margin: 0 !important;
+        height: auto !important;
+        white-space: normal !important;
+        gap: 8px !important;
+    }
+
+    .empresa-tabela td {
+        padding: 0 !important;
+        border: none !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        font-size: 13px !important;
+        min-width: auto !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .empresa-tabela td[data-label]::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #64748b;
+        min-width: 110px;
+        font-size: 12px;
+    }
+
+    .empresa-tabela td[data-label=""] { flex-direction: row; justify-content: center; }
+    .empresa-tabela td[data-label=""]::before { display: none; }
+
+    /* Ações no card empresa */
+    .empresa-tabela .col-acoes {
+        justify-content: center !important;
+        gap: 6px !important;
+        padding-top: 8px !important;
+        border-top: 1px solid #f1f5f9 !important;
+        margin-top: 4px !important;
+    }
+
+    .btn-acao {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 6px !important;
+        font-size: 14px !important;
+    }
+
+    /* ── Badges dentro dos cards ────────── */
+    .empresa-tabela .tipo-badges {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 4px !important;
+    }
+
+    .empresa-tabela .tag-modelo,
+    .empresa-tabela .tag-item-mini {
+        font-size: 11px !important;
+        padding: 3px 8px !important;
+    }
+
+    .empresa-tabela .empresa-nome,
+    .empresa-tabela .empresa-fantasia {
+        font-weight: 500 !important;
+        color: #1f2937 !important;
+    }
+
+    .empresa-tabela .cell-vazio {
+        color: #9ca3af !important;
+        font-style: italic !important;
     }
     .filtros-container {
         flex-direction: column !important;
