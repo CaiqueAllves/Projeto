@@ -188,80 +188,109 @@
 
     /* ── Page headers ──────────────────── */
     .page-header {
-        flex-direction: column !important;
-        gap: 10px !important;
-        align-items: stretch !important;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+        align-items: center !important;
+        padding: 0 !important;
     }
-    .header-left, .header-right {
-        width: 100%;
+
+    .header-left {
+        flex: 1 !important;
+        width: auto !important;
+        min-width: 0 !important;
     }
+
     .header-right {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 8px;
-        justify-content: flex-end;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+        justify-content: flex-end !important;
+        flex-shrink: 0 !important;
+        align-items: center !important;
     }
 
     /* ── Botões só com ícones em mobile ── */
     .header-right button {
         flex: 0 0 auto !important;
-        width: 40px !important;
-        height: 40px !important;
+        width: 44px !important;
+        height: 44px !important;
         padding: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         border-radius: 8px !important;
-        border: 1px solid #e5e7eb !important;
+        border: 1px solid #d1d5db !important;
         background: white !important;
         color: #374151 !important;
         cursor: pointer !important;
-        transition: all 0.2s !important;
+        transition: all 0.2s ease !important;
         font-size: 0 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
     }
 
     .header-right button i {
         font-size: 18px !important;
     }
 
+    .header-right button:active {
+        transform: scale(0.95) !important;
+    }
+
     .header-right button:hover {
-        background: #f3f4f6 !important;
-        border-color: #d1d5db !important;
+        background: #f9fafb !important;
+        border-color: #9ca3af !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
 
     .header-right button.btn-cadastrar {
         background: #4776ec !important;
         color: white !important;
         border-color: #4776ec !important;
+        box-shadow: 0 2px 4px rgba(71,118,236,0.2) !important;
     }
 
     .header-right button.btn-cadastrar:hover {
         background: #3d63d8 !important;
         border-color: #3d63d8 !important;
+        box-shadow: 0 4px 8px rgba(71,118,236,0.3) !important;
     }
 
-    /* ── Input de pesquisa expandível ──── */
+    /* ── Input de pesquisa ────────────── */
     .filter-wrapper {
-        width: 100%;
-        position: relative;
-        display: flex;
-        align-items: center;
+        flex: 1 !important;
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
     }
 
     .filter-wrapper input {
         width: 100% !important;
+        height: 44px !important;
         padding: 10px 12px 10px 36px !important;
-        border: 1px solid #e5e7eb !important;
+        font-size: 14px !important;
+        border: 1px solid #d1d5db !important;
         border-radius: 8px !important;
+        background: white !important;
+        color: #374151 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+    }
+
+    .filter-wrapper input:focus {
+        border-color: #4776ec !important;
+        box-shadow: 0 2px 4px rgba(71,118,236,0.2) !important;
+        outline: none !important;
     }
 
     .filter-wrapper .filter-icon {
-        position: absolute;
-        left: 12px;
-        color: #94a3b8;
-        cursor: pointer;
-        font-size: 16px;
-        pointer-events: none;
+        position: absolute !important;
+        left: 12px !important;
+        color: #9ca3af !important;
+        font-size: 16px !important;
+        pointer-events: none !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
     }
 
     /* ── Actions bar ───────────────────── */
