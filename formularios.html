@@ -1322,6 +1322,21 @@
                                         <span class="doc-filename" id="doc-filename-due"></span>
                                     </div>
 
+                                    <!-- LICENÇA DE EXPORTAÇÃO -->
+                                    <div class="form-group doc-campo">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-le">Nº Licença de Exportação (LE)</label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('le')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('le')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('le')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-le" name="doc_num_le" placeholder="Ex: LE-2024-001">
+                                        <input type="file" id="doc-file-le" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-le"></span>
+                                    </div>
+
                                     <!-- CERTIFICADO DE ORIGEM -->
                                     <div class="form-group doc-campo">
                                         <div class="doc-label-row">
@@ -2188,9 +2203,26 @@
                                         </div>
                                     </div>
 
-                                    <!-- Categoria | Tipo | Marca / Fabricante -->
+                                    <!-- Status | Unidade Comercial | Categoria | Tipo | Marca / Fabricante -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-3">
+                                        <div style="display:grid; grid-template-columns: 0.5fr 0.7fr 1fr 1fr 1fr; gap: 16px;">
+                                            <div class="form-group">
+                                                <label for="prod-status">Status</label>
+                                                <select id="prod-status" name="status">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="ativo">Ativo</option>
+                                                    <option value="pendente">Pendente</option>
+                                                    <option value="pausado">Pausado</option>
+                                                    <option value="inativo">Inativo</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-unidade">Unidade Comercial</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prod-unidade" name="unidade_medida" placeholder="Ex: UN, KG..." autocomplete="off">
+                                                    <div class="autocomplete-list" id="prod-unidade-lista"></div>
+                                                </div>
+                                            </div>
                                             <div class="form-group">
                                                 <label for="prod-categoria">Categoria</label>
                                                 <input type="text" id="prod-categoria" name="categoria" placeholder="Ex: Eletrônicos">
@@ -2261,7 +2293,9 @@
                                                     </div>
                                                 </div>
                                                 <div class="form-group" style="margin-bottom:0;">
-                                                    <label for="prod-ncm-utrib">Unidade Tributação NCM</label>
+                                                    <label for="prod-ncm-utrib">Unidade Tributária NCM
+                                                        <span class="info-balao" data-tooltip="Unidade Tributária (uTrib): É a medida oficial obrigatória definida pelo governo para o cálculo tributário da NCM específica."><i class="fa-solid fa-circle-info"></i></span>
+                                                    </label>
                                                     <input type="text" id="prod-ncm-utrib" name="ncm_utrib" readonly placeholder="Preenchido automaticamente" style="background:#f8faff;cursor:default;">
                                                 </div>
                                             </div>
@@ -2272,34 +2306,19 @@
                                                     <textarea id="prod-ncm-descricao" name="ncm_descricao" readonly placeholder="Preenchido automaticamente" style="background:#f8faff;cursor:default;height:65px;resize:none;"></textarea>
                                                 </div>
                                                 <div class="form-group" style="margin-bottom:0;">
-                                                    <label for="prod-ncm-descricao-completa">Descrição Completa NCM</label>
+                                                    <label for="prod-ncm-descricao-completa">Descrição Completa NCM
+                                                        <span class="info-balao" data-tooltip="Baseado na TEC (Tarifa Externa Comum)."><i class="fa-solid fa-circle-info"></i></span>
+                                                    </label>
                                                     <textarea id="prod-ncm-descricao-completa" name="ncm_descricao_completa" readonly placeholder="Preenchido automaticamente" style="background:#f8faff;cursor:default;height:65px;resize:none;"></textarea>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <!-- Linha 2b: Status | Unidade de Medida | URL da Imagem (+ ícone upload) -->
+                                    <!-- Linha 7: URL da Imagem | Nome do Produto | Descrição -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-3" style="align-items: end;">
-                                            <div class="form-group">
-                                                <label for="prod-status">Status</label>
-                                                <select id="prod-status" name="status">
-                                                    <option value="">Selecione...</option>
-                                                    <option value="ativo">Ativo</option>
-                                                    <option value="pendente">Pendente</option>
-                                                    <option value="pausado">Pausado</option>
-                                                    <option value="inativo">Inativo</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-unidade">Unidade de Medida</label>
-                                                <div class="autocomplete-wrapper">
-                                                    <input type="text" id="prod-unidade" name="unidade_medida" placeholder="Ex: UN, KG..." autocomplete="off">
-                                                    <div class="autocomplete-list" id="prod-unidade-lista"></div>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
+                                        <div style="display:grid; grid-template-columns: 0.5fr 1fr 1.5fr; gap: 16px; align-items: end;">
+                                            <div class="form-group" style="margin-bottom:0;">
                                                 <div class="prod-url-img-label-row">
                                                     <label for="prod-imagem-url">URL da Imagem do Produto</label>
                                                     <div class="prod-url-img-acoes">
@@ -2319,37 +2338,19 @@
                                                 </div>
                                                 <input type="url" id="prod-imagem-url" name="imagem_url" placeholder="https://..." data-no-caps>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Linha 3: Nome | Idioma 2 (oculto) | Adicionar Idioma -->
-                                    <div class="form-group full-width">
-                                        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-                                            <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+                                            <div class="form-group" style="margin-bottom:0;">
                                                 <label for="prod-nome">Nome do Produto <span class="required">*</span></label>
                                                 <input type="text" id="prod-nome" name="nome" placeholder="Nome completo do produto">
                                             </div>
-                                            <div class="form-group" id="prod-nome-idioma2-grupo" style="flex:1;min-width:200px;margin-bottom:0;display:none;">
-                                                <label for="prod-nome-idioma2">Idioma 2</label>
-                                                <input type="text" id="prod-nome-idioma2" name="nome_idioma2" placeholder="Nome em outro idioma">
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prod-descricao">Descrição / Composição do Produto</label>
+                                                <textarea id="prod-descricao" name="descricao" placeholder="Descrição detalhada do produto..." maxlength="500" rows="1" style="resize:none; overflow:hidden; height:42px; min-height:42px;" oninput="this.style.setProperty('height','42px','important');this.style.setProperty('height',this.scrollHeight+'px','important')"></textarea>
                                             </div>
-                                            <button type="button" id="btn-add-idioma" class="btn-add-idioma" onclick="prodAdicionarIdioma()" style="margin-bottom:2px;">
-                                                <i class="fa-solid fa-plus"></i> Adicionar Idioma
-                                            </button>
                                         </div>
-                                        <div id="prod-idiomas-extras" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
-                                    </div>
-
-                                    <!-- Linha 4: Descrição + Idiomas -->
-                                    <div class="form-group full-width">
-                                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                                            <label style="margin:0;">Descrição</label>
-                                            <button type="button" id="btn-add-desc-idioma" class="btn-add-idioma" onclick="prodAdicionarDescIdioma()">
-                                                <i class="fa-solid fa-plus"></i> Adicionar Descrição outro Idioma
-                                            </button>
-                                        </div>
-                                        <textarea id="prod-descricao" name="descricao" placeholder="Descrição detalhada do produto..." maxlength="100"></textarea>
-                                        <div id="prod-desc-idiomas-extras" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;"></div>
+                                        <button type="button" id="btn-add-idioma-prod" class="btn-add-idioma" onclick="prodAdicionarIdiomaExtra()" style="margin-top:10px; width:fit-content;">
+                                            <i class="fa-solid fa-plus"></i> Adicionar outro Idioma
+                                        </button>
+                                        <div id="prod-idiomas-extra-container" style="display:flex; flex-direction:column; gap:24px; margin-top:16px;"></div>
                                     </div>
 
 
@@ -2763,6 +2764,23 @@
                                         </div>
                                     </div>
 
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO: Documentos -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-file-pdf"></i>
+                                Documentos
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div id="prod-docs-lista"></div>
+                                <div class="docs-footer">
+                                    <button type="button" class="btn-add-doc-emp" onclick="prodAdicionarDocumento()">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Documento
+                                    </button>
                                 </div>
                             </div>
                         </div>

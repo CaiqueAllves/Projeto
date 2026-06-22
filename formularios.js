@@ -325,6 +325,9 @@ async function confirmarSalvar() {
             if (pdfWrap)    pdfWrap.style.display    = '';
 
             posModal.style.display = 'flex';
+
+            // Auto-gerar PDF ao salvar
+            gerarPDFProposta();
         } else {
             mostrarNotificacao('Erro ao salvar proposta: ' + (res.mensagem || 'Tente novamente.'), 'erro');
         }
@@ -2041,6 +2044,217 @@ function empVisualizarDoc(id) {
 }
 
 // ========================================
+// PRODUTO — DOCUMENTOS
+// ========================================
+
+let _prodDocCount = 0;
+
+const _PROD_DOC_TIPOS = ['FICHA TÉCNICA', 'FISPQ / FDS', 'HACCP', 'CERTIFICADO', 'Outros'];
+
+const _PROD_DOC_INFO = {
+    'FISPQ / FDS': '(Ficha de Informações de Segurança de Produtos Químicos) ou (Ficha com Dados de Segurança), é um documento técnico obrigatório que detalha os riscos, manuseio, transporte e descarte de produtos químicos.',
+    'HACCP': 'O HACCP ou APPCC, na (sigla em português) é um sistema de gestão de segurança alimentar, serve para identificar, avaliar e controlar riscos físicos, químicos e biológicos, prevenindo contaminações e garantindo que o produto seja seguro para o consumidor.',
+};
+
+function prodAdicionarDocumento() {
+    const lista = document.getElementById('prod-docs-lista');
+    if (!lista) return;
+
+    _prodDocCount++;
+    const id = _prodDocCount;
+
+    const tiposOpts = _PROD_DOC_TIPOS.map(t => `<option value="${t}">${t}</option>`).join('');
+    const usuario   = _empDocUsuario();
+    const dataStr   = _empDocFormatarData(new Date());
+
+    const div = document.createElement('div');
+    div.className = 'emp-doc-item';
+    div.id = `prod-doc-item-${id}`;
+    div.innerHTML = `
+        <div class="emp-doc-item-top">
+            <div class="emp-doc-item-fields">
+                <div class="form-group emp-doc-tipo-group" style="flex-direction:column;">
+                    <label>Tipo de Documento</label>
+                    <select id="prod-doc-tipo-${id}" name="prod_doc_tipo_${id}" onchange="prodTipoDocChange(this, ${id})">
+                        <option value="">Selecione...</option>
+                        ${tiposOpts}
+                    </select>
+                    <div id="prod-doc-info-${id}" style="display:none; margin-top:6px; background:#eff6ff; border-radius:8px; padding:8px 12px; font-size:12px; color:#1e40af; line-height:1.5;"></div>
+                </div>
+                <div class="form-group emp-doc-outros-group" id="prod-doc-desc-group-${id}" style="display:none;">
+                    <label>Descrição</label>
+                    <input type="text" id="prod-doc-desc-${id}" name="prod_doc_desc_${id}" placeholder="Descrição...">
+                </div>
+            </div>
+            <button type="button" class="btn-remover-doc-emp" onclick="prodRemoverDocumento(${id})" title="Remover documento">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+
+        <div class="emp-doc-fonte-toggle">
+            <button type="button" class="emp-doc-fonte-btn ativo" id="prod-doc-fonte-arquivo-${id}" onclick="prodToggleFonteDoc(${id},'arquivo')">
+                <i class="fa-solid fa-file-arrow-up"></i> Arquivo local
+            </button>
+            <button type="button" class="emp-doc-fonte-btn" id="prod-doc-fonte-link-${id}" onclick="prodToggleFonteDoc(${id},'link')">
+                <i class="fa-solid fa-link"></i> Link externo
+            </button>
+        </div>
+
+        <div class="emp-doc-file-area" id="prod-doc-area-arquivo-${id}">
+            <div class="emp-doc-upload-zone" id="prod-doc-upload-zone-${id}">
+                <label class="emp-doc-upload-btn" for="prod-doc-file-${id}">
+                    <i class="fa-solid fa-file-arrow-up"></i> Selecionar PDF
+                    <input type="file" id="prod-doc-file-${id}" accept=".pdf,application/pdf" style="display:none"
+                        onchange="prodPreviewDocumento(this, ${id})">
+                </label>
+                <span class="emp-doc-upload-hint">Somente arquivos .PDF</span>
+            </div>
+            <div class="emp-doc-uploaded" id="prod-doc-uploaded-${id}" style="display:none;">
+                <div class="emp-doc-uploaded-info">
+                    <i class="fa-solid fa-circle-check emp-doc-ok-icon"></i>
+                    <div class="emp-doc-uploaded-meta">
+                        <span class="emp-doc-uploaded-name" id="prod-doc-uploaded-name-${id}"></span>
+                        <span class="emp-doc-uploaded-size" id="prod-doc-uploaded-size-${id}"></span>
+                    </div>
+                </div>
+                <div class="emp-doc-uploaded-actions">
+                    <button type="button" class="emp-doc-action-btn emp-doc-btn-ver" onclick="prodVisualizarDoc(${id})" title="Visualizar">
+                        <i class="fa-solid fa-eye"></i> Visualizar
+                    </button>
+                    <label class="emp-doc-action-btn emp-doc-btn-editar" for="prod-doc-file-${id}" title="Substituir arquivo">
+                        <i class="fa-solid fa-pen"></i> Editar
+                    </label>
+                    <button type="button" class="emp-doc-action-btn emp-doc-btn-excluir" onclick="prodRemoverArquivoDoc(${id})" title="Remover arquivo">
+                        <i class="fa-solid fa-xmark"></i> Remover
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="emp-doc-file-area" id="prod-doc-area-link-${id}" style="display:none;">
+            <div class="emp-doc-link-wrapper">
+                <i class="fa-solid fa-cloud emp-doc-link-icon"></i>
+                <div class="emp-doc-link-fields">
+                    <input type="url" id="prod-doc-url-${id}" name="prod_doc_url_${id}"
+                        placeholder="Cole aqui o link do Google Drive, Dropbox, OneDrive..."
+                        data-no-caps oninput="prodAtualizarPreviewLink(${id})">
+                    <span class="emp-doc-link-hint">O link deve estar configurado como "qualquer pessoa com o link pode visualizar"</span>
+                </div>
+            </div>
+            <div class="emp-doc-uploaded-actions" id="prod-doc-link-actions-${id}" style="display:none;">
+                <button type="button" class="emp-doc-action-btn emp-doc-btn-ver" onclick="prodAbrirLinkDoc(${id})">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir link
+                </button>
+                <button type="button" class="emp-doc-action-btn emp-doc-btn-excluir" onclick="prodLimparLinkDoc(${id})">
+                    <i class="fa-solid fa-xmark"></i> Remover
+                </button>
+            </div>
+        </div>
+
+        <div class="emp-doc-footer">
+            <i class="fa-solid fa-user"></i>
+            <span>${usuario}</span>
+            <span class="emp-doc-footer-sep">•</span>
+            <i class="fa-regular fa-calendar"></i>
+            <span id="prod-doc-data-${id}">${dataStr}</span>
+        </div>`;
+    lista.appendChild(div);
+}
+
+function prodRemoverDocumento(id) {
+    document.getElementById(`prod-doc-item-${id}`)?.remove();
+}
+
+function prodToggleFonteDoc(id, fonte) {
+    const areaArquivo = document.getElementById(`prod-doc-area-arquivo-${id}`);
+    const areaLink    = document.getElementById(`prod-doc-area-link-${id}`);
+    const btnArquivo  = document.getElementById(`prod-doc-fonte-arquivo-${id}`);
+    const btnLink     = document.getElementById(`prod-doc-fonte-link-${id}`);
+    if (!areaArquivo || !areaLink) return;
+    const isLink = fonte === 'link';
+    areaArquivo.style.display = isLink ? 'none' : '';
+    areaLink.style.display    = isLink ? '' : 'none';
+    btnArquivo.classList.toggle('ativo', !isLink);
+    btnLink.classList.toggle('ativo', isLink);
+}
+
+function prodAtualizarPreviewLink(id) {
+    const input   = document.getElementById(`prod-doc-url-${id}`);
+    const actions = document.getElementById(`prod-doc-link-actions-${id}`);
+    if (!input || !actions) return;
+    actions.style.display = input.value.trim() ? '' : 'none';
+}
+
+function prodAbrirLinkDoc(id) {
+    const url = document.getElementById(`prod-doc-url-${id}`)?.value.trim();
+    if (url) window.open(url, '_blank', 'noopener');
+}
+
+function prodLimparLinkDoc(id) {
+    const input   = document.getElementById(`prod-doc-url-${id}`);
+    const actions = document.getElementById(`prod-doc-link-actions-${id}`);
+    if (input)   input.value = '';
+    if (actions) actions.style.display = 'none';
+}
+
+function prodTipoDocChange(sel, id) {
+    const val       = sel.value;
+    const descGroup = document.getElementById(`prod-doc-desc-group-${id}`);
+    const infoBox   = document.getElementById(`prod-doc-info-${id}`);
+
+    const comDescricao = ['CERTIFICADO', 'Outros'];
+
+    if (descGroup) {
+        const mostrar = comDescricao.includes(val);
+        descGroup.style.display = mostrar ? '' : 'none';
+        if (!mostrar) {
+            const inp = document.getElementById(`prod-doc-desc-${id}`);
+            if (inp) inp.value = '';
+        }
+    }
+
+    if (infoBox) {
+        const info = _PROD_DOC_INFO[val] || '';
+        infoBox.textContent  = info;
+        infoBox.style.display = info ? '' : 'none';
+    }
+}
+
+function prodPreviewDocumento(input, id) {
+    const file = input.files[0];
+    if (!file) return;
+    const uploadZone  = document.getElementById(`prod-doc-upload-zone-${id}`);
+    const uploadedBox = document.getElementById(`prod-doc-uploaded-${id}`);
+    const nameEl      = document.getElementById(`prod-doc-uploaded-name-${id}`);
+    const sizeEl      = document.getElementById(`prod-doc-uploaded-size-${id}`);
+    const dataEl      = document.getElementById(`prod-doc-data-${id}`);
+    if (nameEl) nameEl.textContent = file.name;
+    if (sizeEl) sizeEl.textContent = _empDocFormatarTamanho(file.size);
+    if (dataEl) dataEl.textContent = _empDocFormatarData(new Date());
+    if (uploadZone)  uploadZone.style.display  = 'none';
+    if (uploadedBox) uploadedBox.style.display  = '';
+    input._objectUrl = URL.createObjectURL(file);
+}
+
+function prodRemoverArquivoDoc(id) {
+    const fileInput   = document.getElementById(`prod-doc-file-${id}`);
+    const uploadZone  = document.getElementById(`prod-doc-upload-zone-${id}`);
+    const uploadedBox = document.getElementById(`prod-doc-uploaded-${id}`);
+    if (fileInput) {
+        if (fileInput._objectUrl) { URL.revokeObjectURL(fileInput._objectUrl); fileInput._objectUrl = null; }
+        fileInput.value = '';
+    }
+    if (uploadZone)  uploadZone.style.display  = '';
+    if (uploadedBox) uploadedBox.style.display  = 'none';
+}
+
+function prodVisualizarDoc(id) {
+    const fileInput = document.getElementById(`prod-doc-file-${id}`);
+    const url = fileInput?._objectUrl;
+    if (url) window.open(url, '_blank');
+}
+
+// ========================================
 // CEP — MÁSCARA + BUSCA AUTOMÁTICA
 // ========================================
 
@@ -3689,13 +3903,13 @@ function iniciarAutocompleteNcmProduto() {
 
     async function mostrar() {
         const q = input.value.trim().toLowerCase();
-        if (q.length < 2) { lista.classList.remove('aberta'); limparCamposNcm(); return; }
+        if (q.length < 1) { lista.classList.remove('aberta'); limparCamposNcm(); return; }
         try {
             const { data } = await supabaseClient
                 .from('apoio_ncm')
                 .select('ncm, descricao, descricao_concat, utrib_abrev, utrib_descricao')
-                .or(`ncm.ilike.%${q}%,descricao_concat.ilike.%${q}%,descricao.ilike.%${q}%`)
-                .limit(20);
+                .ilike('ncm', `${q}%`)
+                .limit(40);
             if (!data?.length) { lista.classList.remove('aberta'); return; }
             lista.innerHTML = data.map(n => {
                 const utrib = n.utrib_abrev ? `${n.utrib_abrev}${n.utrib_descricao ? ' — ' + n.utrib_descricao : ''}` : '';
@@ -3725,6 +3939,55 @@ function iniciarAutocompleteNcmProduto() {
     document.addEventListener('click', e => {
         if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta');
     });
+}
+
+// ========================================
+// PRODUTO — IDIOMAS EXTRAS (Nome + Descrição)
+// ========================================
+
+let _prodIdiomaExtraCount = 0;
+
+function prodAdicionarIdiomaExtra() {
+    if (_prodIdiomaExtraCount >= 3) return;
+    _prodIdiomaExtraCount++;
+    const num = _prodIdiomaExtraCount;
+    const id  = Date.now();
+
+    const container = document.getElementById('prod-idiomas-extra-container');
+    if (!container) return;
+
+    const row = document.createElement('div');
+    row.id = `prod-idioma-row-${id}`;
+    row.style.cssText = 'display:grid; grid-template-columns: 1fr 1.5fr; gap:16px; align-items:end; position:relative;';
+    row.innerHTML = `
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Nome do Produto — Idioma ${num + 1}</label>
+            <input type="text" name="nome_idioma_${id}" placeholder="Nome em outro idioma">
+        </div>
+        <div class="form-group" style="margin-bottom:0; position:relative;">
+            <label>Descrição / Composição do Produto — Idioma ${num + 1}</label>
+            <textarea name="descricao_idioma_${id}" placeholder="Descrição em outro idioma..." maxlength="500" rows="1"
+                style="resize:none;overflow:hidden;height:42px;min-height:42px;padding-right:36px;"
+                oninput="this.style.setProperty('height','42px','important');this.style.setProperty('height',this.scrollHeight+'px','important')"></textarea>
+            <button type="button" onclick="prodRemoverIdiomaExtra('${id}')"
+                style="position:absolute;top:0;right:0;background:none;border:none;cursor:pointer;color:#dc2626;font-size:15px;padding:2px 6px;"
+                title="Remover idioma">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>`;
+    container.appendChild(row);
+    _prodIdiomaExtraAtualizarBotao();
+}
+
+function prodRemoverIdiomaExtra(id) {
+    const row = document.getElementById(`prod-idioma-row-${id}`);
+    if (row) { row.remove(); _prodIdiomaExtraCount--; }
+    _prodIdiomaExtraAtualizarBotao();
+}
+
+function _prodIdiomaExtraAtualizarBotao() {
+    const btn = document.getElementById('btn-add-idioma-prod');
+    if (btn) btn.style.display = _prodIdiomaExtraCount >= 3 ? 'none' : '';
 }
 
 // ========================================
@@ -4200,6 +4463,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     // Processo
+    const _hoje = new Date().toISOString().split('T')[0];
+    const _inputAbertura = document.getElementById('proc-data-abertura');
+    if (_inputAbertura && !_inputAbertura.value) _inputAbertura.value = _hoje;
+
     aplicarMascaraDocumentoProcesso();
     iniciarEmissor();
     iniciarCamposModal();
@@ -4266,7 +4533,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarAutocompletePortos();
     propIniciarItens();
 
-    if (_propIdEdicao) propCarregarEdicao(_propIdEdicao);
+    const _propModo = new URLSearchParams(window.location.search).get('modo');
+
+    if (_propIdEdicao) {
+        await propCarregarEdicao(_propIdEdicao);
+        if (_propModo === 'visualizar') propAplicarModoVisualizacao();
+    }
 
     // Modal info
     document.getElementById('proc-modal')?.addEventListener('change', function () {
@@ -4895,6 +5167,35 @@ async function _propPreencherPaisOrigem(valorPais) {
 
     paisInput.value = pais ? pais.descricao : valorPais;
     if (paisCod) paisCod.value = pais ? pais.codigo : valorPais;
+}
+
+// ========================================
+// PROPOSTA — MODO VISUALIZAÇÃO
+// ========================================
+
+function propAplicarModoVisualizacao() {
+    const form = document.getElementById('form-proposta');
+    if (!form) return;
+
+    // Desabilita todos os inputs, selects e textareas
+    form.querySelectorAll('input, select, textarea, button[type="submit"]').forEach(el => {
+        el.disabled = true;
+    });
+
+    // Oculta botões de ação (salvar, limpar)
+    const actions = form.querySelector('.form-actions');
+    if (actions) actions.style.display = 'none';
+
+    // Oculta botões de adicionar itens
+    form.querySelectorAll('.btn-add-item, .btn-add-idioma, [id^="btn-add"]').forEach(el => {
+        el.style.display = 'none';
+    });
+
+    // Banner de modo visualização
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:sticky;top:0;z-index:100;background:#1e40af;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;letter-spacing:0.3px;';
+    banner.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:6px;"></i>Modo Visualização — somente leitura';
+    form.insertBefore(banner, form.firstChild);
 }
 
 // ========================================

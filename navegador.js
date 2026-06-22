@@ -102,26 +102,68 @@ function injetarSidebar() {
     }
 }
 
-// ── Mobile: hamburger + overlay ──────────────────────────────
+// ── Mobile: hamburger + overlay + conta ──────────────────────
 function _injetarMobile() {
     // Overlay (fundo escuro quando sidebar aberta)
     if (!document.getElementById('mob-overlay')) {
         const overlay = document.createElement('div');
         overlay.id = 'mob-overlay';
         overlay.className = 'mob-overlay';
-        overlay.addEventListener('click', _fecharSidebarMobile);
+        overlay.addEventListener('click', () => {
+            _fecharSidebarMobile();
+            _fecharContaMobile();
+        });
         document.body.appendChild(overlay);
     }
 
-    // Hamburger no topbar
     const topbar = document.querySelector('.topbar');
+
+    // Hamburger no topbar (primeiro filho — lado esquerdo)
     if (topbar && !topbar.querySelector('.mob-hamburger')) {
         const btn = document.createElement('button');
         btn.className = 'mob-hamburger';
         btn.setAttribute('aria-label', 'Abrir menu');
         btn.innerHTML = '<i class="fa-solid fa-bars"></i>';
         btn.addEventListener('click', _toggleSidebarMobile);
-        topbar.insertBefore(btn, topbar.firstChild);
+        // Inserir como primeiro filho real (antes de qualquer elemento)
+        const primeiro = topbar.firstElementChild;
+        if (primeiro) topbar.insertBefore(btn, primeiro);
+        else topbar.appendChild(btn);
+    }
+
+    // Ícone de conta com dropdown (lado direito)
+    if (topbar && !topbar.querySelector('.mob-conta-btn')) {
+        const u = (() => { try { return JSON.parse(sessionStorage.getItem('usuarioLogado') || '{}'); } catch { return {}; } })();
+        const contaBtn = document.createElement('button');
+        contaBtn.className = 'mob-conta-btn';
+        contaBtn.setAttribute('aria-label', 'Conta');
+        if (u.avatar_url) {
+            contaBtn.innerHTML = `<img src="${u.avatar_url}" class="mob-conta-avatar-img" alt="avatar">`;
+        } else {
+            contaBtn.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+        }
+        contaBtn.addEventListener('click', _toggleContaMobile);
+        topbar.appendChild(contaBtn);
+
+        // Dropdown de conta
+        const dropdown = document.createElement('div');
+        dropdown.id = 'mob-conta-dropdown';
+        dropdown.className = 'mob-conta-dropdown';
+        dropdown.innerHTML = `
+            <div class="mob-conta-info">
+                <span class="mob-conta-nome" id="mob-conta-nome">—</span>
+                <span class="mob-conta-email" id="mob-conta-email">—</span>
+            </div>
+            <button class="mob-conta-sair" onclick="handleLogout()">
+                <i class="fa-solid fa-right-from-bracket"></i> Sair da conta
+            </button>`;
+        document.body.appendChild(dropdown);
+
+        // Preencher nome/email do usuário
+        const nomeEl  = dropdown.querySelector('#mob-conta-nome');
+        const emailEl = dropdown.querySelector('#mob-conta-email');
+        if (nomeEl)  nomeEl.textContent  = u.nome  || '—';
+        if (emailEl) emailEl.textContent = u.email || '—';
     }
 
     // Fechar sidebar ao clicar em qualquer link/item do menu no mobile
@@ -133,6 +175,29 @@ function _injetarMobile() {
             }
         });
     }
+
+    // Fechar dropdown ao clicar fora
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.mob-conta-btn') && !e.target.closest('.mob-conta-dropdown')) {
+            _fecharContaMobile();
+        }
+    });
+}
+
+function _toggleContaMobile() {
+    const dropdown = document.getElementById('mob-conta-dropdown');
+    const topbar   = document.querySelector('.topbar');
+    if (!dropdown) return;
+    const aberto = dropdown.classList.toggle('ativo');
+    if (aberto && topbar) {
+        const rect = topbar.getBoundingClientRect();
+        dropdown.style.top = rect.bottom + 'px';
+    }
+}
+
+function _fecharContaMobile() {
+    const dropdown = document.getElementById('mob-conta-dropdown');
+    if (dropdown) dropdown.classList.remove('ativo');
 }
 
 function _toggleSidebarMobile() {

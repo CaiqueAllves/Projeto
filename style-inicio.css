@@ -911,15 +911,6 @@ canvas {
    RESPONSIVIDADE
 ======================================== */
 @media (max-width: 768px) {
-    aside {
-        left: -260px; /* Esconder menu lateral no mobile */
-        transition: left 0.3s ease;
-    }
-
-    aside.mobile-open {
-        left: 0; /* Mostrar quando ativo */
-    }
-
     .topbar {
         left: 0 !important;
     }
@@ -945,8 +936,9 @@ canvas {
         grid-template-columns: 1fr;
     }
 
-    .charts-grid {
-        grid-template-columns: 1fr;
+    .charts-grid,
+    .charts-grid-2 {
+        grid-template-columns: 1fr !important;
     }
     
     .action-cards {

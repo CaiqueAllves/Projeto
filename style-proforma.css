@@ -2,6 +2,31 @@
    PROFORMA — ESTILOS ESPECÍFICOS
    ======================================== */
 
+/* ── Botões de ação da listagem ─────────── */
+.btn-ver {
+    background: #f0fdf4;
+    color: #16a34a;
+    width: auto;
+    padding: 0 10px;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+.btn-ver:hover { background: #16a34a; color: #fff; }
+
+.btn-pdf {
+    background: #fff1f2;
+    color: #e11d48;
+    width: auto;
+    padding: 0 10px;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+.btn-pdf:hover { background: #e11d48; color: #fff; }
+
 /* ── Botão "Seguir com Processo?" ────────── */
 .btn-seguir-processo {
     background: #f0fdf4;

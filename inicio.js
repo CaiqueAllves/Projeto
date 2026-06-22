@@ -137,7 +137,7 @@ async function carregarEstatisticas(empresas) {
         const usuario = obterUsuarioLogado();
         const [{ count: countProc }, { count: countProd }, { count: countProf }] = await Promise.all([
             supabaseClient.from('processos').select('*', { count: 'exact', head: true }).eq('empresa_proprietaria_id', usuario.empresa_id),
-            supabaseClient.from('produtos').select('*', { count: 'exact', head: true }).eq('empresa_proprietaria_id', usuario.empresa_id),
+            supabaseClient.from('produtos').select('*', { count: 'exact', head: true }).eq('empresa_id', usuario.empresa_id),
             supabaseClient.from('proformas').select('*', { count: 'exact', head: true }).eq('empresa_id', usuario.empresa_id)
         ]);
         const elProc = document.getElementById('totalProcessos');

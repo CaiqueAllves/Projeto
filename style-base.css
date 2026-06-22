@@ -256,6 +256,13 @@ main {
     font-size: 24px;
 }
 
+@media (max-width: 768px) {
+    .topbar-left h2 {
+        font-size: 16px !important;
+        font-weight: 700 !important;
+    }
+}
+
 .topbar-right {
     display: flex;
     align-items: center;

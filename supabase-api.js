@@ -810,7 +810,7 @@ async function atualizarProcesso(id, dados) {
             .from('processos')
             .update({ ...dados, atualizado_em: new Date().toISOString() })
             .eq('id', id)
-            .eq('empresa_proprietaria_id', usuario.empresa_id);
+            .eq('empresa_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {
@@ -827,7 +827,7 @@ async function excluirProcesso(id) {
             .from('processos')
             .delete()
             .eq('id', id)
-            .eq('empresa_proprietaria_id', usuario.empresa_id);
+            .eq('empresa_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {
@@ -847,8 +847,8 @@ async function buscarProdutos(apenasAtivos = false) {
         let query = supabaseClient
             .from('produtos')
             .select('*')
-            .eq('empresa_proprietaria_id', usuario.empresa_id)
-            .order('descricao', { ascending: true });
+            .eq('empresa_id', usuario.empresa_id)
+            .order('nome', { ascending: true });
 
         if (apenasAtivos) query = query.eq('ativo', true);
 
@@ -878,7 +878,7 @@ async function salvarProduto(dados) {
                 pais_origem:             dados.pais_origem || null,
                 fabricante:              dados.fabricante || null,
                 marca:                   dados.marca || null,
-                empresa_proprietaria_id: usuario.empresa_id,
+                empresa_id:              usuario.empresa_id,
                 criado_por:              usuario.id
             })
             .select()
@@ -900,7 +900,7 @@ async function editarProduto(id, dados) {
             .from('produtos')
             .update({ ...dados, atualizado_em: new Date().toISOString() })
             .eq('id', id)
-            .eq('empresa_proprietaria_id', usuario.empresa_id);
+            .eq('empresa_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {
@@ -917,7 +917,7 @@ async function excluirProduto(id) {
             .from('produtos')
             .delete()
             .eq('id', id)
-            .eq('empresa_proprietaria_id', usuario.empresa_id);
+            .eq('empresa_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {

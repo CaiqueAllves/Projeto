@@ -48,7 +48,6 @@ function verificarAutenticacao() {
             if (avatarWrap) {
                 const icon = avatarWrap.querySelector('i');
                 if (icon) icon.style.display = 'none';
-                // Reutiliza img existente (perfil.html já tem #topbarAvatarImg) ou cria uma nova
                 let img = avatarWrap.querySelector('img');
                 if (!img) {
                     img = document.createElement('img');
@@ -58,6 +57,12 @@ function verificarAutenticacao() {
                 }
                 img.src = usuarioAtual.avatar_url;
                 img.style.display = 'block';
+            }
+
+            // Atualizar botão de conta mobile
+            const contaBtn = document.querySelector('.mob-conta-btn');
+            if (contaBtn) {
+                contaBtn.innerHTML = `<img src="${usuarioAtual.avatar_url}" class="mob-conta-avatar-img" alt="avatar">`;
             }
         }
 
