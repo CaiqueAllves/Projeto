@@ -197,16 +197,72 @@
     }
     .header-right {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 8px;
+        justify-content: flex-end;
     }
-    .header-right button, .header-right .btn-cadastrar, .header-right .btn-upload {
-        flex: 1;
-        min-width: 120px;
-        justify-content: center;
+
+    /* ── Botões só com ícones em mobile ── */
+    .header-right button {
+        flex: 0 0 auto !important;
+        width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 8px !important;
+        border: 1px solid #e5e7eb !important;
+        background: white !important;
+        color: #374151 !important;
+        cursor: pointer !important;
+        transition: all 0.2s !important;
+        font-size: 0 !important;
     }
-    .filter-wrapper { width: 100%; }
-    .filter-wrapper input { width: 100%; }
+
+    .header-right button i {
+        font-size: 18px !important;
+    }
+
+    .header-right button:hover {
+        background: #f3f4f6 !important;
+        border-color: #d1d5db !important;
+    }
+
+    .header-right button.btn-cadastrar {
+        background: #4776ec !important;
+        color: white !important;
+        border-color: #4776ec !important;
+    }
+
+    .header-right button.btn-cadastrar:hover {
+        background: #3d63d8 !important;
+        border-color: #3d63d8 !important;
+    }
+
+    /* ── Input de pesquisa expandível ──── */
+    .filter-wrapper {
+        width: 100%;
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .filter-wrapper input {
+        width: 100% !important;
+        padding: 10px 12px 10px 36px !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+    }
+
+    .filter-wrapper .filter-icon {
+        position: absolute;
+        left: 12px;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 16px;
+        pointer-events: none;
+    }
 
     /* ── Actions bar ───────────────────── */
     .actions { flex-direction: column !important; }
