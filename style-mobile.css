@@ -356,7 +356,7 @@
         padding: 0 !important;
         border: none !important;
         display: flex !important;
-        justify-content: space-between !important;
+        justify-content: flex-start !important;
         align-items: center !important;
         font-size: 13px !important;
         min-width: auto !important;
@@ -370,25 +370,34 @@
         color: #64748b;
         min-width: 110px;
         font-size: 12px;
+        flex-basis: 100%;
     }
 
-    .empresa-tabela td[data-label=""] { flex-direction: row; justify-content: center; }
+    .empresa-tabela td[data-label=""] {
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+    }
     .empresa-tabela td[data-label=""]::before { display: none; }
 
     /* Ações no card empresa */
     .empresa-tabela .col-acoes {
         justify-content: center !important;
-        gap: 6px !important;
+        gap: 8px !important;
         padding-top: 8px !important;
         border-top: 1px solid #f1f5f9 !important;
         margin-top: 4px !important;
+        flex-basis: 100% !important;
     }
 
     .btn-acao {
-        width: 32px !important;
-        height: 32px !important;
+        width: 36px !important;
+        height: 36px !important;
         border-radius: 6px !important;
         font-size: 14px !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
     /* ── Badges dentro dos cards ────────── */
@@ -396,23 +405,32 @@
         display: flex !important;
         flex-wrap: wrap !important;
         gap: 4px !important;
+        flex-basis: 100% !important;
+        justify-content: flex-start !important;
     }
 
     .empresa-tabela .tag-modelo,
     .empresa-tabela .tag-item-mini {
         font-size: 11px !important;
-        padding: 3px 8px !important;
+        padding: 4px 8px !important;
     }
 
     .empresa-tabela .empresa-nome,
     .empresa-tabela .empresa-fantasia {
         font-weight: 500 !important;
         color: #1f2937 !important;
+        flex-basis: 100% !important;
     }
 
     .empresa-tabela .cell-vazio {
         color: #9ca3af !important;
         font-style: italic !important;
+    }
+
+    /* Valor dentro do card */
+    .empresa-tabela td > span,
+    .empresa-tabela td > div {
+        flex-basis: 100% !important;
     }
     .filtros-container {
         flex-direction: column !important;
