@@ -334,19 +334,44 @@ async function confirmarSalvar() {
         return;
     }
 
-    // Processo (manter comportamento anterior)
+    // Processo — salvar no Supabase
+    const dadosProc = _coletarDadosProcesso();
+    const editandoIdProc = document.getElementById('proc-id')?.value || '';
+
+    const resProc = editandoIdProc
+        ? await window.supabaseAPI.atualizarProcesso(editandoIdProc, dadosProc)
+        : await window.supabaseAPI.salvarProcesso(dadosProc);
+
     const posModal = document.getElementById('modal-pos-salvo');
     posModal.dataset.origem = origem;
 
-    const tituloEl   = document.getElementById('pos-salvo-titulo');
-    const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
-    const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
+    if (resProc.sucesso) {
+        const tituloEl   = document.getElementById('pos-salvo-titulo');
+        const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
+        const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
 
-    if (tituloEl)   tituloEl.textContent = 'Processo salvo!';
-    if (codigoWrap) codigoWrap.style.display = 'none';
-    if (pdfWrap)    pdfWrap.style.display    = 'none';
+        if (tituloEl)   tituloEl.textContent = editandoIdProc ? 'Processo atualizado!' : 'Processo salvo!';
+        if (codigoWrap) codigoWrap.style.display = 'none';
+        if (pdfWrap)    pdfWrap.style.display    = 'none';
 
-    posModal.style.display = 'flex';
+        posModal.style.display = 'flex';
+    } else {
+        mostrarNotificacao('Erro ao salvar processo: ' + (resProc.mensagem || 'Tente novamente.'), 'erro');
+    }
+}
+
+function _coletarDadosProcesso() {
+    const clienteId = document.getElementById('proc-cliente-id')?.value || null;
+    return {
+        tipo:               document.getElementById('proc-tipo')?.value                       || null,
+        status:             document.getElementById('proc-status')?.value                     || 'aberto',
+        empresa_parceira_id: clienteId || null,
+        incoterm:           document.getElementById('proc-incoterm')?.value                   || null,
+        porto_origem:       document.getElementById('proc-porto-origem')?.value?.trim()       || null,
+        porto_destino:      document.getElementById('proc-porto-destino')?.value?.trim()      || null,
+        data_abertura:      document.getElementById('proc-data-abertura')?.value              || null,
+        observacoes:        document.getElementById('proc-observacoes')?.value?.trim()        || null,
+    };
 }
 
 // Alias mantido para compatibilidade com HTML existente
@@ -355,6 +380,13 @@ function confirmarSalvarProcesso() { confirmarSalvar(); }
 function criarNovo() {
     const origem = document.getElementById('modal-pos-salvo').dataset.origem || 'processo';
     document.getElementById('modal-pos-salvo').style.display = 'none';
+    // Notificar a aba pai para recarregar a lista
+    try {
+        if (window.opener && !window.opener.closed) {
+            if (typeof window.opener.profCarregarLista === 'function') window.opener.profCarregarLista();
+            if (typeof window.opener.carregarProcessos === 'function') window.opener.carregarProcessos();
+        }
+    } catch (e) {}
     if (origem === 'proposta') {
         document.getElementById('form-proposta')?.reset();
         _propItens = [];
@@ -371,6 +403,13 @@ function criarNovo() {
 
 function fecharGuia() {
     document.getElementById('modal-pos-salvo').style.display = 'none';
+    // Notificar a aba pai para recarregar a lista
+    try {
+        if (window.opener && !window.opener.closed) {
+            if (typeof window.opener.profCarregarLista === 'function') window.opener.profCarregarLista();
+            if (typeof window.opener.carregarProcessos === 'function') window.opener.carregarProcessos();
+        }
+    } catch (e) {}
     window.close();
     if (!window.closed) window.history.back();
 }
@@ -3956,16 +3995,20 @@ function prodAdicionarIdiomaExtra() {
     const container = document.getElementById('prod-idiomas-extra-container');
     if (!container) return;
 
+    // Ler títulos dos labels acima
+    const labelNome = document.querySelector('label[for="prod-nome"]')?.childNodes[0]?.textContent?.trim() || 'Nome do Produto';
+    const labelDesc = document.querySelector('label[for="prod-descricao"]')?.textContent?.trim() || 'Descrição';
+
     const row = document.createElement('div');
     row.id = `prod-idioma-row-${id}`;
     row.style.cssText = 'display:grid; grid-template-columns: 1fr 1.5fr; gap:16px; align-items:end; position:relative;';
     row.innerHTML = `
         <div class="form-group" style="margin-bottom:0;">
-            <label>Nome do Produto — Idioma ${num + 1}</label>
+            <label>${labelNome} — Idioma ${num + 1}</label>
             <input type="text" name="nome_idioma_${id}" placeholder="Nome em outro idioma">
         </div>
         <div class="form-group" style="margin-bottom:0; position:relative;">
-            <label>Descrição / Composição do Produto — Idioma ${num + 1}</label>
+            <label>${labelDesc} — Idioma ${num + 1}</label>
             <textarea name="descricao_idioma_${id}" placeholder="Descrição em outro idioma..." maxlength="500" rows="1"
                 style="resize:none;overflow:hidden;height:42px;min-height:42px;padding-right:36px;"
                 oninput="this.style.setProperty('height','42px','important');this.style.setProperty('height',this.scrollHeight+'px','important')"></textarea>
@@ -3988,6 +4031,49 @@ function prodRemoverIdiomaExtra(id) {
 function _prodIdiomaExtraAtualizarBotao() {
     const btn = document.getElementById('btn-add-idioma-prod');
     if (btn) btn.style.display = _prodIdiomaExtraCount >= 3 ? 'none' : '';
+}
+
+// ========================================
+// PRODUTO — MEDIDAS DE CAIXA EXTRAS
+// ========================================
+
+let _prodMedidaCaixaCount = 0;
+
+function prodAdicionarMedidaCaixa() {
+    _prodMedidaCaixaCount++;
+    const id = Date.now();
+    const num = _prodMedidaCaixaCount;
+
+    const container = document.getElementById('prod-medidas-caixas-container');
+    if (!container) return;
+
+    const row = document.createElement('div');
+    row.id = `prod-medida-caixa-row-${id}`;
+    row.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:12px; align-items:end;';
+    row.innerHTML = `
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Comprimento ${num > 1 ? num : ''} (cm)</label>
+            <input type="text" inputmode="decimal" name="caixa_comprimento_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Largura ${num > 1 ? num : ''} (cm)</label>
+            <input type="text" inputmode="decimal" name="caixa_largura_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Altura ${num > 1 ? num : ''} (cm)</label>
+            <input type="text" inputmode="decimal" name="caixa_altura_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+        </div>
+        <button type="button" onclick="prodRemoverMedidaCaixa('${id}')"
+            style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;padding:8px 6px;margin-bottom:0;flex-shrink:0;"
+            title="Remover">
+            <i class="fa-solid fa-xmark"></i>
+        </button>`;
+    container.appendChild(row);
+}
+
+function prodRemoverMedidaCaixa(id) {
+    const row = document.getElementById(`prod-medida-caixa-row-${id}`);
+    if (row) { row.remove(); _prodMedidaCaixaCount--; }
 }
 
 // ========================================

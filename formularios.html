@@ -2180,9 +2180,9 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
-                                    <!-- Linha 0: Identificação da Empresa | Número de Identificação -->
+                                    <!-- Linha 0: Identificação da Empresa | Número de Identificação | Marca / Fabricante -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-3" style="grid-template-columns: repeat(2, 1fr);">
+                                        <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="prod-empresa-busca">Identificação da Empresa <span class="required">*</span></label>
                                                 <div class="autocomplete-wrapper">
@@ -2200,13 +2200,17 @@
                                                 </label>
                                                 <input type="text" id="prod-empresa-doc" name="empresa_doc" placeholder="Preenchido automaticamente" readonly>
                                             </div>
+                                            <div class="form-group">
+                                                <label for="prod-marca">Marca / Fabricante</label>
+                                                <input type="text" id="prod-marca" name="marca" placeholder="Marca ou fabricante">
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <!-- Status | Unidade Comercial | Categoria | Tipo | Marca / Fabricante -->
+                                    <!-- Status | URL da Imagem | Categoria | Tipo -->
                                     <div class="form-group full-width">
-                                        <div style="display:grid; grid-template-columns: 0.5fr 0.7fr 1fr 1fr 1fr; gap: 16px;">
-                                            <div class="form-group">
+                                        <div style="display:grid; grid-template-columns: 0.5fr 1fr 1fr 1fr; gap: 16px; align-items: end;">
+                                            <div class="form-group" style="margin-bottom:0;">
                                                 <label for="prod-status">Status</label>
                                                 <select id="prod-status" name="status">
                                                     <option value="">Selecione...</option>
@@ -2216,6 +2220,40 @@
                                                     <option value="inativo">Inativo</option>
                                                 </select>
                                             </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <div class="prod-url-img-label-row">
+                                                    <label for="prod-imagem-url">URL da Imagem do Produto</label>
+                                                    <div class="prod-url-img-acoes">
+                                                        <label class="prod-img-upload-icon" for="prod-imagem-file" title="Upload de imagem">
+                                                            <i class="fa-solid fa-upload"></i>
+                                                            <input type="file" id="prod-imagem-file" name="imagem_file" accept="image/png,image/jpeg,image/jpg" style="display:none" onchange="prodPreviewImagem(this)">
+                                                        </label>
+                                                        <div class="prod-img-acoes" id="prod-img-acoes" style="display:none;">
+                                                            <button type="button" class="prod-img-acao-btn" title="Visualizar imagem" onclick="prodVerImagem()">
+                                                                <i class="fa-solid fa-eye"></i>
+                                                            </button>
+                                                            <button type="button" class="prod-img-acao-btn prod-img-acao-excluir" title="Remover imagem" onclick="prodRemoverImagem()">
+                                                                <i class="fa-solid fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <input type="url" id="prod-imagem-url" name="imagem_url" placeholder="https://..." data-no-caps>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prod-categoria">Categoria</label>
+                                                <input type="text" id="prod-categoria" name="categoria" placeholder="Ex: Eletrônicos">
+                                            </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prod-tipo">Tipo</label>
+                                                <input type="text" id="prod-tipo" name="tipo" placeholder="Ex: Produto acabado">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 1: Unidade Comercial | SKU | CEST -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="prod-unidade">Unidade Comercial</label>
                                                 <div class="autocomplete-wrapper">
@@ -2223,24 +2261,6 @@
                                                     <div class="autocomplete-list" id="prod-unidade-lista"></div>
                                                 </div>
                                             </div>
-                                            <div class="form-group">
-                                                <label for="prod-categoria">Categoria</label>
-                                                <input type="text" id="prod-categoria" name="categoria" placeholder="Ex: Eletrônicos">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-tipo">Tipo</label>
-                                                <input type="text" id="prod-tipo" name="tipo" placeholder="Ex: Produto acabado">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-marca">Marca / Fabricante</label>
-                                                <input type="text" id="prod-marca" name="marca" placeholder="Marca ou fabricante">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Linha 1: SKU | CEST -->
-                                    <div class="form-group full-width">
-                                        <div class="form-row-3" style="grid-template-columns: repeat(2, 1fr);">
                                             <div class="form-group">
                                                 <label for="prod-sku">Código SKU <span class="required">*</span>
                                                     <span class="info-balao" data-tooltip="(Stock Keeping Unit, ou Unidade de Manutenção de Estoque) é o código de identificação interno usado para rastrear um produto específico em toda a cadeia logística."><i class="fa-solid fa-circle-info"></i></span>
@@ -2256,9 +2276,15 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 2: GTIN/EAN | DUN-14 -->
+                                    <!-- Linha 2: HS CODE | GTIN/EAN | DUN-14 -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-3" style="grid-template-columns: repeat(2, 1fr);">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="prod-hscode">HS CODE
+                                                    <span class="info-balao" data-tooltip="Harmonized System Code: código internacional de 6 dígitos (podendo ser estendido) utilizado para classificar mercadorias no comércio exterior, definindo tarifas aduaneiras e requisitos de importação/exportação."><i class="fa-solid fa-circle-info"></i></span>
+                                                </label>
+                                                <input type="text" id="prod-hscode" name="hscode" placeholder="Ex: 392330" maxlength="12">
+                                            </div>
                                             <div class="form-group">
                                                 <label for="prod-gtin">Código EAN
                                                     <span class="info-balao" data-tooltip="O código EAN (European Article Number), atualmente chamado de GTIN (Global Trade Item Number), é o padrão global de código de barras utilizado para identificar produtos de forma única no varejo e em marketplaces"><i class="fa-solid fa-circle-info"></i></span>
@@ -2315,35 +2341,15 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 7: URL da Imagem | Nome do Produto | Descrição -->
+                                    <!-- Linha 7: Nome do Produto | Descrição -->
                                     <div class="form-group full-width">
-                                        <div style="display:grid; grid-template-columns: 0.5fr 1fr 1.5fr; gap: 16px; align-items: end;">
-                                            <div class="form-group" style="margin-bottom:0;">
-                                                <div class="prod-url-img-label-row">
-                                                    <label for="prod-imagem-url">URL da Imagem do Produto</label>
-                                                    <div class="prod-url-img-acoes">
-                                                        <label class="prod-img-upload-icon" for="prod-imagem-file" title="Upload de imagem">
-                                                            <i class="fa-solid fa-upload"></i>
-                                                            <input type="file" id="prod-imagem-file" name="imagem_file" accept="image/png,image/jpeg,image/jpg" style="display:none" onchange="prodPreviewImagem(this)">
-                                                        </label>
-                                                        <div class="prod-img-acoes" id="prod-img-acoes" style="display:none;">
-                                                            <button type="button" class="prod-img-acao-btn" title="Visualizar imagem" onclick="prodVerImagem()">
-                                                                <i class="fa-solid fa-eye"></i>
-                                                            </button>
-                                                            <button type="button" class="prod-img-acao-btn prod-img-acao-excluir" title="Remover imagem" onclick="prodRemoverImagem()">
-                                                                <i class="fa-solid fa-trash"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <input type="url" id="prod-imagem-url" name="imagem_url" placeholder="https://..." data-no-caps>
-                                            </div>
+                                        <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap: 16px; align-items: end;">
                                             <div class="form-group" style="margin-bottom:0;">
                                                 <label for="prod-nome">Nome do Produto <span class="required">*</span></label>
                                                 <input type="text" id="prod-nome" name="nome" placeholder="Nome completo do produto">
                                             </div>
                                             <div class="form-group" style="margin-bottom:0;">
-                                                <label for="prod-descricao">Descrição / Composição do Produto</label>
+                                                <label for="prod-descricao">Descrição Técnica / Composição do Produto / Descrição Complementar do Produto</label>
                                                 <textarea id="prod-descricao" name="descricao" placeholder="Descrição detalhada do produto..." maxlength="500" rows="1" style="resize:none; overflow:hidden; height:42px; min-height:42px;" oninput="this.style.setProperty('height','42px','important');this.style.setProperty('height',this.scrollHeight+'px','important')"></textarea>
                                             </div>
                                         </div>
@@ -2447,11 +2453,11 @@
                             </div>
                         </div>
 
-                        <!-- SEÇÃO 3: Estoque -->
+                        <!-- SEÇÃO 3: Estoque Exportação -->
                         <div class="form-section">
                             <div class="section-title" onclick="toggleSection(this)">
                                 <i class="fa-solid fa-warehouse"></i>
-                                Estoque
+                                Estoque Exportação
                                 <i class="fa-solid fa-chevron-down section-arrow"></i>
                             </div>
                             <div class="section-content">
@@ -2543,11 +2549,11 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
-                                    <!-- ── SUB-SEÇÃO 1: Embalagem Unitária ── -->
+                                    <!-- ── SUB-SEÇÃO 1: Embalagens dos Produtos / Suas Dimensões ── -->
                                     <div class="form-group full-width">
                                         <div class="log-sub-header">
                                             <i class="fa-solid fa-box"></i>
-                                            Embalagem Unitária
+                                            Embalagens dos Produtos / Suas Dimensões
                                         </div>
                                         <div class="log-sub-body">
                                             <!-- Tipo de Produto | Tipo de Embalagem | Tipo de Acondicionamento -->
@@ -2607,6 +2613,13 @@
                                                     <input type="number" id="prod-empilhamento" name="empilhamento_maximo" min="1" step="1" placeholder="Ex: 5">
                                                 </div>
                                             </div>
+                                            <!-- Botão Adicionar Medida Caixa -->
+                                            <div class="log-sub-row">
+                                                <button type="button" id="btn-add-medida-caixa" class="btn-add-idioma" onclick="prodAdicionarMedidaCaixa()">
+                                                    <i class="fa-solid fa-plus"></i> Adicionar Medida Caixa
+                                                </button>
+                                                <div id="prod-medidas-caixas-container" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;"></div>
+                                            </div>
                                             <!-- Observações -->
                                             <div class="prod-obs-wrapper log-sub-row">
                                                 <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
@@ -2628,7 +2641,7 @@
                                             <i class="fa-solid fa-chevron-down log-sub-arrow"></i>
                                         </div>
                                         <div class="log-sub-body" style="display:none;">
-                                            <!-- Tipo de Embalagem | Tipo de Acondicionamento -->
+                                            <!-- Linha 1: Tipo de Embalagem | Tipo de Acondicionamento -->
                                             <div class="form-row-3" style="grid-template-columns: 1fr 1fr;">
                                                 <div class="form-group">
                                                     <label for="prod-aereo-embalagem">Tipo de Embalagem</label>
@@ -2639,12 +2652,8 @@
                                                     <input type="text" id="prod-aereo-acondicionamento" name="aereo_acondicionamento" placeholder="Tipo de acondicionamento">
                                                 </div>
                                             </div>
-                                            <!-- Capacidade | Comprimento | Largura -->
+                                            <!-- Linha 2: Comprimento | Largura | Altura -->
                                             <div class="form-row-3 log-sub-row">
-                                                <div class="form-group">
-                                                    <label for="prod-aereo-capacidade">Empilhamento Máximo</label>
-                                                    <input type="text" id="prod-aereo-capacidade" name="aereo_capacidade" placeholder="Ex: Máximo de 5 caixas empilhadas">
-                                                </div>
                                                 <div class="form-group">
                                                     <label for="prod-aereo-comprimento">Comprimento (cm)</label>
                                                     <input type="text" inputmode="decimal" id="prod-aereo-comprimento" name="aereo_comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
@@ -2653,9 +2662,13 @@
                                                     <label for="prod-aereo-largura">Largura (cm)</label>
                                                     <input type="text" inputmode="decimal" id="prod-aereo-largura" name="aereo_largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
                                                 </div>
+                                                <div class="form-group">
+                                                    <label for="prod-aereo-altura">Altura (cm)</label>
+                                                    <input type="text" inputmode="decimal" id="prod-aereo-altura" name="aereo_altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
                                             </div>
-                                            <!-- Peso Bruto | Peso Líquido -->
-                                            <div class="form-row-3 log-sub-row" style="grid-template-columns: 1fr 1fr;">
+                                            <!-- Linha 3: Peso Bruto | Peso Líquido | Empilhamento Máximo -->
+                                            <div class="form-row-3 log-sub-row">
                                                 <div class="form-group">
                                                     <label for="prod-aereo-peso-bruto">Peso Bruto (kg)</label>
                                                     <input type="text" inputmode="decimal" id="prod-aereo-peso-bruto" name="aereo_peso_bruto" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
@@ -2663,6 +2676,12 @@
                                                 <div class="form-group">
                                                     <label for="prod-aereo-peso-liquido">Peso Líquido (kg)</label>
                                                     <input type="text" inputmode="decimal" id="prod-aereo-peso-liquido" name="aereo_peso_liquido" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-aereo-capacidade">Empilhamento Máximo
+                                                        <span class="info-balao" data-tooltip="Cubagem aéreo: C × L × A / 6000"><i class="fa-solid fa-circle-info"></i></span>
+                                                    </label>
+                                                    <input type="text" id="prod-aereo-capacidade" name="aereo_capacidade" placeholder="Ex: Máximo de 5 caixas empilhadas">
                                                 </div>
                                             </div>
                                         </div>
@@ -2676,7 +2695,7 @@
                                             <i class="fa-solid fa-chevron-down log-sub-arrow"></i>
                                         </div>
                                         <div class="log-sub-body" style="display:none;">
-                                            <!-- Tipo de Embalagem | Tipo de Acondicionamento -->
+                                            <!-- Linha 1: Tipo de Embalagem | Tipo de Acondicionamento -->
                                             <div class="form-row-3" style="grid-template-columns: 1fr 1fr;">
                                                 <div class="form-group">
                                                     <label for="prod-maritimo-embalagem">Tipo de Embalagem</label>
@@ -2687,12 +2706,8 @@
                                                     <input type="text" id="prod-maritimo-acondicionamento" name="maritimo_acondicionamento" placeholder="Tipo de acondicionamento">
                                                 </div>
                                             </div>
-                                            <!-- Capacidade | Comprimento | Largura -->
+                                            <!-- Linha 2: Comprimento | Largura | Altura -->
                                             <div class="form-row-3 log-sub-row">
-                                                <div class="form-group">
-                                                    <label for="prod-maritimo-capacidade">Empilhamento Máximo</label>
-                                                    <input type="text" id="prod-maritimo-capacidade" name="maritimo_capacidade" placeholder="Ex: Máximo de 5 caixas empilhadas">
-                                                </div>
                                                 <div class="form-group">
                                                     <label for="prod-maritimo-comprimento">Comprimento (cm)</label>
                                                     <input type="text" inputmode="decimal" id="prod-maritimo-comprimento" name="maritimo_comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
@@ -2701,9 +2716,13 @@
                                                     <label for="prod-maritimo-largura">Largura (cm)</label>
                                                     <input type="text" inputmode="decimal" id="prod-maritimo-largura" name="maritimo_largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
                                                 </div>
+                                                <div class="form-group">
+                                                    <label for="prod-maritimo-altura">Altura (cm)</label>
+                                                    <input type="text" inputmode="decimal" id="prod-maritimo-altura" name="maritimo_altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
                                             </div>
-                                            <!-- Peso Bruto | Peso Líquido -->
-                                            <div class="form-row-3 log-sub-row" style="grid-template-columns: 1fr 1fr;">
+                                            <!-- Linha 3: Peso Bruto | Peso Líquido | Empilhamento Máximo -->
+                                            <div class="form-row-3 log-sub-row">
                                                 <div class="form-group">
                                                     <label for="prod-maritimo-peso-bruto">Peso Bruto (kg)</label>
                                                     <input type="text" inputmode="decimal" id="prod-maritimo-peso-bruto" name="maritimo_peso_bruto" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
@@ -2711,6 +2730,10 @@
                                                 <div class="form-group">
                                                     <label for="prod-maritimo-peso-liquido">Peso Líquido (kg)</label>
                                                     <input type="text" inputmode="decimal" id="prod-maritimo-peso-liquido" name="maritimo_peso_liquido" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-maritimo-capacidade">Empilhamento Máximo</label>
+                                                    <input type="text" id="prod-maritimo-capacidade" name="maritimo_capacidade" placeholder="Ex: Máximo de 5 caixas empilhadas">
                                                 </div>
                                             </div>
                                         </div>
@@ -2724,7 +2747,7 @@
                                             <i class="fa-solid fa-chevron-down log-sub-arrow"></i>
                                         </div>
                                         <div class="log-sub-body" style="display:none;">
-                                            <!-- Tipo de Embalagem | Tipo de Acondicionamento -->
+                                            <!-- Linha 1: Tipo de Embalagem | Tipo de Acondicionamento -->
                                             <div class="form-row-3" style="grid-template-columns: 1fr 1fr;">
                                                 <div class="form-group">
                                                     <label for="prod-rodo-embalagem">Tipo de Embalagem</label>
@@ -2735,12 +2758,8 @@
                                                     <input type="text" id="prod-rodo-acondicionamento" name="rodo_acondicionamento" placeholder="Tipo de acondicionamento">
                                                 </div>
                                             </div>
-                                            <!-- Capacidade | Comprimento | Largura -->
+                                            <!-- Linha 2: Comprimento | Largura | Altura -->
                                             <div class="form-row-3 log-sub-row">
-                                                <div class="form-group">
-                                                    <label for="prod-rodo-capacidade">Empilhamento Máximo</label>
-                                                    <input type="text" id="prod-rodo-capacidade" name="rodo_capacidade" placeholder="Ex: Máximo de 5 caixas empilhadas">
-                                                </div>
                                                 <div class="form-group">
                                                     <label for="prod-rodo-comprimento">Comprimento (cm)</label>
                                                     <input type="text" inputmode="decimal" id="prod-rodo-comprimento" name="rodo_comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
@@ -2749,9 +2768,13 @@
                                                     <label for="prod-rodo-largura">Largura (cm)</label>
                                                     <input type="text" inputmode="decimal" id="prod-rodo-largura" name="rodo_largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
                                                 </div>
+                                                <div class="form-group">
+                                                    <label for="prod-rodo-altura">Altura (cm)</label>
+                                                    <input type="text" inputmode="decimal" id="prod-rodo-altura" name="rodo_altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
                                             </div>
-                                            <!-- Peso Bruto | Peso Líquido -->
-                                            <div class="form-row-3 log-sub-row" style="grid-template-columns: 1fr 1fr;">
+                                            <!-- Linha 3: Peso Bruto | Peso Líquido | Empilhamento Máximo -->
+                                            <div class="form-row-3 log-sub-row">
                                                 <div class="form-group">
                                                     <label for="prod-rodo-peso-bruto">Peso Bruto (kg)</label>
                                                     <input type="text" inputmode="decimal" id="prod-rodo-peso-bruto" name="rodo_peso_bruto" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
@@ -2759,6 +2782,10 @@
                                                 <div class="form-group">
                                                     <label for="prod-rodo-peso-liquido">Peso Líquido (kg)</label>
                                                     <input type="text" inputmode="decimal" id="prod-rodo-peso-liquido" name="rodo_peso_liquido" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-rodo-capacidade">Empilhamento Máximo</label>
+                                                    <input type="text" id="prod-rodo-capacidade" name="rodo_capacidade" placeholder="Ex: Máximo de 5 caixas empilhadas">
                                                 </div>
                                             </div>
                                         </div>

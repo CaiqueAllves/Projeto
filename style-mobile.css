@@ -190,14 +190,19 @@
     .page-header {
         display: flex !important;
         flex-direction: row !important;
+        flex-wrap: nowrap !important;
         gap: 8px !important;
         align-items: center !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        padding: 10px 12px !important;
+        margin: 0 0 8px 0 !important;
         width: 100% !important;
+        box-sizing: border-box !important;
+        border-radius: 10px !important;
     }
 
     .header-left {
+        display: flex !important;
+        align-items: center !important;
         flex: 1 1 auto !important;
         width: auto !important;
         min-width: 0 !important;
@@ -254,6 +259,18 @@
         box-shadow: 0 2px 4px rgba(71,118,236,0.2) !important;
     }
 
+    .header-right button.btn-upload {
+        background: #22C55E !important;
+        color: white !important;
+        border-color: #16a34a !important;
+        box-shadow: 0 2px 4px rgba(34,197,94,0.2) !important;
+    }
+
+    .header-right button.btn-upload:hover {
+        background: #16a34a !important;
+        border-color: #15803d !important;
+    }
+
     .header-right button.btn-cadastrar:hover {
         background: #3d63d8 !important;
         border-color: #3d63d8 !important;
@@ -272,6 +289,7 @@
 
     .filter-wrapper input {
         width: 100% !important;
+        min-width: 0 !important;
         height: 44px !important;
         padding: 10px 12px 10px 36px !important;
         font-size: 14px !important;
@@ -297,6 +315,11 @@
         pointer-events: none !important;
         top: 50% !important;
         transform: translateY(-50%) !important;
+    }
+
+    /* ── Lista de itens (cantos completos no mobile) ── */
+    .empresas-lista {
+        border-radius: 10px !important;
     }
 
     /* ── Actions bar ───────────────────── */

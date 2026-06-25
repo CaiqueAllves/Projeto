@@ -753,7 +753,7 @@ async function buscarProcessos(filtros = {}) {
 
         let query = supabaseClient
             .from('processos')
-            .select('*, empresas_cadastradas(nome_empresa, nome_fantasia), usuarios!responsavel_id(nome_completo)')
+            .select('*')
             .eq('empresa_proprietaria_id', usuario.empresa_id)
             .order('criado_em', { ascending: false });
 
@@ -810,7 +810,7 @@ async function atualizarProcesso(id, dados) {
             .from('processos')
             .update({ ...dados, atualizado_em: new Date().toISOString() })
             .eq('id', id)
-            .eq('empresa_id', usuario.empresa_id);
+            .eq('empresa_proprietaria_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {
@@ -827,7 +827,7 @@ async function excluirProcesso(id) {
             .from('processos')
             .delete()
             .eq('id', id)
-            .eq('empresa_id', usuario.empresa_id);
+            .eq('empresa_proprietaria_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {

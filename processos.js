@@ -5,6 +5,7 @@
 const PROCESSOS_KEY = 'processosCadastros';
 
 let _empresasCache = [];
+let _processosTodos = [];
 
 // --------------------------------------------------
 // UTILITÁRIOS
@@ -26,15 +27,40 @@ function notify(msg, type) {
 }
 
 function readProcessos() {
-    try {
-        const raw = localStorage.getItem(PROCESSOS_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-    } catch { return []; }
+    return _processosTodos;
 }
 
 function writeProcessos(list) {
-    localStorage.setItem(PROCESSOS_KEY, JSON.stringify(list || []));
+    _processosTodos = list || [];
+}
+
+async function carregarProcessos() {
+    const container = document.getElementById('listaContainer');
+    const count     = document.getElementById('listaCount');
+    if (container) container.innerHTML = '<div class="lista-vazia"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>';
+
+    try {
+        const res = await window.supabaseAPI.buscarProcessos();
+        if (!res.sucesso) throw new Error(res.mensagem || 'Erro ao buscar processos');
+        _processosTodos = (res.data || []).map(p => ({
+            id:        p.id,
+            codigo:    p.codigo || p.id?.slice(0,8).toUpperCase(),
+            tipo:      p.tipo || '',
+            status:    p.status || 'aberto',
+            cliente:   p.nome_cliente || p.cliente || '',
+            origem:    p.porto_origem || p.pais_origem || '',
+            destino:   p.porto_destino || p.pais_destino || '',
+            etapas:    p.etapas || [],
+            incoterm:  p.incoterm || '',
+            moeda:     p.moeda || 'USD',
+            valor_total: p.valor_total || null,
+            criado_em: p.criado_em,
+        }));
+    } catch (err) {
+        if (container) container.innerHTML = `<div class="lista-vazia"><i class="fa-solid fa-circle-exclamation"></i> Erro: ${err.message}</div>`;
+        return;
+    }
+    renderTabela('');
 }
 
 // --------------------------------------------------
@@ -399,7 +425,7 @@ function enviarMensagem() {
 // INICIALIZAÇÃO
 // --------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-    renderTabela('');
+    carregarProcessos();
     iniciarAutocomplete();
 
     // Filtro
