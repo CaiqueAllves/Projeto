@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style-base.css">
     <link rel="stylesheet" href="style-navegador.css">
     <link rel="stylesheet" href="style-cadastro.css">
+    <link rel="stylesheet" href="style-proforma.css">
     <link rel="stylesheet" href="style-processos.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style-mobile.css">
@@ -51,21 +52,67 @@
                     </div>
                 </div>
                 <div class="header-right">
+                    <div id="procExcluidosWrapper">
+                        <button class="btn-excluidos" onclick="procToggleExcluidos()">
+                            <i class="fa-solid fa-trash-can"></i> Excluídos
+                        </button>
+                        <div class="prof-excluidos-panel" id="procExcluidosPanel">
+                            <div class="prof-excluidos-titulo">
+                                <i class="fa-solid fa-trash-can"></i> Processos Excluídos
+                            </div>
+                            <div class="prof-excluidos-aviso">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                Processos excluídos após 7 dias serão removidos permanentemente.
+                            </div>
+                            <div id="procExcluidosContainer"></div>
+                        </div>
+                    </div>
                     <button class="btn-cadastrar" onclick="window.open('formularios.html?tab=processo', '_blank')">
                         <i class="fa-solid fa-plus"></i> Novo Processo
                     </button>
                 </div>
             </div>
 
-            <!-- LISTA DE PROCESSOS -->
-            <div class="empresas-lista" id="processosLista">
-                <div class="lista-header">
-                    <span><i class="fa-solid fa-diagram-project"></i> Processos Cadastrados</span>
-                    <span class="lista-count" id="listaCount">—</span>
+            <!-- TABS MOBILE -->
+            <div class="kanban-tabs" id="kanbanTabs">
+                <button class="kanban-tab active" data-col="aberta" onclick="kanbanSwitchTab(this)">
+                    Aberta <span class="kanban-tab-count" id="tab-count-aberta">0</span>
+                </button>
+                <button class="kanban-tab" data-col="pendente" onclick="kanbanSwitchTab(this)">
+                    Pendente <span class="kanban-tab-count" id="tab-count-pendente">0</span>
+                </button>
+                <button class="kanban-tab" data-col="encerrada" onclick="kanbanSwitchTab(this)">
+                    Encerrada <span class="kanban-tab-count" id="tab-count-encerrada">0</span>
+                </button>
+            </div>
+
+            <!-- KANBAN BOARD -->
+            <div class="kanban-board" id="kanbanBoard">
+                <div class="kanban-col kanban-col-active" id="col-aberta">
+                    <div class="kanban-col-header kanban-header-aberta">
+                        <span class="kanban-col-title"><i class="fa-solid fa-circle-dot"></i> Aberta</span>
+                        <span class="kanban-col-count" id="count-aberta">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="cards-aberta">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
                 </div>
-                <div id="listaContainer" class="lista-scroll">
-                    <div class="lista-vazia">
-                        <i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...
+                <div class="kanban-col" id="col-pendente">
+                    <div class="kanban-col-header kanban-header-pendente">
+                        <span class="kanban-col-title"><i class="fa-solid fa-clock"></i> Pendente</span>
+                        <span class="kanban-col-count" id="count-pendente">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="cards-pendente">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+                <div class="kanban-col" id="col-encerrada">
+                    <div class="kanban-col-header kanban-header-encerrada">
+                        <span class="kanban-col-title"><i class="fa-solid fa-circle-check"></i> Encerrada</span>
+                        <span class="kanban-col-count" id="count-encerrada">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="cards-encerrada">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                     </div>
                 </div>
             </div>
@@ -273,7 +320,7 @@
             <h3 style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Excluir Processo</h3>
         </div>
         <div class="modal-body">
-            <p style="color:#374151; margin-bottom:16px;">Tem certeza que deseja excluir este processo? Esta ação não pode ser desfeita.</p>
+            <p style="color:#374151; margin-bottom:16px;">O processo será movido para a área de excluídos e poderá ser restaurado em até 7 dias.</p>
             <div id="excluirProcessoInfo" style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:16px;"></div>
         </div>
         <div class="modal-footer">

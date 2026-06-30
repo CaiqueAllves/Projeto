@@ -711,6 +711,7 @@
             <div class="tab-content" id="tab-processo">
                 <div class="form-card">
                     <form id="form-processo" onsubmit="salvarProcesso(event)">
+                    <input type="hidden" id="proc-id">
 
                         <!-- RESUMO DO PROCESSO -->
                         <div class="processo-resumo" id="processo-resumo">
@@ -817,7 +818,7 @@
                                         <input type="text" id="proc-documento" name="documento" placeholder="Preenchido automaticamente" readonly>
                                     </div>
 
-                                    <!-- Linha 3: Incoterm | Modal | Observações -->
+                                    <!-- Linha 3: Incoterm | Modal -->
                                     <div class="form-group">
                                         <label for="proc-incoterm">
                                             Incoterm
@@ -857,7 +858,8 @@
                                         <div class="incoterm-info" id="modal-info"></div>
                                     </div>
 
-                                    <div class="form-group prod-obs-wrapper">
+                                    <!-- Linha 4: Observações (largura total) -->
+                                    <div class="form-group full-width prod-obs-wrapper">
                                         <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
                                             <span>Observações</span>
                                             <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
@@ -1195,9 +1197,8 @@
                                             <option value="">Selecione...</option>
                                             <option value="aberto">Aberto</option>
                                             <option value="em_andamento">Em Andamento</option>
-                                            <option value="aguardando">Aguardando Documentos</option>
-                                            <option value="liberado">Liberado</option>
-                                            <option value="encerrado">Encerrado</option>
+                                            <option value="aguardando_documentos">Aguardando Documentos</option>
+                                            <option value="concluido">Concluído</option>
                                             <option value="cancelado">Cancelado</option>
                                         </select>
                                     </div>
@@ -1618,29 +1619,31 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 5: Valor do Frete | Seguro | Observações -->
+                                    <!-- Linha 5: Valor do Frete (com Seguro) -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-3">
-                                            <div class="form-group">
-                                                <label for="transp-frete-valor">Valor do Frete</label>
-                                                <div class="doc-tipo-wrapper" style="align-items:flex-end;">
-                                                    <div class="autocomplete-wrapper" style="width:140px;flex-shrink:0;">
-                                                        <input type="text" id="transp-frete-moeda-display" placeholder="Moeda..." autocomplete="off">
-                                                        <input type="hidden" id="transp-frete-moeda" name="transp_frete_moeda">
-                                                        <div class="autocomplete-dropdown" id="transp-frete-moeda-list" style="display:none;"></div>
-                                                    </div>
-                                                    <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00">
-                                                    <input type="text" id="transp-frete-incoterm" name="transp_frete_incoterm" class="transp-incoterm-tag" placeholder="—" readonly tabindex="-1" style="width:70px;flex-shrink:0;">
+                                        <div class="form-group">
+                                            <label for="transp-frete-valor">Valor do Frete</label>
+                                            <div class="doc-tipo-wrapper" style="align-items:flex-end;">
+                                                <div class="autocomplete-wrapper" style="width:140px;flex-shrink:0;">
+                                                    <input type="text" id="transp-frete-moeda-display" placeholder="Moeda..." autocomplete="off">
+                                                    <input type="hidden" id="transp-frete-moeda" name="transp_frete_moeda">
+                                                    <div class="autocomplete-dropdown" id="transp-frete-moeda-list" style="display:none;"></div>
                                                 </div>
+                                                <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00">
+                                                <input type="text" id="transp-frete-incoterm" name="transp_frete_incoterm" class="transp-incoterm-tag" placeholder="—" readonly tabindex="-1" style="width:70px;flex-shrink:0;">
+                                                <input type="text" id="transp-seguro" name="transp_seguro" placeholder="Nº apólice ou seguro" title="Seguro de Transporte (se houver)" style="flex:1;">
                                             </div>
-                                            <div class="form-group">
-                                                <label for="transp-seguro">Seguro de Transporte <span class="campo-opcional">(se houver)</span></label>
-                                                <input type="text" id="transp-seguro" name="transp_seguro" placeholder="Nº apólice ou valor do seguro">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="transp-obs">Observações</label>
-                                                <textarea id="transp-obs" name="transp_obs" placeholder="Informações adicionais sobre o transporte..." style="height:38px;resize:vertical;"></textarea>
-                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 6: Observações (largura total) -->
+                                    <div class="form-group full-width prod-obs-wrapper">
+                                        <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                            <span>Observações</span>
+                                            <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                        </div>
+                                        <div class="prod-obs-content">
+                                            <textarea id="transp-obs" name="transp_obs" placeholder="Informações adicionais sobre o transporte..."></textarea>
                                         </div>
                                     </div>
 

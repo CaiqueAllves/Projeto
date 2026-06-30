@@ -52,6 +52,12 @@
     width: auto;
 }
 
+.empresa-tabela .col-gerar-processo {
+    width: 140px;
+    min-width: 140px;
+    white-space: nowrap;
+}
+
 /* ── Contadores do header ────────────────── */
 .lista-header-counts {
     display: flex;

@@ -285,6 +285,14 @@ function salvarProduto(e)  { e.preventDefault(); alert('Produto salvo com sucess
 
 function salvarProcesso(e) {
     e.preventDefault();
+
+    const tipo = document.getElementById('proc-tipo')?.value;
+    if (!tipo) {
+        mostrarNotificacao('Selecione o Tipo do processo antes de salvar.', 'warning');
+        document.getElementById('proc-tipo')?.focus();
+        return;
+    }
+
     const modal = document.getElementById('modal-confirmar-salvar');
     modal.dataset.origem = 'processo';
     modal.style.display = 'flex';
@@ -346,6 +354,8 @@ async function confirmarSalvar() {
     posModal.dataset.origem = origem;
 
     if (resProc.sucesso) {
+        localStorage.setItem('processos_updated', Date.now());
+
         const tituloEl   = document.getElementById('pos-salvo-titulo');
         const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
         const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
@@ -360,13 +370,65 @@ async function confirmarSalvar() {
     }
 }
 
+async function procCarregarEdicao(id) {
+    const res = await window.supabaseAPI.buscarProcessoPorId(id);
+    if (!res.sucesso || !res.data) {
+        mostrarNotificacao('Processo não encontrado.', 'erro');
+        return;
+    }
+    const p = res.data;
+
+    // Preenche campos do formulário
+    const set = (sel, val) => { const el = document.getElementById(sel); if (el && val != null) el.value = val; };
+
+    set('proc-tipo',          p.tipo);
+    set('proc-status',        p.status);
+    set('proc-modal',         p.modal);
+    set('proc-incoterm',      p.incoterm);
+    set('proc-origem-pais',   p.pais_origem);
+    set('proc-destino-pais',  p.pais_destino);
+    set('proc-porto-origem',  p.porto_origem);
+    set('proc-porto-destino', p.porto_destino);
+    set('proc-data-abertura', p.data_abertura);
+    set('proc-observacoes',   p.observacoes);
+    set('proc-codigo',        p.numero_processo);
+
+    // Guarda ID para atualização
+    const idEl = document.getElementById('proc-id');
+    if (idEl) idEl.value = p.id;
+
+    // Exibe número do processo no título
+    const titulo = document.querySelector('#tab-processo .section-title span');
+    if (titulo && p.numero_processo) titulo.textContent = `Editar Processo — ${p.numero_processo}`;
+}
+
+function procAplicarModoVisualizacao() {
+    const form = document.getElementById('form-processo');
+    if (!form) return;
+
+    form.querySelectorAll('input, select, textarea, button[type="submit"], button[type="button"]').forEach(el => {
+        el.disabled = true;
+    });
+
+    const actions = form.querySelector('.form-actions');
+    if (actions) actions.style.display = 'none';
+
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:sticky;top:0;z-index:100;background:#1e40af;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;letter-spacing:0.3px;border-radius:8px;margin-bottom:12px;';
+    banner.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:6px;"></i>Modo Visualização — somente leitura';
+    form.insertBefore(banner, form.firstChild);
+}
+
 function _coletarDadosProcesso() {
     const clienteId = document.getElementById('proc-cliente-id')?.value || null;
     return {
         tipo:               document.getElementById('proc-tipo')?.value                       || null,
         status:             document.getElementById('proc-status')?.value                     || 'aberto',
         empresa_parceira_id: clienteId || null,
+        modal:              document.getElementById('proc-modal')?.value?.trim()              || null,
         incoterm:           document.getElementById('proc-incoterm')?.value                   || null,
+        pais_origem:        document.getElementById('proc-origem-pais')?.value?.trim()        || null,
+        pais_destino:       document.getElementById('proc-destino-pais')?.value?.trim()       || null,
         porto_origem:       document.getElementById('proc-porto-origem')?.value?.trim()       || null,
         porto_destino:      document.getElementById('proc-porto-destino')?.value?.trim()      || null,
         data_abertura:      document.getElementById('proc-data-abertura')?.value              || null,
@@ -3121,7 +3183,7 @@ async function _procPreencherDaProforma(id) {
                 radioTerceiro.dispatchEvent(new Event('change'));
             }
             // Preenche campo empresa/cliente com o nome do parceiro (buscado separadamente)
-            const { data: emp } = await supabaseClient.from('empresas').select('id, razao_social, nome_fantasia').eq('id', data.parceiro_id).single();
+            const { data: emp } = await supabaseClient.from('empresas_cadastradas').select('id, razao_social, nome_fantasia').eq('id', data.parceiro_id).single();
             if (emp) {
                 const clienteEl = document.getElementById('proc-cliente');
                 const clienteIdEl = document.getElementById('proc-cliente-id');
@@ -4560,19 +4622,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarCamposStatus();
     iniciarAutocompleteProcCliente();
     iniciarAutocompleteProcCodProposta();
-
-    // Pré-preenchimento via proforma_id (botão "Seguir com Processo?")
-    const _procProformaIdParam = new URLSearchParams(window.location.search).get('proforma_id');
-    if (_procProformaIdParam) {
-        await _acCarregarPropostas();
-        const proformaAc = _acPropostas.find(x => x.id === _procProformaIdParam);
-        const codigoEl   = document.getElementById('proc-codigo');
-        const idOcultoEl = document.getElementById('proc-proposta-id');
-        if (codigoEl)   codigoEl.value   = proformaAc?.nome || '';
-        if (idOcultoEl) idOcultoEl.value = _procProformaIdParam;
-        await _procPreencherDaProforma(_procProformaIdParam);
-    }
-
     iniciarAutocompletePaisOrigem();
     iniciarAutocompletePaisDestino();
     iniciarAutocompleteContainer();
@@ -4591,6 +4640,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     carregarMoedasTransporte();
     iniciarTransportadoraPropria();
 
+    // Pré-preenchimento via proforma_id — APÓS todos os iniciar* para que os listeners estejam prontos
+    const _procProformaIdParam = new URLSearchParams(window.location.search).get('proforma_id');
+    if (_procProformaIdParam) {
+        await _acCarregarPropostas();
+        const proformaAc = _acPropostas.find(x => x.id === _procProformaIdParam);
+        const codigoEl   = document.getElementById('proc-codigo');
+        const idOcultoEl = document.getElementById('proc-proposta-id');
+        if (codigoEl)   codigoEl.value   = proformaAc?.nome || '';
+        if (idOcultoEl) idOcultoEl.value = _procProformaIdParam;
+        await _procPreencherDaProforma(_procProformaIdParam);
+    }
+
     // Produto
     iniciarAutocompleteEmpresaProduto();
     iniciarAutocompleteNcmProduto();
@@ -4600,7 +4661,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarAutocompleteAcondicionamentoProduto();
 
     // Proposta
-    const _propIdEdicao = new URLSearchParams(window.location.search).get('id');
+    const _urlParams    = new URLSearchParams(window.location.search);
+    const _urlTab       = _urlParams.get('tab');
+    const _urlId        = _urlParams.get('id');
+    const _urlModo      = _urlParams.get('modo');
+
+    // ?id= só é ID de proposta quando tab != processo
+    const _propIdEdicao = _urlTab !== 'processo' ? _urlId : null;
+
     if (!_propIdEdicao) {
         propGerarCodigo();
         const _propDataCriacao = document.getElementById('prop-data-emissao');
@@ -4619,11 +4687,19 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarAutocompletePortos();
     propIniciarItens();
 
-    const _propModo = new URLSearchParams(window.location.search).get('modo');
-
     if (_propIdEdicao) {
         await propCarregarEdicao(_propIdEdicao);
-        if (_propModo === 'visualizar') propAplicarModoVisualizacao();
+        if (_urlModo === 'visualizar') propAplicarModoVisualizacao();
+    }
+
+    // Processo — pré-preencher ao editar via ?tab=processo&id=...
+    if (_urlTab === 'processo' && _urlId) {
+        await procCarregarEdicao(_urlId);
+        if (_urlModo === 'visualizar') procAplicarModoVisualizacao();
+        if (_urlModo === 'pdf') {
+            procAplicarModoVisualizacao();
+            setTimeout(() => window.print(), 600);
+        }
     }
 
     // Modal info

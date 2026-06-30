@@ -755,6 +755,7 @@ async function buscarProcessos(filtros = {}) {
             .from('processos')
             .select('*')
             .eq('empresa_proprietaria_id', usuario.empresa_id)
+            .neq('status', 'excluido')
             .order('criado_em', { ascending: false });
 
         if (filtros.tipo)   query = query.eq('tipo', filtros.tipo);
@@ -768,28 +769,73 @@ async function buscarProcessos(filtros = {}) {
     }
 }
 
-async function salvarProcesso(dados) {
+async function buscarProcessoPorId(id) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
         const { data, error } = await supabaseClient
             .from('processos')
+            .select('*')
+            .eq('id', id)
+            .eq('empresa_proprietaria_id', usuario.empresa_id)
+            .single();
+
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, data };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
+async function _gerarNumeroProcesso(empresaId) {
+    const ano     = new Date().getFullYear();
+    const pattern = `PROC${ano}%`;
+
+    const { data } = await supabaseClient
+        .from('processos')
+        .select('numero_processo')
+        .eq('empresa_proprietaria_id', empresaId)
+        .like('numero_processo', pattern)
+        .order('numero_processo', { ascending: false })
+        .limit(1);
+
+    let seq = 1;
+    if (data && data.length > 0) {
+        const ultimo = data[0].numero_processo;
+        const num    = parseInt(ultimo?.slice(`PROC${ano}`.length), 10);
+        if (!isNaN(num)) seq = num + 1;
+    }
+
+    return `PROC${ano}${String(seq).padStart(6, '0')}`;
+}
+
+async function salvarProcesso(dados) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+
+        const numero_processo = await _gerarNumeroProcesso(usuario.empresa_id);
+
+        const { data, error } = await supabaseClient
+            .from('processos')
             .insert({
+                numero_processo:         numero_processo,
                 tipo:                    dados.tipo,
                 status:                  dados.status || 'aberto',
                 empresa_proprietaria_id: usuario.empresa_id,
                 empresa_parceira_id:     dados.empresa_parceira_id || null,
-                responsavel_id:          dados.responsavel_id || usuario.id,
+                modal:                   dados.modal || null,
                 moeda:                   dados.moeda || 'USD',
                 valor_total:             dados.valor_total || null,
                 incoterm:                dados.incoterm || null,
+                pais_origem:             dados.pais_origem || null,
+                pais_destino:            dados.pais_destino || null,
                 porto_origem:            dados.porto_origem || null,
                 porto_destino:           dados.porto_destino || null,
                 data_abertura:           dados.data_abertura || new Date().toISOString().split('T')[0],
                 data_previsao:           dados.data_previsao || null,
                 observacoes:             dados.observacoes || null,
-                criado_por:              usuario.id
             })
             .select()
             .single();
@@ -1131,6 +1177,7 @@ window.supabaseAPI = {
     buscarDadosPerfilCompleto,
     redefinirSenha,
     buscarProcessos,
+    buscarProcessoPorId,
     salvarProcesso,
     atualizarProcesso,
     excluirProcesso,

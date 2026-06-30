@@ -142,20 +142,13 @@ function profRenderizarLista(lista) {
                 <div style="font-size:12px;color:#374151;">${dataEmis}</div>
                 <div style="font-size:11px;color:#94a3b8;">Val: ${dataVal}</div>
             </td>
-            <td>
-                <select class="prof-status-select prof-status-${status}"
-                        onchange="profAlterarStatus('${p.id}', this)">
-                    ${optStatus}
-                </select>
-            </td>
             <td class="col-acoes">
                 <div style="display:flex;align-items:center;gap:6px;">
-                    ${status === 'aprovado' ? `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Seguir com Processo?</button>` : ''}
                     <button class="btn-acao btn-ver" onclick="profVisualizar('${p.id}')" title="Visualizar">
                         <i class="fa-solid fa-eye"></i>
                     </button>
                     <button class="btn-acao btn-pdf" onclick="profGerarPDF('${p.id}')" title="Gerar PDF">
-                        <i class="fa-solid fa-file-pdf"></i> PDF
+                        <i class="fa-solid fa-file-pdf"></i>
                     </button>
                     <button class="btn-acao btn-editar" onclick="profEditar('${p.id}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
@@ -164,6 +157,15 @@ function profRenderizarLista(lista) {
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
+            </td>
+            <td>
+                <select class="prof-status-select prof-status-${status}"
+                        onchange="profAlterarStatus('${p.id}', this)">
+                    ${optStatus}
+                </select>
+            </td>
+            <td class="col-gerar-processo">
+                ${status === 'aprovado' ? `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar Processo ?</button>` : ''}
             </td>
         </tr>`;
     }).join('');
@@ -176,8 +178,9 @@ function profRenderizarLista(lista) {
                 <th>Rota</th>
                 <th>Modal / Incoterm</th>
                 <th>Data</th>
+                <th class="col-acoes">Ações</th>
                 <th>Status</th>
-                <th class="col-acoes"></th>
+                <th class="col-gerar-processo"></th>
             </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -205,14 +208,14 @@ async function profAlterarStatus(id, selectEl) {
 
         const row = document.getElementById(`prof-card-${id}`);
         if (row) {
-            const acoesDiv  = row.querySelector('.col-acoes > div');
+            const gerarCell = row.querySelector('.col-gerar-processo');
             const btnExiste = row.querySelector('.btn-seguir-processo');
-            if (novoStatus === 'aprovado' && !btnExiste && acoesDiv) {
+            if (novoStatus === 'aprovado' && !btnExiste && gerarCell) {
                 const btn = document.createElement('button');
                 btn.className = 'btn-seguir-processo';
-                btn.textContent = 'Seguir com Processo?';
+                btn.textContent = 'Gerar Processo ?';
                 btn.onclick = () => profSeguirProcesso(id);
-                acoesDiv.prepend(btn);
+                gerarCell.appendChild(btn);
             } else if (novoStatus !== 'aprovado' && btnExiste) {
                 btnExiste.remove();
             }
