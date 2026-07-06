@@ -344,6 +344,60 @@
 .badge-status-inativo { display:inline-block; background: #f1f5f9; color: #64748b;  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
 /* ========================================
+   MÓDULOS E PERMISSÕES — TOGGLES NO CARD
+======================================== */
+
+.usuario-card-modulos {
+    border-top: 1px solid #f1f5f9;
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.modulos-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+}
+
+.modulos-toggles {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.modulo-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 20px;
+    border: 1.5px solid #e2e8f0;
+    font-size: 11px;
+    font-weight: 600;
+    background: #f8fafc;
+    color: #94a3b8;
+    transition: all 0.18s;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.modulo-chip:hover { filter: brightness(0.95); }
+
+/* estados ativos por módulo */
+.modulo-chip.ativo.operacional { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.modulo-chip.ativo.comercial   { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+.modulo-chip.ativo.financeiro  { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+
+/* read-only (não-admin) */
+.modulo-chip.readonly { cursor: default; }
+.modulo-chip.readonly:hover { filter: none; }
+
+/* ========================================
    ATIVIDADE RECENTE
 ======================================== */
 

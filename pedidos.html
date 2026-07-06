@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Pedidos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-pedidos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-bag-shopping"></i> Pedidos</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- FILTRO + AÇÕES -->
+            <div class="page-header">
+                <div class="header-left">
+                    <div class="filter-wrapper">
+                        <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+                        <input type="text" id="filtroPedidos" placeholder="Filtrar por número, cliente..." oninput="pedFiltrar()">
+                    </div>
+                    <select id="filtroStatusPedido" class="filter-select" onchange="pedFiltrar()">
+                        <option value="">Todos os status</option>
+                        <option value="aguardando">Aguardando</option>
+                        <option value="confirmado">Confirmado</option>
+                        <option value="em_producao">Em produção</option>
+                        <option value="embarcado">Embarcado</option>
+                        <option value="entregue">Entregue</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                </div>
+                <div class="header-right">
+                    <button class="btn-cadastrar" onclick="pedAbrirModal()">
+                        <i class="fa-solid fa-plus"></i> Novo Pedido
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABELA -->
+            <div class="ped-table-wrap">
+                <table class="ped-table" id="pedTabela">
+                    <thead>
+                        <tr>
+                            <th>Nº Pedido</th>
+                            <th>Cliente</th>
+                            <th>Valor</th>
+                            <th>Data do Pedido</th>
+                            <th>Entrega Prevista</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pedTbody">
+                        <tr><td colspan="7" class="ped-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- MODAL CRIAR/EDITAR -->
+<div class="pl-modal-overlay" id="pedModalOverlay" onclick="pedFecharModal()">
+    <div class="pl-modal" onclick="event.stopPropagation()">
+        <div class="pl-modal-header">
+            <h3 id="pedModalTitulo"><i class="fa-solid fa-bag-shopping"></i> Novo Pedido</h3>
+            <button class="pl-modal-close" onclick="pedFecharModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pl-modal-body">
+            <input type="hidden" id="pedEditId">
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Nº do Pedido</label>
+                    <input type="text" id="pedNumero" placeholder="Ex: PED-2025-001">
+                </div>
+                <div class="pl-form-group">
+                    <label>Status <span class="pl-req">*</span></label>
+                    <select id="pedStatus">
+                        <option value="aguardando">Aguardando</option>
+                        <option value="confirmado">Confirmado</option>
+                        <option value="em_producao">Em produção</option>
+                        <option value="embarcado">Embarcado</option>
+                        <option value="entregue">Entregue</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group pl-full">
+                    <label>Cliente</label>
+                    <input type="text" id="pedClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="pedBuscarCliente(this.value)">
+                    <input type="hidden" id="pedClienteId">
+                    <div class="pl-autocomplete" id="pedAutoCliente"></div>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Valor Total</label>
+                    <input type="number" id="pedValor" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="pl-form-group">
+                    <label>Moeda</label>
+                    <select id="pedMoeda">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="BRL">BRL</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Data do Pedido</label>
+                    <input type="date" id="pedDataPedido">
+                </div>
+                <div class="pl-form-group">
+                    <label>Entrega Prevista</label>
+                    <input type="date" id="pedDataEntrega">
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group pl-full">
+                    <label>Observações</label>
+                    <textarea id="pedObservacoes" rows="3" placeholder="Detalhes do pedido..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="pl-modal-footer">
+            <button class="pl-btn-cancelar" onclick="pedFecharModal()">Cancelar</button>
+            <button class="pl-btn-salvar" id="pedBtnSalvar" onclick="pedSalvar()">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR EXCLUIR -->
+<div class="pl-modal-overlay" id="pedModalExcluirOverlay" onclick="pedFecharModalExcluir()">
+    <div class="pl-modal pl-modal-sm" onclick="event.stopPropagation()">
+        <div class="pl-modal-header">
+            <h3><i class="fa-solid fa-trash"></i> Excluir Pedido</h3>
+            <button class="pl-modal-close" onclick="pedFecharModalExcluir()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pl-modal-body">
+            <p>Tem certeza que deseja excluir o pedido <strong id="pedExcluirNum"></strong>? Esta ação não pode ser desfeita.</p>
+        </div>
+        <div class="pl-modal-footer">
+            <button class="pl-btn-cancelar" onclick="pedFecharModalExcluir()">Cancelar</button>
+            <button class="pl-btn-excluir" id="pedBtnConfirmarExcluir" onclick="pedConfirmarExcluir()">
+                <i class="fa-solid fa-trash"></i> Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2025 Marpex · Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="navegador.js"></script>
+<script src="pedidos.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

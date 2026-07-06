@@ -33,16 +33,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     inicializarGraficos(empresas);
     
     // Inicializar chat
-    const chatInput = document.getElementById('chatInput');
-    if (chatInput) {
-        chatInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                enviarMensagem();
-            }
-        });
-    }
-    
-    // Adicionar efeito de scroll na topbar
+// Adicionar efeito de scroll na topbar
     let lastScroll = 0;
     window.addEventListener('scroll', function() {
         const currentScroll = window.pageYOffset;
@@ -774,41 +765,6 @@ function criarGraficoProformas(proformas) {
 // ========================================
 // WHATSAPP CHAT
 // ========================================
-
-function toggleWhatsappChat() {
-    const chat = document.getElementById('whatsappChat');
-    chat.classList.toggle('active');
-}
-
-function enviarMensagem() {
-    const input = document.getElementById('chatInput');
-    const mensagem = input.value.trim();
-    
-    if (mensagem === '') return;
-    
-    const chatBody = document.querySelector('.chat-body');
-    const userMessage = document.createElement('div');
-    userMessage.className = 'chat-message user';
-    userMessage.innerHTML = `
-        <div class="message-content">${mensagem}</div>
-        <div class="message-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
-    `;
-    chatBody.appendChild(userMessage);
-    
-    input.value = '';
-    chatBody.scrollTop = chatBody.scrollHeight;
-    
-    setTimeout(() => {
-        const botMessage = document.createElement('div');
-        botMessage.className = 'chat-message bot';
-        botMessage.innerHTML = `
-            <div class="message-content">Obrigado pela sua mensagem! Nossa equipe responderá em breve. 😊</div>
-            <div class="message-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
-        `;
-        chatBody.appendChild(botMessage);
-        chatBody.scrollTop = chatBody.scrollHeight;
-    }, 1000);
-}
 
 // ========================================
 // NOTIFICAÇÕES

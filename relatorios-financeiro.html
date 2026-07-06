@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Relatórios Financeiros</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-chart-pie"></i> Relatórios Financeiros</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- Período -->
+            <div class="fin-periodo-wrap">
+                <label><i class="fa-regular fa-calendar"></i> Período:</label>
+                <input type="month" id="rfInicio" onchange="rfCarregar()">
+                <span style="color:#94a3b8">até</span>
+                <input type="month" id="rfFim" onchange="rfCarregar()">
+            </div>
+
+            <!-- KPIs -->
+            <div class="fin-summary">
+                <div class="fin-card">
+                    <div class="fin-card-icon verde"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Receita Total</div>
+                        <div class="fin-card-valor verde" id="rfReceita">R$ 0,00</div>
+                    </div>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-icon vermelho"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Despesas Totais</div>
+                        <div class="fin-card-valor vermelho" id="rfDespesas">R$ 0,00</div>
+                    </div>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-icon azul"><i class="fa-solid fa-coins"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Resultado</div>
+                        <div class="fin-card-valor" id="rfResultado">R$ 0,00</div>
+                    </div>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-icon laranja"><i class="fa-solid fa-percent"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Margem</div>
+                        <div class="fin-card-valor" id="rfMargem">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabelas lado a lado -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 20px 0;">
+
+                <!-- Contas a Receber -->
+                <div>
+                    <div style="font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">
+                        <i class="fa-solid fa-arrow-down" style="color:#22c55e"></i> Contas a Receber
+                    </div>
+                    <div class="fin-table-wrap" style="margin:0;">
+                        <table class="fin-table">
+                            <thead>
+                                <tr><th>Status</th><th>Qtd</th><th>Total</th></tr>
+                            </thead>
+                            <tbody id="rfTbodyReceber"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Contas a Pagar -->
+                <div>
+                    <div style="font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">
+                        <i class="fa-solid fa-arrow-up" style="color:#ef4444"></i> Contas a Pagar
+                    </div>
+                    <div class="fin-table-wrap" style="margin:0;">
+                        <table class="fin-table">
+                            <thead>
+                                <tr><th>Status</th><th>Qtd</th><th>Total</th></tr>
+                            </thead>
+                            <tbody id="rfTbodyPagar"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maiores despesas -->
+            <div style="margin:16px 20px 20px;">
+                <div style="font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">
+                    <i class="fa-solid fa-list-ol"></i> Top 10 — Maiores Despesas
+                </div>
+                <div class="fin-table-wrap" style="margin:0;">
+                    <table class="fin-table">
+                        <thead>
+                            <tr><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th></tr>
+                        </thead>
+                        <tbody id="rfTbodyTop"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2025 Marpex · Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="navegador.js"></script>
+<script src="relatorios-financeiro.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

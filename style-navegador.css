@@ -200,3 +200,88 @@ aside .badge {
     margin-left: auto;
     font-weight: 600;
 }
+
+/* ========================================
+   MÓDULOS — TROCA DE CONTEXTO
+======================================== */
+
+aside h2 {
+    margin-bottom: 0;
+}
+
+.mod-select-wrap {
+    position: relative;
+    padding: 14px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 6px;
+}
+
+.mod-select {
+    width: 100%;
+    padding: 9px 32px 9px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.9);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.18s, background 0.18s;
+}
+
+.mod-select:focus,
+.mod-select:hover {
+    border-color: rgba(247,147,30,0.6);
+    background: rgba(255,255,255,0.12);
+}
+
+.mod-select option {
+    background: #1e293b;
+    color: white;
+}
+
+.mod-select-arrow {
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-65%);
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    pointer-events: none;
+}
+
+/* ── Submenus dos módulos Comercial e Financeiro (hover abre) ── */
+#mod-com-config:hover .submenu,
+#mod-fin-config:hover .submenu,
+#mod-fin-contas:hover .submenu {
+    max-height: 2000px;
+    opacity: 1;
+}
+
+#mod-com-config:hover,
+#mod-fin-config:hover,
+#mod-fin-contas:hover {
+    overflow: visible;
+}
+
+/* Seções de módulo: escondidas por padrão, JS mostra a ativa */
+.mod-section {
+    display: none;
+}
+
+/* ── Placeholder: módulo em desenvolvimento ────────────────── */
+.mod-em-breve {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px;
+    color: rgba(255,255,255,0.35);
+    text-align: center;
+    gap: 10px;
+}
+
+.mod-em-breve i  { font-size: 28px; }
+.mod-em-breve p  { font-size: 12px; margin: 0; line-height: 1.5; }

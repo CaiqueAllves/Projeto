@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Relatórios Comerciais</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-relatorios-comercial.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-chart-line"></i> Relatórios Comerciais</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- FILTROS DE PERÍODO -->
+            <div class="rc-filtros">
+                <div class="rc-filtros-esq">
+                    <span class="rc-filtros-label">Período:</span>
+                    <div class="rc-period-btns">
+                        <button class="rc-period-btn active" onclick="rcSetPeriodo(this, 30)">30 dias</button>
+                        <button class="rc-period-btn" onclick="rcSetPeriodo(this, 90)">90 dias</button>
+                        <button class="rc-period-btn" onclick="rcSetPeriodo(this, 365)">1 ano</button>
+                    </div>
+                    <div class="rc-period-custom">
+                        <input type="date" id="rcDataInicio">
+                        <span>até</span>
+                        <input type="date" id="rcDataFim">
+                        <button class="rc-btn-aplicar" onclick="rcAplicarPeriodo()">Aplicar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARDS DE RESUMO -->
+            <div class="rc-cards">
+                <div class="rc-card rc-card-pipeline">
+                    <div class="rc-card-icon"><i class="fa-solid fa-filter"></i></div>
+                    <div class="rc-card-info">
+                        <span class="rc-card-valor" id="rcTotalOportunidades">—</span>
+                        <span class="rc-card-label">Oportunidades no período</span>
+                    </div>
+                </div>
+                <div class="rc-card rc-card-valor">
+                    <div class="rc-card-icon"><i class="fa-solid fa-coins"></i></div>
+                    <div class="rc-card-info">
+                        <span class="rc-card-valor" id="rcValorPipeline">—</span>
+                        <span class="rc-card-label">Valor total no pipeline</span>
+                    </div>
+                </div>
+                <div class="rc-card rc-card-fechado">
+                    <div class="rc-card-icon"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="rc-card-info">
+                        <span class="rc-card-valor" id="rcOportunidadesFechadas">—</span>
+                        <span class="rc-card-label">Oportunidades fechadas</span>
+                    </div>
+                </div>
+                <div class="rc-card rc-card-pedidos">
+                    <div class="rc-card-icon"><i class="fa-solid fa-bag-shopping"></i></div>
+                    <div class="rc-card-info">
+                        <span class="rc-card-valor" id="rcTotalPedidos">—</span>
+                        <span class="rc-card-label">Pedidos no período</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LINHA 2: Pipeline por etapa + Top Clientes -->
+            <div class="rc-row">
+
+                <!-- Pipeline por etapa -->
+                <div class="rc-panel">
+                    <div class="rc-panel-header">
+                        <h3><i class="fa-solid fa-filter"></i> Pipeline por Etapa</h3>
+                    </div>
+                    <div class="rc-panel-body" id="rcPipelineEtapas">
+                        <div class="rc-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <!-- Top clientes -->
+                <div class="rc-panel">
+                    <div class="rc-panel-header">
+                        <h3><i class="fa-solid fa-ranking-star"></i> Top Clientes</h3>
+                    </div>
+                    <div class="rc-panel-body" id="rcTopClientes">
+                        <div class="rc-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- LINHA 3: Pedidos por status + Taxa de conversão -->
+            <div class="rc-row">
+
+                <!-- Pedidos por status -->
+                <div class="rc-panel">
+                    <div class="rc-panel-header">
+                        <h3><i class="fa-solid fa-bag-shopping"></i> Pedidos por Status</h3>
+                    </div>
+                    <div class="rc-panel-body" id="rcPedidosStatus">
+                        <div class="rc-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <!-- Taxa de conversão -->
+                <div class="rc-panel">
+                    <div class="rc-panel-header">
+                        <h3><i class="fa-solid fa-percent"></i> Taxa de Conversão</h3>
+                    </div>
+                    <div class="rc-panel-body rc-conversao-body" id="rcConversao">
+                        <div class="rc-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2025 Marpex · Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="navegador.js"></script>
+<script src="relatorios-comercial.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

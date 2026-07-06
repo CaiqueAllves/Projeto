@@ -366,40 +366,6 @@ function initImagemPreview() {
 }
 
 // --------------------------------------------------
-// WHATSAPP
-// --------------------------------------------------
-function toggleWhatsappChat() {
-    document.getElementById('whatsappChat')?.classList.toggle('active');
-}
-
-function enviarMensagem() {
-    const input    = document.getElementById('chatInput');
-    const chatBody = document.querySelector('.chat-body');
-    if (!input || !chatBody) return;
-    const msg = input.value.trim();
-    if (!msg) return;
-
-    const userMsg = document.createElement('div');
-    userMsg.className = 'chat-message user';
-    userMsg.innerHTML = `
-        <div class="message-content">${escapeHtml(msg)}</div>
-        <div class="message-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>`;
-    chatBody.appendChild(userMsg);
-    input.value = '';
-    chatBody.scrollTop = chatBody.scrollHeight;
-
-    setTimeout(() => {
-        const botMsg = document.createElement('div');
-        botMsg.className = 'chat-message bot';
-        botMsg.innerHTML = `
-            <div class="message-content">Obrigado! Nossa equipe responderá em breve.</div>
-            <div class="message-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>`;
-        chatBody.appendChild(botMsg);
-        chatBody.scrollTop = chatBody.scrollHeight;
-    }, 800);
-}
-
-// --------------------------------------------------
 // INICIALIZAÇÃO
 // --------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
@@ -466,7 +432,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Chat Enter
-    document.getElementById('chatInput')?.addEventListener('keypress', e => {
-        if (e.key === 'Enter') enviarMensagem();
-    });
 });

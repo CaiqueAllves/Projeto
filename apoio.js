@@ -664,23 +664,3 @@ function _filtrarDualPanel(n, cfg, termo) {
     _renderDualPanel(n, cfg, filtrado);
 }
 
-// --------------------------------------------------
-// WHATSAPP
-// --------------------------------------------------
-function toggleWhatsappChat() {
-    document.getElementById('whatsappChat').classList.toggle('open');
-}
-
-function enviarMensagem() {
-    const input = document.getElementById('chatInput');
-    const texto = input.value.trim();
-    if (!texto) return;
-    const body  = document.querySelector('.chat-body');
-    body.innerHTML += `
-        <div class="chat-message" style="align-self:flex-end;">
-            <div class="message-content" style="background:#dcf8c6; border-radius:12px 0 12px 12px;">${texto}</div>
-            <div class="message-time" style="text-align:right;">Agora</div>
-        </div>`;
-    input.value = '';
-    body.scrollTop = body.scrollHeight;
-}

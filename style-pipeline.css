@@ -1,0 +1,508 @@
+/* ========================================
+   PIPELINE COMERCIAL — ESTILOS
+======================================== */
+
+/* ── Kanban board ──────────────────────────────────────────────── */
+.pl-kanban {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    align-items: start;
+    margin-top: 16px;
+}
+
+.pl-col {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    min-height: 200px;
+    overflow: hidden;
+}
+
+.pl-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.pl-col-titulo {
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.pl-col-count {
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.08);
+    color: inherit;
+}
+
+/* Cores das colunas */
+.pl-header-lead       { background: #eff6ff; color: #1d4ed8; border-bottom-color: #bfdbfe; }
+.pl-header-proposta   { background: #fff7ed; color: #c2410c; border-bottom-color: #fed7aa; }
+.pl-header-negociacao { background: #f5f3ff; color: #6d28d9; border-bottom-color: #ddd6fe; }
+.pl-header-fechado    { background: #f0fdf4; color: #15803d; border-bottom-color: #bbf7d0; }
+
+.pl-col-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────── */
+.pl-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: default;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+.pl-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-color: #cbd5e1;
+}
+
+/* Borda esquerda por etapa */
+.pl-card[data-etapa="lead"]        { border-left: 3px solid #3b82f6; }
+.pl-card[data-etapa="proposta"]    { border-left: 3px solid #f97316; }
+.pl-card[data-etapa="negociacao"]  { border-left: 3px solid #8b5cf6; }
+.pl-card[data-etapa="fechado"]     { border-left: 3px solid #22c55e; }
+
+.pl-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.pl-card-titulo {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.4;
+    flex: 1;
+}
+
+.pl-prob-badge {
+    font-size: 11px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.pl-card-cliente {
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pl-card-valor {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pl-card-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 2px;
+}
+
+.pl-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.pl-card-resp,
+.pl-card-data {
+    font-size: 11px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pl-card-btns {
+    display: flex;
+    gap: 6px;
+}
+
+/* ── Botões de ação nos cards ──────────────────────────────────── */
+.pl-btn-acao {
+    flex: 1;
+    height: 32px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.pl-btn-editar:hover  { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.pl-btn-avancar:hover { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+.pl-btn-excluir:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+/* ── Vazia / loading ───────────────────────────────────────────── */
+.pl-col-vazia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 32px 12px;
+    color: #cbd5e1;
+    font-size: 12px;
+    text-align: center;
+}
+.pl-col-vazia i { font-size: 22px; }
+
+.pl-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    color: #94a3b8;
+    font-size: 18px;
+}
+
+/* ── Painel de perdidos ────────────────────────────────────────── */
+.pl-perdidos-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 900;
+}
+.pl-perdidos-overlay.ativo { display: block; }
+
+.pl-perdidos-panel {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+    z-index: 901;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.25s ease;
+    overflow: hidden;
+}
+.pl-perdidos-panel.ativo { right: 0; }
+
+.pl-perdidos-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    background: #fef2f2;
+    border-bottom: 1px solid #fecaca;
+    color: #dc2626;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.pl-perdidos-header button {
+    background: none;
+    border: none;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.pl-perdido-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.pl-perdido-item:last-child { border-bottom: none; }
+
+.pl-perdido-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.pl-perdido-titulo {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pl-perdido-cliente { font-size: 11px; color: #94a3b8; }
+
+.pl-perdido-acoes { display: flex; gap: 6px; }
+
+.pl-perdidos-vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 48px 20px;
+    color: #cbd5e1;
+    font-size: 13px;
+    text-align: center;
+}
+.pl-perdidos-vazio i { font-size: 28px; }
+
+/* ── Modal ─────────────────────────────────────────────────────── */
+.pl-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+.pl-modal-overlay.ativo { display: flex; }
+
+.pl-modal {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: plModalIn 0.2s ease;
+}
+.pl-modal-sm { max-width: 440px; }
+
+@keyframes plModalIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.pl-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+.pl-modal-header h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pl-modal-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+.pl-modal-close:hover { background: #f1f5f9; color: #475569; }
+
+.pl-modal-body {
+    padding: 20px 22px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.pl-modal-body p { font-size: 14px; color: #475569; margin: 0; line-height: 1.6; }
+
+.pl-modal-footer {
+    padding: 16px 22px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* ── Form dentro do modal ──────────────────────────────────────── */
+.pl-form-row {
+    display: flex;
+    gap: 14px;
+}
+.pl-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+.pl-form-group.pl-full { flex: 100%; }
+
+.pl-form-group label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #374151;
+}
+.pl-req { color: #ef4444; }
+
+.pl-form-group input,
+.pl-form-group select,
+.pl-form-group textarea {
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #334155;
+    background: #f8fafc;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+}
+.pl-form-group input:focus,
+.pl-form-group select:focus,
+.pl-form-group textarea:focus {
+    border-color: #4776ec;
+    background: white;
+}
+.pl-form-group textarea { resize: vertical; }
+
+/* Autocomplete */
+.pl-autocomplete {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    z-index: 1100;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.pl-form-group { position: relative; }
+
+.pl-auto-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+.pl-auto-item:last-child { border-bottom: none; }
+.pl-auto-item:hover { background: #f0f5ff; }
+.pl-auto-nome  { font-size: 13px; font-weight: 600; color: #1e293b; }
+.pl-auto-razao { font-size: 11px; color: #94a3b8; }
+.pl-auto-vazio { padding: 12px 14px; font-size: 13px; color: #94a3b8; text-align: center; }
+
+/* ── Botões do modal ───────────────────────────────────────────── */
+.pl-btn-cancelar {
+    padding: 9px 18px;
+    background: #f1f5f9;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.pl-btn-cancelar:hover { background: #e2e8f0; }
+
+.pl-btn-salvar {
+    padding: 9px 20px;
+    background: linear-gradient(135deg, #3a63d8, #4776ec);
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: opacity 0.15s;
+}
+.pl-btn-salvar:hover    { opacity: 0.9; }
+.pl-btn-salvar:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.pl-btn-excluir {
+    padding: 9px 20px;
+    background: #ef4444;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: opacity 0.15s;
+}
+.pl-btn-excluir:hover    { opacity: 0.9; }
+.pl-btn-excluir:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .pl-kanban {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    .pl-perdidos-panel {
+        width: 100%;
+        right: -100%;
+    }
+    .pl-perdidos-panel.ativo { right: 0; }
+    .pl-modal {
+        margin: 12px;
+        max-height: calc(100vh - 24px);
+    }
+    .pl-form-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .pl-card-btns .pl-btn-acao {
+        height: 40px;
+    }
+}

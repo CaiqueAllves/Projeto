@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Contas a Receber</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-arrow-down"></i> Contas a Receber</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- Resumo -->
+            <div class="fin-summary">
+                <div class="fin-card">
+                    <div class="fin-card-icon azul"><i class="fa-solid fa-clock"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">A Receber</div>
+                        <div class="fin-card-valor" id="totalPendente">R$ 0,00</div>
+                    </div>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-icon vermelho"><i class="fa-solid fa-circle-exclamation"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Vencido</div>
+                        <div class="fin-card-valor vermelho" id="totalVencido">R$ 0,00</div>
+                    </div>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-icon verde"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Recebido este mês</div>
+                        <div class="fin-card-valor verde" id="totalRecebido">R$ 0,00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtro + ações -->
+            <div class="page-header" style="margin:16px 20px 0;">
+                <div class="header-left">
+                    <div class="filter-wrapper">
+                        <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+                        <input type="text" id="filtroContas" placeholder="Filtrar por descrição ou cliente..." oninput="crFiltrar()">
+                    </div>
+                    <select class="filter-select" id="filtroStatus" onchange="crFiltrar()" style="margin-left:10px;">
+                        <option value="">Todos os status</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="vencido">Vencido</option>
+                        <option value="recebido">Recebido</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                </div>
+                <div class="header-right">
+                    <button class="btn-cadastrar" onclick="crAbrirModal()">
+                        <i class="fa-solid fa-plus"></i> Nova Conta
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabela -->
+            <div class="fin-table-wrap">
+                <table class="fin-table">
+                    <thead>
+                        <tr>
+                            <th>Descrição</th>
+                            <th>Cliente</th>
+                            <th>Valor</th>
+                            <th>Vencimento</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="crTbody">
+                        <tr><td colspan="6" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Modal criar/editar -->
+<div class="fin-modal-overlay" id="crModalOverlay" onclick="crFecharModal()">
+    <div class="fin-modal" onclick="event.stopPropagation()">
+        <div class="fin-modal-header">
+            <h3 id="crModalTitulo"><i class="fa-solid fa-arrow-down"></i> Nova Conta a Receber</h3>
+            <button class="fin-modal-close" onclick="crFecharModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="fin-modal-body">
+            <input type="hidden" id="crEditId">
+
+            <div class="fin-form-row">
+                <div class="fin-form-group fin-full">
+                    <label>Descrição <span style="color:#ef4444">*</span></label>
+                    <input type="text" id="crDescricao" placeholder="Ex: Exportação de calçados — Pedido #001">
+                </div>
+            </div>
+            <div class="fin-form-row">
+                <div class="fin-form-group fin-full">
+                    <label>Cliente / Parceiro</label>
+                    <input type="text" id="crClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="crBuscarParceiro(this.value)">
+                    <input type="hidden" id="crClienteId">
+                    <div class="pl-autocomplete" id="crAutoParceiro"></div>
+                </div>
+            </div>
+            <div class="fin-form-row">
+                <div class="fin-form-group">
+                    <label>Valor <span style="color:#ef4444">*</span></label>
+                    <input type="number" id="crValor" placeholder="0,00" min="0" step="0.01">
+                </div>
+                <div class="fin-form-group">
+                    <label>Moeda</label>
+                    <select id="crMoeda">
+                        <option value="BRL">BRL</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fin-form-row">
+                <div class="fin-form-group">
+                    <label>Vencimento <span style="color:#ef4444">*</span></label>
+                    <input type="date" id="crVencimento">
+                </div>
+                <div class="fin-form-group">
+                    <label>Data de Recebimento</label>
+                    <input type="date" id="crDataRecebimento">
+                </div>
+            </div>
+            <div class="fin-form-row">
+                <div class="fin-form-group">
+                    <label>Status</label>
+                    <select id="crStatus">
+                        <option value="pendente">Pendente</option>
+                        <option value="recebido">Recebido</option>
+                        <option value="vencido">Vencido</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                </div>
+                <div class="fin-form-group">
+                    <label>Categoria</label>
+                    <select id="crCategoria">
+                        <option value="">Selecione...</option>
+                        <option value="exportacao">Exportação</option>
+                        <option value="importacao">Importação</option>
+                        <option value="servico">Serviço</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fin-form-row">
+                <div class="fin-form-group fin-full">
+                    <label>Observações</label>
+                    <textarea id="crObservacoes" placeholder="Detalhes adicionais..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="fin-modal-footer">
+            <button class="fin-btn-cancelar" onclick="crFecharModal()">Cancelar</button>
+            <button class="fin-btn-salvar" id="crBtnSalvar" onclick="crSalvar()">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal excluir -->
+<div class="fin-modal-overlay" id="crModalExcluirOverlay" onclick="crFecharModalExcluir()">
+    <div class="fin-modal" style="width:400px" onclick="event.stopPropagation()">
+        <div class="fin-modal-header">
+            <h3><i class="fa-solid fa-trash"></i> Excluir Conta</h3>
+            <button class="fin-modal-close" onclick="crFecharModalExcluir()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="fin-modal-body">
+            <p style="color:#64748b;font-size:14px;">Tem certeza que deseja excluir <strong id="crExcluirNome"></strong>? Esta ação não pode ser desfeita.</p>
+        </div>
+        <div class="fin-modal-footer">
+            <button class="fin-btn-cancelar" onclick="crFecharModalExcluir()">Cancelar</button>
+            <button class="fin-btn-confirmar-excluir" id="crBtnConfirmarExcluir" onclick="crConfirmarExcluir()">
+                <i class="fa-solid fa-trash"></i> Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2025 Marpex · Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="navegador.js"></script>
+<script src="contas-receber.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

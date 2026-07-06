@@ -509,13 +509,37 @@ async function buscarUsuariosDaEmpresa() {
         if (!usuario || !usuario.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada', data: [] };
         const { data, error } = await supabaseClient
             .from('usuarios')
-            .select('id, nome_completo, cpf, email, perfil, ativo, ultimo_login, criado_em')
+            .select('id, nome_completo, cpf, email, perfil, ativo, ultimo_login, criado_em, cargo, permissoes')
             .eq('empresa_id', usuario.empresa_id)
             .order('criado_em', { ascending: true });
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) {
         return { sucesso: false, mensagem: err.message, data: [] };
+    }
+}
+
+// SQL para adicionar a coluna de permissões (executar uma vez no Supabase):
+//
+// ALTER TABLE usuarios
+//     ADD COLUMN IF NOT EXISTS permissoes JSONB DEFAULT '{}'::jsonb;
+//
+// Estrutura esperada:
+// { "operacional": true, "comercial": false, "financeiro": true }
+
+async function atualizarPermissoesUsuario(id, permissoes) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+        const { error } = await supabaseClient
+            .from('usuarios')
+            .update({ permissoes })
+            .eq('id', id)
+            .eq('empresa_id', usuario.empresa_id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
     }
 }
 
@@ -1153,6 +1177,212 @@ async function atualizarProformaDB(id, dados) {
 }
 
 // ========================================
+// MÓDULO FINANCEIRO — CONTAS A PAGAR
+// ========================================
+//
+// SQL para criar as tabelas no Supabase (executar uma vez):
+//
+// CREATE TABLE contas_pagar (
+//     id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+//     empresa_id      UUID REFERENCES empresas(id),
+//     descricao       TEXT NOT NULL,
+//     parceiro_id     INTEGER REFERENCES parceiros(id),
+//     valor           NUMERIC NOT NULL,
+//     moeda           TEXT DEFAULT 'BRL',
+//     data_vencimento DATE NOT NULL,
+//     data_pagamento  DATE,
+//     status          TEXT DEFAULT 'pendente'
+//                         CHECK (status IN ('pendente','pago','vencido','cancelado')),
+//     categoria       TEXT,
+//     observacoes     TEXT,
+//     criado_por      UUID,
+//     criado_em       TIMESTAMPTZ DEFAULT NOW(),
+//     atualizado_em   TIMESTAMPTZ DEFAULT NOW()
+// );
+//
+// CREATE TABLE contas_receber (
+//     id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+//     empresa_id       UUID REFERENCES empresas(id),
+//     descricao        TEXT NOT NULL,
+//     parceiro_id      INTEGER REFERENCES parceiros(id),
+//     valor            NUMERIC NOT NULL,
+//     moeda            TEXT DEFAULT 'BRL',
+//     data_vencimento  DATE NOT NULL,
+//     data_recebimento DATE,
+//     status           TEXT DEFAULT 'pendente'
+//                          CHECK (status IN ('pendente','recebido','vencido','cancelado')),
+//     categoria        TEXT,
+//     observacoes      TEXT,
+//     criado_por       UUID,
+//     criado_em        TIMESTAMPTZ DEFAULT NOW(),
+//     atualizado_em    TIMESTAMPTZ DEFAULT NOW()
+// );
+
+async function buscarContasPagar() {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, data: [] };
+        let query = supabaseClient
+            .from('contas_pagar')
+            .select('*, parceiros(razao_social, nome_fantasia)')
+            .order('data_vencimento', { ascending: true });
+        if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        const { data, error } = await query;
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+async function buscarContasPagarPeriodo(inicio, fim) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, data: [] };
+        let query = supabaseClient
+            .from('contas_pagar')
+            .select('*, parceiros(razao_social, nome_fantasia)')
+            .gte('data_vencimento', inicio)
+            .lte('data_vencimento', fim)
+            .order('data_vencimento', { ascending: true });
+        if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        const { data, error } = await query;
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+async function salvarContaPagar(dados, id = null) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+        const payload = {
+            descricao:       dados.descricao,
+            parceiro_id:     dados.parceiro_id || null,
+            valor:           dados.valor,
+            moeda:           dados.moeda || 'BRL',
+            data_vencimento: dados.data_vencimento,
+            data_pagamento:  dados.data_pagamento || null,
+            status:          dados.status || 'pendente',
+            categoria:       dados.categoria || null,
+            observacoes:     dados.observacoes || null,
+            atualizado_em:   new Date().toISOString(),
+        };
+        let result;
+        if (id) {
+            result = await supabaseClient.from('contas_pagar').update(payload).eq('id', id).select().single();
+        } else {
+            payload.empresa_id  = usuario.empresa_id;
+            payload.criado_por  = usuario.id;
+            result = await supabaseClient.from('contas_pagar').insert(payload).select().single();
+        }
+        if (result.error) return { sucesso: false, mensagem: result.error.message };
+        return { sucesso: true, data: result.data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function atualizarContaPagar(id, dados) {
+    try {
+        const { error } = await supabaseClient
+            .from('contas_pagar')
+            .update({ ...dados, atualizado_em: new Date().toISOString() })
+            .eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function excluirContaPagar(id) {
+    try {
+        const { error } = await supabaseClient.from('contas_pagar').delete().eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// ========================================
+// MÓDULO FINANCEIRO — CONTAS A RECEBER
+// ========================================
+
+async function buscarContasReceber() {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, data: [] };
+        let query = supabaseClient
+            .from('contas_receber')
+            .select('*, parceiros(razao_social, nome_fantasia)')
+            .order('data_vencimento', { ascending: true });
+        if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        const { data, error } = await query;
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+async function buscarContasReceberPeriodo(inicio, fim) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, data: [] };
+        let query = supabaseClient
+            .from('contas_receber')
+            .select('*, parceiros(razao_social, nome_fantasia)')
+            .gte('data_vencimento', inicio)
+            .lte('data_vencimento', fim)
+            .order('data_vencimento', { ascending: true });
+        if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        const { data, error } = await query;
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+async function salvarContaReceber(dados, id = null) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+        const payload = {
+            descricao:        dados.descricao,
+            parceiro_id:      dados.parceiro_id || null,
+            valor:            dados.valor,
+            moeda:            dados.moeda || 'BRL',
+            data_vencimento:  dados.data_vencimento,
+            data_recebimento: dados.data_recebimento || null,
+            status:           dados.status || 'pendente',
+            categoria:        dados.categoria || null,
+            observacoes:      dados.observacoes || null,
+            atualizado_em:    new Date().toISOString(),
+        };
+        let result;
+        if (id) {
+            result = await supabaseClient.from('contas_receber').update(payload).eq('id', id).select().single();
+        } else {
+            payload.empresa_id = usuario.empresa_id;
+            payload.criado_por = usuario.id;
+            result = await supabaseClient.from('contas_receber').insert(payload).select().single();
+        }
+        if (result.error) return { sucesso: false, mensagem: result.error.message };
+        return { sucesso: true, data: result.data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function atualizarContaReceber(id, dados) {
+    try {
+        const { error } = await supabaseClient
+            .from('contas_receber')
+            .update({ ...dados, atualizado_em: new Date().toISOString() })
+            .eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function excluirContaReceber(id) {
+    try {
+        const { error } = await supabaseClient.from('contas_receber').delete().eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// ========================================
 // EXPORTAR API
 // ========================================
 
@@ -1168,6 +1398,7 @@ window.supabaseAPI = {
     responderSolicitacao: responderSolicitacao,
     buscarUsuarios: buscarUsuariosDaEmpresa,
     atualizarPerfil: atualizarPerfilUsuario,
+    atualizarPermissoes: atualizarPermissoesUsuario,
     ativarDesativar: ativarDesativarUsuario,
     buscarChaveEmpresa: buscarChaveEmpresa,
     criarSubUsuario,
@@ -1191,5 +1422,179 @@ window.supabaseAPI = {
     buscarProforma: buscarProformaDB,
     atualizarProforma: atualizarProformaDB,
     contarPropostas,
+    // Comercial
+    buscarOportunidades,
+    salvarOportunidade,
+    atualizarEtapaOportunidade,
+    excluirOportunidade,
+    buscarPedidos,
+    salvarPedido,
+    atualizarStatusPedido,
+    excluirPedido,
+    // Financeiro
+    buscarContasPagar,
+    buscarContasPagarPeriodo,
+    salvarContaPagar,
+    atualizarContaPagar,
+    excluirContaPagar,
+    buscarContasReceber,
+    buscarContasReceberPeriodo,
+    salvarContaReceber,
+    atualizarContaReceber,
+    excluirContaReceber,
 };
+
+// ========================================
+// MÓDULO COMERCIAL — PIPELINE
+// ========================================
+//
+// SQL para criar as tabelas no Supabase (executar uma vez):
+//
+// CREATE TABLE oportunidades (
+//     id                      UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+//     empresa_proprietaria_id UUID REFERENCES empresas(id),
+//     titulo                  TEXT NOT NULL,
+//     cliente_id              INTEGER REFERENCES parceiros(id),
+//     valor                   NUMERIC,
+//     moeda                   TEXT DEFAULT 'USD',
+//     etapa                   TEXT DEFAULT 'lead'
+//                                 CHECK (etapa IN ('lead','proposta','negociacao','fechado','perdido')),
+//     probabilidade           INTEGER DEFAULT 50,
+//     responsavel             TEXT,
+//     data_prevista           DATE,
+//     observacoes             TEXT,
+//     proforma_id             UUID,
+//     created_at              TIMESTAMPTZ DEFAULT NOW(),
+//     updated_at              TIMESTAMPTZ DEFAULT NOW()
+// );
+//
+// CREATE TABLE pedidos (
+//     id                      UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+//     empresa_proprietaria_id UUID REFERENCES empresas(id),
+//     numero                  TEXT,
+//     cliente_id              INTEGER REFERENCES parceiros(id),
+//     proforma_id             UUID,
+//     oportunidade_id         UUID REFERENCES oportunidades(id),
+//     status                  TEXT DEFAULT 'aguardando'
+//                                 CHECK (status IN ('aguardando','confirmado','em_producao','embarcado','entregue','cancelado')),
+//     valor_total             NUMERIC,
+//     moeda                   TEXT DEFAULT 'USD',
+//     data_pedido             DATE,
+//     data_entrega_prevista   DATE,
+//     observacoes             TEXT,
+//     created_at              TIMESTAMPTZ DEFAULT NOW(),
+//     updated_at              TIMESTAMPTZ DEFAULT NOW()
+// );
+
+async function buscarOportunidades() {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, data: [] };
+        let query = supabaseClient
+            .from('oportunidades')
+            .select('*, parceiros(razao_social, nome_fantasia)')
+            .order('updated_at', { ascending: false });
+        if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        const { data, error } = await query;
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+async function salvarOportunidade(dados, id = null) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+        const payload = {
+            titulo: dados.titulo, cliente_id: dados.cliente_id || null,
+            valor: dados.valor || null, moeda: dados.moeda || 'USD',
+            etapa: dados.etapa || 'lead', probabilidade: dados.probabilidade ?? 50,
+            responsavel: dados.responsavel || null, data_prevista: dados.data_prevista || null,
+            observacoes: dados.observacoes || null, proforma_id: dados.proforma_id || null,
+            updated_at: new Date().toISOString(),
+        };
+        let result;
+        if (id) {
+            result = await supabaseClient.from('oportunidades').update(payload).eq('id', id).select().single();
+        } else {
+            payload.empresa_proprietaria_id = usuario.empresa_id;
+            result = await supabaseClient.from('oportunidades').insert(payload).select().single();
+        }
+        if (result.error) return { sucesso: false, mensagem: result.error.message };
+        return { sucesso: true, data: result.data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function atualizarEtapaOportunidade(id, etapa) {
+    try {
+        const { error } = await supabaseClient.from('oportunidades')
+            .update({ etapa, updated_at: new Date().toISOString() }).eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function excluirOportunidade(id) {
+    try {
+        const { error } = await supabaseClient.from('oportunidades').delete().eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function buscarPedidos() {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, data: [] };
+        let query = supabaseClient
+            .from('pedidos')
+            .select('*, parceiros(razao_social, nome_fantasia)')
+            .order('created_at', { ascending: false });
+        if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        const { data, error } = await query;
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+async function salvarPedido(dados, id = null) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+        const payload = {
+            numero: dados.numero || null, cliente_id: dados.cliente_id || null,
+            proforma_id: dados.proforma_id || null, oportunidade_id: dados.oportunidade_id || null,
+            status: dados.status || 'aguardando', valor_total: dados.valor_total || null,
+            moeda: dados.moeda || 'USD', data_pedido: dados.data_pedido || null,
+            data_entrega_prevista: dados.data_entrega_prevista || null,
+            observacoes: dados.observacoes || null, updated_at: new Date().toISOString(),
+        };
+        let result;
+        if (id) {
+            result = await supabaseClient.from('pedidos').update(payload).eq('id', id).select().single();
+        } else {
+            payload.empresa_proprietaria_id = usuario.empresa_id;
+            result = await supabaseClient.from('pedidos').insert(payload).select().single();
+        }
+        if (result.error) return { sucesso: false, mensagem: result.error.message };
+        return { sucesso: true, data: result.data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function atualizarStatusPedido(id, status) {
+    try {
+        const { error } = await supabaseClient.from('pedidos')
+            .update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function excluirPedido(id) {
+    try {
+        const { error } = await supabaseClient.from('pedidos').delete().eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
 

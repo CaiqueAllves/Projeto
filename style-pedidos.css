@@ -1,0 +1,114 @@
+/* ========================================
+   PEDIDOS — ESTILOS
+======================================== */
+
+.ped-table-wrap {
+    margin-top: 16px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    overflow-x: auto;
+}
+
+.ped-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+}
+
+.ped-table thead th {
+    background: #f8fafc;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.ped-table tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.12s;
+}
+.ped-table tbody tr:last-child { border-bottom: none; }
+.ped-table tbody tr:hover { background: #f8fafc; }
+
+.ped-table tbody td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.ped-num   { font-weight: 700; color: #1e293b; }
+.ped-valor { font-weight: 600; color: #0f172a; }
+
+.ped-loading,
+.ped-vazio {
+    text-align: center;
+    padding: 40px;
+    color: #94a3b8;
+    font-size: 14px;
+}
+.ped-vazio i { margin-right: 6px; }
+
+/* ── Badges de status ──────────────────────────────────────────── */
+.ped-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ped-badge-aguardando  { background: #f1f5f9;  color: #475569; }
+.ped-badge-confirmado  { background: #eff6ff;  color: #1d4ed8; }
+.ped-badge-em_producao { background: #fff7ed;  color: #c2410c; }
+.ped-badge-embarcado   { background: #f5f3ff;  color: #6d28d9; }
+.ped-badge-entregue    { background: #f0fdf4;  color: #15803d; }
+.ped-badge-cancelado   { background: #fef2f2;  color: #dc2626; }
+
+/* ── Select de status inline ───────────────────────────────────── */
+.ped-status-select {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 22px;
+}
+
+.ped-status-aguardando  { background-color: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.ped-status-confirmado  { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.ped-status-em_producao { background-color: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.ped-status-embarcado   { background-color: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.ped-status-entregue    { background-color: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.ped-status-cancelado   { background-color: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+/* ── Ações da linha ────────────────────────────────────────────── */
+.ped-acoes {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ── Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .ped-table-wrap {
+        border-radius: 10px;
+    }
+    .ped-acoes {
+        flex-wrap: wrap;
+    }
+}

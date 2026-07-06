@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | DRE / Balancete</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-table-columns"></i> DRE / Balancete</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- Período -->
+            <div class="fin-periodo-wrap">
+                <label><i class="fa-regular fa-calendar"></i> Período:</label>
+                <input type="month" id="dreInicio" onchange="dreCarregar()">
+                <span style="color:#94a3b8">até</span>
+                <input type="month" id="dreFim" onchange="dreCarregar()">
+                <button onclick="dreCarregar()" style="padding:7px 16px;background:#4776ec;color:white;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-rotate-right"></i> Atualizar
+                </button>
+            </div>
+
+            <!-- DRE -->
+            <div class="dre-wrap">
+                <table class="dre-table" id="dreTable">
+                    <tbody id="dreTbody">
+                        <tr><td colspan="2" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2025 Marpex · Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="navegador.js"></script>
+<script src="dre.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

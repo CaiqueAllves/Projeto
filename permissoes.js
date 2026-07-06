@@ -162,6 +162,26 @@ async function responder(id, aprovado) {
 }
 
 // ========================================
+// MÓDULOS — HELPERS
+// ========================================
+
+const MODULOS_DEF = [
+    { key: 'operacional', label: 'Operacional', icon: 'fa-ship' },
+    { key: 'comercial',   label: 'Comercial',   icon: 'fa-bag-shopping' },
+    { key: 'financeiro',  label: 'Financeiro',  icon: 'fa-coins' },
+];
+
+function _permissoesDefault() {
+    return { operacional: true, comercial: false, financeiro: false };
+}
+
+function _getPermissoes(u) {
+    const base = _permissoesDefault();
+    if (!u.permissoes || typeof u.permissoes !== 'object') return base;
+    return { ...base, ...u.permissoes };
+}
+
+// ========================================
 // USUÁRIOS - CARDS
 // ========================================
 
@@ -191,10 +211,22 @@ function renderizarUsuarios(usuarios) {
     container.innerHTML = `
         <div class="usuarios-grid">
             ${usuarios.map(u => {
-                const iniciais = iniciaisDe(u.nome_completo);
+                const iniciais  = iniciaisDe(u.nome_completo);
                 const badgeStatus = u.ativo ? 'badge-status-ativo' : 'badge-status-inativo';
                 const badgePerfil = perfisBadge[u.perfil] || 'badge-usuario';
-                const isAdmin = usuarioAtual.perfil === 'admin';
+                const isAdmin     = usuarioAtual.perfil === 'admin';
+                const perms       = _getPermissoes(u);
+
+                const modulosHtml = MODULOS_DEF.map(m => {
+                    const ativo = perms[m.key] ? 'ativo' : '';
+                    const readonlyCls = isAdmin ? '' : 'readonly';
+                    const onclick = isAdmin
+                        ? `onclick="toggleModulo('${u.id}', '${m.key}', ${!perms[m.key]})"`
+                        : '';
+                    return `<span class="modulo-chip ${ativo} ${m.key} ${readonlyCls}" ${onclick} title="${ativo ? 'Revogar' : 'Liberar'} acesso ao módulo ${m.label}">
+                        <i class="fa-solid ${m.icon}"></i> ${m.label}
+                    </span>`;
+                }).join('');
 
                 return `
                 <div class="usuario-card ${u.ativo ? '' : 'usuario-inativo'}" id="card-${u.id}">
@@ -217,6 +249,11 @@ function renderizarUsuarios(usuarios) {
                             <span class="usuario-info-label">Último acesso</span>
                             <span class="usuario-info-valor">${u.ultimo_login ? formatarDataRelativa(u.ultimo_login) : 'Nunca acessou'}</span>
                         </div>
+                    </div>
+
+                    <div class="usuario-card-modulos">
+                        <div class="modulos-label"><i class="fa-solid fa-layer-group"></i> Módulos com acesso</div>
+                        <div class="modulos-toggles">${modulosHtml}</div>
                     </div>
 
                     <div class="usuario-card-controles">
@@ -337,6 +374,32 @@ async function alterarPerfil(id, perfil) {
     } else {
         mostrarToast('Erro ao atualizar perfil.', 'erro');
         renderizarUsuarios(todosUsuarios);
+    }
+}
+
+async function toggleModulo(id, modulo, novoValor) {
+    const u = todosUsuarios.find(x => x.id === id);
+    if (!u) return;
+
+    const permsAtuais = _getPermissoes(u);
+    const novasPerms  = { ...permsAtuais, [modulo]: novoValor };
+
+    // Atualização otimista
+    u.permissoes = novasPerms;
+    renderizarUsuarios(todosUsuarios);
+
+    const res = await atualizarPermissoesUsuario(id, novasPerms);
+    if (res.sucesso) {
+        const label = MODULOS_DEF.find(m => m.key === modulo)?.label || modulo;
+        mostrarToast(
+            novoValor ? `Acesso ao módulo ${label} liberado.` : `Acesso ao módulo ${label} revogado.`,
+            novoValor ? 'sucesso' : 'erro'
+        );
+    } else {
+        // Reverte em caso de erro
+        u.permissoes = permsAtuais;
+        renderizarUsuarios(todosUsuarios);
+        mostrarToast('Erro ao atualizar permissões.', 'erro');
     }
 }
 

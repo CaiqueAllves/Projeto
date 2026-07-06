@@ -4,8 +4,19 @@
 
 const PROCESSOS_KEY = 'processosCadastros';
 
-let _empresasCache = [];
+let _empresasCache  = [];
 let _processosTodos = [];
+let _viewMode       = 'kanban';
+
+const KANBAN_COLS = ['aberto','em_andamento','aguardando_documentos','concluido','cancelado'];
+
+const STATUS_OPTS = [
+    { v: 'aberto',                label: 'Aberto' },
+    { v: 'em_andamento',          label: 'Em Andamento' },
+    { v: 'aguardando_documentos', label: 'Aguard. Documentos' },
+    { v: 'concluido',             label: 'Concluído' },
+    { v: 'cancelado',             label: 'Cancelado' },
+];
 
 // --------------------------------------------------
 // UTILITÁRIOS
@@ -35,14 +46,14 @@ function writeProcessos(list) {
 }
 
 function _kanbanSetLoading() {
-    ['aberta','pendente','encerrada'].forEach(g => {
+    KANBAN_COLS.forEach(g => {
         const body = document.getElementById(`cards-${g}`);
         if (body) body.innerHTML = '<div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
     });
 }
 
 function _kanbanSetErro(msg) {
-    ['aberta','pendente','encerrada'].forEach(g => {
+    KANBAN_COLS.forEach(g => {
         const body = document.getElementById(`cards-${g}`);
         if (body) body.innerHTML = `<div class="kanban-vazio" style="color:#ef4444;"><i class="fa-solid fa-circle-exclamation"></i><span>${msg}</span></div>`;
     });
@@ -63,7 +74,7 @@ async function carregarProcessos() {
         let empresaMap = {};
         if (parceiraIds.length > 0) {
             const { data: emps } = await supabaseClient
-                .from('empresas_cadastradas')
+                .from('parceiros')
                 .select('id, razao_social')
                 .in('id', parceiraIds);
             if (emps) emps.forEach(e => { empresaMap[e.id] = e.razao_social || ''; });
@@ -84,6 +95,7 @@ async function carregarProcessos() {
             moeda:             p.moeda || 'USD',
             valor_total:       p.valor_total || null,
             criado_em:         p.criado_em,
+            atualizado_em:     p.atualizado_em || p.updated_at || null,
         }));
     } catch (err) {
         _kanbanSetErro(err.message);
@@ -238,29 +250,46 @@ function fecharModalExcluir() {
 // TABELA DE PROCESSOS
 // --------------------------------------------------
 function statusLabel(s) {
-    return {
-        aberto:                'Aberto',
-        em_andamento:          'Em Andamento',
-        aguardando_documentos: 'Aguard. Documentos',
-        concluido:             'Concluído',
-        cancelado:             'Cancelado',
-        aberta:                'Aberta',
-        pendente:              'Pendente',
-        encerrada:             'Encerrada',
-    }[s] || 'Aberto';
+    return STATUS_OPTS.find(o => o.v === s)?.label
+        || { aberta: 'Aberto', pendente: 'Em Andamento', encerrada: 'Concluído' }[s]
+        || 'Aberto';
+}
+
+function _getColuna(status) {
+    const map = {
+        aberto:                'aberto',
+        aberta:                'aberto',
+        em_andamento:          'em_andamento',
+        pendente:              'em_andamento',
+        aguardando_documentos: 'aguardando_documentos',
+        concluido:             'concluido',
+        encerrada:             'concluido',
+        cancelado:             'cancelado',
+    };
+    return map[status] || 'aberto';
+}
+
+function switchView(mode) {
+    _viewMode = mode;
+    document.getElementById('btnViewKanban').classList.toggle('active', mode === 'kanban');
+    document.getElementById('btnViewLista').classList.toggle('active',  mode === 'lista');
+    document.getElementById('kanbanBoard').style.display    = mode === 'kanban' ? '' : 'none';
+    document.getElementById('kanbanTabs').style.display     = mode === 'kanban' ? '' : 'none';
+    document.getElementById('listaContainer').style.display = mode === 'lista'  ? '' : 'none';
+    renderTabela(document.getElementById('filtroProcessos')?.value || '');
 }
 
 async function procAlterarStatus(id, selectEl) {
     const novoStatus  = selectEl.value;
-    const statusAntes = _processosTodos.find(x => x.id === id)?.status || 'aberta';
+    const statusAntes = _processosTodos.find(x => x.id === id)?.status || 'aberto';
     selectEl.className = `proc-status-select proc-status-${novoStatus}`;
     selectEl.disabled  = true;
     try {
         const res = await window.supabaseAPI.atualizarProcesso(id, { status: novoStatus });
         if (!res.sucesso) throw new Error(res.mensagem);
         const p = _processosTodos.find(x => x.id === id);
-        if (p) p.status = novoStatus;
-        renderKanban(document.getElementById('filtroProcessos')?.value || '');
+        if (p) { p.status = novoStatus; p.atualizado_em = new Date().toISOString(); }
+        renderTabela(document.getElementById('filtroProcessos')?.value || '');
     } catch (err) {
         mostrarNotificacao('Erro ao atualizar status: ' + err.message, 'erro');
         selectEl.value     = statusAntes;
@@ -279,6 +308,19 @@ function _primeiroNome(razaoSocial) {
     return (razaoSocial || '').trim().split(/\s+/)[0] || '—';
 }
 
+function _tempoRelativo(isoStr) {
+    if (!isoStr) return null;
+    const diff = Date.now() - new Date(isoStr).getTime();
+    const min  = Math.floor(diff / 60000);
+    const h    = Math.floor(diff / 3600000);
+    const d    = Math.floor(diff / 86400000);
+    if (min < 1)  return 'agora mesmo';
+    if (min < 60) return `há ${min}min`;
+    if (h   < 24) return `há ${h}h`;
+    if (d   < 30) return `há ${d} dia${d > 1 ? 's' : ''}`;
+    return new Date(isoStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+}
+
 function _statusGrupo(status) {
     if (['aberto','aberta'].includes(status)) return 'aberta';
     if (['em_andamento','aguardando_documentos','pendente'].includes(status)) return 'pendente';
@@ -286,12 +328,12 @@ function _statusGrupo(status) {
 }
 
 function _renderCard(p) {
-    const grupo      = _statusGrupo(p.status || 'aberta');
+    const coluna     = _getColuna(p.status || 'aberto');
     const tipoLabel  = { importacao: 'Importação', exportacao: 'Exportação', exportacao_direta: 'Exp. Direta', exportacao_indireta: 'Exp. Indireta' }[p.tipo] || null;
     const tipoClasse = { importacao: 'tipo-importacao', exportacao: 'tipo-exportacao', exportacao_direta: 'tipo-exportacao', exportacao_indireta: 'tipo-exp-indireta' }[p.tipo] || '';
     const imp        = p.empresaImportador && p.empresaImportador !== '—' ? p.empresaImportador : null;
     const exp        = _primeiroNome(p.empresaExportador);
-    const status     = p.status || 'aberta';
+    const status     = _getColuna(p.status || 'aberto');
     const modalIco   = { aereo: 'fa-plane', maritimo: 'fa-ship', terrestre: 'fa-truck' }[p.modal] || 'fa-route';
     const modalLabel = p.modal ? p.modal.charAt(0).toUpperCase() + p.modal.slice(1) : null;
 
@@ -301,16 +343,15 @@ function _renderCard(p) {
         return pend ? pend.text : p.etapas[p.etapas.length - 1].text;
     })();
 
-    const dataCriacao = p.criado_em
-        ? new Date(p.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-        : null;
+    const dataCriacao   = p.criado_em    ? new Date(p.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : null;
+    const dataAtualizado = _tempoRelativo(p.atualizado_em);
 
-    const optStatus = ['aberto','em_andamento','aguardando_documentos','concluido','cancelado','aberta','pendente','encerrada']
-        .map(s => `<option value="${s}" ${status === s ? 'selected' : ''}>${statusLabel(s)}</option>`)
+    const optStatus = STATUS_OPTS
+        .map(o => `<option value="${o.v}" ${status === o.v ? 'selected' : ''}>${o.label}</option>`)
         .join('');
 
     return `
-    <div class="proc-card" id="proc-card-${escapeHtml(p.id)}" data-grupo="${grupo}">
+    <div class="proc-card" id="proc-card-${escapeHtml(p.id)}" data-grupo="${coluna}">
         <div class="proc-card-top">
             <span class="proc-card-codigo"><i class="fa-solid fa-hashtag proc-card-hash"></i>${escapeHtml(p.codigo.replace(/^PROC/,''))}</span>
             ${tipoLabel ? `<span class="proc-card-tipo ${tipoClasse}">${escapeHtml(tipoLabel)}</span>` : ''}
@@ -337,46 +378,86 @@ function _renderCard(p) {
         ${etapaTexto ? `
         <div class="proc-card-etapa"><i class="fa-solid fa-circle-dot"></i> ${escapeHtml(etapaTexto)}</div>` : ''}
         <div class="proc-card-footer">
-            <div class="proc-card-actions">
-                <div class="proc-card-btns">
-                    <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                    <button class="btn-acao btn-pdf"     data-action="pdf"        data-id="${escapeHtml(p.id)}" title="PDF"><i class="fa-solid fa-file-pdf"></i></button>
-                    <button class="btn-acao btn-editar"  data-action="editar"     data-id="${escapeHtml(p.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-acao btn-excluir" data-action="excluir"    data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
-                </div>
+            <div class="proc-card-meta">
+                ${dataCriacao ? `<span class="proc-card-data"><i class="fa-regular fa-calendar"></i> Criado em ${dataCriacao}</span>` : '<span></span>'}
                 <select class="proc-status-select proc-status-${escapeHtml(status)}"
                         onchange="procAlterarStatus('${escapeHtml(p.id)}', this)">
                     ${optStatus}
                 </select>
             </div>
-            ${dataCriacao ? `<span class="proc-card-data"><i class="fa-regular fa-calendar"></i> ${dataCriacao}</span>` : ''}
+            ${dataAtualizado ? `<div class="proc-card-atualizado"><i class="fa-solid fa-rotate-right"></i> ${dataAtualizado}</div>` : ''}
+            <div class="proc-card-btns">
+                <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                <button class="btn-acao btn-editar"  data-action="editar"     data-id="${escapeHtml(p.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-acao btn-excluir" data-action="excluir"    data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div>
         </div>
     </div>`;
 }
 
 function renderKanban(filtro) {
-    const q   = (filtro || '').trim().toLowerCase();
-    const all = readProcessos();
+    const q    = (filtro || '').trim().toLowerCase();
+    const all  = readProcessos();
     const list = q
         ? all.filter(p => `${p.codigo} ${p.tipo} ${p.empresaExportador} ${p.empresaImportador} ${p.pais_origem} ${p.pais_destino} ${p.status}`.toLowerCase().includes(q))
         : all;
 
-    const grupos = { aberta: [], pendente: [], encerrada: [] };
-    list.forEach(p => grupos[_statusGrupo(p.status || 'aberta')].push(p));
+    const grupos = Object.fromEntries(KANBAN_COLS.map(c => [c, []]));
+    list.forEach(p => grupos[_getColuna(p.status || 'aberto')].push(p));
 
-    ['aberta','pendente','encerrada'].forEach(g => {
+    KANBAN_COLS.forEach(g => {
         const body     = document.getElementById(`cards-${g}`);
         const count    = document.getElementById(`count-${g}`);
         const tabCount = document.getElementById(`tab-count-${g}`);
         if (count)    count.textContent    = grupos[g].length;
         if (tabCount) tabCount.textContent = grupos[g].length;
         if (!body) return;
-        if (grupos[g].length === 0) {
-            body.innerHTML = `<div class="kanban-vazio"><i class="fa-solid fa-inbox"></i><span>${q ? 'Sem resultados' : 'Nenhum processo'}</span></div>`;
-        } else {
-            body.innerHTML = grupos[g].map(_renderCard).join('');
-        }
+        body.innerHTML = grupos[g].length === 0
+            ? `<div class="kanban-vazio"><i class="fa-solid fa-inbox"></i><span>${q ? 'Sem resultados' : 'Nenhum processo'}</span></div>`
+            : grupos[g].map(_renderCard).join('');
     });
+}
+
+function renderLista(filtro) {
+    const tbody = document.getElementById('procTbody');
+    if (!tbody) return;
+
+    const q    = (filtro || '').trim().toLowerCase();
+    const all  = readProcessos();
+    const list = q
+        ? all.filter(p => `${p.codigo} ${p.tipo} ${p.empresaExportador} ${p.empresaImportador} ${p.pais_origem} ${p.pais_destino} ${p.status}`.toLowerCase().includes(q))
+        : all;
+
+    if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;"><i class="fa-regular fa-folder-open"></i> Nenhum processo encontrado.</td></tr>`;
+        return;
+    }
+
+    const tipoMap  = { importacao: 'Importação', exportacao: 'Exportação', exportacao_direta: 'Exp. Direta', exportacao_indireta: 'Exp. Indireta' };
+    const modalMap = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre', rodoviario: 'Rodoviário', ferroviario: 'Ferroviário' };
+
+    tbody.innerHTML = list.map(p => {
+        const status = _getColuna(p.status || 'aberto');
+        const opts   = STATUS_OPTS.map(o => `<option value="${o.v}" ${status === o.v ? 'selected' : ''}>${o.label}</option>`).join('');
+        const cliente = escapeHtml(p.empresaImportador || p.empresaExportador || '—');
+        const rota    = (p.pais_origem || p.pais_destino)
+            ? `<div class="proc-rota"><span>${escapeHtml(p.pais_origem||'—')}</span><i class="fa-solid fa-arrow-right proc-rota-arrow"></i><span>${escapeHtml(p.pais_destino||'—')}</span></div>`
+            : '—';
+        return `<tr>
+            <td><span class="proc-codigo">${escapeHtml(p.codigo)}</span></td>
+            <td class="proc-cliente-nome">${cliente}</td>
+            <td>${escapeHtml(tipoMap[p.tipo] || p.tipo || '—')}</td>
+            <td>${rota}</td>
+            <td>${escapeHtml(modalMap[p.modal] || p.modal || '—')}</td>
+            <td>${escapeHtml(p.incoterm || '—')}</td>
+            <td><select class="proc-status-select proc-status-${status}" onchange="procAlterarStatus('${escapeHtml(p.id)}', this)">${opts}</select></td>
+            <td><div class="proc-acoes">
+                <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                <button class="btn-acao btn-editar"  data-action="editar"     data-id="${escapeHtml(p.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-acao btn-excluir" data-action="excluir"    data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div></td>
+        </tr>`;
+    }).join('');
 }
 
 function kanbanSwitchTab(btn) {
@@ -387,8 +468,10 @@ function kanbanSwitchTab(btn) {
     document.getElementById(`col-${col}`)?.classList.add('kanban-col-active');
 }
 
-// Alias para compatibilidade com chamadas existentes
-function renderTabela(filtro) { renderKanban(filtro); }
+function renderTabela(filtro) {
+    if (_viewMode === 'lista') renderLista(filtro);
+    else renderKanban(filtro);
+}
 
 // --------------------------------------------------
 // FORMULÁRIO — PREENCHER / LIMPAR
@@ -500,39 +583,6 @@ function coletarDocs() {
     }));
 }
 
-// --------------------------------------------------
-// WHATSAPP
-// --------------------------------------------------
-function toggleWhatsappChat() {
-    document.getElementById('whatsappChat')?.classList.toggle('active');
-}
-
-function enviarMensagem() {
-    const input    = document.getElementById('chatInput');
-    const chatBody = document.querySelector('.chat-body');
-    if (!input || !chatBody) return;
-    const msg = input.value.trim();
-    if (!msg) return;
-
-    const userMsg = document.createElement('div');
-    userMsg.className = 'chat-message user';
-    userMsg.innerHTML = `
-        <div class="message-content">${escapeHtml(msg)}</div>
-        <div class="message-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>`;
-    chatBody.appendChild(userMsg);
-    input.value = '';
-    chatBody.scrollTop = chatBody.scrollHeight;
-
-    setTimeout(() => {
-        const botMsg = document.createElement('div');
-        botMsg.className = 'chat-message bot';
-        botMsg.innerHTML = `
-            <div class="message-content">Obrigado! Nossa equipe responderá em breve.</div>
-            <div class="message-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>`;
-        chatBody.appendChild(botMsg);
-        chatBody.scrollTop = chatBody.scrollHeight;
-    }, 800);
-}
 
 // --------------------------------------------------
 // INICIALIZAÇÃO
@@ -544,17 +594,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filtro
     document.getElementById('filtroProcessos')?.addEventListener('input', e => renderTabela(e.target.value));
 
-    // Cliques nos cards (editar / excluir / visualizar / pdf)
-    document.getElementById('kanbanBoard')?.addEventListener('click', e => {
+    // Cliques nos cards/linhas (editar / excluir / visualizar)
+    function _handleAcao(e) {
         const btn = e.target.closest('button[data-action]');
         if (!btn) return;
         const action = btn.getAttribute('data-action');
         const id     = btn.getAttribute('data-id');
         if (action === 'editar')     window.open(`formularios.html?tab=processo&id=${id}`, '_blank');
         if (action === 'visualizar') window.open(`formularios.html?tab=processo&id=${id}&modo=visualizar`, '_blank');
-        if (action === 'pdf')        window.open(`formularios.html?tab=processo&id=${id}&modo=pdf`, '_blank');
-        if (action === 'excluir') abrirModalExcluir(id);
-    });
+        if (action === 'excluir')    abrirModalExcluir(id);
+    }
+    document.getElementById('kanbanBoard')?.addEventListener('click', _handleAcao);
+    document.getElementById('listaContainer')?.addEventListener('click', _handleAcao);
 
     // Adicionar etapa
     document.getElementById('btnAddEtapa')?.addEventListener('click', () => {
@@ -643,11 +694,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-trash"></i> Excluir'; }
         }
-    });
-
-    // Chat input Enter
-    document.getElementById('chatInput')?.addEventListener('keypress', e => {
-        if (e.key === 'Enter') enviarMensagem();
     });
 
     // Atualiza tabela quando outra aba salva um processo

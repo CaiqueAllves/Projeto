@@ -1,0 +1,347 @@
+/* ========================================
+   RELATÓRIOS COMERCIAIS — ESTILOS
+======================================== */
+
+/* ── Filtros de período ────────────────────────────────────────── */
+.rc-filtros {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.rc-filtros-esq {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.rc-filtros-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.rc-period-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.rc-period-btn {
+    padding: 6px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.rc-period-btn:hover  { border-color: #4776ec; color: #4776ec; }
+.rc-period-btn.active { background: #4776ec; border-color: #4776ec; color: white; }
+
+.rc-period-custom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rc-period-custom input[type="date"] {
+    padding: 6px 10px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #334155;
+    outline: none;
+    background: white;
+}
+.rc-period-custom input:focus { border-color: #4776ec; }
+
+.rc-period-custom span {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.rc-btn-aplicar {
+    padding: 6px 14px;
+    background: #f1f5f9;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.rc-btn-aplicar:hover { background: #e2e8f0; }
+
+/* ── Cards de resumo ───────────────────────────────────────────── */
+.rc-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.rc-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.rc-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.rc-card-pipeline .rc-card-icon { background: #eff6ff; color: #3b82f6; }
+.rc-card-valor    .rc-card-icon { background: #fffbeb; color: #d97706; }
+.rc-card-fechado  .rc-card-icon { background: #f0fdf4; color: #16a34a; }
+.rc-card-pedidos  .rc-card-icon { background: #f5f3ff; color: #7c3aed; }
+
+.rc-card-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.rc-card-valor {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rc-card-label {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* ── Painéis ───────────────────────────────────────────────────── */
+.rc-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.rc-panel {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.rc-panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fafbff;
+}
+.rc-panel-header h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.rc-panel-header h3 i { color: #4776ec; }
+
+.rc-panel-body {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 160px;
+}
+
+/* ── Barras por etapa/status ────────────────────────────────────── */
+.rc-etapa-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rc-etapa-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 110px;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.rc-etapa-count {
+    font-size: 11px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 1px 6px;
+    border-radius: 999px;
+}
+
+.rc-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.rc-bar {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s ease;
+    min-width: 4px;
+}
+
+.rc-etapa-valor {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    width: 90px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* ── Top clientes ──────────────────────────────────────────────── */
+.rc-cliente-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f8fafc;
+}
+.rc-cliente-row:last-child { border-bottom: none; }
+
+.rc-cliente-pos {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.rc-cliente-nome {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rc-cliente-badges { display: flex; gap: 4px; flex-shrink: 0; }
+
+.rc-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+.rc-badge-op  { background: #eff6ff; color: #1d4ed8; }
+.rc-badge-ped { background: #f5f3ff; color: #6d28d9; }
+
+/* ── Taxa de conversão ─────────────────────────────────────────── */
+.rc-conversao-body {
+    align-items: center;
+    justify-content: center;
+}
+
+.rc-gauge-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.rc-gauge-svg {
+    width: 160px;
+    height: 90px;
+}
+
+.rc-gauge-pct {
+    font-size: 28px;
+    font-weight: 800;
+    color: #22c55e;
+    margin-top: -8px;
+}
+
+.rc-gauge-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+}
+
+.rc-conversao-stats {
+    display: flex;
+    gap: 24px;
+}
+
+.rc-conv-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.rc-conv-num   { font-size: 20px; font-weight: 800; }
+.rc-conv-label { font-size: 11px; color: #94a3b8; }
+
+/* ── Estado vazio / loading ────────────────────────────────────── */
+.rc-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    color: #94a3b8;
+    font-size: 18px;
+}
+
+.rc-vazio {
+    color: #94a3b8;
+    font-size: 13px;
+    text-align: center;
+    padding: 24px 0;
+    margin: 0;
+}
+
+/* ── Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .rc-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+    .rc-row {
+        grid-template-columns: 1fr;
+    }
+    .rc-filtros-esq {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .rc-period-custom {
+        flex-wrap: wrap;
+    }
+    .rc-card {
+        padding: 14px 16px;
+    }
+    .rc-card-valor { font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+    .rc-cards { grid-template-columns: 1fr; }
+}

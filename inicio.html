@@ -246,39 +246,6 @@
     </main>
 </div>
         
-<!-- BOTÃO FLUTUANTE DO WHATSAPP -->
-<div class="whatsapp-float" onclick="toggleWhatsappChat()">
-    <i class="fa-brands fa-whatsapp"></i>
-</div>
-
-<!-- PAINEL DE CHAT DO WHATSAPP -->
-<div class="whatsapp-chat" id="whatsappChat">
-    <div class="chat-header">
-        <div class="chat-header-info">
-            <i class="fa-brands fa-whatsapp"></i>
-            <div>
-                <div class="chat-title">Suporte Marpex</div>
-                <div class="chat-status">Online</div>
-            </div>
-        </div>
-        <i class="fa-solid fa-xmark" onclick="toggleWhatsappChat()"></i>
-    </div>
-    <div class="chat-body">
-        <div class="chat-message bot">
-            <div class="message-content">
-                Olá! 👋 Como podemos ajudar você hoje?
-            </div>
-            <div class="message-time">Agora</div>
-        </div>
-    </div>
-    <div class="chat-footer">
-        <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
-        <button onclick="enviarMensagem()">
-            <i class="fa-solid fa-paper-plane"></i>
-        </button>
-    </div>
-</div>
-
 <!-- MODAL PARA ADICIONAR TAREFA -->
 <div class="modal-overlay" id="modalTarefa" onclick="fecharModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
@@ -321,6 +288,7 @@
 <script src="navegador.js"></script>
 <script src="dashboard.js"></script>
 <script src="inicio.js"></script>
+<script src="suporte.js"></script>
 
 </body>
 </html>

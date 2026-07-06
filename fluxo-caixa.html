@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Fluxo de Caixa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-arrow-right-arrow-left"></i> Fluxo de Caixa</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- Seletor de período -->
+            <div class="fin-periodo-wrap">
+                <label><i class="fa-regular fa-calendar"></i> Período:</label>
+                <input type="month" id="fcPeriodo" onchange="fcCarregar()">
+            </div>
+
+            <!-- Resumo -->
+            <div class="fin-summary">
+                <div class="fin-card">
+                    <div class="fin-card-icon verde"><i class="fa-solid fa-arrow-down"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Total Entradas</div>
+                        <div class="fin-card-valor verde" id="fcTotalEntradas">R$ 0,00</div>
+                    </div>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-icon vermelho"><i class="fa-solid fa-arrow-up"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Total Saídas</div>
+                        <div class="fin-card-valor vermelho" id="fcTotalSaidas">R$ 0,00</div>
+                    </div>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-icon azul"><i class="fa-solid fa-scale-balanced"></i></div>
+                    <div class="fin-card-info">
+                        <div class="fin-card-label">Saldo do Período</div>
+                        <div class="fin-card-valor" id="fcSaldo">R$ 0,00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela de movimentações -->
+            <div class="fin-table-wrap">
+                <table class="fin-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                            <th>Saldo Acumulado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fcTbody">
+                        <tr><td colspan="5" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2025 Marpex · Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="navegador.js"></script>
+<script src="fluxo-caixa.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

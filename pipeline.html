@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Pipeline Comercial</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-pipeline.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-filter"></i> Pipeline Comercial</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- FILTRO + AÇÕES -->
+            <div class="page-header">
+                <div class="header-left">
+                    <div class="filter-wrapper">
+                        <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+                        <input type="text" id="filtroPipeline" placeholder="Filtrar por título, cliente ou responsável..." oninput="plFiltrar()">
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn-excluidos" onclick="plTogglePerdidos()">
+                        <i class="fa-solid fa-ban"></i> Perdidos
+                    </button>
+                    <button class="btn-cadastrar" onclick="plAbrirModal()">
+                        <i class="fa-solid fa-plus"></i> Nova Oportunidade
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABS MOBILE -->
+            <div class="kanban-tabs" id="plKanbanTabs">
+                <button class="kanban-tab active" data-col="lead"        onclick="plSwitchTab(this)">Lead <span class="kanban-tab-count" id="tab-count-lead">0</span></button>
+                <button class="kanban-tab"         data-col="proposta"   onclick="plSwitchTab(this)">Proposta <span class="kanban-tab-count" id="tab-count-proposta">0</span></button>
+                <button class="kanban-tab"         data-col="negociacao" onclick="plSwitchTab(this)">Negociação <span class="kanban-tab-count" id="tab-count-negociacao">0</span></button>
+                <button class="kanban-tab"         data-col="fechado"    onclick="plSwitchTab(this)">Fechado <span class="kanban-tab-count" id="tab-count-fechado">0</span></button>
+            </div>
+
+            <!-- KANBAN -->
+            <div class="pl-kanban" id="plKanban">
+
+                <div class="pl-col" data-etapa="lead">
+                    <div class="pl-col-header pl-header-lead">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-seedling"></i> Lead</span>
+                        <span class="pl-col-count" id="count-lead">0</span>
+                    </div>
+                    <div class="pl-col-body" id="col-lead">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="proposta">
+                    <div class="pl-col-header pl-header-proposta">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-file-lines"></i> Proposta</span>
+                        <span class="pl-col-count" id="count-proposta">0</span>
+                    </div>
+                    <div class="pl-col-body" id="col-proposta">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="negociacao">
+                    <div class="pl-col-header pl-header-negociacao">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-comments-dollar"></i> Negociação</span>
+                        <span class="pl-col-count" id="count-negociacao">0</span>
+                    </div>
+                    <div class="pl-col-body" id="col-negociacao">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="fechado">
+                    <div class="pl-col-header pl-header-fechado">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-circle-check"></i> Fechado</span>
+                        <span class="pl-col-count" id="count-fechado">0</span>
+                    </div>
+                    <div class="pl-col-body" id="col-fechado">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PAINEL PERDIDOS -->
+            <div class="pl-perdidos-overlay" id="plPerdidosOverlay" onclick="plFecharPerdidos()"></div>
+            <div class="pl-perdidos-panel" id="plPerdidosPanel">
+                <div class="pl-perdidos-header">
+                    <span><i class="fa-solid fa-ban"></i> Oportunidades Perdidas</span>
+                    <button onclick="plFecharPerdidos()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="plPerdidosLista"></div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- MODAL CRIAR/EDITAR -->
+<div class="pl-modal-overlay" id="plModalOverlay" onclick="plFecharModal()">
+    <div class="pl-modal" onclick="event.stopPropagation()">
+        <div class="pl-modal-header">
+            <h3 id="plModalTitulo"><i class="fa-solid fa-filter"></i> Nova Oportunidade</h3>
+            <button class="pl-modal-close" onclick="plFecharModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pl-modal-body">
+            <input type="hidden" id="plEditId">
+
+            <div class="pl-form-row">
+                <div class="pl-form-group pl-full">
+                    <label>Título da Oportunidade <span class="pl-req">*</span></label>
+                    <input type="text" id="plTitulo" placeholder="Ex: Exportação de calçados para Portugal">
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group pl-full">
+                    <label>Cliente</label>
+                    <input type="text" id="plClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="plBuscarCliente(this.value)">
+                    <input type="hidden" id="plClienteId">
+                    <div class="pl-autocomplete" id="plAutoCliente"></div>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Valor</label>
+                    <input type="number" id="plValor" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="pl-form-group">
+                    <label>Moeda</label>
+                    <select id="plMoeda">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="BRL">BRL</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Etapa</label>
+                    <select id="plEtapa">
+                        <option value="lead">Lead</option>
+                        <option value="proposta">Proposta</option>
+                        <option value="negociacao">Negociação</option>
+                        <option value="fechado">Fechado</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                </div>
+                <div class="pl-form-group">
+                    <label>Probabilidade (%)</label>
+                    <input type="number" id="plProbabilidade" value="50" min="0" max="100">
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Responsável</label>
+                    <input type="text" id="plResponsavel" placeholder="Nome do responsável">
+                </div>
+                <div class="pl-form-group">
+                    <label>Previsão de Fechamento</label>
+                    <input type="date" id="plDataPrevista">
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group pl-full">
+                    <label>Observações</label>
+                    <textarea id="plObservacoes" rows="3" placeholder="Detalhes da oportunidade..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="pl-modal-footer">
+            <button class="pl-btn-cancelar" onclick="plFecharModal()">Cancelar</button>
+            <button class="pl-btn-salvar" id="plBtnSalvar" onclick="plSalvar()">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR EXCLUIR -->
+<div class="pl-modal-overlay" id="plModalExcluirOverlay" onclick="plFecharModalExcluir()">
+    <div class="pl-modal pl-modal-sm" onclick="event.stopPropagation()">
+        <div class="pl-modal-header">
+            <h3><i class="fa-solid fa-trash"></i> Excluir Oportunidade</h3>
+            <button class="pl-modal-close" onclick="plFecharModalExcluir()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pl-modal-body">
+            <p>Tem certeza que deseja excluir a oportunidade <strong id="plExcluirNome"></strong>? Esta ação não pode ser desfeita.</p>
+        </div>
+        <div class="pl-modal-footer">
+            <button class="pl-btn-cancelar" onclick="plFecharModalExcluir()">Cancelar</button>
+            <button class="pl-btn-excluir" id="plBtnConfirmarExcluir" onclick="plConfirmarExcluir()">
+                <i class="fa-solid fa-trash"></i> Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2025 Marpex · Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="navegador.js"></script>
+<script src="pipeline.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

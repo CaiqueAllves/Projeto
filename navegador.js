@@ -4,95 +4,170 @@
 
 const SIDEBAR_HTML = `
     <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
-    <ul>
-        <li id="menu-inicio" onclick="window.location.href='inicio.html'">
-            <i class="fa-solid fa-chart-line"></i> Início
-        </li>
 
-        <div class="menu-item">
-            <a href="#" class="menu-title">
-                <i class="fa-solid fa-building"></i>Empresas
-                <i class="fa-solid fa-chevron-down arrow"></i>
-            </a>
-            <div class="submenu">
-                <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
-                <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+    <div class="mod-select-wrap">
+        <select id="modSelect" class="mod-select" onchange="setModulo(this.value)">
+            <option value="operacional">Operacional</option>
+            <option value="comercial">Comercial</option>
+            <option value="financeiro">Financeiro</option>
+        </select>
+        <i class="fa-solid fa-chevron-down mod-select-arrow"></i>
+    </div>
+
+    <!-- ── Módulo: Operacional ─────────────────── -->
+    <div class="mod-section" id="mod-operacional">
+        <ul>
+            <li id="menu-inicio" onclick="window.location.href='inicio.html'">
+                <i class="fa-solid fa-chart-line"></i> Início
+            </li>
+
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-building"></i>Empresas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
+                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
             </div>
-        </div>
 
-        <div class="menu-item">
-            <a href="#" class="menu-title">
-                <i class="fa-solid fa-boxes-stacked"></i>Produtos
-                <i class="fa-solid fa-chevron-down arrow"></i>
-            </a>
-            <div class="submenu">
-                <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
-                <a href="relatorios-produtos.html" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
+                    <a href="relatorios-produtos.html" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
             </div>
-        </div>
 
-        <div class="menu-item">
-            <a href="#" class="menu-title">
-                <i class="fa-solid fa-file-lines"></i>Proformas
-                <i class="fa-solid fa-chevron-down arrow"></i>
-            </a>
-            <div class="submenu">
-                <a href="proforma.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
-                <a href="relatorios-proforma.html" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-lines"></i>Proformas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="proforma.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-proforma.html" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
             </div>
-        </div>
 
-        <div class="menu-item">
-            <a href="#" class="menu-title">
-                <i class="fa-solid fa-ship"></i>Processos
-                <i class="fa-solid fa-chevron-down arrow"></i>
-            </a>
-            <div class="submenu">
-                <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
-                <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-ship"></i>Processos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
+                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
+                </div>
             </div>
-        </div>
 
-        <div class="menu-item">
-            <a href="#" class="menu-title">
-                <i class="fa-solid fa-scale-balanced"></i>Termos
-                <i class="fa-solid fa-chevron-down arrow"></i>
-            </a>
-            <div class="submenu">
-                <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-scale-balanced"></i>Termos
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
+                </div>
             </div>
-        </div>
 
-        <div class="menu-item" id="menu-apoio">
-            <a href="#" class="menu-title">
-                <i class="fa-solid fa-book-open"></i>Apoio
-                <i class="fa-solid fa-chevron-down arrow"></i>
-            </a>
-            <div class="submenu">
-                <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
-                <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
-                <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
-                <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
-                <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
-                <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
-                <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
-                <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
-                <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+            <div class="menu-item" id="menu-apoio">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-book-open"></i>Apoio
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="apoio.html?tab=paises" id="submenu-paises"><i class="fa-solid fa-earth-americas"></i> Países e Regiões</a>
+                    <a href="apoio.html?tab=portos" id="submenu-portos"><i class="fa-solid fa-anchor"></i> Portos e Armadores</a>
+                    <a href="apoio.html?tab=aeroportos" id="submenu-aeroportos"><i class="fa-solid fa-plane"></i> Aeroportos e Cias Aéreas</a>
+                    <a href="apoio.html?tab=moedas" id="submenu-moedas"><i class="fa-solid fa-coins"></i> Moedas</a>
+                    <a href="apoio.html?tab=embalagens" id="submenu-embalagens"><i class="fa-solid fa-box"></i> Embalagens e Unid. Medida</a>
+                    <a href="apoio.html?tab=termos-pagamento" id="submenu-termos-apoio"><i class="fa-solid fa-file-invoice-dollar"></i> Termos de Pagamentos</a>
+                    <a href="apoio.html?tab=acondicionamento" id="submenu-acondicionamento"><i class="fa-solid fa-truck-ramp-box"></i> Acondicionamento</a>
+                    <a href="apoio.html?tab=container" id="submenu-container"><i class="fa-solid fa-box-open"></i> Container</a>
+                    <a href="apoio.html?tab=ncm" id="submenu-ncm"><i class="fa-solid fa-barcode"></i> NCM</a>
+                </div>
             </div>
-        </div>
 
-        <div class="menu-item">
-            <a href="#" class="menu-title">
-                <i class="fa-solid fa-gear"></i>Configurações
-                <i class="fa-solid fa-chevron-down arrow"></i>
-            </a>
-            <div class="submenu">
-                <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
-                <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+            <div class="menu-item">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
             </div>
-        </div>
 
-    </ul>
+        </ul>
+    </div>
+
+    <!-- ── Módulo: Comercial ───────────────────── -->
+    <div class="mod-section" id="mod-comercial">
+        <ul>
+            <li id="submenu-pipeline" onclick="window.location.href='pipeline.html'">
+                <i class="fa-solid fa-filter"></i> Pipeline
+            </li>
+            <li id="submenu-pedidos" onclick="window.location.href='pedidos.html'">
+                <i class="fa-solid fa-bag-shopping"></i> Pedidos
+            </li>
+            <li id="submenu-relatorios-comercial" onclick="window.location.href='relatorios-comercial.html'">
+                <i class="fa-solid fa-chart-line"></i> Relatórios
+            </li>
+            <div class="menu-item" id="mod-com-config">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+        </ul>
+    </div>
+
+    <!-- ── Módulo: Financeiro ─────────────────── -->
+    <div class="mod-section" id="mod-financeiro">
+        <ul>
+            <div class="menu-item" id="mod-fin-contas">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>Contas
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="contas-pagar.html" id="submenu-contas-pagar"><i class="fa-solid fa-arrow-up"></i> Contas a Pagar</a>
+                    <a href="contas-receber.html" id="submenu-contas-receber"><i class="fa-solid fa-arrow-down"></i> Contas a Receber</a>
+                </div>
+            </div>
+
+            <li id="submenu-fluxo-caixa" onclick="window.location.href='fluxo-caixa.html'">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i> Fluxo de Caixa
+            </li>
+            <li id="submenu-relatorios-financeiro" onclick="window.location.href='relatorios-financeiro.html'">
+                <i class="fa-solid fa-chart-pie"></i> Relatórios
+            </li>
+            <li id="submenu-dre" onclick="window.location.href='dre.html'">
+                <i class="fa-solid fa-table-columns"></i> DRE / Balancete
+            </li>
+
+            <div class="menu-item" id="mod-fin-config">
+                <a href="#" class="menu-title">
+                    <i class="fa-solid fa-gear"></i>Configurações
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
+                <div class="submenu">
+                    <a href="perfil.html"><i class="fa-solid fa-user"></i> Perfil</a>
+                    <a href="permissoes.html"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
+                </div>
+            </div>
+        </ul>
+    </div>
 `;
 
 function injetarSidebar() {
@@ -222,12 +297,45 @@ function _fecharSidebarMobile() {
 }
 
 // ========================================
+// TROCA DE MÓDULO
+// ========================================
+
+const _MODULO_PAGINAS = {
+    'pipeline.html':              'comercial',
+    'pedidos.html':               'comercial',
+    'relatorios-comercial.html':  'comercial',
+    'contas-pagar.html':          'financeiro',
+    'contas-receber.html':        'financeiro',
+    'fluxo-caixa.html':           'financeiro',
+    'relatorios-financeiro.html': 'financeiro',
+    'dre.html':                   'financeiro',
+};
+
+function _getModuloAtual() {
+    const pagina = window.location.pathname.split('/').pop().toLowerCase();
+    return _MODULO_PAGINAS[pagina] || sessionStorage.getItem('modulo_ativo') || 'operacional';
+}
+
+function setModulo(mod) {
+    sessionStorage.setItem('modulo_ativo', mod);
+
+    const sel = document.getElementById('modSelect');
+    if (sel) sel.value = mod;
+
+    document.querySelectorAll('.mod-section').forEach(sec => {
+        sec.style.display = sec.id === `mod-${mod}` ? 'block' : 'none';
+    });
+
+    destacarMenuAtivo();
+}
+
+// ========================================
 // NAVEGAÇÃO - DESTACAR ITEM ATIVO
 // ========================================
 
 function _initNavegador() {
     injetarSidebar();
-    destacarMenuAtivo();
+    setModulo(_getModuloAtual());
     inicializarMenuColapsavel();
     destacarInicio();
     _injetarMobile();
@@ -284,6 +392,18 @@ function destacarMenuAtivo() {
         // Processos
         'processos.html':           'submenu-processos-cadastro',
         'relatorios-processos.html':'submenu-processos-relatorios',
+
+        // Comercial
+        'pipeline.html':              'submenu-pipeline',
+        'pedidos.html':               'submenu-pedidos',
+        'relatorios-comercial.html':  'submenu-relatorios-comercial',
+
+        // Financeiro
+        'contas-pagar.html':          'submenu-contas-pagar',
+        'contas-receber.html':        'submenu-contas-receber',
+        'fluxo-caixa.html':           'submenu-fluxo-caixa',
+        'relatorios-financeiro.html': 'submenu-relatorios-financeiro',
+        'dre.html':                   'submenu-dre',
 
         // Termos
         'termos.html': 'submenu-termos',

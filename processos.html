@@ -50,11 +50,20 @@
                         <i class="fa-solid fa-magnifying-glass filter-icon"></i>
                         <input type="text" id="filtroProcessos" placeholder="Filtrar por código, cliente, origem, destino..." />
                     </div>
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="btnViewKanban" onclick="switchView('kanban')" title="Kanban">
+                            <i class="fa-solid fa-table-columns"></i>
+                        </button>
+                        <button class="view-btn" id="btnViewLista" onclick="switchView('lista')" title="Lista">
+                            <i class="fa-solid fa-list"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="header-right">
                     <div id="procExcluidosWrapper">
                         <button class="btn-excluidos" onclick="procToggleExcluidos()">
                             <i class="fa-solid fa-trash-can"></i> Excluídos
+                            <i class="fa-solid fa-chevron-down" style="font-size:10px;margin-left:2px;"></i>
                         </button>
                         <div class="prof-excluidos-panel" id="procExcluidosPanel">
                             <div class="prof-excluidos-titulo">
@@ -75,45 +84,90 @@
 
             <!-- TABS MOBILE -->
             <div class="kanban-tabs" id="kanbanTabs">
-                <button class="kanban-tab active" data-col="aberta" onclick="kanbanSwitchTab(this)">
-                    Aberta <span class="kanban-tab-count" id="tab-count-aberta">0</span>
+                <button class="kanban-tab active" data-col="aberto" onclick="kanbanSwitchTab(this)">
+                    Aberto <span class="kanban-tab-count" id="tab-count-aberto">0</span>
                 </button>
-                <button class="kanban-tab" data-col="pendente" onclick="kanbanSwitchTab(this)">
-                    Pendente <span class="kanban-tab-count" id="tab-count-pendente">0</span>
+                <button class="kanban-tab" data-col="em_andamento" onclick="kanbanSwitchTab(this)">
+                    Em Andamento <span class="kanban-tab-count" id="tab-count-em_andamento">0</span>
                 </button>
-                <button class="kanban-tab" data-col="encerrada" onclick="kanbanSwitchTab(this)">
-                    Encerrada <span class="kanban-tab-count" id="tab-count-encerrada">0</span>
+                <button class="kanban-tab" data-col="aguardando_documentos" onclick="kanbanSwitchTab(this)">
+                    Aguard. Docs <span class="kanban-tab-count" id="tab-count-aguardando_documentos">0</span>
+                </button>
+                <button class="kanban-tab" data-col="concluido" onclick="kanbanSwitchTab(this)">
+                    Concluído <span class="kanban-tab-count" id="tab-count-concluido">0</span>
+                </button>
+                <button class="kanban-tab" data-col="cancelado" onclick="kanbanSwitchTab(this)">
+                    Cancelado <span class="kanban-tab-count" id="tab-count-cancelado">0</span>
                 </button>
             </div>
 
             <!-- KANBAN BOARD -->
             <div class="kanban-board" id="kanbanBoard">
-                <div class="kanban-col kanban-col-active" id="col-aberta">
-                    <div class="kanban-col-header kanban-header-aberta">
-                        <span class="kanban-col-title"><i class="fa-solid fa-circle-dot"></i> Aberta</span>
-                        <span class="kanban-col-count" id="count-aberta">0</span>
+                <div class="kanban-col kanban-col-active" id="col-aberto">
+                    <div class="kanban-col-header kanban-header-aberto">
+                        <span class="kanban-col-title"><i class="fa-solid fa-circle-dot"></i> Aberto</span>
+                        <span class="kanban-col-count" id="count-aberto">0</span>
                     </div>
-                    <div class="kanban-col-body" id="cards-aberta">
+                    <div class="kanban-col-body" id="cards-aberto">
                         <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                     </div>
                 </div>
-                <div class="kanban-col" id="col-pendente">
-                    <div class="kanban-col-header kanban-header-pendente">
-                        <span class="kanban-col-title"><i class="fa-solid fa-clock"></i> Pendente</span>
-                        <span class="kanban-col-count" id="count-pendente">0</span>
+                <div class="kanban-col" id="col-em_andamento">
+                    <div class="kanban-col-header kanban-header-em_andamento">
+                        <span class="kanban-col-title"><i class="fa-solid fa-spinner"></i> Em Andamento</span>
+                        <span class="kanban-col-count" id="count-em_andamento">0</span>
                     </div>
-                    <div class="kanban-col-body" id="cards-pendente">
+                    <div class="kanban-col-body" id="cards-em_andamento">
                         <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                     </div>
                 </div>
-                <div class="kanban-col" id="col-encerrada">
-                    <div class="kanban-col-header kanban-header-encerrada">
-                        <span class="kanban-col-title"><i class="fa-solid fa-circle-check"></i> Encerrada</span>
-                        <span class="kanban-col-count" id="count-encerrada">0</span>
+                <div class="kanban-col" id="col-aguardando_documentos">
+                    <div class="kanban-col-header kanban-header-aguardando_documentos">
+                        <span class="kanban-col-title"><i class="fa-solid fa-file-circle-question"></i> Aguard. Docs</span>
+                        <span class="kanban-col-count" id="count-aguardando_documentos">0</span>
                     </div>
-                    <div class="kanban-col-body" id="cards-encerrada">
+                    <div class="kanban-col-body" id="cards-aguardando_documentos">
                         <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                     </div>
+                </div>
+                <div class="kanban-col" id="col-concluido">
+                    <div class="kanban-col-header kanban-header-concluido">
+                        <span class="kanban-col-title"><i class="fa-solid fa-circle-check"></i> Concluído</span>
+                        <span class="kanban-col-count" id="count-concluido">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="cards-concluido">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+                <div class="kanban-col" id="col-cancelado">
+                    <div class="kanban-col-header kanban-header-cancelado">
+                        <span class="kanban-col-title"><i class="fa-solid fa-circle-xmark"></i> Cancelado</span>
+                        <span class="kanban-col-count" id="count-cancelado">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="cards-cancelado">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LISTA DE PROCESSOS -->
+            <div id="listaContainer" style="display:none;">
+                <div class="proc-lista-wrap">
+                    <table class="proc-tabela">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Cliente</th>
+                                <th>Tipo</th>
+                                <th>Rota</th>
+                                <th>Modal</th>
+                                <th>Incoterm</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="procTbody"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -332,40 +386,12 @@
     </div>
 </div>
 
-<!-- BOTÃO FLUTUANTE DO WHATSAPP -->
-<div class="whatsapp-float" onclick="toggleWhatsappChat()">
-    <i class="fa-brands fa-whatsapp"></i>
-</div>
-
-<!-- PAINEL DE CHAT DO WHATSAPP -->
-<div class="whatsapp-chat" id="whatsappChat">
-    <div class="chat-header">
-        <div class="chat-header-info">
-            <i class="fa-brands fa-whatsapp"></i>
-            <div>
-                <div class="chat-title">Suporte Marpex</div>
-                <div class="chat-status">Online</div>
-            </div>
-        </div>
-        <i class="fa-solid fa-xmark" onclick="toggleWhatsappChat()"></i>
-    </div>
-    <div class="chat-body">
-        <div class="chat-message bot">
-            <div class="message-content">Olá! Como podemos ajudar você hoje?</div>
-            <div class="message-time">Agora</div>
-        </div>
-    </div>
-    <div class="chat-footer">
-        <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
-        <button onclick="enviarMensagem()"><i class="fa-solid fa-paper-plane"></i></button>
-    </div>
-</div>
-
 <script src="supabase.min.js"></script>
 <script src="supabase-api.js"></script>
 <script src="auth.js"></script>
 <script src="navegador.js"></script>
 <script src="processos.js"></script>
+<script src="suporte.js"></script>
 
 </body>
 </html>
