@@ -632,10 +632,98 @@ a { text-decoration: none; color: inherit; }
 .footer-copy { font-size: 12px; color: #64748b; }
 
 /* ==========================================
+   MÓDULOS
+   ========================================== */
+
+.modulos-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-top: 48px;
+}
+
+.modulo-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.modulo-card:hover {
+    box-shadow: 0 8px 28px rgba(0,0,0,0.09);
+    transform: translateY(-3px);
+}
+
+.modulo-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--mc) 12%, white), color-mix(in srgb, var(--mc) 5%, white));
+    border-bottom: 1px solid color-mix(in srgb, var(--mc) 15%, transparent);
+}
+
+.modulo-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: var(--mc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.modulo-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--mc);
+    margin-bottom: 2px;
+}
+
+.modulo-card-header h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.modulo-features {
+    list-style: none;
+    padding: 20px 24px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modulo-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13.5px;
+    color: #475569;
+    line-height: 1.4;
+}
+
+.modulo-features li i {
+    color: #22c55e;
+    font-size: 12px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* ==========================================
    RESPONSIVO
    ========================================== */
 @media (max-width: 1024px) {
     .pillars { grid-template-columns: repeat(2, 1fr); }
+    .modulos-grid { grid-template-columns: repeat(2, 1fr); }
     .modais-grid { grid-template-columns: repeat(2, 1fr); }
     .docs-grid { grid-template-columns: repeat(2, 1fr); }
     .hero-visual { display: none; }
@@ -651,6 +739,7 @@ a { text-decoration: none; color: inherit; }
     .section { padding: 64px 20px; }
     .hero { padding: 90px 20px 60px; }
     .pillars { grid-template-columns: 1fr; }
+    .modulos-grid { grid-template-columns: 1fr; }
     .modais-grid { grid-template-columns: 1fr; }
     .docs-grid { grid-template-columns: 1fr; }
     .fluxo-steps { flex-direction: column; }

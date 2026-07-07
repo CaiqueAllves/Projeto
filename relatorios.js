@@ -45,6 +45,18 @@ document.addEventListener('DOMContentLoaded', async function () {
 });
 
 // ========================================
+// SELETOR DE MÓDULO
+// ========================================
+
+function relSwitchModulo(modulo, btn) {
+    document.querySelectorAll('.rel-secao').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.rel-modulo-tab').forEach(b => b.classList.remove('active'));
+    const sec = document.getElementById('rel-sec-' + modulo);
+    if (sec) sec.style.display = 'block';
+    if (btn) btn.classList.add('active');
+}
+
+// ========================================
 // PERMISSÕES
 // ========================================
 

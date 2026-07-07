@@ -253,19 +253,6 @@ aside h2 {
     pointer-events: none;
 }
 
-/* ── Submenus dos módulos Comercial e Financeiro (hover abre) ── */
-#mod-com-config:hover .submenu,
-#mod-fin-config:hover .submenu,
-#mod-fin-contas:hover .submenu {
-    max-height: 2000px;
-    opacity: 1;
-}
-
-#mod-com-config:hover,
-#mod-fin-config:hover,
-#mod-fin-contas:hover {
-    overflow: visible;
-}
 
 /* Seções de módulo: escondidas por padrão, JS mostra a ativa */
 .mod-section {

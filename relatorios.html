@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Marpex | Empresa › Relatórios</title>
+    <title>Marpex | Relatórios</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css">
     <link rel="stylesheet" href="style-navegador.css">
@@ -20,7 +20,7 @@
         <!-- TOPBAR -->
         <div class="topbar">
             <div class="topbar-left">
-                <h2><i class="fa-solid fa-chart-pie"></i> Empresa: Relatórios</h2>
+                <h2><i class="fa-solid fa-chart-pie"></i> Relatórios</h2>
             </div>
             <div class="topbar-right">
                 <div class="user-info-card">
@@ -40,6 +40,25 @@
 
         <!-- CONTEÚDO -->
         <div class="content">
+
+            <!-- SELETOR DE MÓDULO -->
+            <div class="rel-modulo-tabs">
+                <button class="rel-modulo-tab active" data-modulo="empresas" onclick="relSwitchModulo('empresas', this)">
+                    <i class="fa-solid fa-building"></i> Empresas
+                </button>
+                <button class="rel-modulo-tab" data-modulo="produtos" onclick="relSwitchModulo('produtos', this)">
+                    <i class="fa-solid fa-boxes-stacked"></i> Produtos
+                </button>
+                <button class="rel-modulo-tab" data-modulo="proformas" onclick="relSwitchModulo('proformas', this)">
+                    <i class="fa-solid fa-file-lines"></i> Proformas
+                </button>
+                <button class="rel-modulo-tab" data-modulo="processos" onclick="relSwitchModulo('processos', this)">
+                    <i class="fa-solid fa-ship"></i> Processos
+                </button>
+            </div>
+
+            <!-- SEÇÃO: EMPRESAS -->
+            <div id="rel-sec-empresas" class="rel-secao">
 
             <!-- STATS -->
             <div class="stats-row">
@@ -135,6 +154,180 @@
                 </div>
             </div>
 
+
+            </div><!-- /rel-sec-empresas -->
+
+            <!-- SEÇÃO: PRODUTOS -->
+            <div id="rel-sec-produtos" class="rel-secao" style="display:none;">
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#f3e8ff; color:#9333ea;">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="totalProdutos">—</div>
+                            <div class="stat-label">Produtos Cadastrados</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#dcfce7; color:#22c55e;">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="totalProdutosAtivos">—</div>
+                            <div class="stat-label">Ativos</div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-file-lines"></i> Gerar Relatório de Produtos</h3>
+                    </div>
+                    <div class="report-grid">
+                        <div class="report-card">
+                            <div class="report-card-icon" style="background: linear-gradient(135deg,#9333ea,#6366f1);">
+                                <i class="fa-solid fa-list"></i>
+                            </div>
+                            <h4>Listagem Geral</h4>
+                            <p>Todos os produtos cadastrados com código, descrição, NCM e unidade de medida.</p>
+                            <button class="btn-report" style="background: linear-gradient(135deg,#9333ea,#6366f1);" onclick="gerarRelatorio('produtos-listagem')">
+                                <i class="fa-solid fa-download"></i> Gerar
+                            </button>
+                        </div>
+                        <div class="report-card">
+                            <div class="report-card-icon" style="background: linear-gradient(135deg,#22c55e,#16a34a);">
+                                <i class="fa-solid fa-barcode"></i>
+                            </div>
+                            <h4>Por NCM</h4>
+                            <p>Agrupamento dos produtos por código NCM com totais e percentuais.</p>
+                            <button class="btn-report" style="background: linear-gradient(135deg,#22c55e,#16a34a);" onclick="gerarRelatorio('produtos-ncm')">
+                                <i class="fa-solid fa-download"></i> Gerar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /rel-sec-produtos -->
+
+            <!-- SEÇÃO: PROFORMAS -->
+            <div id="rel-sec-proformas" class="rel-secao" style="display:none;">
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;">
+                            <i class="fa-solid fa-file-lines"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="totalProformas">—</div>
+                            <div class="stat-label">Proformas Emitidas</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#dbeafe; color:#3b82f6;">
+                            <i class="fa-solid fa-coins"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="totalProformasValor">—</div>
+                            <div class="stat-label">Valor Total (USD)</div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-file-lines"></i> Gerar Relatório de Proformas</h3>
+                    </div>
+                    <div class="report-grid">
+                        <div class="report-card">
+                            <div class="report-card-icon" style="background: linear-gradient(135deg,#f59e0b,#f97316);">
+                                <i class="fa-solid fa-calendar"></i>
+                            </div>
+                            <h4>Por Período</h4>
+                            <p>Proformas emitidas em um intervalo de datas, com totalizador de valor.</p>
+                            <button class="btn-report" style="background: linear-gradient(135deg,#f59e0b,#f97316);" onclick="gerarRelatorio('proformas-periodo')">
+                                <i class="fa-solid fa-download"></i> Gerar
+                            </button>
+                        </div>
+                        <div class="report-card">
+                            <div class="report-card-icon" style="background: linear-gradient(135deg,#4776ec,#6366f1);">
+                                <i class="fa-solid fa-building"></i>
+                            </div>
+                            <h4>Por Cliente</h4>
+                            <p>Ranking de clientes com maior volume de proformas e valores acumulados.</p>
+                            <button class="btn-report" style="background: linear-gradient(135deg,#4776ec,#6366f1);" onclick="gerarRelatorio('proformas-cliente')">
+                                <i class="fa-solid fa-download"></i> Gerar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /rel-sec-proformas -->
+
+            <!-- SEÇÃO: PROCESSOS -->
+            <div id="rel-sec-processos" class="rel-secao" style="display:none;">
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#dbeafe; color:#3b82f6;">
+                            <i class="fa-solid fa-ship"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="totalProcessos">—</div>
+                            <div class="stat-label">Processos</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#dcfce7; color:#22c55e;">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="totalProcessosConcluidos">—</div>
+                            <div class="stat-label">Concluídos</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="totalProcessosAbertos">—</div>
+                            <div class="stat-label">Em Andamento</div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-file-lines"></i> Gerar Relatório de Processos</h3>
+                    </div>
+                    <div class="report-grid">
+                        <div class="report-card">
+                            <div class="report-card-icon" style="background: linear-gradient(135deg,#4776ec,#6366f1);">
+                                <i class="fa-solid fa-calendar"></i>
+                            </div>
+                            <h4>Por Período</h4>
+                            <p>Processos abertos em um intervalo de datas com totais por status.</p>
+                            <button class="btn-report" style="background: linear-gradient(135deg,#4776ec,#6366f1);" onclick="gerarRelatorio('processos-periodo')">
+                                <i class="fa-solid fa-download"></i> Gerar
+                            </button>
+                        </div>
+                        <div class="report-card">
+                            <div class="report-card-icon" style="background: linear-gradient(135deg,#22c55e,#16a34a);">
+                                <i class="fa-solid fa-chart-bar"></i>
+                            </div>
+                            <h4>Por Status</h4>
+                            <p>Distribuição dos processos entre os diferentes status com percentuais.</p>
+                            <button class="btn-report" style="background: linear-gradient(135deg,#22c55e,#16a34a);" onclick="gerarRelatorio('processos-status')">
+                                <i class="fa-solid fa-download"></i> Gerar
+                            </button>
+                        </div>
+                        <div class="report-card">
+                            <div class="report-card-icon" style="background: linear-gradient(135deg,#f59e0b,#f97316);">
+                                <i class="fa-solid fa-globe"></i>
+                            </div>
+                            <h4>Por Modal</h4>
+                            <p>Processos agrupados por modal de transporte (aéreo, marítimo, rodoviário).</p>
+                            <button class="btn-report" style="background: linear-gradient(135deg,#f59e0b,#f97316);" onclick="gerarRelatorio('processos-modal')">
+                                <i class="fa-solid fa-download"></i> Gerar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /rel-sec-processos -->
 
             <!-- HISTÓRICO (somente admin) -->
             <div class="history-card" id="secaoHistorico" style="display:none;">
@@ -238,6 +431,7 @@
 <script src="navegador.js"></script>
 <script src="relatorios.js"></script>
 
+<script src="suporte.js"></script>
 </body>
 </html>
 

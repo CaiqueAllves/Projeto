@@ -10,6 +10,7 @@ const SIDEBAR_HTML = `
             <option value="operacional">Operacional</option>
             <option value="comercial">Comercial</option>
             <option value="financeiro">Financeiro</option>
+            <option value="configuracoes">Configurações</option>
         </select>
         <i class="fa-solid fa-chevron-down mod-select-arrow"></i>
     </div>
@@ -21,59 +22,29 @@ const SIDEBAR_HTML = `
                 <i class="fa-solid fa-chart-line"></i> Início
             </li>
 
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-building"></i>Empresas
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="cadastros.html" id="submenu-clientes"><i class="fa-solid fa-users"></i> Cadastro</a>
-                    <a href="relatorios.html" id="submenu-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
-                </div>
-            </div>
+            <li id="submenu-clientes" onclick="window.location.href='cadastros.html'">
+                <i class="fa-solid fa-building"></i> Empresas
+            </li>
 
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-boxes-stacked"></i>Produtos
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="produtos.html" id="submenu-produtos-cadastro"><i class="fa-solid fa-plus"></i> Cadastro</a>
-                    <a href="relatorios-produtos.html" id="submenu-produtos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
-                </div>
-            </div>
+            <li id="submenu-produtos-cadastro" onclick="window.location.href='produtos.html'">
+                <i class="fa-solid fa-boxes-stacked"></i> Produtos
+            </li>
 
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-file-lines"></i>Proformas
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="proforma.html" id="submenu-documentos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
-                    <a href="relatorios-proforma.html" id="submenu-documentos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
-                </div>
-            </div>
+            <li id="submenu-documentos-cadastro" onclick="window.location.href='proforma.html'">
+                <i class="fa-solid fa-file-lines"></i> Proformas
+            </li>
 
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-ship"></i>Processos
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="processos.html" id="submenu-processos-cadastro"><i class="fa-solid fa-plus"></i> Cadastros</a>
-                    <a href="relatorios-processos.html" id="submenu-processos-relatorios"><i class="fa-solid fa-chart-line"></i> Relatórios</a>
-                </div>
-            </div>
+            <li id="submenu-processos-cadastro" onclick="window.location.href='processos.html'">
+                <i class="fa-solid fa-ship"></i> Processos
+            </li>
 
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-scale-balanced"></i>Termos
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="termos.html" id="submenu-termos"><i class="fa-solid fa-file-contract"></i> Termos e Políticas</a>
-                </div>
-            </div>
+            <li id="menu-relatorios" onclick="window.location.href='relatorios.html'">
+                <i class="fa-solid fa-chart-line"></i> Relatórios
+            </li>
+
+            <li id="menu-termos" onclick="window.location.href='termos.html'">
+                <i class="fa-solid fa-scale-balanced"></i> Termos
+            </li>
 
             <div class="menu-item" id="menu-apoio">
                 <a href="#" class="menu-title">
@@ -93,17 +64,6 @@ const SIDEBAR_HTML = `
                 </div>
             </div>
 
-            <div class="menu-item">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-gear"></i>Configurações
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="perfil.html" id="submenu-perfil"><i class="fa-solid fa-user"></i> Perfil</a>
-                    <a href="permissoes.html" id="submenu-permissoes"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
-                </div>
-            </div>
-
         </ul>
     </div>
 
@@ -119,32 +79,18 @@ const SIDEBAR_HTML = `
             <li id="submenu-relatorios-comercial" onclick="window.location.href='relatorios-comercial.html'">
                 <i class="fa-solid fa-chart-line"></i> Relatórios
             </li>
-            <div class="menu-item" id="mod-com-config">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-gear"></i>Configurações
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="perfil.html"><i class="fa-solid fa-user"></i> Perfil</a>
-                    <a href="permissoes.html"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
-                </div>
-            </div>
         </ul>
     </div>
 
     <!-- ── Módulo: Financeiro ─────────────────── -->
     <div class="mod-section" id="mod-financeiro">
         <ul>
-            <div class="menu-item" id="mod-fin-contas">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-file-invoice-dollar"></i>Contas
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="contas-pagar.html" id="submenu-contas-pagar"><i class="fa-solid fa-arrow-up"></i> Contas a Pagar</a>
-                    <a href="contas-receber.html" id="submenu-contas-receber"><i class="fa-solid fa-arrow-down"></i> Contas a Receber</a>
-                </div>
-            </div>
+            <li id="submenu-contas-pagar" onclick="window.location.href='contas-pagar.html'">
+                <i class="fa-solid fa-arrow-up"></i> Contas a Pagar
+            </li>
+            <li id="submenu-contas-receber" onclick="window.location.href='contas-receber.html'">
+                <i class="fa-solid fa-arrow-down"></i> Contas a Receber
+            </li>
 
             <li id="submenu-fluxo-caixa" onclick="window.location.href='fluxo-caixa.html'">
                 <i class="fa-solid fa-arrow-right-arrow-left"></i> Fluxo de Caixa
@@ -156,16 +102,18 @@ const SIDEBAR_HTML = `
                 <i class="fa-solid fa-table-columns"></i> DRE / Balancete
             </li>
 
-            <div class="menu-item" id="mod-fin-config">
-                <a href="#" class="menu-title">
-                    <i class="fa-solid fa-gear"></i>Configurações
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
-                <div class="submenu">
-                    <a href="perfil.html"><i class="fa-solid fa-user"></i> Perfil</a>
-                    <a href="permissoes.html"><i class="fa-solid fa-user-shield"></i> Usuários e Permissões</a>
-                </div>
-            </div>
+        </ul>
+    </div>
+
+    <!-- ── Módulo: Configurações ─────────────── -->
+    <div class="mod-section" id="mod-configuracoes">
+        <ul>
+            <li id="menu-perfil" onclick="window.location.href='perfil.html'">
+                <i class="fa-solid fa-user"></i> Perfil
+            </li>
+            <li id="menu-permissoes" onclick="window.location.href='permissoes.html'">
+                <i class="fa-solid fa-user-shield"></i> Usuários e Permissões
+            </li>
         </ul>
     </div>
 `;
@@ -309,6 +257,8 @@ const _MODULO_PAGINAS = {
     'fluxo-caixa.html':           'financeiro',
     'relatorios-financeiro.html': 'financeiro',
     'dre.html':                   'financeiro',
+    'perfil.html':                'configuracoes',
+    'permissoes.html':            'configuracoes',
 };
 
 function _getModuloAtual() {
@@ -376,22 +326,16 @@ function destacarMenuAtivo() {
         'dashboard.html': 'menu-inicio',
         '':               'menu-inicio',
 
-        // Empresa
-        'cadastros.html':  'submenu-clientes',
-        'relatorios.html': 'submenu-relatorios',
-
-        // Produtos
+        // Operacional
+        'cadastros.html':           'submenu-clientes',
         'produtos.html':            'submenu-produtos-cadastro',
-        'relatorios-produtos.html': 'submenu-produtos-relatorios',
-
-        // Proformas
         'proforma.html':            'submenu-documentos-cadastro',
         'formularios.html':         'submenu-documentos-cadastro',
-        'relatorios-proforma.html': 'submenu-documentos-relatorios',
-
-        // Processos
         'processos.html':           'submenu-processos-cadastro',
-        'relatorios-processos.html':'submenu-processos-relatorios',
+        'relatorios.html':          'menu-relatorios',
+        'relatorios-produtos.html': 'menu-relatorios',
+        'relatorios-proforma.html': 'menu-relatorios',
+        'relatorios-processos.html':'menu-relatorios',
 
         // Comercial
         'pipeline.html':              'submenu-pipeline',
@@ -406,11 +350,11 @@ function destacarMenuAtivo() {
         'dre.html':                   'submenu-dre',
 
         // Termos
-        'termos.html': 'submenu-termos',
+        'termos.html': 'menu-termos',
 
         // Configurações
-        'perfil.html':     'submenu-perfil',
-        'permissoes.html': 'submenu-permissoes',
+        'perfil.html':     'menu-perfil',
+        'permissoes.html': 'menu-permissoes',
 
         // Apoio (por query param — tratado em apoio.js)
     };
