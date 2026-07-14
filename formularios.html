@@ -1203,17 +1203,17 @@
                                         </select>
                                     </div>
 
-                                    <div class="form-group" data-show-for="aberto,em_andamento,aguardando,liberado,encerrado,cancelado">
+                                    <div class="form-group" data-show-for="aberto,em_andamento,aguardando_documentos,concluido,cancelado">
                                         <label for="proc-data-abertura">Data de Abertura</label>
                                         <input type="date" id="proc-data-abertura" name="data_abertura">
                                     </div>
 
-                                    <div class="form-group" data-show-for="encerrado">
+                                    <div class="form-group" data-show-for="em_andamento,aguardando_documentos,concluido">
                                         <label for="proc-data-embarque">Data de Embarque</label>
                                         <input type="date" id="proc-data-embarque" name="data_embarque">
                                     </div>
 
-                                    <div class="form-group" data-show-for="encerrado">
+                                    <div class="form-group" data-show-for="em_andamento,aguardando_documentos,concluido">
                                         <label for="proc-data-chegada">Data de Chegada</label>
                                         <input type="date" id="proc-data-chegada" name="data_chegada">
                                     </div>
@@ -1223,7 +1223,22 @@
                                         <input type="date" id="proc-data-cancelamento" name="data_cancelamento">
                                     </div>
 
-                                    <div class="form-group full-width prod-obs-wrapper" data-show-for="aberto,em_andamento,aguardando,liberado,encerrado,cancelado">
+                                    <div class="form-group">
+                                        <label for="proc-container-tipo">Container</label>
+                                        <select id="proc-container-tipo" name="container_tipo">
+                                            <option value="">Não aplica</option>
+                                            <option value="20">20'</option>
+                                            <option value="40">40'</option>
+                                            <option value="40hc">40' HC</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="proc-container-num">Número do Container</label>
+                                        <input type="text" id="proc-container-num" name="container_numero" placeholder="Ex: MSKU1234567">
+                                    </div>
+
+                                    <div class="form-group full-width prod-obs-wrapper" data-show-for="aberto,em_andamento,aguardando_documentos,concluido,cancelado">
                                         <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
                                             <span>Observações</span>
                                             <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
@@ -1968,6 +1983,7 @@
                                     <!-- Código da Proforma -->
                                     <div class="form-group full-width">
                                         <input type="hidden" id="prop-id">
+                                        <input type="hidden" id="prop-pedido-id">
                                         <input type="hidden" id="prop-codigo" name="codigo">
                                         <p class="prop-codigo-exibicao">Código da Proforma: <strong id="prop-codigo-display">—</strong></p>
                                     </div>

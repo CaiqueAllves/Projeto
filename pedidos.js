@@ -5,6 +5,14 @@
 let _pedTodos    = [];
 let _pedFiltrados = [];
 let _pedExcluirId = null;
+let _pedItensAtual = [];
+const _pedItemBuscaTimers = {};
+
+// Escapa valores usados dentro de filtros PostgREST (.or()) — evita que
+// vírgulas/parênteses no termo digitado alterem a estrutura do filtro.
+function _pedEscaparFiltro(termo) {
+    return String(termo).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
 
 const PED_STATUS_LABEL = {
     aguardando:   'Aguardando',
@@ -29,7 +37,35 @@ const PED_STATUS_CLASS = {
 document.addEventListener('DOMContentLoaded', async () => {
     _pedCarregarUsuario();
     await pedCarregar();
+    _pedTratarParametrosUrl();
 });
+
+// ── Integração com Pipeline (oportunidade -> pedido) ────────────────────────
+
+function _pedTratarParametrosUrl() {
+    const params = new URLSearchParams(window.location.search);
+
+    const editarId = params.get('editar');
+    if (editarId) {
+        pedAbrirModal(editarId);
+        return;
+    }
+
+    const oportunidadeId = params.get('oportunidade_id');
+    if (oportunidadeId) {
+        pedAbrirModal();
+        document.getElementById('pedOportunidadeId').value = oportunidadeId;
+        document.getElementById('pedClienteNome').value    = params.get('cliente_nome') || '';
+        document.getElementById('pedClienteId').value      = params.get('cliente_id')   || '';
+        document.getElementById('pedMoeda').value          = params.get('moeda')        || 'USD';
+
+        const valorParam = parseFloat(params.get('valor'));
+        if (valorParam > 0) {
+            _pedItensAtual = [{ produto_id: null, produto_nome: 'Item do pedido', quantidade: 1, unidade_medida: 'UN', preco_unitario: valorParam }];
+            pedRenderizarItens();
+        }
+    }
+}
 
 function _pedCarregarUsuario() {
     try {
@@ -114,6 +150,9 @@ function pedRenderizar() {
                             `<option value="${v}" ${v === status ? 'selected' : ''}>${l}</option>`
                         ).join('')}
                     </select>
+                    ${p.proforma_id
+                        ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProforma('${p.proforma_id}')" title="Ver Proforma gerada"><i class="fa-solid fa-file-invoice-dollar"></i></button>`
+                        : `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>`}
                     <button class="pl-btn-acao pl-btn-editar" onclick="pedAbrirModal('${p.id}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
                     </button>
@@ -124,6 +163,16 @@ function pedRenderizar() {
             </td>
         </tr>`;
     }).join('');
+}
+
+// ── Gerar/ver Proforma a partir do pedido ───────────────────────────────────
+
+function pedGerarProforma(id) {
+    window.open(`formularios.html?tab=proposta&pedido_id=${id}`, '_blank');
+}
+
+function pedVerProforma(proformaId) {
+    window.open(`formularios.html?tab=proposta&id=${proformaId}&modo=visualizar`, '_blank');
 }
 
 // ── Alterar status inline ──────────────────────────────────────────────────
@@ -153,7 +202,8 @@ async function pedAlterarStatus(id, selectEl) {
 function pedAbrirModal(id = null) {
     const ped = id ? _pedTodos.find(p => p.id === id) : null;
 
-    document.getElementById('pedEditId').value       = ped?.id || '';
+    document.getElementById('pedEditId').value         = ped?.id || '';
+    document.getElementById('pedOportunidadeId').value = ped?.oportunidade_id || '';
     document.getElementById('pedModalTitulo').innerHTML = ped
         ? '<i class="fa-solid fa-pen"></i> Editar Pedido'
         : '<i class="fa-solid fa-bag-shopping"></i> Novo Pedido';
@@ -162,11 +212,22 @@ function pedAbrirModal(id = null) {
     document.getElementById('pedStatus').value       = ped?.status || 'aguardando';
     document.getElementById('pedClienteNome').value  = ped?.parceiros?.nome_fantasia || ped?.parceiros?.razao_social || '';
     document.getElementById('pedClienteId').value    = ped?.cliente_id || '';
-    document.getElementById('pedValor').value        = ped?.valor_total || '';
     document.getElementById('pedMoeda').value        = ped?.moeda || 'USD';
     document.getElementById('pedDataPedido').value   = ped?.data_pedido || '';
     document.getElementById('pedDataEntrega').value  = ped?.data_entrega_prevista || '';
     document.getElementById('pedObservacoes').value  = ped?.observacoes || '';
+
+    _pedItensAtual = (ped?.pedido_itens || []).map(it => ({
+        produto_id:     it.produto_id || null,
+        produto_nome:   it.produto_nome || it.produtos?.nome || '',
+        quantidade:     Number(it.quantidade) || 1,
+        unidade_medida: it.unidade_medida || 'UN',
+        preco_unitario: Number(it.preco_unitario) || 0,
+    }));
+    if (!_pedItensAtual.length) {
+        _pedItensAtual = [{ produto_id: null, produto_nome: '', quantidade: 1, unidade_medida: 'UN', preco_unitario: 0 }];
+    }
+    pedRenderizarItens();
 
     document.getElementById('pedModalOverlay').classList.add('ativo');
 }
@@ -174,18 +235,151 @@ function pedAbrirModal(id = null) {
 function pedFecharModal() {
     document.getElementById('pedModalOverlay').classList.remove('ativo');
     document.getElementById('pedAutoCliente').innerHTML = '';
+    _pedItensAtual = [];
 }
 
+// ── Itens do pedido ──────────────────────────────────────────────────────────
+
+function pedAdicionarItem() {
+    _pedItensAtual.push({ produto_id: null, produto_nome: '', quantidade: 1, unidade_medida: 'UN', preco_unitario: 0 });
+    pedRenderizarItens();
+}
+
+function pedRemoverItem(idx) {
+    _pedItensAtual.splice(idx, 1);
+    pedRenderizarItens();
+}
+
+function pedAtualizarItem(idx, campo, valor) {
+    if (!_pedItensAtual[idx]) return;
+    _pedItensAtual[idx][campo] = valor;
+    pedRecalcularTotais();
+}
+
+function pedRenderizarItens() {
+    const body = document.getElementById('ped-itens-body');
+    if (!body) return;
+
+    body.innerHTML = _pedItensAtual.map((item, i) => `
+        <div class="ped-item-card">
+            <div class="ped-item-top">
+                <span class="ped-item-badge">${i + 1}</span>
+                <div class="ped-item-produto-wrap">
+                    <input type="text" class="ped-item-input" id="ped-item-produto-${i}"
+                        value="${_pedEscapar(item.produto_nome)}" autocomplete="off"
+                        placeholder="Buscar produto ou digitar descrição..."
+                        oninput="pedBuscarProduto(${i}, this.value)">
+                    <input type="hidden" id="ped-item-produtoId-${i}" value="${item.produto_id || ''}">
+                    <div class="pl-autocomplete" id="ped-item-auto-${i}"></div>
+                </div>
+                <button type="button" class="ped-item-del" onclick="pedRemoverItem(${i})" title="Remover">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+            <div class="ped-item-bottom">
+                <div class="ped-item-field ped-item-field--qtd">
+                    <label>Qtd</label>
+                    <input type="number" class="ped-item-input" min="0" step="0.01" value="${item.quantidade}"
+                        oninput="pedAtualizarItem(${i}, 'quantidade', parseFloat(this.value)||0)">
+                </div>
+                <div class="ped-item-field ped-item-field--un">
+                    <label>Un.</label>
+                    <input type="text" class="ped-item-input" value="${_pedEscapar(item.unidade_medida)}"
+                        oninput="pedAtualizarItem(${i}, 'unidade_medida', this.value)">
+                </div>
+                <div class="ped-item-field ped-item-field--preco">
+                    <label>Preço Unit.</label>
+                    <input type="number" class="ped-item-input" min="0" step="0.01" value="${item.preco_unitario}"
+                        oninput="pedAtualizarItem(${i}, 'preco_unitario', parseFloat(this.value)||0)">
+                </div>
+                <div class="ped-item-field ped-item-field--total">
+                    <label>Total</label>
+                    <span class="ped-item-total-val" id="ped-item-total-${i}">${(item.quantidade * item.preco_unitario).toFixed(2)}</span>
+                </div>
+            </div>
+        </div>`).join('');
+
+    pedRecalcularTotais();
+}
+
+function pedRecalcularTotais() {
+    _pedItensAtual.forEach((item, i) => {
+        const el = document.getElementById(`ped-item-total-${i}`);
+        if (el) el.textContent = (item.quantidade * item.preco_unitario).toFixed(2);
+    });
+
+    const total   = _pedItensAtual.reduce((s, it) => s + (it.quantidade * it.preco_unitario), 0);
+    const moeda   = document.getElementById('pedMoeda')?.value || 'USD';
+    const totalEl = document.getElementById('pedTotalGeral');
+    if (totalEl) {
+        totalEl.textContent = total
+            ? `${moeda} ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+            : '—';
+    }
+}
+
+// ── Autocomplete produtos ────────────────────────────────────────────────────
+
+async function pedBuscarProduto(idx, termo) {
+    const box = document.getElementById(`ped-item-auto-${idx}`);
+    document.getElementById(`ped-item-produtoId-${idx}`).value = '';
+    pedAtualizarItem(idx, 'produto_id', null);
+    pedAtualizarItem(idx, 'produto_nome', termo);
+    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
+
+    clearTimeout(_pedItemBuscaTimers[idx]);
+    _pedItemBuscaTimers[idx] = setTimeout(async () => {
+        try {
+            const usuario = obterUsuarioLogado();
+            const { data } = await supabaseClient
+                .from('produtos')
+                .select('id, nome, sku')
+                .eq('empresa_id', usuario.empresa_id)
+                .or(`nome.ilike."%${_pedEscaparFiltro(termo)}%",sku.ilike."%${_pedEscaparFiltro(termo)}%"`)
+                .limit(8);
+
+            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum produto encontrado — usando texto digitado</div>'; return; }
+            box.innerHTML = data.map(p => `
+                <div class="pl-auto-item" onclick="pedSelecionarProduto(${idx}, '${p.id}', '${_pedEscaparAtributo(p.nome)}')">
+                    <span class="pl-auto-nome">${_pedEscapar(p.nome)}</span>
+                    ${p.sku ? `<span class="pl-auto-razao">${_pedEscapar(p.sku)}</span>` : ''}
+                </div>`).join('');
+        } catch (e) {}
+    }, 300);
+}
+
+function pedSelecionarProduto(idx, produtoId, nome) {
+    document.getElementById(`ped-item-produtoId-${idx}`).value = produtoId;
+    document.getElementById(`ped-item-produto-${idx}`).value   = nome;
+    document.getElementById(`ped-item-auto-${idx}`).innerHTML  = '';
+    pedAtualizarItem(idx, 'produto_id', produtoId);
+    pedAtualizarItem(idx, 'produto_nome', nome);
+}
+
+document.addEventListener('click', e => {
+    if (e.target.closest('[id^="ped-item-auto-"]') || e.target.closest('[id^="ped-item-produto-"]')) return;
+    document.querySelectorAll('[id^="ped-item-auto-"]').forEach(b => b.innerHTML = '');
+});
+
 async function pedSalvar() {
+    const linhasValidas = _pedItensAtual.filter(it => it.produto_nome?.trim() && it.quantidade > 0);
+    if (!linhasValidas.length) {
+        alert('Adicione ao menos um item com produto, quantidade e preço.');
+        return;
+    }
+
     const btn = document.getElementById('pedBtnSalvar');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+
+    const valorTotal = linhasValidas.reduce((s, it) => s + (it.quantidade * it.preco_unitario), 0);
 
     const dados = {
         numero:               document.getElementById('pedNumero').value.trim() || null,
         status:               document.getElementById('pedStatus').value,
         cliente_id:           document.getElementById('pedClienteId').value || null,
-        valor_total:          document.getElementById('pedValor').value || null,
+        oportunidade_id:      document.getElementById('pedOportunidadeId').value || null,
+        valor_total:          valorTotal || null,
         moeda:                document.getElementById('pedMoeda').value,
         data_pedido:          document.getElementById('pedDataPedido').value || null,
         data_entrega_prevista: document.getElementById('pedDataEntrega').value || null,
@@ -193,7 +387,7 @@ async function pedSalvar() {
     };
 
     const id  = document.getElementById('pedEditId').value || null;
-    const res = await salvarPedido(dados, id);
+    const res = await salvarPedido(dados, id, linhasValidas);
 
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar';
@@ -217,12 +411,12 @@ async function pedBuscarCliente(termo) {
             const { data } = await supabaseClient
                 .from('parceiros')
                 .select('id, razao_social, nome_fantasia')
-                .or(`razao_social.ilike.%${termo}%,nome_fantasia.ilike.%${termo}%`)
+                .or(`razao_social.ilike."%${_pedEscaparFiltro(termo)}%",nome_fantasia.ilike."%${_pedEscaparFiltro(termo)}%"`)
                 .limit(8);
 
             if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum cliente encontrado</div>'; return; }
             box.innerHTML = data.map(p => `
-                <div class="pl-auto-item" onclick="pedSelecionarCliente(${p.id}, '${_pedEscapar(p.nome_fantasia || p.razao_social)}')">
+                <div class="pl-auto-item" onclick="pedSelecionarCliente('${p.id}', '${_pedEscaparAtributo(p.nome_fantasia || p.razao_social)}')">
                     <span class="pl-auto-nome">${_pedEscapar(p.nome_fantasia || p.razao_social)}</span>
                     ${p.nome_fantasia ? `<span class="pl-auto-razao">${_pedEscapar(p.razao_social)}</span>` : ''}
                 </div>`).join('');
@@ -277,6 +471,13 @@ async function pedConfirmarExcluir() {
 function _pedEscapar(str) {
     return String(str || '')
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Para uso como argumento de string dentro de onclick="fn('...')" — além do
+// escape de HTML acima, escapa barra invertida e aspas simples para não
+// quebrar o literal JS de aspas simples embutido no atributo.
+function _pedEscaparAtributo(str) {
+    return _pedEscapar(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 function handleLogout() {

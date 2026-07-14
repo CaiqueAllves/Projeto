@@ -5,15 +5,30 @@
 let _profTodos      = [];
 let _profExcluirId  = null;
 let _profListaAtual = [];
+let _viewMode        = 'kanban';
+
+const KANBAN_COLS = ['enviado', 'aprovado', 'pendente', 'encerrado', 'finalizado'];
 
 // ── Helpers ──────────────────────────────
 function _profFmt(n) {
     return Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function _profEscapar(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
 function _profStatusLabel(status) {
-    const map = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', recusado: 'Recusado' };
+    const map = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado', recusado: 'Encerrado' };
     return map[status] || 'Ativo';
+}
+
+// Mapeia status (incl. legado "recusado") para a coluna do kanban
+function _profGetColuna(status) {
+    const map = { enviado: 'enviado', aprovado: 'aprovado', pendente: 'pendente', encerrado: 'encerrado', finalizado: 'finalizado', recusado: 'encerrado' };
+    return map[status] || 'enviado';
 }
 
 function _profTipoLabel(tipo) {
@@ -23,6 +38,17 @@ function _profTipoLabel(tipo) {
 
 function _profModalIcon(modal) {
     return { aereo: 'fa-plane', maritimo: 'fa-ship', terrestre: 'fa-truck' }[modal] || 'fa-route';
+}
+
+// Botão de ação para gerar/ver o processo vinculado à proforma
+function _profBotaoProcesso(p, status) {
+    if (p.processo_gerado_id) {
+        return `<button class="btn-ver-processo" onclick="profVerProcesso('${p.processo_gerado_id}')"><i class="fa-solid fa-eye"></i> Ver Processo</button>`;
+    }
+    if (status === 'aprovado') {
+        return `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar Processo ?</button>`;
+    }
+    return '';
 }
 
 function _profEmissorNome(p) {
@@ -40,14 +66,20 @@ function _profDestinatarioNome(p) {
 }
 
 function profAtualizarContadores(lista) {
-    const counts = { enviado: 0, aprovado: 0, pendente: 0, recusado: 0 };
-    lista.forEach(p => { if (counts[p.status] !== undefined) counts[p.status]++; });
-    ['enviado', 'aprovado', 'pendente', 'recusado'].forEach(s => {
+    const counts = { enviado: 0, aprovado: 0, pendente: 0, encerrado: 0, finalizado: 0 };
+    lista.forEach(p => { counts[_profGetColuna(p.status || 'enviado')]++; });
+
+    KANBAN_COLS.forEach(s => {
         const key   = s.charAt(0).toUpperCase() + s.slice(1);
         const badge = document.getElementById('count' + key);
         const num   = document.getElementById('count' + key + 'Num');
         if (badge) badge.style.display = counts[s] > 0 ? '' : 'none';
         if (num)   num.textContent = counts[s];
+
+        const colCount = document.getElementById(`count-${s}`);
+        const tabCount = document.getElementById(`tab-count-${s}`);
+        if (colCount) colCount.textContent = counts[s];
+        if (tabCount) tabCount.textContent = counts[s];
     });
 }
 
@@ -91,19 +123,119 @@ async function profCarregarLista() {
             destinatario_emp: empresaMap[p.destinatario_id]  || null,
         }));
 
-        profRenderizarLista(_profTodos);
+        profFiltrar();
     } catch (err) {
         container.innerHTML = `<div class="lista-vazia"><i class="fa-solid fa-circle-exclamation"></i> Erro ao carregar: ${err.message}</div>`;
     }
 }
 
+// ── Despacha para a view ativa (kanban ou lista) ──
+function profRenderConteudo(lista) {
+    _profListaAtual = lista;
+    profAtualizarContadores(lista);
+    const countEl = document.getElementById('listaCount');
+    if (countEl) countEl.textContent = `${lista.length} ${lista.length === 1 ? 'proforma' : 'proformas'}`;
+
+    if (_viewMode === 'kanban') profRenderKanban(lista);
+    else profRenderizarLista(lista);
+}
+
+function profRenderKanban(lista) {
+    const grupos = Object.fromEntries(KANBAN_COLS.map(c => [c, []]));
+    lista.forEach(p => grupos[_profGetColuna(p.status || 'enviado')].push(p));
+
+    KANBAN_COLS.forEach(g => {
+        const body = document.getElementById(`cards-${g}`);
+        if (!body) return;
+        body.innerHTML = grupos[g].length === 0
+            ? `<div class="kanban-vazio"><i class="fa-solid fa-inbox"></i><span>Nenhuma proforma</span></div>`
+            : grupos[g].map(_profRenderCard).join('');
+    });
+}
+
+function _profRenderCard(p) {
+    const status      = _profGetColuna(p.status || 'enviado');
+    const tipoLabel    = _profTipoLabel(p.tipo);
+    const modalIco     = _profModalIcon(p.modal);
+    const modalLabel   = p.modal ? p.modal.charAt(0).toUpperCase() + p.modal.slice(1) : null;
+    const dataEmis     = p.data_emissao ? new Date(p.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : null;
+    const dataAtualizado = p.status_atualizado_em ? new Date(p.status_atualizado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : null;
+    const emissor      = _profEmissorNome(p);
+    const destinatario = _profDestinatarioNome(p);
+    const valorTexto   = p.valor_total
+        ? `${p.moeda_principal || 'USD'} ${Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        : null;
+
+    const optStatus = KANBAN_COLS.map(s =>
+        `<option value="${s}" ${status === s ? 'selected' : ''}>${_profStatusLabel(s)}</option>`
+    ).join('');
+
+    return `
+    <div class="prof-card" id="prof-kcard-${p.id}" data-status="${status}">
+        <div class="prof-card-top">
+            <span class="prof-card-codigo">${_profEscapar(p.codigo) || '—'}</span>
+            ${tipoLabel ? `<span class="prof-card-tipo">${_profEscapar(tipoLabel)}</span>` : ''}
+        </div>
+        ${(p.origem_pais || p.destino_pais) ? `
+        <div class="prof-card-rota">
+            <i class="fa-solid fa-earth-americas"></i>
+            <span class="prof-card-pais">${_profEscapar(p.origem_pais) || '—'}</span>
+            <i class="fa-solid fa-arrow-right prof-card-arrow"></i>
+            <span class="prof-card-pais">${_profEscapar(p.destino_pais) || '—'}</span>
+        </div>` : ''}
+        ${(modalLabel || p.incoterm) ? `
+        <div class="prof-card-modal">
+            ${modalLabel ? `<span class="tag-badge"><i class="fa-solid ${modalIco}"></i> ${_profEscapar(modalLabel)}</span>` : ''}
+            ${p.incoterm ? `<span class="tag-badge">${_profEscapar(p.incoterm)}</span>` : ''}
+        </div>` : ''}
+        <div class="prof-card-empresa">
+            <i class="fa-solid fa-handshake"></i>
+            <span class="prof-card-pais">${_profEscapar(emissor)}</span>
+            <i class="fa-solid fa-arrow-right prof-card-arrow"></i>
+            <span class="prof-card-pais">${_profEscapar(destinatario)}</span>
+        </div>
+        ${valorTexto ? `
+        <div class="prof-card-valor"><i class="fa-solid fa-sack-dollar"></i> ${_profEscapar(valorTexto)}</div>` : ''}
+        <div class="prof-card-footer">
+            <div class="prof-card-meta">
+                ${dataEmis ? `<span class="prof-card-data"><i class="fa-regular fa-calendar"></i> Criado em ${dataEmis}</span>` : '<span></span>'}
+                <select class="prof-status-select prof-status-${status}" onchange="profAlterarStatus('${p.id}', this)">
+                    ${optStatus}
+                </select>
+            </div>
+            ${dataAtualizado ? `<div class="prof-card-atualizado"><i class="fa-solid fa-rotate-right"></i> Atualizado em ${dataAtualizado}</div>` : ''}
+            ${_profBotaoProcesso(p, status)}
+            <div class="prof-card-btns">
+                <button class="btn-acao btn-ver"     onclick="profVisualizar('${p.id}')" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                <button class="btn-acao btn-pdf"     onclick="profGerarPDF('${p.id}')" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                <button class="btn-acao btn-editar"  onclick="profEditar('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-acao btn-excluir" onclick="profAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>
+    </div>`;
+}
+
+function switchView(mode) {
+    _viewMode = mode;
+    document.getElementById('btnViewKanban').classList.toggle('active', mode === 'kanban');
+    document.getElementById('btnViewLista').classList.toggle('active',  mode === 'lista');
+    document.getElementById('kanbanBoard').style.display    = mode === 'kanban' ? '' : 'none';
+    document.getElementById('kanbanTabs').style.display     = mode === 'kanban' ? '' : 'none';
+    document.getElementById('proformasLista').style.display = mode === 'lista'  ? '' : 'none';
+    profRenderConteudo(_profListaAtual);
+}
+
+function kanbanSwitchTab(btn) {
+    document.querySelectorAll('.kanban-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const col = btn.getAttribute('data-col');
+    document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('kanban-col-active'));
+    document.getElementById(`col-${col}`)?.classList.add('kanban-col-active');
+}
+
 function profRenderizarLista(lista) {
     const container = document.getElementById('listaContainer');
-    const countEl   = document.getElementById('listaCount');
     if (!container) return;
-    _profListaAtual = lista;
-    if (countEl) countEl.textContent = `${lista.length} ${lista.length === 1 ? 'proforma' : 'proformas'}`;
-    profAtualizarContadores(lista);
 
     if (!lista.length) {
         container.innerHTML = '<div class="lista-vazia"><i class="fa-solid fa-file-circle-xmark"></i> Nenhuma proforma encontrada.</div>';
@@ -115,9 +247,9 @@ function profRenderizarLista(lista) {
         const dataVal    = p.data_validade ? new Date(p.data_validade + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
         const modalIco   = _profModalIcon(p.modal);
         const modalLabel = p.modal ? p.modal.charAt(0).toUpperCase() + p.modal.slice(1) : null;
-        const status     = p.status || 'enviado';
+        const status     = _profGetColuna(p.status || 'enviado');
 
-        const optStatus = ['enviado','aprovado','pendente','recusado'].map(s =>
+        const optStatus = KANBAN_COLS.map(s =>
             `<option value="${s}" ${status === s ? 'selected' : ''}>${_profStatusLabel(s)}</option>`
         ).join('');
 
@@ -165,7 +297,7 @@ function profRenderizarLista(lista) {
                 </select>
             </td>
             <td class="col-gerar-processo">
-                ${status === 'aprovado' ? `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar Processo ?</button>` : ''}
+                ${_profBotaoProcesso(p, status)}
             </td>
         </tr>`;
     }).join('');
@@ -196,30 +328,16 @@ async function profAlterarStatus(id, selectEl) {
     selectEl.disabled  = true;
 
     try {
+        const agora = new Date().toISOString();
         const { error } = await supabaseClient
             .from('proformas')
-            .update({ status: novoStatus })
+            .update({ status: novoStatus, status_atualizado_em: agora })
             .eq('id', id);
         if (error) throw error;
 
         const p = _profTodos.find(x => x.id === id);
-        if (p) p.status = novoStatus;
-        profAtualizarContadores(_profListaAtual);
-
-        const row = document.getElementById(`prof-card-${id}`);
-        if (row) {
-            const gerarCell = row.querySelector('.col-gerar-processo');
-            const btnExiste = row.querySelector('.btn-seguir-processo');
-            if (novoStatus === 'aprovado' && !btnExiste && gerarCell) {
-                const btn = document.createElement('button');
-                btn.className = 'btn-seguir-processo';
-                btn.textContent = 'Gerar Processo ?';
-                btn.onclick = () => profSeguirProcesso(id);
-                gerarCell.appendChild(btn);
-            } else if (novoStatus !== 'aprovado' && btnExiste) {
-                btnExiste.remove();
-            }
-        }
+        if (p) { p.status = novoStatus; p.status_atualizado_em = agora; }
+        profRenderConteudo(_profListaAtual);
     } catch (err) {
         alert('Erro ao atualizar status: ' + err.message);
         selectEl.value     = statusAntes;
@@ -235,7 +353,7 @@ function profFiltrar() {
     const s = document.getElementById('filtroStatus')?.value || '';
 
     let lista = _profTodos;
-    if (s) lista = lista.filter(p => (p.status || 'enviado') === s);
+    if (s) lista = lista.filter(p => _profGetColuna(p.status || 'enviado') === s);
     if (q) lista = lista.filter(p =>
         (p.codigo        || '').toLowerCase().includes(q) ||
         (p.origem_pais   || '').toLowerCase().includes(q) ||
@@ -246,7 +364,7 @@ function profFiltrar() {
         (_profDestinatarioNome(p)).toLowerCase().includes(q)
     );
 
-    profRenderizarLista(lista);
+    profRenderConteudo(lista);
 }
 
 // ── Editar ────────────────────────────────
@@ -516,6 +634,10 @@ async function _profGerarPDFDados(d) {
 // ── Seguir com Processo ───────────────────
 function profSeguirProcesso(id) {
     window.open(`formularios.html?tab=processo&proforma_id=${id}`, '_blank');
+}
+
+function profVerProcesso(processoId) {
+    window.open(`formularios.html?tab=processo&id=${processoId}&modo=visualizar`, '_blank');
 }
 
 // ── Excluir (soft delete) ─────────────────

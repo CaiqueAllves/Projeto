@@ -538,3 +538,48 @@
         align-items: flex-start;
     }
 }
+
+/* ========================================
+   MODO VISITANTE (acesso sem login)
+   ======================================== */
+.visitante-anonimo aside,
+.visitante-anonimo .mob-hamburger,
+.visitante-anonimo .mob-conta-btn,
+.visitante-anonimo .mob-conta-dropdown,
+.visitante-anonimo .user-info-card,
+.visitante-anonimo .logout,
+.visitante-anonimo .suporte-float,
+.visitante-anonimo .suporte-panel {
+    display: none !important;
+}
+
+/* Sem aside, remove o deslocamento fixo reservado pra ele (style-navegador.css) */
+.visitante-anonimo .topbar {
+    left: 0;
+}
+
+.visitante-anonimo main {
+    margin-left: 0;
+}
+
+.visitante-btn-voltar {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    background: var(--azul);
+    color: var(--branco);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    transition: var(--transicao);
+}
+
+.visitante-anonimo .visitante-btn-voltar {
+    display: flex;
+}
+
+.visitante-btn-voltar:hover {
+    opacity: .9;
+}

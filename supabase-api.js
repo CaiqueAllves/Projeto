@@ -834,6 +834,56 @@ async function _gerarNumeroProcesso(empresaId) {
     return `PROC${ano}${String(seq).padStart(6, '0')}`;
 }
 
+// Monta o payload completo do processo a partir de `dados` (saída de
+// _coletarDadosProcesso em formularios.js). Usado tanto no insert quanto no
+// update vindos do formulário, para que nenhum campo se perca ao salvar.
+function _payloadProcesso(dados) {
+    return {
+        proforma_id:            dados.proforma_id || null,
+        tipo:                    dados.tipo || null,
+        proposito:               dados.proposito || null,
+        emissor_tipo:            dados.emissor_tipo || 'usuario',
+        documento_tipo:          dados.documento_tipo || null,
+        documento:               dados.documento || null,
+        remetente_parceiro_id:   dados.remetente_parceiro_id || null,
+        status:                  dados.status || 'aberto',
+        empresa_parceira_id:     dados.empresa_parceira_id || null,
+        modal:                   dados.modal || null,
+        moeda:                   dados.moeda || 'USD',
+        valor_total:             dados.valor_total || null,
+        incoterm:                dados.incoterm || null,
+        pais_origem:             dados.pais_origem || null,
+        origem_pais_codigo:      dados.origem_pais_codigo || null,
+        pais_destino:            dados.pais_destino || null,
+        destino_pais_codigo:     dados.destino_pais_codigo || null,
+        navio:                   dados.navio || null,
+        aeronave:                dados.aeronave || null,
+        porto_origem:            dados.porto_origem || null,
+        porto_destino:           dados.porto_destino || null,
+        aeroporto_origem:        dados.aeroporto_origem || null,
+        aeroporto_destino:       dados.aeroporto_destino || null,
+        fronteira_saida:         dados.fronteira_saida || null,
+        fronteira_entrada:       dados.fronteira_entrada || null,
+        container_tipo:          dados.container_tipo || null,
+        container_numero:        dados.container_numero || null,
+        origem_endereco:         dados.origem_endereco || {},
+        origem_coleta:           dados.origem_coleta || {},
+        destino_endereco:        dados.destino_endereco || {},
+        destino_responsavel:     dados.destino_responsavel || {},
+        rota_intermediarios:     dados.rota_intermediarios || [],
+        data_abertura:           dados.data_abertura || null,
+        data_previsao:           dados.data_previsao || null,
+        data_embarque:           dados.data_embarque || null,
+        data_chegada:            dados.data_chegada || null,
+        data_cancelamento:       dados.data_cancelamento || null,
+        obs_prazos:              dados.obs_prazos || null,
+        observacoes:             dados.observacoes || null,
+        etapas:                  dados.etapas || [],
+        documentos:              dados.documentos || {},
+        transporte:              dados.transporte || {},
+    };
+}
+
 async function salvarProcesso(dados) {
     try {
         const usuario = obterUsuarioLogado();
@@ -844,22 +894,10 @@ async function salvarProcesso(dados) {
         const { data, error } = await supabaseClient
             .from('processos')
             .insert({
+                ..._payloadProcesso(dados),
                 numero_processo:         numero_processo,
-                tipo:                    dados.tipo,
-                status:                  dados.status || 'aberto',
                 empresa_proprietaria_id: usuario.empresa_id,
-                empresa_parceira_id:     dados.empresa_parceira_id || null,
-                modal:                   dados.modal || null,
-                moeda:                   dados.moeda || 'USD',
-                valor_total:             dados.valor_total || null,
-                incoterm:                dados.incoterm || null,
-                pais_origem:             dados.pais_origem || null,
-                pais_destino:            dados.pais_destino || null,
-                porto_origem:            dados.porto_origem || null,
-                porto_destino:           dados.porto_destino || null,
                 data_abertura:           dados.data_abertura || new Date().toISOString().split('T')[0],
-                data_previsao:           dados.data_previsao || null,
-                observacoes:             dados.observacoes || null,
             })
             .select()
             .single();
@@ -876,9 +914,15 @@ async function atualizarProcesso(id, dados) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
+        // Atualizações parciais (ex: só o status, vindas do kanban) não devem
+        // sobrescrever o resto dos campos com null — o payload completo só é
+        // montado quando `dados` vem do formulário (_coletarDadosProcesso
+        // sempre inclui a chave `tipo`, mesmo que vazia).
+        const payload = ('tipo' in dados) ? _payloadProcesso(dados) : dados;
+
         const { error } = await supabaseClient
             .from('processos')
-            .update({ ...dados, atualizado_em: new Date().toISOString() })
+            .update({ ...payload, atualizado_em: new Date().toISOString() })
             .eq('id', id)
             .eq('empresa_proprietaria_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
@@ -920,7 +964,7 @@ async function buscarProdutos(apenasAtivos = false) {
             .eq('empresa_id', usuario.empresa_id)
             .order('nome', { ascending: true });
 
-        if (apenasAtivos) query = query.eq('ativo', true);
+        if (apenasAtivos) query = query.eq('status', 'ativo');
 
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
@@ -1070,7 +1114,7 @@ async function salvarPropostaDB(dados) {
                 criado_por:          usuario.id,
                 tipo:                dados.tipo                || null,
                 proposito:           dados.proposito           || null,
-                status:              'enviado',
+                status:              'pendente',
                 emissor_tipo:        dados.emissor_tipo        || 'usuario',
                 parceiro_id:         dados.parceiro_id         || null,
                 documento:           dados.documento           || null,
@@ -1122,6 +1166,24 @@ async function buscarProformaDB(id) {
             .single();
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
+// Marca a proforma como finalizada quando um processo é gerado a partir dela
+async function marcarProformaFinalizadaDB(proformaId, processoId) {
+    try {
+        const { error } = await supabaseClient
+            .from('proformas')
+            .update({
+                status:               'finalizado',
+                processo_gerado_id:   processoId,
+                status_atualizado_em: new Date().toISOString(),
+            })
+            .eq('id', proformaId);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
     }
@@ -1421,6 +1483,7 @@ window.supabaseAPI = {
     salvarProposta: salvarPropostaDB,
     buscarProforma: buscarProformaDB,
     atualizarProforma: atualizarProformaDB,
+    marcarProformaFinalizada: marcarProformaFinalizadaDB,
     contarPropostas,
     // Comercial
     buscarOportunidades,
@@ -1431,6 +1494,7 @@ window.supabaseAPI = {
     salvarPedido,
     atualizarStatusPedido,
     excluirPedido,
+    vincularProformaAoPedido,
     // Financeiro
     buscarContasPagar,
     buscarContasPagarPeriodo,
@@ -1548,7 +1612,7 @@ async function buscarPedidos() {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('pedidos')
-            .select('*, parceiros(razao_social, nome_fantasia)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedido_itens(*, produtos(nome, sku))')
             .order('created_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
         const { data, error } = await query;
@@ -1557,7 +1621,8 @@ async function buscarPedidos() {
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
 }
 
-async function salvarPedido(dados, id = null) {
+// itens: [{ produto_id, produto_nome, quantidade, unidade_medida, preco_unitario }]
+async function salvarPedido(dados, id = null, itens = []) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
@@ -1577,6 +1642,34 @@ async function salvarPedido(dados, id = null) {
             result = await supabaseClient.from('pedidos').insert(payload).select().single();
         }
         if (result.error) return { sucesso: false, mensagem: result.error.message };
+
+        const pedidoId = result.data.id;
+
+        // Substitui os itens sem transação disponível no cliente: insere os novos
+        // primeiro e só apaga os antigos (por id) depois do insert ter sucesso, para
+        // que uma falha no insert nunca deixe o pedido sem nenhum item.
+        const { data: itensAntigos } = await supabaseClient.from('pedido_itens').select('id').eq('pedido_id', pedidoId);
+        const idsAntigos = (itensAntigos || []).map(i => i.id);
+
+        const linhasValidas = (itens || []).filter(it => it.produto_nome && Number(it.quantidade) > 0);
+        if (linhasValidas.length) {
+            const rows = linhasValidas.map(it => ({
+                pedido_id: pedidoId,
+                produto_id: it.produto_id || null,
+                produto_nome: it.produto_nome,
+                quantidade: it.quantidade,
+                unidade_medida: it.unidade_medida || 'UN',
+                preco_unitario: it.preco_unitario || 0,
+            }));
+            const { error: insErr } = await supabaseClient.from('pedido_itens').insert(rows);
+            if (insErr) return { sucesso: false, mensagem: insErr.message };
+        }
+
+        if (idsAntigos.length) {
+            const { error: delErr } = await supabaseClient.from('pedido_itens').delete().in('id', idsAntigos);
+            if (delErr) return { sucesso: false, mensagem: delErr.message };
+        }
+
         return { sucesso: true, data: result.data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
@@ -1585,6 +1678,16 @@ async function atualizarStatusPedido(id, status) {
     try {
         const { error } = await supabaseClient.from('pedidos')
             .update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// Marca o pedido como vinculado à proforma gerada a partir dele
+async function vincularProformaAoPedido(pedidoId, proformaId) {
+    try {
+        const { error } = await supabaseClient.from('pedidos')
+            .update({ proforma_id: proformaId, updated_at: new Date().toISOString() }).eq('id', pedidoId);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }

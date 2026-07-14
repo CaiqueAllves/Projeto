@@ -103,6 +103,107 @@
     gap: 6px;
 }
 
+/* ── Itens do pedido ───────────────────────────────────────────── */
+.ped-itens-wrapper { display: flex; flex-direction: column; gap: 8px; }
+
+.ped-item-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ped-item-top { display: flex; align-items: center; gap: 8px; }
+
+.ped-item-badge {
+    min-width: 22px;
+    height: 22px;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.ped-item-produto-wrap { flex: 1; position: relative; }
+
+.ped-item-bottom { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+
+.ped-item-field { display: flex; flex-direction: column; gap: 4px; }
+.ped-item-field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    white-space: nowrap;
+}
+
+.ped-item-field--qtd   { width: 90px; }
+.ped-item-field--un    { width: 80px; }
+.ped-item-field--preco { width: 120px; }
+.ped-item-field--total { min-width: 100px; }
+
+.ped-item-total-val {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 13px;
+    padding: 6px 2px;
+    white-space: nowrap;
+}
+
+.ped-item-input {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+.ped-item-input:focus { outline: none; border-color: var(--azul); }
+
+.ped-item-del {
+    background: none;
+    border: none;
+    color: #cbd5e1;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: color .15s, background .15s;
+}
+.ped-item-del:hover { color: #ef4444; background: #fee2e2; }
+
+.ped-btn-add-item {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #f1f5f9;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ped-btn-add-item:hover { background: #e0f2fe; border-color: var(--azul); color: var(--azul); }
+
+.ped-total-readonly {
+    font-weight: 700;
+    color: var(--azul);
+    font-size: 14px;
+    padding: 8px 0;
+}
+
 /* ── Mobile ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .ped-table-wrap {

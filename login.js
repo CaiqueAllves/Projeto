@@ -2,6 +2,39 @@
 // LOGIN - JAVASCRIPT
 // ========================================
 
+// ── EmailJS — e-mail de boas-vindas ──────
+// 1. Acesse https://www.emailjs.com e crie uma conta gratuita
+// 2. Conecte um serviço de e-mail (Email Services) e crie o template com email-template-boas-vindas.html
+// 3. Preencha as 3 constantes abaixo com os IDs gerados
+const BOASVINDAS_EMAILJS_PUBLIC_KEY  = 'zpEU_nVjkI8qGClOC';
+const BOASVINDAS_EMAILJS_SERVICE_ID  = 'service_umbw1hi';
+const BOASVINDAS_EMAILJS_TEMPLATE_ID = 'template_q18po1k';
+
+function _boasVindasCarregarEmailJS(callback) {
+    if (window.emailjs) { callback(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    script.onload  = () => { emailjs.init(BOASVINDAS_EMAILJS_PUBLIC_KEY); callback(); };
+    script.onerror = () => callback(new Error('Falha ao carregar EmailJS'));
+    document.head.appendChild(script);
+}
+
+function enviarEmailBoasVindas({ nome, email, empresa }) {
+    _boasVindasCarregarEmailJS(async (err) => {
+        if (err) { console.warn('[Boas-vindas]', err); return; }
+        try {
+            await emailjs.send(BOASVINDAS_EMAILJS_SERVICE_ID, BOASVINDAS_EMAILJS_TEMPLATE_ID, {
+                to_name:   nome,
+                to_email:  email,
+                empresa:   empresa || 'sua empresa',
+                login_url: window.location.origin + '/login.html'
+            });
+        } catch (emailErr) {
+            console.warn('[Boas-vindas] Falha ao enviar e-mail:', emailErr);
+        }
+    });
+}
+
 // Aplicar máscara de CPF
 function aplicarMascaraCPF(input) {
     input.addEventListener('input', function(e) {
@@ -224,6 +257,8 @@ async function realizarCadastro() {
             fecharModal('modalCadastro');
             document.getElementById('cadastroForm').reset();
             document.getElementById('cpf').value = cpf;
+
+            enviarEmailBoasVindas({ nome, email, empresa });
 
             if (resultado.chave_gerada) {
                 document.getElementById('chaveDisplay').textContent = resultado.chave_gerada;

@@ -50,6 +50,14 @@
                         <i class="fa-solid fa-magnifying-glass filter-icon"></i>
                         <input type="text" id="filtroProcessos" placeholder="Filtrar por código, cliente, origem, destino..." />
                     </div>
+                    <select id="filtroStatusProcesso" class="filter-select" onchange="renderTabela(document.getElementById('filtroProcessos')?.value || '')">
+                        <option value="">Todos os status</option>
+                        <option value="aberto">Aberto</option>
+                        <option value="em_andamento">Em Andamento</option>
+                        <option value="aguardando_documentos">Aguard. Documentos</option>
+                        <option value="concluido">Concluído</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
                     <div class="view-toggle">
                         <button class="view-btn active" id="btnViewKanban" onclick="switchView('kanban')" title="Kanban">
                             <i class="fa-solid fa-table-columns"></i>
@@ -178,191 +186,6 @@
             </footer>
         </div>
     </main>
-</div>
-
-<!-- =============================================
-     MODAL: FORMULÁRIO DE PROCESSO
-============================================== -->
-<div class="modal-form-overlay" id="modalFormProcesso" onclick="fecharModalProcesso()">
-    <div class="modal-form-wrapper" onclick="event.stopPropagation()">
-
-        <div class="modal-form-top">
-            <h3><i class="fa-solid fa-diagram-project"></i> <span id="modalFormTitulo">Novo Processo</span></h3>
-            <button class="modal-form-close" onclick="fecharModalProcesso()">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
-        <div class="modal-form-body">
-            <form id="processoForm" novalidate>
-                <input type="hidden" id="processoEditandoId" />
-
-                <!-- SEÇÃO: DADOS DO PROCESSO -->
-                <div class="form-section active">
-                    <h3 class="section-title" onclick="toggleSection(this)">
-                        <i class="fa-solid fa-diagram-project"></i>
-                        <span>Dados do Processo</span>
-                        <i class="fa-solid fa-chevron-down section-arrow"></i>
-                    </h3>
-                    <div class="section-content">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="procCodigo">Código <span class="required">*</span></label>
-                                <input id="procCodigo" name="procCodigo" type="text" maxlength="30" required placeholder="Ex: PRC-2026-001">
-                            </div>
-                            <div class="form-group">
-                                <label for="procTipo">Tipo</label>
-                                <select id="procTipo" name="procTipo">
-                                    <option value="importacao" selected>Importação</option>
-                                    <option value="exportacao">Exportação</option>
-                                    <option value="interno">Interno</option>
-                                </select>
-                            </div>
-                            <div class="form-group full-width">
-                                <label for="procCliente">Cliente/Empresa <span class="required">*</span></label>
-                                <div class="autocomplete-wrapper">
-                                    <input id="procCliente" name="procCliente" type="text" maxlength="120" required placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
-                                    <input type="hidden" id="procClienteId">
-                                    <div class="autocomplete-list" id="procClienteLista"></div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="procOrigem">Origem</label>
-                                <input id="procOrigem" name="procOrigem" type="text" maxlength="60" placeholder="Ex: Shanghai/CN">
-                            </div>
-                            <div class="form-group">
-                                <label for="procDestino">Destino</label>
-                                <input id="procDestino" name="procDestino" type="text" maxlength="60" placeholder="Ex: Santos/BR">
-                            </div>
-                            <div class="form-group">
-                                <label for="procIncoterm">Incoterm</label>
-                                <select id="procIncoterm" name="procIncoterm">
-                                    <option value="">Selecione...</option>
-                                    <option value="EXW">EXW</option>
-                                    <option value="FOB">FOB</option>
-                                    <option value="CIF">CIF</option>
-                                    <option value="DAP">DAP</option>
-                                    <option value="DDP">DDP</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="procModal">Modal</label>
-                                <select id="procModal" name="procModal">
-                                    <option value="maritimo" selected>Marítimo</option>
-                                    <option value="aereo">Aéreo</option>
-                                    <option value="rodoviario">Rodoviário</option>
-                                    <option value="ferroviario">Ferroviário</option>
-                                </select>
-                            </div>
-                            <div class="form-group full-width">
-                                <label for="procObservacoes">Observações</label>
-                                <textarea id="procObservacoes" name="procObservacoes" maxlength="500" rows="3" placeholder="Notas internas, referências, contatos, etc."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO: PRAZOS E STATUS -->
-                <div class="form-section">
-                    <h3 class="section-title" onclick="toggleSection(this)">
-                        <i class="fa-solid fa-calendar-days"></i>
-                        <span>Prazos e Status</span>
-                        <i class="fa-solid fa-chevron-down section-arrow"></i>
-                    </h3>
-                    <div class="section-content" style="display:none;">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="procStatus">Status</label>
-                                <select id="procStatus" name="procStatus">
-                                    <option value="aberto" selected>Aberto</option>
-                                    <option value="andamento">Em andamento</option>
-                                    <option value="concluido">Concluído</option>
-                                    <option value="cancelado">Cancelado</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="procAbertura">Data de Abertura</label>
-                                <input id="procAbertura" name="procAbertura" type="date">
-                            </div>
-                            <div class="form-group">
-                                <label for="procEmbarque">Embarque (estimado)</label>
-                                <input id="procEmbarque" name="procEmbarque" type="date">
-                            </div>
-                            <div class="form-group">
-                                <label for="procChegada">Chegada (estimado)</label>
-                                <input id="procChegada" name="procChegada" type="date">
-                            </div>
-                            <div class="form-group">
-                                <label for="procContainerTipo">Container</label>
-                                <select id="procContainerTipo" name="procContainerTipo">
-                                    <option value="">Não aplica</option>
-                                    <option value="20">20'</option>
-                                    <option value="40">40'</option>
-                                    <option value="40hc">40' HC</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="procContainerNum">Número do Container</label>
-                                <input id="procContainerNum" name="procContainerNum" type="text" maxlength="16" placeholder="Ex: MSKU1234567">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO: ETAPAS -->
-                <div class="form-section">
-                    <h3 class="section-title" onclick="toggleSection(this)">
-                        <i class="fa-solid fa-list-check"></i>
-                        <span>Etapas do Processo</span>
-                        <i class="fa-solid fa-chevron-down section-arrow"></i>
-                    </h3>
-                    <div class="section-content" style="display:none;">
-                        <div class="etapas-grid">
-                            <div class="etapas-col">
-                                <div class="etapas-head">
-                                    <div class="etapas-title">Etapas</div>
-                                    <button class="btn-mini" type="button" id="btnAddEtapa"><i class="fa-solid fa-plus"></i> Etapa</button>
-                                </div>
-                                <div class="etapas-list" id="etapasList"></div>
-                            </div>
-                            <div class="etapas-col">
-                                <div class="tip-card">
-                                    <div class="tip-title"><i class="fa-solid fa-lightbulb"></i> Dica</div>
-                                    <p>Use etapas para padronizar o fluxo (ex: Booking, BL Draft, Embarque, Chegada, Desembaraço).</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO: DOCUMENTOS -->
-                <div class="form-section">
-                    <h3 class="section-title" onclick="toggleSection(this)">
-                        <i class="fa-solid fa-folder-open"></i>
-                        <span>Documentos</span>
-                        <i class="fa-solid fa-chevron-down section-arrow"></i>
-                    </h3>
-                    <div class="section-content" style="display:none;">
-                        <div class="form-group full-width">
-                            <label>Checklist de documentos</label>
-                            <div class="checklist" id="docsChecklist"></div>
-                            <small class="info-text">Marque o que já foi recebido/conferido.</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BOTÕES DE AÇÃO -->
-                <div class="form-actions">
-                    <button type="button" class="btn-clear" id="btnLimparProcesso">
-                        <i class="fa-solid fa-eraser"></i> Limpar Dados
-                    </button>
-                    <button type="submit" class="btn-save">
-                        <i class="fa-solid fa-check"></i> Salvar Processo
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <!-- =============================================

@@ -250,6 +250,43 @@ function gerarPDFProcesso() {
     }
 
     // ════════════════════════════════════════
+    // CONTAINER
+    // ════════════════════════════════════════
+    const containerTipo = val('proc-container-tipo');
+    const containerNum  = val('proc-container-num');
+    if (containerTipo !== '—' || containerNum !== '—') {
+        secHeader('Container', '▶');
+        campo('Tipo',   containerTipo, ML,      Y, 60);
+        campo('Número', containerNum,  ML + 70, Y, 100);
+        Y += 14;
+    }
+
+    // ════════════════════════════════════════
+    // TRANSPORTE
+    // ════════════════════════════════════════
+    const transpRazao      = val('transp-razao');
+    const transpPlaca      = val('transp-placa');
+    const transpMotorista  = val('transp-motorista');
+    const transpFreteValor = val('transp-frete-valor');
+    const temTransporte = [transpRazao, transpPlaca, transpMotorista, transpFreteValor].some(v => v !== '—');
+    if (temTransporte) {
+        if (Y > 240) { doc.addPage(); Y = 20; }
+        secHeader('Transporte', '▶');
+        campo('Transportadora', transpRazao, ML,       Y, 90);
+        campo('Nº de Coleta',   val('transp-num-coleta'), ML + 100, Y, 90);
+        Y += 10;
+        campo('Tipo de Veículo', val('transp-tipo-veiculo'), ML,      Y, 60);
+        campo('Placa',           transpPlaca,               ML + 70, Y, 40);
+        campo('Motorista',       transpMotorista,           ML + 120, Y, 70);
+        Y += 10;
+        const freteMoeda = val('transp-frete-moeda');
+        const freteTxt = transpFreteValor !== '—' ? `${freteMoeda !== '—' ? freteMoeda + ' ' : ''}${transpFreteValor}` : '—';
+        campo('Valor do Frete',  freteTxt,               ML,       Y, 60);
+        campo('Seguro',          val('transp-seguro'),    ML + 70, Y, 120);
+        Y += 14;
+    }
+
+    // ════════════════════════════════════════
     // OBSERVAÇÕES
     // ════════════════════════════════════════
     const obs = val('proc-obs-prazos') !== '—' ? val('proc-obs-prazos') : val('proc-observacoes');

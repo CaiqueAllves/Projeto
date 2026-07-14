@@ -668,6 +668,16 @@
 
 .proc-card-etapa i { font-size: 0.62rem; }
 
+.proc-card-valor {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #15803d;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.proc-card-valor i { font-size: 0.68rem; }
+
 .proc-card-footer {
     border-top: 1px solid #f1f5f9;
     padding-top: 10px;

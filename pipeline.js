@@ -6,6 +6,7 @@ let _plTodas    = [];
 let _plFiltradas = [];
 let _plExcluirId = null;
 let _plTabAtiva  = 'lead';
+let _plPedidosMap = {};
 
 const PL_ETAPAS = ['lead', 'proposta', 'negociacao', 'fechado'];
 
@@ -45,6 +46,20 @@ async function plCarregar() {
     }
     _plTodas = res.data || [];
     _plFiltradas = [..._plTodas];
+
+    // Link reverso: quais oportunidades já geraram um Pedido
+    _plPedidosMap = {};
+    const oportunidadeIds = _plTodas.map(o => o.id).filter(Boolean);
+    if (oportunidadeIds.length > 0) {
+        try {
+            const { data: pedidosLinkados } = await supabaseClient
+                .from('pedidos')
+                .select('id, numero, oportunidade_id')
+                .in('oportunidade_id', oportunidadeIds);
+            (pedidosLinkados || []).forEach(p => { _plPedidosMap[p.oportunidade_id] = p; });
+        } catch (e) {}
+    }
+
     plRenderizar();
 }
 
@@ -107,6 +122,16 @@ function _plRenderCard(o) {
     const podeAvancar = o.etapa !== 'fechado' && o.etapa !== 'perdido';
     const proxEtapa   = { lead: 'proposta', proposta: 'negociacao', negociacao: 'fechado' };
 
+    let botaoPedido = '';
+    if (o.etapa === 'fechado') {
+        const pedidoLinkado = _plPedidosMap[o.id];
+        if (pedidoLinkado) {
+            botaoPedido = `<button class="btn-ver-processo" onclick="plVerPedido('${pedidoLinkado.id}')"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido ${_plEscapar(pedidoLinkado.numero || '')}</button>`;
+        } else {
+            botaoPedido = `<button class="btn-seguir-processo" onclick="plGerarPedido('${o.id}')"><i class="fa-solid fa-bag-shopping"></i> Gerar Pedido</button>`;
+        }
+    }
+
     return `
         <div class="pl-card" data-etapa="${o.etapa}" data-id="${o.id}">
             <div class="pl-card-header">
@@ -125,6 +150,7 @@ function _plRenderCard(o) {
                     ${o.responsavel ? `<span class="pl-card-resp"><i class="fa-solid fa-user-tie"></i> ${_plEscapar(o.responsavel)}</span>` : '<span></span>'}
                     ${dataFmt ? `<span class="pl-card-data"><i class="fa-regular fa-calendar"></i> ${dataFmt}</span>` : '<span></span>'}
                 </div>
+                ${botaoPedido}
                 <div class="pl-card-btns">
                     <button class="pl-btn-acao pl-btn-editar" data-action="editar" data-id="${o.id}" title="Editar">
                         <i class="fa-solid fa-pen"></i>
@@ -194,6 +220,26 @@ function plAtualizarMobileTab() {
     document.querySelectorAll('.pl-col').forEach(col => {
         col.style.display = col.dataset.etapa === _plTabAtiva ? '' : 'none';
     });
+}
+
+// ── Gerar/ver Pedido a partir da oportunidade ──────────────────────────────
+
+function plGerarPedido(id) {
+    const o = _plTodas.find(x => x.id === id);
+    if (!o) return;
+    const cliente = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '';
+    const params = new URLSearchParams({
+        oportunidade_id: id,
+        cliente_id:      o.cliente_id || '',
+        cliente_nome:    cliente,
+        valor:           o.valor || '',
+        moeda:           o.moeda || 'USD',
+    });
+    window.open(`pedidos.html?${params.toString()}`, '_blank');
+}
+
+function plVerPedido(pedidoId) {
+    window.open(`pedidos.html?editar=${pedidoId}`, '_blank');
 }
 
 // ── Avançar etapa ──────────────────────────────────────────────────────────

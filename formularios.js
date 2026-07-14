@@ -293,6 +293,13 @@ function salvarProcesso(e) {
         return;
     }
 
+    const emissorTipo = document.querySelector('input[name="proc-emissor-tipo"]:checked')?.value;
+    if (emissorTipo === 'terceiro' && !document.getElementById('proc-cliente-id')?.value) {
+        mostrarNotificacao('Selecione o Remetente antes de salvar.', 'warning');
+        document.getElementById('proc-cliente')?.focus();
+        return;
+    }
+
     const modal = document.getElementById('modal-confirmar-salvar');
     modal.dataset.origem = 'processo';
     modal.style.display = 'flex';
@@ -334,6 +341,12 @@ async function confirmarSalvar() {
 
             posModal.style.display = 'flex';
 
+            // Proforma gerada a partir de um Pedido: vincula de volta ao pedido
+            const pedidoOrigemId = document.getElementById('prop-pedido-id')?.value || '';
+            if (!editandoId && pedidoOrigemId && res.data?.id) {
+                await window.supabaseAPI.vincularProformaAoPedido(pedidoOrigemId, res.data.id);
+            }
+
             // Auto-gerar PDF ao salvar
             gerarPDFProposta();
         } else {
@@ -355,6 +368,12 @@ async function confirmarSalvar() {
 
     if (resProc.sucesso) {
         localStorage.setItem('processos_updated', Date.now());
+
+        // Processo gerado a partir de uma proforma: marca a proforma como finalizada
+        const propostaOrigemId = document.getElementById('proc-proposta-id')?.value || '';
+        if (!editandoIdProc && propostaOrigemId && resProc.data?.id) {
+            await window.supabaseAPI.marcarProformaFinalizada(propostaOrigemId, resProc.data.id);
+        }
 
         const tituloEl   = document.getElementById('pos-salvo-titulo');
         const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
@@ -380,18 +399,133 @@ async function procCarregarEdicao(id) {
 
     // Preenche campos do formulário
     const set = (sel, val) => { const el = document.getElementById(sel); if (el && val != null) el.value = val; };
+    const fire = (sel, evt) => document.getElementById(sel)?.dispatchEvent(new Event(evt));
 
-    set('proc-tipo',          p.tipo);
-    set('proc-status',        p.status);
-    set('proc-modal',         p.modal);
-    set('proc-incoterm',      p.incoterm);
-    set('proc-origem-pais',   p.pais_origem);
-    set('proc-destino-pais',  p.pais_destino);
-    set('proc-porto-origem',  p.porto_origem);
-    set('proc-porto-destino', p.porto_destino);
-    set('proc-data-abertura', p.data_abertura);
-    set('proc-observacoes',   p.observacoes);
-    set('proc-codigo',        p.numero_processo);
+    // Dados do Processo
+    set('proc-tipo',            p.tipo);
+    set('proc-proposito',       p.proposito);
+    set('proc-documento-tipo',  p.documento_tipo);
+    set('proc-documento',       p.documento);
+    set('proc-incoterm',        p.incoterm);
+    fire('proc-incoterm', 'change');
+    set('proc-modal',           p.modal);
+    fire('proc-modal', 'change');
+    set('proc-observacoes',     p.observacoes);
+    set('proc-codigo',          p.numero_processo);
+
+    if (p.emissor_tipo === 'terceiro') {
+        const radio = document.getElementById('proc-emissor-terceiro');
+        if (radio) { radio.checked = true; fire('proc-emissor-terceiro', 'change'); }
+        if (p.remetente_parceiro_id) {
+            const { data: remetente } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia').eq('id', p.remetente_parceiro_id).single();
+            if (remetente) {
+                set('proc-cliente',    remetente.nome_fantasia || remetente.razao_social);
+                set('proc-cliente-id', remetente.id);
+            }
+        }
+    }
+
+    // Status / prazos / container
+    set('proc-status',            p.status);
+    fire('proc-status', 'change');
+    set('proc-data-abertura',     p.data_abertura);
+    set('proc-data-embarque',     p.data_embarque);
+    set('proc-data-chegada',      p.data_chegada);
+    set('proc-data-cancelamento', p.data_cancelamento);
+    set('proc-obs-prazos',        p.obs_prazos);
+    set('proc-container-tipo',    p.container_tipo);
+    set('proc-container-num',    p.container_numero);
+
+    // Origem
+    set('proc-origem-pais',        p.pais_origem);
+    set('proc-origem-pais-codigo', p.origem_pais_codigo);
+    set('proc-navio',              p.navio);
+    set('proc-aeronave',           p.aeronave);
+    set('proc-porto-origem',       p.porto_origem);
+    set('proc-aeroporto-origem',   p.aeroporto_origem);
+    set('proc-fronteira-saida',    p.fronteira_saida);
+    const oe = p.origem_endereco || {};
+    set('proc-origem-cep',         oe.cep);
+    set('proc-origem-estado',      oe.estado);
+    set('proc-origem-cidade',      oe.cidade);
+    set('proc-origem-bairro',      oe.bairro);
+    set('proc-origem-endereco',    oe.endereco);
+    set('proc-origem-numero',      oe.numero);
+    set('proc-origem-complemento', oe.complemento);
+    const oc = p.origem_coleta || {};
+    const coletaMesmoEl = document.getElementById('proc-origem-coleta-mesmo');
+    if (coletaMesmoEl) coletaMesmoEl.checked = !!oc.mesmo;
+    set('proc-origem-coleta-cep',         oc.cep);
+    set('proc-origem-coleta-estado',      oc.estado);
+    set('proc-origem-coleta-cidade',      oc.cidade);
+    set('proc-origem-coleta-bairro',      oc.bairro);
+    set('proc-origem-coleta-endereco',    oc.endereco);
+    set('proc-origem-coleta-numero',      oc.numero);
+    set('proc-origem-coleta-complemento', oc.complemento);
+    set('proc-origem-coleta-horario',     oc.horario);
+    set('proc-origem-coleta-intervalo',   oc.intervalo);
+
+    // Destino
+    if (p.empresa_parceira_id) {
+        const { data: dest } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento').eq('id', p.empresa_parceira_id).single();
+        if (dest) {
+            set('proc-emp-dest-busca',    dest.nome_fantasia || dest.razao_social);
+            set('proc-emp-dest-id',       dest.id);
+            set('proc-emp-dest-auto-doc', dest.documento);
+        }
+    }
+    set('proc-destino-pais',        p.pais_destino);
+    set('proc-destino-pais-codigo', p.destino_pais_codigo);
+    set('proc-porto-destino',       p.porto_destino);
+    set('proc-aeroporto-destino',   p.aeroporto_destino);
+    set('proc-fronteira-entrada',   p.fronteira_entrada);
+    const de = p.destino_endereco || {};
+    set('proc-destino-cep',         de.cep);
+    set('proc-destino-estado',      de.estado);
+    set('proc-destino-cidade',      de.cidade);
+    set('proc-destino-bairro',      de.bairro);
+    set('proc-destino-endereco',    de.endereco);
+    set('proc-destino-numero',      de.numero);
+    set('proc-destino-complemento', de.complemento);
+    const dr = p.destino_responsavel || {};
+    set('proc-destino-responsavel',         dr.nome);
+    set('proc-destino-responsavel-contato', dr.contato);
+    set('proc-destino-responsavel-email',   dr.email);
+
+    if (typeof restaurarIntermediarios === 'function') restaurarIntermediarios(p.rota_intermediarios || []);
+
+    // Etapas
+    if (Array.isArray(p.etapas) && p.etapas.length && typeof renderEtapas === 'function') {
+        _etapas = p.etapas;
+        renderEtapas();
+    }
+
+    // Documentos
+    const docs = p.documentos || {};
+    Object.entries(docs).forEach(([chave, valor]) => set(`doc-num-${chave}`, valor));
+
+    // Transporte
+    const t = p.transporte || {};
+    set('transp-tipo',              t.tipo);
+    set('transp-nome',              t.nome);
+    set('transp-razao',             t.razao);
+    set('transp-cnpj',              t.cnpj);
+    set('transp-num-coleta',        t.num_coleta);
+    set('transp-tipo-veiculo',      t.tipo_veiculo);
+    set('transp-placa',             t.placa);
+    set('transp-motorista',         t.motorista);
+    set('transp-motorista-cnh',     t.motorista_cnh);
+    set('transp-motorista-contato', t.motorista_contato);
+    set('transp-data-coleta',       t.data_coleta);
+    set('transp-data-entrega',      t.data_entrega);
+    set('transp-frete-moeda',       t.frete_moeda);
+    set('transp-frete-valor',       t.frete_valor);
+    set('transp-frete-incoterm',    t.frete_incoterm);
+    set('transp-seguro',            t.seguro);
+    set('transp-obs',               t.obs);
+
+    // Proforma de origem
+    set('proc-proposta-id', p.proforma_id);
 
     // Guarda ID para atualização
     const idEl = document.getElementById('proc-id');
@@ -420,19 +554,130 @@ function procAplicarModoVisualizacao() {
 }
 
 function _coletarDadosProcesso() {
-    const clienteId = document.getElementById('proc-cliente-id')?.value || null;
+    const v = id => document.getElementById(id)?.value?.trim() || null;
+    const destinatarioId = document.getElementById('proc-emp-dest-id')?.value || null;
+    const remetenteId    = document.getElementById('proc-cliente-id')?.value || null;
+
     return {
-        tipo:               document.getElementById('proc-tipo')?.value                       || null,
-        status:             document.getElementById('proc-status')?.value                     || 'aberto',
-        empresa_parceira_id: clienteId || null,
-        modal:              document.getElementById('proc-modal')?.value?.trim()              || null,
-        incoterm:           document.getElementById('proc-incoterm')?.value                   || null,
-        pais_origem:        document.getElementById('proc-origem-pais')?.value?.trim()        || null,
-        pais_destino:       document.getElementById('proc-destino-pais')?.value?.trim()       || null,
-        porto_origem:       document.getElementById('proc-porto-origem')?.value?.trim()       || null,
-        porto_destino:      document.getElementById('proc-porto-destino')?.value?.trim()      || null,
-        data_abertura:      document.getElementById('proc-data-abertura')?.value              || null,
-        observacoes:        document.getElementById('proc-observacoes')?.value?.trim()        || null,
+        // Dados do Processo
+        proforma_id:            document.getElementById('proc-proposta-id')?.value || null,
+        tipo:                   v('proc-tipo'),
+        proposito:              v('proc-proposito'),
+        emissor_tipo:            document.querySelector('input[name="proc-emissor-tipo"]:checked')?.value || 'usuario',
+        documento_tipo:          v('proc-documento-tipo'),
+        documento:               v('proc-documento'),
+        remetente_parceiro_id:   remetenteId,
+        incoterm:                v('proc-incoterm'),
+        modal:                   v('proc-modal'),
+        observacoes:             v('proc-observacoes'),
+
+        // Status / prazos / container
+        status:                  document.getElementById('proc-status')?.value || 'aberto',
+        data_abertura:           document.getElementById('proc-data-abertura')?.value || null,
+        data_embarque:           document.getElementById('proc-data-embarque')?.value || null,
+        data_chegada:            document.getElementById('proc-data-chegada')?.value || null,
+        data_cancelamento:       document.getElementById('proc-data-cancelamento')?.value || null,
+        obs_prazos:              v('proc-obs-prazos'),
+        container_tipo:          v('proc-container-tipo'),
+        container_numero:        v('proc-container-num'),
+
+        // Origem
+        pais_origem:             v('proc-origem-pais'),
+        origem_pais_codigo:      v('proc-origem-pais-codigo'),
+        navio:                   v('proc-navio'),
+        aeronave:                v('proc-aeronave'),
+        porto_origem:            v('proc-porto-origem'),
+        aeroporto_origem:        v('proc-aeroporto-origem'),
+        fronteira_saida:         v('proc-fronteira-saida'),
+        origem_endereco: {
+            cep:         v('proc-origem-cep'),
+            estado:      v('proc-origem-estado'),
+            cidade:      v('proc-origem-cidade'),
+            bairro:      v('proc-origem-bairro'),
+            endereco:    v('proc-origem-endereco'),
+            numero:      v('proc-origem-numero'),
+            complemento: v('proc-origem-complemento'),
+        },
+        origem_coleta: {
+            mesmo:       !!document.getElementById('proc-origem-coleta-mesmo')?.checked,
+            cep:         v('proc-origem-coleta-cep'),
+            estado:      v('proc-origem-coleta-estado'),
+            cidade:      v('proc-origem-coleta-cidade'),
+            bairro:      v('proc-origem-coleta-bairro'),
+            endereco:    v('proc-origem-coleta-endereco'),
+            numero:      v('proc-origem-coleta-numero'),
+            complemento: v('proc-origem-coleta-complemento'),
+            horario:     v('proc-origem-coleta-horario'),
+            intervalo:   v('proc-origem-coleta-intervalo'),
+        },
+
+        // Destino
+        empresa_parceira_id:     destinatarioId,
+        pais_destino:            v('proc-destino-pais'),
+        destino_pais_codigo:     v('proc-destino-pais-codigo'),
+        porto_destino:           v('proc-porto-destino'),
+        aeroporto_destino:       v('proc-aeroporto-destino'),
+        fronteira_entrada:       v('proc-fronteira-entrada'),
+        destino_endereco: {
+            cep:         v('proc-destino-cep'),
+            estado:      v('proc-destino-estado'),
+            cidade:      v('proc-destino-cidade'),
+            bairro:      v('proc-destino-bairro'),
+            endereco:    v('proc-destino-endereco'),
+            numero:      v('proc-destino-numero'),
+            complemento: v('proc-destino-complemento'),
+        },
+        destino_responsavel: {
+            nome:    v('proc-destino-responsavel'),
+            contato: v('proc-destino-responsavel-contato'),
+            email:   v('proc-destino-responsavel-email'),
+        },
+
+        rota_intermediarios: (typeof coletarIntermediarios === 'function') ? coletarIntermediarios() : [],
+
+        // Etapas
+        etapas: (typeof _etapas !== 'undefined') ? _etapas : [],
+
+        // Documentos (numeração — sem arquivos anexados)
+        documentos: {
+            proforma:   v('doc-num-proforma'),
+            commercial: v('doc-num-commercial'),
+            packing:    v('doc-num-packing'),
+            due:        v('doc-num-due'),
+            le:         v('doc-num-le'),
+            certorigem: v('doc-num-certorigem'),
+            ctn:        v('doc-num-ctn'),
+            nfe:        v('doc-num-nfe'),
+            awb:        v('doc-num-awb'),
+            manifesto:  v('doc-num-manifesto'),
+            fcl:        v('doc-num-fcl'),
+            lcl:        v('doc-num-lcl'),
+            bl:         v('doc-num-bl'),
+            apolice:    v('doc-num-apolice'),
+            crt:        v('doc-num-crt'),
+            micdta:     v('doc-num-micdta'),
+        },
+
+        // Transporte
+        transporte: {
+            tipo:               v('transp-tipo'),
+            nome:               v('transp-nome'),
+            razao:              v('transp-razao'),
+            cnpj:               v('transp-cnpj'),
+            num_coleta:         v('transp-num-coleta'),
+            tipo_veiculo:       v('transp-tipo-veiculo'),
+            placa:              v('transp-placa'),
+            motorista:          v('transp-motorista'),
+            motorista_cnh:      v('transp-motorista-cnh'),
+            motorista_contato:  v('transp-motorista-contato'),
+            data_coleta:        document.getElementById('transp-data-coleta')?.value || null,
+            data_entrega:       document.getElementById('transp-data-entrega')?.value || null,
+            frete_moeda:        v('transp-frete-moeda'),
+            frete_valor:        v('transp-frete-valor'),
+            frete_incoterm:     v('transp-frete-incoterm'),
+            seguro:             v('transp-seguro'),
+            obs:                v('transp-obs'),
+        },
     };
 }
 
@@ -2969,7 +3214,7 @@ function adicionarIntermediario(tipo) {
     const cfg     = _INTERMEDIARIO_CONFIG[tipo];
     if (!cfg) return;
     const id      = 'inter-' + tipo + '-' + Date.now();
-    _intermediarios.push({ id, tipo });
+    _intermediarios.push({ id, tipo, valor: '' });
     _renderIntermediarios();
 }
 
@@ -2995,9 +3240,16 @@ function _renderIntermediarios() {
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <input type="text" name="${item.tipo}_intermediario_${idx}" placeholder="${cfg.placeholder}" class="rota-inter-input">
+            <input type="text" name="${item.tipo}_intermediario_${idx}" placeholder="${cfg.placeholder}" class="rota-inter-input" data-id="${item.id}" value="${(item.valor || '').replace(/"/g, '&quot;')}">
         </div>`;
     }).join('');
+
+    lista.querySelectorAll('.rota-inter-input').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const it = _intermediarios.find(i => i.id === inp.getAttribute('data-id'));
+            if (it) it.valor = inp.value;
+        });
+    });
 }
 
 function removerIntermediario(id) {
@@ -3007,6 +3259,15 @@ function removerIntermediario(id) {
 
 function limparIntermediarios() {
     _intermediarios = [];
+    _renderIntermediarios();
+}
+
+function coletarIntermediarios() {
+    return _intermediarios.map(i => ({ id: i.id, tipo: i.tipo, valor: i.valor || '' }));
+}
+
+function restaurarIntermediarios(lista) {
+    _intermediarios = (lista || []).map(i => ({ id: i.id || ('inter-' + i.tipo + '-' + Date.now() + Math.random()), tipo: i.tipo, valor: i.valor || '' }));
     _renderIntermediarios();
 }
 
@@ -3130,6 +3391,22 @@ async function _acCarregarPropostas() {
         const { data } = await query;
         _acPropostas = (data || []).map(p => ({ id: p.id, nome: p.codigo, label: p.codigo }));
     } catch { _acPropostas = []; }
+}
+
+async function _propPreencherDoPedido(pedidoId) {
+    if (!pedidoId) return;
+    try {
+        const { data: pedido, error } = await supabaseClient.from('pedidos').select('*').eq('id', pedidoId).single();
+        if (error || !pedido || !pedido.cliente_id) return;
+
+        const { data: parceiro } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento').eq('id', pedido.cliente_id).single();
+        if (!parceiro) return;
+
+        const buscaEl = document.getElementById('prop-emp-dest-busca');
+        const idEl    = document.getElementById('prop-emp-dest-id');
+        if (buscaEl) buscaEl.value = parceiro.nome_fantasia || parceiro.razao_social || '';
+        if (idEl)    idEl.value    = parceiro.id;
+    } catch { /* silêncio */ }
 }
 
 async function _procPreencherDaProforma(id) {
@@ -4690,6 +4967,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (_propIdEdicao) {
         await propCarregarEdicao(_propIdEdicao);
         if (_urlModo === 'visualizar') propAplicarModoVisualizacao();
+    } else {
+        // Proforma gerada a partir de um Pedido — pré-preenche o destinatário
+        const _propPedidoIdParam = _urlParams.get('pedido_id');
+        if (_propPedidoIdParam) {
+            document.getElementById('prop-pedido-id').value = _propPedidoIdParam;
+            await _propPreencherDoPedido(_propPedidoIdParam);
+        }
     }
 
     // Processo — pré-preencher ao editar via ?tab=processo&id=...
@@ -4698,7 +4982,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (_urlModo === 'visualizar') procAplicarModoVisualizacao();
         if (_urlModo === 'pdf') {
             procAplicarModoVisualizacao();
-            setTimeout(() => window.print(), 600);
+            setTimeout(() => {
+                if (typeof gerarPDFProcesso === 'function') gerarPDFProcesso();
+                setTimeout(() => window.close(), 800);
+            }, 600);
         }
     }
 

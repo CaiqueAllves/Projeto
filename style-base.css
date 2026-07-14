@@ -1415,9 +1415,10 @@ form small {
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
+    cursor: pointer;
     transition: border-color 0.15s;
 }
-.suporte-chamado-item:hover { border-color: #94a3b8; }
+.suporte-chamado-item:hover { border-color: #4776ec; }
 
 .suporte-chamado-info { flex: 1; min-width: 0; }
 
@@ -1431,7 +1432,33 @@ form small {
     text-overflow: ellipsis;
 }
 
+.suporte-chamado-sub {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.suporte-chamado-modulo-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #4776ec;
+    background: #eff6ff;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
 .suporte-chamado-data { font-size: 11px; color: #94a3b8; }
+
+.suporte-chamado-anexo {
+    color: #4f46e5;
+    font-size: 11px;
+    margin-left: 4px;
+}
+.suporte-chamado-anexo:hover { color: #3b6cd8; }
 
 .suporte-chamado-badge {
     font-size: 11px;
@@ -1462,6 +1489,89 @@ form small {
     align-items: center;
     justify-content: center;
     padding: 32px 0;
+}
+
+/* ── Detalhe do chamado ──────────────────────────────────────────────── */
+.suporte-chamado-detalhe-view {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.suporte-chamado-detalhe-view.ativo { display: flex; }
+
+.suporte-chamado-detalhe-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px 0;
+    flex-shrink: 0;
+}
+
+.suporte-chamado-detalhe-modulo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #4776ec;
+    background: #eff6ff;
+    padding: 3px 9px;
+    border-radius: 20px;
+}
+.suporte-chamado-detalhe-modulo--vazio {
+    color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.suporte-chamado-detalhe-resumo {
+    margin: 12px 14px 0;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #4776ec;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.suporte-chamado-resumo-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0 0 6px;
+}
+
+.suporte-chamado-resumo-desc {
+    font-size: 13px;
+    color: #1e293b;
+    line-height: 1.5;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.suporte-chamado-thread-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin: 14px 14px 0;
+    flex-shrink: 0;
+}
+
+.suporte-chamado-sem-respostas {
+    font-size: 12.5px;
+    color: #94a3b8;
+    text-align: center;
+    padding: 16px 8px;
+    margin: 0;
+}
+
+#suporteChamadoDetalheMsgs {
+    max-height: 220px;
 }
 
 /* Espaço para o footer fixo não cobrir o conteúdo */

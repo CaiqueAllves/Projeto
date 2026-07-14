@@ -2,42 +2,51 @@
 // WIDGET DE SUPORTE — injeta em todas as páginas
 // ========================================
 //
-// Tabela necessária no Supabase:
-// CREATE TABLE chamados (
-//     id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-//     empresa_proprietaria_id UUID REFERENCES empresas(id),
-//     usuario_id       UUID,
-//     titulo           TEXT NOT NULL,
-//     modulo           TEXT,
-//     descricao        TEXT NOT NULL,
-//     status           TEXT DEFAULT 'aberto'
-//                          CHECK (status IN ('aberto','em_andamento','resolvido')),
-//     created_at       TIMESTAMPTZ DEFAULT NOW(),
-//     updated_at       TIMESTAMPTZ DEFAULT NOW()
-// );
+// Tabela e bucket de Storage necessários no Supabase: ver database-chamados.sql
 
 // ── Configurações ────────────────────────────────────────────────────────────
 
-// Chave da API Anthropic para o chat de dúvidas
-// ATENÇÃO: em produção, use um proxy backend para proteger esta chave
-const SUPORTE_API_KEY = 'SUA_CHAVE_AQUI';
+// Chat de dúvidas: chama a Edge Function suporte-ia (supabase/functions/suporte-ia),
+// que guarda a chave da Anthropic no servidor e nunca a expõe no front-end.
+const SUPORTE_IA_ENDPOINT = `${SUPABASE_URL}/functions/v1/suporte-ia`;
 
 // EmailJS — configure em https://www.emailjs.com
-const SUPORTE_EMAILJS_PUBLIC_KEY  = 'SUA_PUBLIC_KEY';
-const SUPORTE_EMAILJS_SERVICE_ID  = 'SUA_SERVICE_ID';
-const SUPORTE_EMAILJS_TEMPLATE_ID = 'SEU_TEMPLATE_ID';
-const SUPORTE_EMAIL_DESTINO       = 'email@suporte.com';
+const SUPORTE_EMAILJS_PUBLIC_KEY  = 'zpEU_nVjkI8qGClOC';
+const SUPORTE_EMAILJS_SERVICE_ID  = 'service_umbw1hi';
+const SUPORTE_EMAILJS_TEMPLATE_ID = 'template_ddtkzcj';
+const SUPORTE_EMAIL_DESTINO       = 'marpex.controller@hotmail.com';
 
 // ── Prompt do assistente de IA ───────────────────────────────────────────────
 
 const SUPORTE_SYSTEM_PROMPT = `Você é um assistente virtual da Marpex, sistema de gestão de comércio exterior brasileiro.
 Seu objetivo é ajudar os usuários a usar o sistema de forma clara e eficiente.
 
-O sistema Marpex inclui:
-- Processos: quadro kanban para gestão de processos de exportação, exportação indireta e importação. Status disponíveis: Aberta, Pendente e Encerrada.
-- Cadastros: cadastro de empresas parceiras e produtos.
-- Apoio: recursos de apoio, documentos e materiais de referência.
+O sistema Marpex é organizado em 4 módulos, selecionáveis no topo do menu lateral:
+
+Operacional:
 - Início: painel principal com visão geral.
+- Empresas: cadastro de empresas parceiras (clientes, fornecedores etc.).
+- Produtos: cadastro de produtos.
+- Proformas: emissão e gestão de proformas.
+- Processos: quadro kanban para gestão de processos de exportação, exportação indireta e importação. Status disponíveis: Aberta, Pendente e Encerrada.
+- Relatórios: relatórios do módulo operacional (produtos, proformas, processos).
+- Termos: termos e condições.
+- Apoio: tabelas de apoio (países e regiões, portos e armadores, aeroportos e cias aéreas, moedas, embalagens e unidades de medida, termos de pagamento, acondicionamento, container, NCM).
+
+Comercial:
+- Pipeline: quadro kanban do funil de vendas.
+- Pedidos: gestão de pedidos.
+- Relatórios: relatórios comerciais.
+
+Financeiro:
+- Contas a Pagar / Contas a Receber: gestão financeira de contas.
+- Fluxo de Caixa: acompanhamento de entradas e saídas.
+- DRE / Balancete: demonstrativo de resultado.
+- Relatórios: relatórios financeiros.
+
+Configurações:
+- Perfil: dados da conta do usuário.
+- Usuários e Permissões: gestão de usuários e permissões de acesso.
 
 Regras de resposta:
 - Use português brasileiro claro e amigável
@@ -49,9 +58,10 @@ Regras de resposta:
 
 // ── Estado global ────────────────────────────────────────────────────────────
 
-let _suporteChatHistorico = [];
-let _suporteEnviando      = false;
-let _suporteImagemColada  = null;
+let _suporteChatHistorico   = [];
+let _suporteEnviando        = false;
+let _suporteImagemColada    = null;
+let _suporteChamadoAbertoId = null;
 
 // ── HTML do widget ───────────────────────────────────────────────────────────
 
@@ -188,11 +198,32 @@ let _suporteImagemColada  = null;
                         <label class="suporte-form-label">Módulo <span class="suporte-optional">(opcional)</span></label>
                         <select id="suporteReportModulo" class="suporte-form-select">
                             <option value="">— escolher —</option>
-                            <option value="Processos">Processos</option>
-                            <option value="Cadastros">Cadastros</option>
-                            <option value="Produtos">Produtos</option>
-                            <option value="Apoio">Apoio</option>
-                            <option value="Início / Dashboard">Início / Dashboard</option>
+                            <optgroup label="Operacional">
+                                <option value="Início">Início</option>
+                                <option value="Empresas">Empresas</option>
+                                <option value="Produtos">Produtos</option>
+                                <option value="Proformas">Proformas</option>
+                                <option value="Processos">Processos</option>
+                                <option value="Relatórios (Operacional)">Relatórios</option>
+                                <option value="Termos">Termos</option>
+                                <option value="Apoio">Apoio</option>
+                            </optgroup>
+                            <optgroup label="Comercial">
+                                <option value="Pipeline">Pipeline</option>
+                                <option value="Pedidos">Pedidos</option>
+                                <option value="Relatórios (Comercial)">Relatórios</option>
+                            </optgroup>
+                            <optgroup label="Financeiro">
+                                <option value="Contas a Pagar">Contas a Pagar</option>
+                                <option value="Contas a Receber">Contas a Receber</option>
+                                <option value="Fluxo de Caixa">Fluxo de Caixa</option>
+                                <option value="DRE / Balancete">DRE / Balancete</option>
+                                <option value="Relatórios (Financeiro)">Relatórios</option>
+                            </optgroup>
+                            <optgroup label="Configurações">
+                                <option value="Perfil">Perfil</option>
+                                <option value="Usuários e Permissões">Usuários e Permissões</option>
+                            </optgroup>
                             <option value="Outro">Outro</option>
                         </select>
                     </div>
@@ -273,6 +304,44 @@ let _suporteImagemColada  = null;
 
             </div>
 
+            <!-- ⑤ Detalhe do chamado -->
+            <div class="suporte-chamado-detalhe-view" id="suporteChamadoDetalheView">
+
+                <div class="suporte-chamados-header">
+                    <button class="suporte-chamados-voltar" onclick="_suporteFecharChamadoDetalhe()" title="Voltar">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div class="suporte-chamados-header-info">
+                        <i class="fa-regular fa-envelope-open"></i>
+                        <span id="suporteChamadoDetalheTitulo">Chamado</span>
+                    </div>
+                    <button class="suporte-close" onclick="suporteFechar()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="suporte-chamado-detalhe-meta" id="suporteChamadoDetalheMeta"></div>
+
+                <div class="suporte-chamado-detalhe-resumo" id="suporteChamadoDetalheResumo"></div>
+
+                <p class="suporte-chamado-thread-label">Conversa</p>
+
+                <div class="suporte-chat-msgs" id="suporteChamadoDetalheMsgs"></div>
+
+                <div class="suporte-chat-bottom">
+                    <div class="suporte-chat-input-row">
+                        <input type="text" id="suporteChamadoDetalheInput"
+                            placeholder="Escreva uma mensagem..."
+                            onkeydown="if(event.key==='Enter')suporteEnviarMensagemChamado()"
+                            autocomplete="off">
+                        <button class="suporte-chat-send" id="suporteChamadoDetalheSend" onclick="suporteEnviarMensagemChamado()">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
         </div>`;
 
     function montar() {
@@ -311,8 +380,10 @@ function suporteVoltarMenu() {
     document.getElementById('suporteChatView')?.classList.remove('ativo');
     document.getElementById('suporteReportView')?.classList.remove('ativo');
     document.getElementById('suporteChamadosView')?.classList.remove('ativo');
+    document.getElementById('suporteChamadoDetalheView')?.classList.remove('ativo');
     document.getElementById('suportePanel')?.classList.remove('suporte-panel--chamados');
     document.getElementById('suporteBody').style.display = '';
+    _suporteChamadoAbertoId = null;
     _suporteReportResetar();
 }
 
@@ -376,28 +447,21 @@ async function suporteEnviarMsg() {
     const typingEl = _suporteAdicionarMsg('ia', null, true);
 
     try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
+        const res = await fetch(SUPORTE_IA_ENDPOINT, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': SUPORTE_API_KEY,
-                'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-request-type': 'CORS'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'claude-haiku-4-5-20251001',
-                max_tokens: 512,
                 system: SUPORTE_SYSTEM_PROMPT,
                 messages: _suporteChatHistorico
             })
         });
 
+        const data = await res.json();
+
         if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.error?.message || `HTTP ${res.status}`);
+            throw new Error(data.error?.message || data.error || `HTTP ${res.status}`);
         }
 
-        const data    = await res.json();
         const resposta = data.content[0].text;
         typingEl.remove();
         _suporteChatHistorico.push({ role: 'assistant', content: resposta });
@@ -477,6 +541,68 @@ function _suportePreviewArquivo(input) {
     document.getElementById('suporteFileNome').textContent = input.files[0]?.name || '';
 }
 
+function _suporteExtensaoArquivo(arquivo) {
+    if (arquivo.name && arquivo.name.includes('.')) return arquivo.name.split('.').pop();
+    return (arquivo.type || '').split('/')[1] || 'png';
+}
+
+async function _suporteUploadAnexo(chamadoId) {
+    const arquivo = _suporteImagemColada || document.getElementById('suporteReportArquivo')?.files[0];
+    if (!arquivo || typeof supabaseClient === 'undefined' || !supabaseClient) return null;
+
+    try {
+        const caminho = `${chamadoId}/${Date.now()}.${_suporteExtensaoArquivo(arquivo)}`;
+
+        const { error } = await supabaseClient.storage
+            .from('chamados-anexos')
+            .upload(caminho, arquivo, { contentType: arquivo.type || 'image/png' });
+
+        if (error) throw error;
+
+        const { data } = supabaseClient.storage.from('chamados-anexos').getPublicUrl(caminho);
+        return data?.publicUrl || null;
+    } catch (e) {
+        console.warn('[Suporte Report] Upload de anexo falhou:', e);
+        return null;
+    }
+}
+
+// ── Triagem automática por IA (usada no e-mail de "Reportar problema") ──────
+
+const SUPORTE_TRIAGEM_PROMPT = `Você é um assistente de triagem de suporte técnico do sistema Marpex (comércio exterior).
+Você vai receber o título, módulo e descrição de um chamado aberto por um usuário do sistema.
+Gere uma triagem curta e objetiva para a equipe de suporte, em português, seguindo exatamente este formato (sem markdown, sem títulos extras, sem introdução):
+
+Resumo: <1-2 frases resumindo o problema em linguagem técnica objetiva>
+Urgência provável: <Baixa, Média ou Alta> — <motivo em poucas palavras>
+Possível causa: <hipótese curta, ou "Não é possível identificar com as informações disponíveis">
+
+Seja direto e não invente detalhes que não estão na descrição.`;
+
+async function _suporteGerarResumoIA(titulo, modulo, desc) {
+    try {
+        const res = await fetch(SUPORTE_IA_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                system: SUPORTE_TRIAGEM_PROMPT,
+                messages: [{
+                    role: 'user',
+                    content: `Título: ${titulo}\nMódulo: ${modulo || 'Não informado'}\nDescrição: ${desc}`
+                }]
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || data.error || `HTTP ${res.status}`);
+
+        return data.content[0].text.trim();
+    } catch (e) {
+        console.warn('[Suporte Report] Triagem IA falhou:', e);
+        return null;
+    }
+}
+
 function _suporteCarregarEmailJS(callback) {
     if (window.emailjs) { callback(); return; }
     const script = document.createElement('script');
@@ -511,9 +637,9 @@ async function suporteEnviarReport() {
 
     const usuario = (typeof obterUsuarioLogado === 'function') ? obterUsuarioLogado() : null;
 
-    // 1. Salvar no Supabase
-    let chamadoId = null;
-    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+    // 1. Salvar no Supabase e gerar a triagem de IA em paralelo (não dependem uma da outra)
+    const salvarPromise = (async () => {
+        if (typeof supabaseClient === 'undefined' || !supabaseClient) return null;
         try {
             const payload = {
                 titulo,
@@ -525,16 +651,40 @@ async function suporteEnviarReport() {
             if (usuario?.id)         payload.usuario_id = usuario.id;
 
             const { data, error } = await supabaseClient.from('chamados').insert(payload).select('id').single();
-            if (!error && data) chamadoId = data.id;
+            return (!error && data) ? data.id : null;
         } catch (e) {
             console.warn('[Suporte Report] Supabase save failed:', e);
+            return null;
+        }
+    })();
+
+    const resumoPromise = _suporteGerarResumoIA(titulo, modulo, desc);
+
+    const [chamadoId, resumoIA] = await Promise.all([salvarPromise, resumoPromise]);
+
+    // 2. Upload do anexo (print colado ou arquivo manual), se houver
+    let anexoUrl = null;
+    if (chamadoId) {
+        anexoUrl = await _suporteUploadAnexo(chamadoId);
+        if (anexoUrl) {
+            try {
+                await supabaseClient.from('chamados').update({ anexo_url: anexoUrl }).eq('id', chamadoId);
+            } catch (e) {
+                console.warn('[Suporte Report] Falha ao salvar anexo_url:', e);
+            }
         }
     }
 
-    // 2. Enviar email via EmailJS
+    // 3. Enviar email via EmailJS
     _suporteCarregarEmailJS(async (err) => {
-        if (!err) {
+        if (err) {
+            console.error('[Suporte Report] Falha ao carregar script do EmailJS (CDN bloqueado?):', err);
+        } else {
             try {
+                const anexoBloco = anexoUrl
+                    ? `<a href="${anexoUrl}" style="color:#4f46e5; text-decoration:none; font-weight:bold;">Ver print anexado →</a>`
+                    : 'Nenhum anexo enviado';
+
                 await emailjs.send(SUPORTE_EMAILJS_SERVICE_ID, SUPORTE_EMAILJS_TEMPLATE_ID, {
                     to_email:  SUPORTE_EMAIL_DESTINO,
                     titulo,
@@ -542,8 +692,10 @@ async function suporteEnviarReport() {
                     descricao: desc,
                     pagina:    window.location.href,
                     data_hora: new Date().toLocaleString('pt-BR'),
-                    tem_imagem: _suporteImagemColada ? 'Sim' : 'Não',
-                    chamado_id: chamadoId || 'N/A'
+                    anexo_bloco: anexoBloco,
+                    anexo_url:   anexoUrl || '',
+                    chamado_id: chamadoId || 'N/A',
+                    resumo_ia: resumoIA || 'Triagem automática indisponível no momento.'
                 });
             } catch (emailErr) {
                 console.warn('[Suporte Report] Email failed:', emailErr);
@@ -584,7 +736,7 @@ async function _suporteCarregarChamados() {
     try {
         let query = supabaseClient
             .from('chamados')
-            .select('id, titulo, modulo, status, updated_at')
+            .select('id, titulo, modulo, status, updated_at, anexo_url')
             .order('updated_at', { ascending: false })
             .limit(30);
 
@@ -628,14 +780,26 @@ function _suporteRenderChamados(chamados) {
         const dataFmt = `${String(data.getDate()).padStart(2,'0')}/${String(data.getMonth()+1).padStart(2,'0')}, ${String(data.getHours()).padStart(2,'0')}:${String(data.getMinutes()).padStart(2,'0')}`;
         const status  = c.status || 'aberto';
 
-        return `<div class="suporte-chamado-item">
+        const anexoHtml = c.anexo_url
+            ? `<a href="${_suporteEscapar(c.anexo_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="suporte-chamado-anexo" title="Ver print anexado"><i class="fa-solid fa-paperclip"></i></a>`
+            : '';
+
+        const moduloHtml = c.modulo
+            ? `<span class="suporte-chamado-modulo-tag"><i class="fa-solid fa-layer-group"></i> ${_suporteEscapar(c.modulo)}</span>`
+            : '';
+
+        return `<div class="suporte-chamado-item" onclick="_suporteAbrirChamado('${c.id}')">
             <div class="suporte-chamado-info">
                 <p class="suporte-chamado-titulo">${_suporteEscapar(c.titulo)}</p>
-                <span class="suporte-chamado-data">Atualizado em ${dataFmt}</span>
+                <div class="suporte-chamado-sub">
+                    ${moduloHtml}
+                    <span class="suporte-chamado-data">Atualizado em ${dataFmt}</span>
+                </div>
             </div>
             <span class="suporte-chamado-badge ${badgeClass[status] || 'suporte-badge-aberto'}">
                 ${statusLabel[status] || status}
             </span>
+            ${anexoHtml}
         </div>`;
     }).join('');
 }
@@ -646,4 +810,174 @@ function _suporteEscapar(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+// ── ⑤ Detalhe do chamado ─────────────────────────────────────────────────────
+
+function _suporteAbrirChamado(id) {
+    _suporteChamadoAbertoId = id;
+    document.getElementById('suporteChamadosView')?.classList.remove('ativo');
+    document.getElementById('suporteChamadoDetalheView')?.classList.add('ativo');
+    _suporteCarregarChamadoDetalhe(id);
+}
+
+function _suporteFecharChamadoDetalhe() {
+    _suporteChamadoAbertoId = null;
+    document.getElementById('suporteChamadoDetalheView')?.classList.remove('ativo');
+    document.getElementById('suporteChamadosView')?.classList.add('ativo');
+    _suporteCarregarChamados();
+}
+
+async function _suporteCarregarChamadoDetalhe(id) {
+    const msgsEl = document.getElementById('suporteChamadoDetalheMsgs');
+    const metaEl = document.getElementById('suporteChamadoDetalheMeta');
+    msgsEl.innerHTML = `<div class="suporte-chamados-loading"><div class="suporte-loading-spinner"></div></div>`;
+    metaEl.innerHTML = '';
+
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+        msgsEl.innerHTML = `<div class="suporte-chamados-vazio">
+            <i class="fa-solid fa-plug-circle-xmark"></i>
+            <p>Não foi possível conectar ao banco de dados.</p>
+        </div>`;
+        return;
+    }
+
+    try {
+        const { data: chamado, error: errChamado } = await supabaseClient
+            .from('chamados')
+            .select('id, titulo, modulo, descricao, status, anexo_url, created_at')
+            .eq('id', id)
+            .single();
+        if (errChamado) throw errChamado;
+
+        const { data: mensagens, error: errMsgs } = await supabaseClient
+            .from('chamados_mensagens')
+            .select('id, autor_tipo, usuario_nome, mensagem, anexo_url, created_at')
+            .eq('chamado_id', id)
+            .order('created_at', { ascending: true });
+        if (errMsgs) throw errMsgs;
+
+        _suporteRenderChamadoDetalhe(chamado, mensagens || []);
+
+    } catch (e) {
+        console.error('[Suporte Chamado Detalhe]', e);
+        msgsEl.innerHTML = `<div class="suporte-chamados-vazio">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <p>Erro ao carregar o chamado.</p>
+        </div>`;
+    }
+}
+
+function _suporteRenderChamadoDetalhe(chamado, mensagens) {
+    document.getElementById('suporteChamadoDetalheTitulo').textContent = chamado.titulo;
+
+    const statusLabel = { aberto: 'Aberto', em_andamento: 'Em andamento', resolvido: 'Resolvido' };
+    const badgeClass  = { aberto: 'suporte-badge-aberto', em_andamento: 'suporte-badge-em_andamento', resolvido: 'suporte-badge-resolvido' };
+    const status = chamado.status || 'aberto';
+
+    const metaEl = document.getElementById('suporteChamadoDetalheMeta');
+    metaEl.innerHTML = `
+        ${chamado.modulo ? `<span class="suporte-chamado-detalhe-modulo"><i class="fa-solid fa-layer-group"></i> ${_suporteEscapar(chamado.modulo)}</span>` : '<span class="suporte-chamado-detalhe-modulo suporte-chamado-detalhe-modulo--vazio">Módulo não informado</span>'}
+        <span class="suporte-chamado-badge ${badgeClass[status] || 'suporte-badge-aberto'}">${statusLabel[status] || status}</span>`;
+
+    // ── Resumo do problema relatado (destacado, separado da conversa) ──
+    const dataAbertura = new Date(chamado.created_at);
+    const dataAberturaFmt = `${String(dataAbertura.getDate()).padStart(2,'0')}/${String(dataAbertura.getMonth()+1).padStart(2,'0')}/${dataAbertura.getFullYear()} às ${String(dataAbertura.getHours()).padStart(2,'0')}:${String(dataAbertura.getMinutes()).padStart(2,'0')}`;
+
+    const resumoEl = document.getElementById('suporteChamadoDetalheResumo');
+    resumoEl.innerHTML = `
+        <p class="suporte-chamado-resumo-label"><i class="fa-solid fa-circle-info"></i> Problema relatado em ${dataAberturaFmt}</p>
+        <p class="suporte-chamado-resumo-desc"></p>
+        ${chamado.anexo_url ? `<a href="${_suporteEscapar(chamado.anexo_url)}" target="_blank" rel="noopener" class="suporte-chamado-anexo"><i class="fa-solid fa-paperclip"></i> Ver print anexado</a>` : ''}`;
+    resumoEl.querySelector('.suporte-chamado-resumo-desc').textContent = chamado.descricao;
+
+    // ── Conversa (respostas trocadas depois da abertura) ──
+    const msgsEl = document.getElementById('suporteChamadoDetalheMsgs');
+    msgsEl.innerHTML = '';
+
+    if (!mensagens.length) {
+        msgsEl.innerHTML = `<p class="suporte-chamado-sem-respostas">Nenhuma resposta ainda. Escreva algo abaixo se quiser complementar o problema.</p>`;
+    } else {
+        mensagens.forEach(m => {
+            msgsEl.appendChild(_suporteMontarBalaoMensagem(m.autor_tipo, m.mensagem, m.anexo_url));
+        });
+    }
+
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    const podeResponder = status !== 'resolvido';
+    const input   = document.getElementById('suporteChamadoDetalheInput');
+    const sendBtn = document.getElementById('suporteChamadoDetalheSend');
+    input.disabled   = !podeResponder;
+    sendBtn.disabled = !podeResponder;
+    input.placeholder = podeResponder ? 'Escreva uma mensagem...' : 'Este chamado já foi resolvido';
+}
+
+function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl) {
+    const div = document.createElement('div');
+    // Reaproveita o estilo do chat de IA: "usuario" à direita, "suporte" à esquerda
+    const role = autorTipo === 'suporte' ? 'ia' : 'user';
+    div.className = `chat-msg chat-msg-${role}`;
+
+    const span = document.createElement('span');
+    span.style.whiteSpace = 'pre-wrap';
+    span.textContent = texto;
+    div.appendChild(span);
+
+    if (anexoUrl) {
+        const a = document.createElement('a');
+        a.href = anexoUrl;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'suporte-chamado-anexo';
+        a.title = 'Ver anexo';
+        a.innerHTML = '<i class="fa-solid fa-paperclip"></i> Anexo';
+        div.appendChild(a);
+    }
+
+    return div;
+}
+
+async function suporteEnviarMensagemChamado() {
+    const input = document.getElementById('suporteChamadoDetalheInput');
+    const texto = input.value.trim();
+    if (!texto || !_suporteChamadoAbertoId) return;
+
+    const sendBtn = document.getElementById('suporteChamadoDetalheSend');
+    input.disabled = true;
+    sendBtn.disabled = true;
+
+    const usuario = (typeof obterUsuarioLogado === 'function') ? obterUsuarioLogado() : null;
+
+    try {
+        const payload = {
+            chamado_id: _suporteChamadoAbertoId,
+            autor_tipo: 'usuario',
+            usuario_id: usuario?.id || null,
+            usuario_nome: usuario?.nome || null,
+            mensagem: texto
+        };
+
+        const { error } = await supabaseClient.from('chamados_mensagens').insert(payload);
+        if (error) throw error;
+
+        await supabaseClient
+            .from('chamados')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', _suporteChamadoAbertoId);
+
+        const msgsEl = document.getElementById('suporteChamadoDetalheMsgs');
+        msgsEl.querySelector('.suporte-chamado-sem-respostas')?.remove();
+        msgsEl.appendChild(_suporteMontarBalaoMensagem('usuario', texto, null));
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+        input.value = '';
+
+    } catch (e) {
+        console.error('[Suporte Chamado] Erro ao enviar mensagem:', e);
+        alert('Não foi possível enviar sua mensagem. Tente novamente.');
+    } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+    }
 }

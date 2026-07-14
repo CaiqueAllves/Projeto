@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style-home.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style-mobile.css">
+    <link rel="stylesheet" href="style-cookies.css">
 </head>
 <body>
 
@@ -371,6 +372,45 @@
     </div>
 </footer>
 
+<!-- COOKIE CONSENT -->
+<div class="cookie-bar" id="cookieBar">
+    <div class="cookie-icon"><i class="fa-solid fa-cookie-bite"></i></div>
+    <div class="cookie-body">
+        <h2>Usamos cookies</h2>
+        <p>Utilizamos cookies essenciais para o funcionamento da plataforma e, com sua permissão, cookies analíticos para melhorar sua experiência. Saiba mais na nossa <a href="termos.html?tab=cookies">Política de Cookies</a> e <a href="termos.html?tab=privacidade">Política de Privacidade</a>.</p>
+    </div>
+    <div class="cookie-actions">
+        <button class="btn btn-prefs" id="cookiePrefsBtn">Preferências</button>
+        <button class="btn btn-reject" id="cookieRejectBtn">Rejeitar</button>
+        <button class="btn btn-accept" id="cookieAcceptBtn">Aceitar todos</button>
+    </div>
+</div>
+
+<div class="cookie-modal-overlay" id="cookieModal">
+    <div class="cookie-modal">
+        <h3>Preferências de cookies</h3>
+        <p>Escolha quais categorias de cookies você permite. Detalhes completos na <a href="termos.html?tab=cookies">Política de Cookies</a>. Cookies necessários não podem ser desativados pois são essenciais para o login e a segurança do sistema.</p>
+
+        <div class="cookie-pref-row">
+            <div><strong>Necessários</strong><span>Login, sessão e segurança. Sempre ativos.</span></div>
+            <div class="cookie-switch on disabled"></div>
+        </div>
+        <div class="cookie-pref-row">
+            <div><strong>Analíticos</strong><span>Ajudam a entender como o sistema é usado.</span></div>
+            <div class="cookie-switch on" data-pref="analiticos"></div>
+        </div>
+        <div class="cookie-pref-row">
+            <div><strong>Marketing</strong><span>Comunicações e conteúdo personalizado.</span></div>
+            <div class="cookie-switch" data-pref="marketing"></div>
+        </div>
+
+        <div class="cookie-modal-actions">
+            <button class="btn btn-reject" id="cookieModalCancel">Cancelar</button>
+            <button class="btn btn-accept" id="cookieModalSave">Salvar preferências</button>
+        </div>
+    </div>
+</div>
+
 <script>
     document.querySelectorAll('a[href^="#"]').forEach(a => {
         a.addEventListener('click', e => {
@@ -383,6 +423,7 @@
         document.querySelector('.navbar').classList.toggle('scrolled', window.scrollY > 20);
     });
 </script>
+<script src="cookie-consent.js"></script>
 
 </body>
 </html>

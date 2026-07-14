@@ -2,34 +2,41 @@
 // SISTEMA DE AUTENTICAÇÃO (COMPARTILHADO)
 // ========================================
 
+// Páginas que podem ser vistas sem login (ex: políticas legais)
+const PAGINAS_PUBLICAS = ['termos.html'];
+
 // Verificar autenticação ao carregar qualquer página (exceto login)
 window.addEventListener('load', function() {
     const paginaAtual = window.location.pathname.split('/').pop();
-    
-    // Se não for a página de login, verificar autenticação
-    if (paginaAtual !== 'login.html' && paginaAtual !== '' && paginaAtual !== '/') {
-        verificarAutenticacao();
-    } else if (paginaAtual === 'login.html' || paginaAtual === '' || paginaAtual === '/') {
+
+    if (paginaAtual === 'login.html' || paginaAtual === '' || paginaAtual === '/') {
         // Na página de login, verificar auto-login
         verificarAutoLogin();
+    } else if (PAGINAS_PUBLICAS.includes(paginaAtual)) {
+        // Página pública: mostra dados do usuário se logado, mas não redireciona se anônimo
+        verificarAutenticacao({ redirecionar: false });
+    } else {
+        // Demais páginas exigem login
+        verificarAutenticacao({ redirecionar: true });
     }
 });
 
 // Verificar se usuário está autenticado
-function verificarAutenticacao() {
+function verificarAutenticacao(opcoes = {}) {
+    const redirecionar = opcoes.redirecionar !== false;
     const usuarioSessao = sessionStorage.getItem('usuarioLogado');
     const usuarioLocal = localStorage.getItem('usuarioSalvo');
     const rememberMe = localStorage.getItem('rememberMe') === 'true';
-    
+
     let usuarioAtual = null;
-    
+
     if (usuarioSessao) {
         usuarioAtual = JSON.parse(usuarioSessao);
     } else if (rememberMe && usuarioLocal) {
         usuarioAtual = JSON.parse(usuarioLocal);
         sessionStorage.setItem('usuarioLogado', usuarioLocal);
     }
-    
+
     if (usuarioAtual) {
         // Usuário autenticado - atualizar interface
         const displayUsername = document.getElementById('displayUsername');
@@ -79,9 +86,12 @@ function verificarAutenticacao() {
                 }
             }, 1000);
         }
-    } else {
+    } else if (redirecionar) {
         // Não autenticado - redirecionar para login
         window.location.href = 'login.html';
+    } else {
+        // Não autenticado, mas página pública: exibir versão para visitante
+        document.body.classList.add('visitante-anonimo');
     }
 }
 
