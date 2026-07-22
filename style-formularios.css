@@ -3390,3 +3390,53 @@ form {
 .log-sub-section.active .log-sub-arrow {
     transform: rotate(180deg);
 }
+
+/* Tabela de Embalagens (Logística) */
+.tabela-embalagens-wrap {
+    border: 1px solid #eef1f6;
+    border-radius: 10px;
+    overflow: hidden;
+    overflow-x: auto;
+}
+
+.tabela-embalagens {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 13px;
+    margin-bottom: 0;
+    box-shadow: none;
+}
+
+.tabela-embalagens thead th {
+    background: #f8fafc;
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-bottom: 2px solid #f1f5f9;
+    white-space: nowrap;
+}
+
+.tabela-embalagens tbody tr {
+    border-bottom: 1px solid #f8fafc;
+    transition: background .12s;
+    height: 50px;
+}
+
+.tabela-embalagens tbody tr:last-child {
+    border-bottom: none;
+}
+
+.tabela-embalagens tbody tr:hover {
+    background: #fafbff;
+}
+
+.tabela-embalagens td {
+    padding: 0 12px;
+    color: #374151;
+    vertical-align: middle;
+}

@@ -330,7 +330,6 @@ function destacarMenuAtivo() {
         'cadastros.html':           'submenu-clientes',
         'produtos.html':            'submenu-produtos-cadastro',
         'proforma.html':            'submenu-documentos-cadastro',
-        'formularios.html':         'submenu-documentos-cadastro',
         'processos.html':           'submenu-processos-cadastro',
         'relatorios.html':          'menu-relatorios',
         'relatorios-produtos.html': 'menu-relatorios',
@@ -358,8 +357,23 @@ function destacarMenuAtivo() {
 
         // Apoio (por query param — tratado em apoio.js)
     };
-    
-    const idAtivo = mapeamento[paginaAtual];
+
+    // formularios.html reúne várias abas (Empresa, Processo, Proforma, Produto)
+    // numa única página — o menu ativo depende da aba (?tab=) e não da página em si.
+    const mapeamentoAbasFormularios = {
+        'empresa':  'submenu-clientes',
+        'processo': 'submenu-processos-cadastro',
+        'proposta': 'submenu-documentos-cadastro',
+        'produto':  'submenu-produtos-cadastro'
+    };
+
+    let idAtivo;
+    if (paginaAtual === 'formularios.html') {
+        const tabAtual = new URLSearchParams(window.location.search).get('tab') || 'empresa';
+        idAtivo = mapeamentoAbasFormularios[tabAtual] || 'submenu-clientes';
+    } else {
+        idAtivo = mapeamento[paginaAtual];
+    }
     
     if (idAtivo) {
         const elementoAtivo = document.getElementById(idAtivo);

@@ -19,6 +19,7 @@ function mudarTab(tabId) {
     const url = new URL(window.location);
     url.searchParams.set('tab', tabId);
     window.history.replaceState({}, '', url);
+    if (typeof destacarMenuAtivo === 'function') destacarMenuAtivo();
 }
 
 // Toggle seção colapsável
@@ -4340,8 +4341,20 @@ function prodAdicionarIdiomaExtra() {
 
     const row = document.createElement('div');
     row.id = `prod-idioma-row-${id}`;
-    row.style.cssText = 'display:grid; grid-template-columns: 1fr 1.5fr; gap:16px; align-items:end; position:relative;';
+    row.style.cssText = 'display:grid; grid-template-columns: 0.5fr 1fr 1.5fr; gap:16px; align-items:end; position:relative;';
     row.innerHTML = `
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Idioma</label>
+            <select name="idioma_idioma_${id}">
+                <option value="pt">Português</option>
+                <option value="en">Inglês</option>
+                <option value="es">Espanhol</option>
+                <option value="zh">Chinês</option>
+                <option value="fr">Francês</option>
+                <option value="de">Alemão</option>
+                <option value="outro">Outro</option>
+            </select>
+        </div>
         <div class="form-group" style="margin-bottom:0;">
             <label>${labelNome} — Idioma ${num + 1}</label>
             <input type="text" name="nome_idioma_${id}" placeholder="Nome em outro idioma">
@@ -4413,6 +4426,205 @@ function prodAdicionarMedidaCaixa() {
 function prodRemoverMedidaCaixa(id) {
     const row = document.getElementById(`prod-medida-caixa-row-${id}`);
     if (row) { row.remove(); _prodMedidaCaixaCount--; }
+}
+
+// ========================================
+// PRODUTO — EMBALAGENS (LOGÍSTICA)
+// ========================================
+// Cada "Embalagem" cadastrada guarda uma cópia dos valores dos campos abaixo.
+// O mesmo formulário (com os mesmos ids/autocompletes) é reaproveitado para
+// criar, editar e visualizar — por isso só um registro é editado por vez.
+
+let _prodEmbalagens = [];
+let _prodEmbalagemEditandoId = null;
+
+const _PROD_EMBALAGEM_CAMPOS = [
+    'prod-embalagem-nome', 'prod-embalagem', 'prod-embalagem-codigo',
+    'prod-acondicionamento', 'prod-acondicionamento-numero', 'prod-acond-descricao',
+    'prod-embalagem-transporte',
+    'prod-comprimento', 'prod-largura', 'prod-altura',
+    'prod-peso-bruto', 'prod-peso-liquido', 'prod-empilhamento', 'prod-obs-logistica'
+];
+
+const _PROD_EMBALAGEM_TRANSPORTE_LABELS = {
+    aereo: 'Aéreo',
+    maritimo: 'Marítimo',
+    rodoviario: 'Rodoviário'
+};
+
+function _prodEscapeHtml(valor) {
+    if (valor === null || valor === undefined) return '';
+    return String(valor).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch]));
+}
+
+function _prodEmbalagemBotoes(modo) {
+    // modo: 'novo' | 'edicao' | 'visualizacao'
+    document.getElementById('btn-embalagem-salvar').style.display  = modo === 'novo'          ? '' : 'none';
+    document.getElementById('btn-embalagem-editar').style.display  = modo === 'edicao'        ? '' : 'none';
+    document.getElementById('btn-embalagem-excluir').style.display = modo !== 'visualizacao'  ? '' : 'none';
+    document.getElementById('btn-embalagem-fechar').style.display  = modo === 'visualizacao'  ? '' : 'none';
+}
+
+function _prodEmbalagemSetCamposDisabled(desabilitado) {
+    document.querySelectorAll('#prod-embalagem-form input, #prod-embalagem-form select, #prod-embalagem-form textarea, #prod-embalagem-form button.btn-add-idioma')
+        .forEach(el => { el.disabled = desabilitado; });
+}
+
+function prodLimparFormEmbalagem() {
+    _PROD_EMBALAGEM_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    const outrosWrapper = document.getElementById('prod-acond-outros-wrapper');
+    if (outrosWrapper) outrosWrapper.style.display = 'none';
+
+    const medidasContainer = document.getElementById('prod-medidas-caixas-container');
+    if (medidasContainer) medidasContainer.innerHTML = '';
+    _prodMedidaCaixaCount = 0;
+
+    document.querySelectorAll('#prod-embalagem-form .prod-obs-toggle').forEach(t => t.classList.remove('aberto'));
+    document.querySelectorAll('#prod-embalagem-form .prod-obs-content').forEach(c => c.style.display = 'none');
+}
+
+function prodAbrirFormEmbalagem() {
+    _prodEmbalagemEditandoId = null;
+    prodLimparFormEmbalagem();
+    _prodEmbalagemSetCamposDisabled(false);
+    _prodEmbalagemBotoes('novo');
+
+    const form = document.getElementById('prod-embalagem-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function _prodEmbalagemColetarDados() {
+    const dados = { id: _prodEmbalagemEditandoId || Date.now() };
+    _PROD_EMBALAGEM_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        dados[id] = el ? el.value.trim() : '';
+    });
+    return dados;
+}
+
+function _prodEmbalagemPreencherForm(dados) {
+    _PROD_EMBALAGEM_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = dados[id] || '';
+    });
+
+    const isOutros       = /^outros?$/i.test((dados['prod-acondicionamento'] || '').trim());
+    const outrosWrapper  = document.getElementById('prod-acond-outros-wrapper');
+    if (outrosWrapper) outrosWrapper.style.display = isOutros ? '' : 'none';
+}
+
+function _prodEmbalagemFecharForm() {
+    _prodEmbalagemEditandoId = null;
+    document.getElementById('prod-embalagem-form').style.display = 'none';
+    prodLimparFormEmbalagem();
+    _prodEmbalagemSetCamposDisabled(false);
+}
+
+function prodSalvarEmbalagem() {
+    const nomeEl = document.getElementById('prod-embalagem-nome');
+    if (!nomeEl.value.trim()) {
+        alert('Informe o Nome da Embalagem.');
+        nomeEl.focus();
+        return;
+    }
+
+    const dados = _prodEmbalagemColetarDados();
+
+    if (_prodEmbalagemEditandoId) {
+        const idx = _prodEmbalagens.findIndex(e => e.id === _prodEmbalagemEditandoId);
+        if (idx > -1) _prodEmbalagens[idx] = dados;
+    } else {
+        _prodEmbalagens.push(dados);
+    }
+
+    _prodEmbalagemFecharForm();
+    _prodRenderTabelaEmbalagens();
+}
+
+function prodExcluirEmbalagemForm() {
+    if (_prodEmbalagemEditandoId) {
+        if (!confirm('Deseja realmente excluir esta embalagem?')) return;
+        _prodEmbalagens = _prodEmbalagens.filter(e => e.id !== _prodEmbalagemEditandoId);
+        _prodRenderTabelaEmbalagens();
+    }
+    _prodEmbalagemFecharForm();
+}
+
+function prodFecharVisualizacaoEmbalagem() {
+    _prodEmbalagemFecharForm();
+}
+
+function prodEditarEmbalagem(id) {
+    const dados = _prodEmbalagens.find(e => e.id === id);
+    if (!dados) return;
+    _prodEmbalagemEditandoId = id;
+    prodLimparFormEmbalagem();
+    _prodEmbalagemPreencherForm(dados);
+    _prodEmbalagemSetCamposDisabled(false);
+    _prodEmbalagemBotoes('edicao');
+
+    const form = document.getElementById('prod-embalagem-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function prodVerEmbalagem(id) {
+    const dados = _prodEmbalagens.find(e => e.id === id);
+    if (!dados) return;
+    _prodEmbalagemEditandoId = id;
+    prodLimparFormEmbalagem();
+    _prodEmbalagemPreencherForm(dados);
+    _prodEmbalagemSetCamposDisabled(true);
+    _prodEmbalagemBotoes('visualizacao');
+
+    const form = document.getElementById('prod-embalagem-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function prodExcluirEmbalagemTabela(id) {
+    if (!confirm('Deseja realmente excluir esta embalagem?')) return;
+    _prodEmbalagens = _prodEmbalagens.filter(e => e.id !== id);
+    if (_prodEmbalagemEditandoId === id) _prodEmbalagemFecharForm();
+    _prodRenderTabelaEmbalagens();
+}
+
+function _prodEmbalagemDimensoesTexto(dados) {
+    const c = dados['prod-comprimento'], l = dados['prod-largura'], a = dados['prod-altura'];
+    if (!c && !l && !a) return '—';
+    return `${c || '—'} × ${l || '—'} × ${a || '—'} cm`;
+}
+
+function _prodRenderTabelaEmbalagens() {
+    const wrapper = document.getElementById('prod-embalagens-tabela-wrapper');
+    const corpo   = document.getElementById('prod-embalagens-tabela-corpo');
+    if (!wrapper || !corpo) return;
+
+    if (!_prodEmbalagens.length) {
+        wrapper.style.display = 'none';
+        corpo.innerHTML = '';
+        return;
+    }
+
+    wrapper.style.display = '';
+    corpo.innerHTML = _prodEmbalagens.map(dados => `
+        <tr>
+            <td>${_prodEscapeHtml(dados['prod-embalagem-nome'] || '—')}</td>
+            <td>${_prodEscapeHtml(_PROD_EMBALAGEM_TRANSPORTE_LABELS[dados['prod-embalagem-transporte']] || '—')}</td>
+            <td>${_prodEscapeHtml(_prodEmbalagemDimensoesTexto(dados))}</td>
+            <td>${_prodEscapeHtml(dados['prod-peso-liquido'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-peso-bruto'] || '—')}</td>
+            <td>
+                <button type="button" class="btn-acao btn-visualizar" title="Ver" onclick="prodVerEmbalagem(${dados.id})"><i class="fa-solid fa-eye"></i></button>
+                <button type="button" class="btn-acao btn-editar" title="Editar" onclick="prodEditarEmbalagem(${dados.id})"><i class="fa-solid fa-pen"></i></button>
+                <button type="button" class="btn-acao btn-excluir" title="Excluir" onclick="prodExcluirEmbalagemTabela(${dados.id})"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`).join('');
 }
 
 // ========================================
@@ -4509,7 +4721,6 @@ function iniciarAutocompleteEmbalagemProduto() {
             lista.innerHTML = data.map(e => `
                 <div class="autocomplete-item" data-codigo="${e.codigo || ''}" data-descricao="${(e.descricao || '').replace(/"/g, '&quot;')}">
                     <span class="ac-nome">${e.descricao || ''}</span>
-                    <span class="ac-fantasia">${e.codigo || ''}</span>
                 </div>`).join('');
             _acPosicionar(input, lista);
             lista.classList.add('aberta');
@@ -4554,7 +4765,6 @@ function iniciarAutocompleteAcondicionamentoProduto() {
             lista.innerHTML = data.map(a => `
                 <div class="autocomplete-item" data-numero="${a.numero || ''}" data-descricao="${(a.descricao || '').replace(/"/g, '&quot;')}">
                     <span class="ac-nome">${a.descricao || ''}</span>
-                    <span class="ac-fantasia">${a.numero || ''}</span>
                 </div>`).join('');
             _acPosicionar(input, lista);
             lista.classList.add('aberta');
@@ -4563,14 +4773,12 @@ function iniciarAutocompleteAcondicionamentoProduto() {
 
     const outrosWrapper = document.getElementById('prod-acond-outros-wrapper');
     const outrosInput   = document.getElementById('prod-acond-descricao');
-    const row           = document.getElementById('prod-acond-row');
 
     function _toggleOutros(descricao) {
         const isOutros = /^outros?$/i.test(descricao.trim());
         if (outrosWrapper) outrosWrapper.style.display = isOutros ? '' : 'none';
         if (outrosInput)   outrosInput.required = isOutros;
         if (!isOutros && outrosInput) outrosInput.value = '';
-        if (row) row.style.gridTemplateColumns = isOutros ? '1fr 1fr 1fr' : '1fr 1fr';
     }
 
     let _sel = false;
