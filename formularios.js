@@ -360,6 +360,14 @@ async function confirmarSalvar() {
     const dadosProc = _coletarDadosProcesso();
     const editandoIdProc = document.getElementById('proc-id')?.value || '';
 
+    // Propaga o pedido de origem: se o processo nasce de uma proforma que por
+    // sua vez veio de um pedido, vincula o processo diretamente ao pedido
+    // (evita depender do salto processo → proforma_id → pedidos.proforma_id)
+    if (!editandoIdProc && dadosProc.proforma_id && !dadosProc.pedido_id) {
+        const resPedOrigem = await window.supabaseAPI.buscarPedidoIdPorProforma(dadosProc.proforma_id);
+        if (resPedOrigem?.data?.id) dadosProc.pedido_id = resPedOrigem.data.id;
+    }
+
     const resProc = editandoIdProc
         ? await window.supabaseAPI.atualizarProcesso(editandoIdProc, dadosProc)
         : await window.supabaseAPI.salvarProcesso(dadosProc);
@@ -527,6 +535,7 @@ async function procCarregarEdicao(id) {
 
     // Proforma de origem
     set('proc-proposta-id', p.proforma_id);
+    set('proc-pedido-id',   p.pedido_id);
 
     // Guarda ID para atualização
     const idEl = document.getElementById('proc-id');
@@ -562,6 +571,7 @@ function _coletarDadosProcesso() {
     return {
         // Dados do Processo
         proforma_id:            document.getElementById('proc-proposta-id')?.value || null,
+        pedido_id:               document.getElementById('proc-pedido-id')?.value || null,
         tipo:                   v('proc-tipo'),
         proposito:              v('proc-proposito'),
         emissor_tipo:            document.querySelector('input[name="proc-emissor-tipo"]:checked')?.value || 'usuario',
@@ -816,6 +826,12 @@ function salvarProposta(e) {
 
     if (document.getElementById('prop-prazo-pagamento')?.value === 'personalizado') {
         checar('prop-prazo-personalizado', 'Informe a condição de pagamento personalizada.');
+    }
+
+    // ── Pedido de origem (obrigatório para proforma nova) ──
+    const _propIdExistente = document.getElementById('prop-id')?.value || '';
+    if (!_propIdExistente && !document.getElementById('prop-pedido-id')?.value) {
+        erros.push('Esta proforma precisa ser gerada a partir de um Pedido. Volte para Pedidos e use "Gerar Proforma".');
     }
 
     // ── Resultado ─────────────────────────

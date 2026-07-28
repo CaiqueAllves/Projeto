@@ -840,6 +840,7 @@ async function _gerarNumeroProcesso(empresaId) {
 function _payloadProcesso(dados) {
     return {
         proforma_id:            dados.proforma_id || null,
+        pedido_id:               dados.pedido_id || null,
         tipo:                    dados.tipo || null,
         proposito:               dados.proposito || null,
         emissor_tipo:            dados.emissor_tipo || 'usuario',
@@ -1171,13 +1172,14 @@ async function buscarProformaDB(id) {
     }
 }
 
-// Marca a proforma como finalizada quando um processo é gerado a partir dela
+// Registra o processo mais recente gerado a partir desta proforma. Não força
+// mais status: 'finalizado' — uma proforma aprovada pode gerar vários
+// processos, então o status do kanban continua sendo controlado manualmente.
 async function marcarProformaFinalizadaDB(proformaId, processoId) {
     try {
         const { error } = await supabaseClient
             .from('proformas')
             .update({
-                status:               'finalizado',
                 processo_gerado_id:   processoId,
                 status_atualizado_em: new Date().toISOString(),
             })
@@ -1286,7 +1288,7 @@ async function buscarContasPagar() {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_pagar')
-            .select('*, parceiros(razao_social, nome_fantasia)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         const { data, error } = await query;
@@ -1301,7 +1303,7 @@ async function buscarContasPagarPeriodo(inicio, fim) {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_pagar')
-            .select('*, parceiros(razao_social, nome_fantasia)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
             .gte('data_vencimento', inicio)
             .lte('data_vencimento', fim)
             .order('data_vencimento', { ascending: true });
@@ -1319,6 +1321,8 @@ async function salvarContaPagar(dados, id = null) {
         const payload = {
             descricao:       dados.descricao,
             parceiro_id:     dados.parceiro_id || null,
+            pedido_id:       dados.pedido_id || null,
+            processo_id:     dados.processo_id || null,
             valor:           dados.valor,
             moeda:           dados.moeda || 'BRL',
             data_vencimento: dados.data_vencimento,
@@ -1370,7 +1374,7 @@ async function buscarContasReceber() {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         const { data, error } = await query;
@@ -1385,7 +1389,7 @@ async function buscarContasReceberPeriodo(inicio, fim) {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
             .gte('data_vencimento', inicio)
             .lte('data_vencimento', fim)
             .order('data_vencimento', { ascending: true });
@@ -1403,6 +1407,8 @@ async function salvarContaReceber(dados, id = null) {
         const payload = {
             descricao:        dados.descricao,
             parceiro_id:      dados.parceiro_id || null,
+            pedido_id:        dados.pedido_id || null,
+            processo_id:      dados.processo_id || null,
             valor:            dados.valor,
             moeda:            dados.moeda || 'BRL',
             data_vencimento:  dados.data_vencimento,
@@ -1495,6 +1501,7 @@ window.supabaseAPI = {
     atualizarStatusPedido,
     excluirPedido,
     vincularProformaAoPedido,
+    buscarPedidoIdPorProforma,
     // Financeiro
     buscarContasPagar,
     buscarContasPagarPeriodo,
@@ -1612,7 +1619,11 @@ async function buscarPedidos() {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('pedidos')
-            .select('*, parceiros(razao_social, nome_fantasia), pedido_itens(*, produtos(nome, sku))')
+            .select(`*,
+                parceiros!pedidos_cliente_id_fkey(razao_social, nome_fantasia, documento),
+                remetente:parceiros!pedidos_remetente_parceiro_id_fkey(razao_social, nome_fantasia, documento),
+                pedido_itens(*, produtos(nome, sku))`)
+            .neq('status', 'excluido')
             .order('created_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
         const { data, error } = await query;
@@ -1628,6 +1639,7 @@ async function salvarPedido(dados, id = null, itens = []) {
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
         const payload = {
             numero: dados.numero || null, cliente_id: dados.cliente_id || null,
+            remetente_parceiro_id: dados.remetente_parceiro_id || null,
             proforma_id: dados.proforma_id || null, oportunidade_id: dados.oportunidade_id || null,
             status: dados.status || 'aguardando', valor_total: dados.valor_total || null,
             moeda: dados.moeda || 'USD', data_pedido: dados.data_pedido || null,
@@ -1693,9 +1705,31 @@ async function vincularProformaAoPedido(pedidoId, proformaId) {
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
+// Busca o pedido de origem de uma proforma (link reverso de pedidos.proforma_id),
+// usado para propagar pedido_id ao processo gerado a partir dessa proforma.
+async function buscarPedidoIdPorProforma(proformaId) {
+    try {
+        const { data, error } = await supabaseClient.from('pedidos')
+            .select('id, cliente_id, valor_total, moeda')
+            .eq('proforma_id', proformaId).maybeSingle();
+        if (error) return { sucesso: false, mensagem: error.message, data: null };
+        return { sucesso: true, data };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: null }; }
+}
+
+// Exclusão suave (soft delete) — mesmo padrão de proformas/processos:
+// o pedido some da listagem mas fica recuperável por 7 dias no painel Excluídos.
 async function excluirPedido(id) {
     try {
-        const { error } = await supabaseClient.from('pedidos').delete().eq('id', id);
+        const usuario = obterUsuarioLogado();
+        const { error } = await supabaseClient
+            .from('pedidos')
+            .update({
+                status:       'excluido',
+                excluido_em:  new Date().toISOString(),
+                excluido_por: usuario?.nome || usuario?.email || 'Desconhecido',
+            })
+            .eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }

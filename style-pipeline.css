@@ -162,6 +162,11 @@
 .pl-header-negociacao { background: #f5f3ff; color: #6d28d9; border-bottom-color: #ddd6fe; }
 .pl-header-fechado    { background: #f0fdf4; color: #15803d; border-bottom-color: #bbf7d0; }
 
+.pl-header-sem-cobranca { background: #f1f5f9; color: #475569; border-bottom-color: #e2e8f0; }
+.pl-header-aguardando   { background: #fefce8; color: #a16207; border-bottom-color: #fef08a; }
+.pl-header-vencido      { background: #fef2f2; color: #991b1b; border-bottom-color: #fecaca; }
+.pl-header-recebido     { background: #f0fdf4; color: #15803d; border-bottom-color: #bbf7d0; }
+
 .pl-col-body {
     padding: 10px;
     display: flex;
@@ -263,6 +268,34 @@
 .pl-card-btns {
     display: flex;
     gap: 6px;
+}
+
+/* ── Pipeline Financeiro: contas vinculadas ao card do pedido ────── */
+.pf-card-contas {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pf-card-conta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.pf-card-conta-valor {
+    font-weight: 600;
+    color: #334155;
+}
+
+.pf-card-conta-venc {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #94a3b8;
 }
 
 /* ── Botões de ação nos cards ──────────────────────────────────── */
@@ -523,6 +556,11 @@
     z-index: 1100;
     max-height: 220px;
     overflow-y: auto;
+}
+.pl-autocomplete:empty {
+    display: none;
+    border: none;
+    box-shadow: none;
 }
 .pl-form-group { position: relative; }
 

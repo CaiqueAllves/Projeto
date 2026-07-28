@@ -85,6 +85,9 @@ const SIDEBAR_HTML = `
     <!-- ── Módulo: Financeiro ─────────────────── -->
     <div class="mod-section" id="mod-financeiro">
         <ul>
+            <li id="submenu-pipeline-financeiro" onclick="window.location.href='pipeline-financeiro.html'">
+                <i class="fa-solid fa-bars-progress"></i> Pipeline Financeiro
+            </li>
             <li id="submenu-contas-pagar" onclick="window.location.href='contas-pagar.html'">
                 <i class="fa-solid fa-arrow-up"></i> Contas a Pagar
             </li>
@@ -254,6 +257,7 @@ const _MODULO_PAGINAS = {
     'relatorios-comercial.html':  'comercial',
     'contas-pagar.html':          'financeiro',
     'contas-receber.html':        'financeiro',
+    'pipeline-financeiro.html':   'financeiro',
     'fluxo-caixa.html':           'financeiro',
     'relatorios-financeiro.html': 'financeiro',
     'dre.html':                   'financeiro',
@@ -344,6 +348,7 @@ function destacarMenuAtivo() {
         // Financeiro
         'contas-pagar.html':          'submenu-contas-pagar',
         'contas-receber.html':        'submenu-contas-receber',
+        'pipeline-financeiro.html':   'submenu-pipeline-financeiro',
         'fluxo-caixa.html':           'submenu-fluxo-caixa',
         'relatorios-financeiro.html': 'submenu-relatorios-financeiro',
         'dre.html':                   'submenu-dre',

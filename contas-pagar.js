@@ -9,7 +9,33 @@ let _cpExcluirId = null;
 document.addEventListener('DOMContentLoaded', async () => {
     _cpCarregarUsuario();
     await cpCarregar();
+    await _cpVerificarGeracaoViaUrl();
 });
+
+// ── Abertura pré-preenchida a partir de Processo (módulo Operacional) ──────
+
+async function _cpVerificarGeracaoViaUrl() {
+    const params     = new URLSearchParams(window.location.search);
+    const processoId = params.get('gerar_processo_id');
+    if (!processoId) return;
+
+    const { data: processo } = await supabaseClient
+        .from('processos')
+        .select('id, numero_processo, valor_total, moeda')
+        .eq('id', processoId).maybeSingle();
+    if (processo) {
+        // Parceiro não é pré-preenchido: processos usa empresas_cadastradas,
+        // uma tabela diferente de parceiros (usada nas contas). O usuário
+        // seleciona o fornecedor manualmente.
+        cpAbrirModal(null, {
+            descricao:    `Processo ${processo.numero_processo || ''}`.trim(),
+            processoId:   processo.id,
+            processoNome: processo.numero_processo || '',
+            valor:        processo.valor_total || '',
+            moeda:        processo.moeda || 'BRL',
+        });
+    }
+}
 
 function _cpCarregarUsuario() {
     try {
@@ -76,7 +102,7 @@ function cpRenderizar() {
         const podePagar = c.status === 'pendente' || c.status === 'vencido';
 
         return `<tr>
-            <td><strong>${_cpEsc(c.descricao)}</strong>${c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(c.categoria)}</span>` : ''}</td>
+            <td><strong>${_cpEsc(c.descricao)}</strong>${c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(c.categoria)}</span>` : ''}${c.pedidos?.numero ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-bag-shopping"></i> Pedido ${_cpEsc(c.pedidos.numero)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_cpEsc(c.processos.numero_processo)}</span>` : ''}</td>
             <td>${_cpEsc(parceiro)}</td>
             <td class="td-valor">${valor}</td>
             <td>${venc}</td>
@@ -150,7 +176,7 @@ async function cpMarcarPago(id) {
 
 // ── Modal criar/editar ─────────────────────────────────────────────────────
 
-function cpAbrirModal(id = null) {
+function cpAbrirModal(id = null, prefill = null) {
     const c = id ? _cpTodas.find(x => x.id === id) : null;
 
     document.getElementById('cpEditId').value = c?.id || '';
@@ -158,11 +184,15 @@ function cpAbrirModal(id = null) {
         ? '<i class="fa-solid fa-pen"></i> Editar Conta a Pagar'
         : '<i class="fa-solid fa-arrow-up"></i> Nova Conta a Pagar';
 
-    document.getElementById('cpDescricao').value      = c?.descricao || '';
-    document.getElementById('cpFornecedorNome').value = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || '';
-    document.getElementById('cpFornecedorId').value   = c?.parceiro_id || '';
-    document.getElementById('cpValor').value          = c?.valor || '';
-    document.getElementById('cpMoeda').value          = c?.moeda || 'BRL';
+    document.getElementById('cpDescricao').value      = c?.descricao || prefill?.descricao || '';
+    document.getElementById('cpFornecedorNome').value = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || prefill?.fornecedorNome || '';
+    document.getElementById('cpFornecedorId').value   = c?.parceiro_id || prefill?.fornecedorId || '';
+    document.getElementById('cpPedidoNome').value     = c?.pedidos?.numero || prefill?.pedidoNome || '';
+    document.getElementById('cpPedidoId').value        = c?.pedido_id || prefill?.pedidoId || '';
+    document.getElementById('cpProcessoNome').value   = c?.processos?.numero_processo || prefill?.processoNome || '';
+    document.getElementById('cpProcessoId').value     = c?.processo_id || prefill?.processoId || '';
+    document.getElementById('cpValor').value          = c?.valor || prefill?.valor || '';
+    document.getElementById('cpMoeda').value          = c?.moeda || prefill?.moeda || 'BRL';
     document.getElementById('cpVencimento').value     = c?.data_vencimento || '';
     document.getElementById('cpDataPagamento').value  = c?.data_pagamento  || '';
     document.getElementById('cpStatus').value         = c?.status || 'pendente';
@@ -175,6 +205,8 @@ function cpAbrirModal(id = null) {
 function cpFecharModal() {
     document.getElementById('cpModalOverlay').classList.remove('ativo');
     document.getElementById('cpAutoParceiro').innerHTML = '';
+    document.getElementById('cpAutoPedido').innerHTML   = '';
+    document.getElementById('cpAutoProcesso').innerHTML = '';
 }
 
 async function cpSalvar() {
@@ -194,6 +226,8 @@ async function cpSalvar() {
     const dados = {
         descricao,
         parceiro_id:    document.getElementById('cpFornecedorId').value || null,
+        pedido_id:      document.getElementById('cpPedidoId').value || null,
+        processo_id:    document.getElementById('cpProcessoId').value || null,
         valor:          parseFloat(valor),
         moeda:          document.getElementById('cpMoeda').value,
         data_vencimento: venc,
@@ -247,9 +281,77 @@ function cpSelecionarParceiro(id, nome) {
     document.getElementById('cpAutoParceiro').innerHTML = '';
 }
 
+// ── Autocomplete vínculo — Pedido ────────────────────────────────────────────
+
+let _cpBuscaPedidoTimer = null;
+async function cpBuscarPedido(termo) {
+    const box = document.getElementById('cpAutoPedido');
+    document.getElementById('cpPedidoId').value = '';
+    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
+    clearTimeout(_cpBuscaPedidoTimer);
+    _cpBuscaPedidoTimer = setTimeout(async () => {
+        try {
+            const { data } = await supabaseClient
+                .from('pedidos')
+                .select('id, numero')
+                .ilike('numero', `%${termo}%`)
+                .limit(8);
+            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum pedido encontrado</div>'; return; }
+            box.innerHTML = data.map(p => `
+                <div class="pl-auto-item" onclick="cpSelecionarPedido('${p.id}', '${_cpEsc(p.numero || '')}')">
+                    <span class="pl-auto-nome">${_cpEsc(p.numero || '')}</span>
+                </div>`).join('');
+        } catch (e) {}
+    }, 300);
+}
+
+function cpSelecionarPedido(id, numero) {
+    document.getElementById('cpPedidoId').value   = id;
+    document.getElementById('cpPedidoNome').value = numero;
+    document.getElementById('cpAutoPedido').innerHTML = '';
+}
+
+// ── Autocomplete vínculo — Processo ─────────────────────────────────────────
+
+let _cpBuscaProcessoTimer = null;
+async function cpBuscarProcesso(termo) {
+    const box = document.getElementById('cpAutoProcesso');
+    document.getElementById('cpProcessoId').value = '';
+    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
+    clearTimeout(_cpBuscaProcessoTimer);
+    _cpBuscaProcessoTimer = setTimeout(async () => {
+        try {
+            const { data } = await supabaseClient
+                .from('processos')
+                .select('id, numero_processo')
+                .ilike('numero_processo', `%${termo}%`)
+                .limit(8);
+            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo encontrado</div>'; return; }
+            box.innerHTML = data.map(p => `
+                <div class="pl-auto-item" onclick="cpSelecionarProcesso('${p.id}', '${_cpEsc(p.numero_processo || '')}')">
+                    <span class="pl-auto-nome">${_cpEsc(p.numero_processo || '')}</span>
+                </div>`).join('');
+        } catch (e) {}
+    }, 300);
+}
+
+function cpSelecionarProcesso(id, numero) {
+    document.getElementById('cpProcessoId').value   = id;
+    document.getElementById('cpProcessoNome').value = numero;
+    document.getElementById('cpAutoProcesso').innerHTML = '';
+}
+
 document.addEventListener('click', e => {
     if (!e.target.closest('#cpAutoParceiro') && !e.target.closest('#cpFornecedorNome')) {
         const box = document.getElementById('cpAutoParceiro');
+        if (box) box.innerHTML = '';
+    }
+    if (!e.target.closest('#cpAutoPedido') && !e.target.closest('#cpPedidoNome')) {
+        const box = document.getElementById('cpAutoPedido');
+        if (box) box.innerHTML = '';
+    }
+    if (!e.target.closest('#cpAutoProcesso') && !e.target.closest('#cpProcessoNome')) {
+        const box = document.getElementById('cpAutoProcesso');
         if (box) box.innerHTML = '';
     }
 });

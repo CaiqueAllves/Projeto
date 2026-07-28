@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Pipeline Financeiro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-pipeline.css">
+    <link rel="stylesheet" href="style-financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-bars-progress"></i> Pipeline Financeiro</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- FILTRO -->
+            <div class="page-header">
+                <div class="header-left">
+                    <div class="filter-wrapper">
+                        <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+                        <input type="text" id="filtroPipelineFinanceiro" placeholder="Filtrar por número do pedido, cliente ou CNPJ..." oninput="pfFiltrar()">
+                    </div>
+                    <select class="filter-select" id="filtroCampoPipelineFinanceiro" onchange="pfFiltrar()" style="margin-left:10px;">
+                        <option value="todos">Todos os campos</option>
+                        <option value="numero">Número do Pedido</option>
+                        <option value="cliente">Razão Social</option>
+                        <option value="cnpj">CNPJ</option>
+                        <option value="cpf">CPF</option>
+                        <option value="sem_cobranca">Sem Cobrança</option>
+                        <option value="aguardando">Aguardando</option>
+                        <option value="vencido">Vencido</option>
+                        <option value="recebido">Recebido</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- TABS MOBILE -->
+            <div class="kanban-tabs" id="pfKanbanTabs">
+                <button class="kanban-tab active" data-col="sem_cobranca" onclick="pfSwitchTab(this)">Sem Cobrança <span class="kanban-tab-count" id="tab-count-sem_cobranca">0</span></button>
+                <button class="kanban-tab"         data-col="aguardando"  onclick="pfSwitchTab(this)">Aguardando <span class="kanban-tab-count" id="tab-count-aguardando">0</span></button>
+                <button class="kanban-tab"         data-col="vencido"     onclick="pfSwitchTab(this)">Vencido <span class="kanban-tab-count" id="tab-count-vencido">0</span></button>
+                <button class="kanban-tab"         data-col="recebido"    onclick="pfSwitchTab(this)">Recebido <span class="kanban-tab-count" id="tab-count-recebido">0</span></button>
+            </div>
+
+            <!-- KANBAN -->
+            <div class="pl-kanban" id="pfKanban">
+
+                <div class="pl-col" data-etapa="sem_cobranca">
+                    <div class="pl-col-header pl-header-sem-cobranca">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-circle-question"></i> Sem Cobrança</span>
+                        <span class="pl-col-count" id="count-sem_cobranca">0</span>
+                    </div>
+                    <div class="pl-col-body" id="col-sem_cobranca">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="aguardando">
+                    <div class="pl-col-header pl-header-aguardando">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-clock"></i> Aguardando</span>
+                        <span class="pl-col-count" id="count-aguardando">0</span>
+                    </div>
+                    <div class="pl-col-body" id="col-aguardando">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="vencido">
+                    <div class="pl-col-header pl-header-vencido">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-circle-exclamation"></i> Vencido</span>
+                        <span class="pl-col-count" id="count-vencido">0</span>
+                    </div>
+                    <div class="pl-col-body" id="col-vencido">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="recebido">
+                    <div class="pl-col-header pl-header-recebido">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-circle-check"></i> Recebido</span>
+                        <span class="pl-col-count" id="count-recebido">0</span>
+                    </div>
+                    <div class="pl-col-body" id="col-recebido">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2026 Marpex — Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="navegador.js"></script>
+<script src="pipeline-financeiro.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

@@ -9,6 +9,12 @@ let _viewMode        = 'kanban';
 
 const KANBAN_COLS = ['enviado', 'aprovado', 'pendente', 'encerrado', 'finalizado'];
 
+// ── Nova Proforma agora nasce de um Pedido ──
+function profIrParaPedidos() {
+    mostrarNotificacao('Toda proforma nasce de um pedido. Crie ou escolha um pedido e use "Gerar Proforma".', 'info');
+    window.location.href = 'pedidos.html';
+}
+
 // ── Helpers ──────────────────────────────
 function _profFmt(n) {
     return Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -40,15 +46,30 @@ function _profModalIcon(modal) {
     return { aereo: 'fa-plane', maritimo: 'fa-ship', terrestre: 'fa-truck' }[modal] || 'fa-route';
 }
 
-// Botão de ação para gerar/ver o processo vinculado à proforma
+// Botões de ação para gerar/ver os processos vinculados à proforma.
+// Uma proforma pode gerar mais de um processo — os dois botões podem
+// coexistir (ver processos já gerados + gerar mais um).
 function _profBotaoProcesso(p, status) {
-    if (p.processo_gerado_id) {
-        return `<button class="btn-ver-processo" onclick="profVerProcesso('${p.processo_gerado_id}')"><i class="fa-solid fa-eye"></i> Ver Processo</button>`;
+    const processos = p._processos || [];
+    let html = '';
+
+    if (processos.length === 1) {
+        html += `<button class="btn-ver-processo" onclick="profVerProcesso('${processos[0].id}')"><i class="fa-solid fa-eye"></i> Ver Processo</button>`;
+    } else if (processos.length > 1) {
+        html += `<button class="btn-ver-processo" onclick="profVerProcessos('${p.id}')"><i class="fa-solid fa-eye"></i> Ver Processos (${processos.length})</button>`;
     }
+
     if (status === 'aprovado') {
-        return `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar Processo ?</button>`;
+        html += `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar ${processos.length ? 'novo ' : ''}Processo</button>`;
     }
-    return '';
+
+    return html;
+}
+
+// Botão "Ver Pedido de origem" — link reverso de pedidos.proforma_id
+function _profBotaoPedido(p) {
+    if (!p._pedidoOrigemId) return '';
+    return `<button class="btn-ver-processo" onclick="profVerPedido('${p._pedidoOrigemId}')"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido de origem</button>`;
 }
 
 function _profEmissorNome(p) {
@@ -117,10 +138,34 @@ async function profCarregarLista() {
             (emps || []).forEach(e => { empresaMap[e.id] = e; });
         }
 
+        // Processos gerados a partir de cada proforma (uma proforma pode gerar 1 ou mais)
+        // e o pedido de origem (link reverso de pedidos.proforma_id) — mesmo padrão de
+        // lookup em lote já usado em processos.js pra resolver a proforma de cada processo.
+        const proformaIds = proformas.map(p => p.id);
+        let processosMap = {};
+        let pedidosMap = {};
+        if (proformaIds.length > 0) {
+            const { data: procs } = await supabaseClient
+                .from('processos')
+                .select('id, proforma_id')
+                .in('proforma_id', proformaIds);
+            (procs || []).forEach(pr => {
+                (processosMap[pr.proforma_id] ||= []).push(pr);
+            });
+
+            const { data: peds } = await supabaseClient
+                .from('pedidos')
+                .select('id, proforma_id')
+                .in('proforma_id', proformaIds);
+            (peds || []).forEach(pd => { pedidosMap[pd.proforma_id] = pd.id; });
+        }
+
         _profTodos = proformas.map(p => ({
             ...p,
             parceiro:         empresaMap[p.parceiro_id]      || null,
             destinatario_emp: empresaMap[p.destinatario_id]  || null,
+            _processos:       processosMap[p.id] || [],
+            _pedidoOrigemId:  pedidosMap[p.id]    || null,
         }));
 
         profFiltrar();
@@ -204,6 +249,7 @@ function _profRenderCard(p) {
                 </select>
             </div>
             ${dataAtualizado ? `<div class="prof-card-atualizado"><i class="fa-solid fa-rotate-right"></i> Atualizado em ${dataAtualizado}</div>` : ''}
+            ${_profBotaoPedido(p)}
             ${_profBotaoProcesso(p, status)}
             <div class="prof-card-btns">
                 <button class="btn-acao btn-ver"     onclick="profVisualizar('${p.id}')" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
@@ -297,6 +343,7 @@ function profRenderizarLista(lista) {
                 </select>
             </td>
             <td class="col-gerar-processo">
+                ${_profBotaoPedido(p)}
                 ${_profBotaoProcesso(p, status)}
             </td>
         </tr>`;
@@ -638,6 +685,14 @@ function profSeguirProcesso(id) {
 
 function profVerProcesso(processoId) {
     window.open(`formularios.html?tab=processo&id=${processoId}&modo=visualizar`, '_blank');
+}
+
+function profVerProcessos(proformaId) {
+    window.open(`processos.html?proforma_id=${proformaId}`, '_blank');
+}
+
+function profVerPedido(pedidoId) {
+    window.open(`pedidos.html?editar=${pedidoId}`, '_blank');
 }
 
 // ── Excluir (soft delete) ─────────────────

@@ -132,6 +132,20 @@
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
+                    <label>Vincular a Pedido</label>
+                    <input type="text" id="cpPedidoNome" placeholder="Buscar pedido por número..." autocomplete="off" oninput="cpBuscarPedido(this.value)">
+                    <input type="hidden" id="cpPedidoId">
+                    <div class="pl-autocomplete" id="cpAutoPedido"></div>
+                </div>
+                <div class="fin-form-group">
+                    <label>Vincular a Processo</label>
+                    <input type="text" id="cpProcessoNome" placeholder="Buscar processo por número..." autocomplete="off" oninput="cpBuscarProcesso(this.value)">
+                    <input type="hidden" id="cpProcessoId">
+                    <div class="pl-autocomplete" id="cpAutoProcesso"></div>
+                </div>
+            </div>
+            <div class="fin-form-row">
+                <div class="fin-form-group">
                     <label>Valor <span style="color:#ef4444">*</span></label>
                     <input type="number" id="cpValor" placeholder="0,00" min="0" step="0.01">
                 </div>

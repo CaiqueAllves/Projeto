@@ -55,6 +55,21 @@
                     </select>
                 </div>
                 <div class="header-right">
+                    <div id="pedExcluidosWrapper">
+                        <button class="btn-excluidos" onclick="pedToggleExcluidos()">
+                            <i class="fa-solid fa-trash-can"></i> Excluídos
+                        </button>
+                        <div class="prof-excluidos-panel" id="pedExcluidosPanel">
+                            <div class="prof-excluidos-titulo">
+                                <i class="fa-solid fa-trash-can"></i> Pedidos Excluídos
+                            </div>
+                            <div class="prof-excluidos-aviso">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                Pedidos excluídos após 7 dias, serão removidos sem chances de restaurar.
+                            </div>
+                            <div id="pedExcluidosContainer"></div>
+                        </div>
+                    </div>
                     <button class="btn-cadastrar" onclick="pedAbrirModal()">
                         <i class="fa-solid fa-plus"></i> Novo Pedido
                     </button>
@@ -67,16 +82,17 @@
                     <thead>
                         <tr>
                             <th>Nº Pedido</th>
-                            <th>Cliente</th>
+                            <th>Remetente</th>
+                            <th>Destinatário</th>
                             <th>Valor</th>
-                            <th>Data do Pedido</th>
+                            <th>Data de Criação</th>
                             <th>Entrega Prevista</th>
                             <th>Status</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="pedTbody">
-                        <tr><td colspan="7" class="ped-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>
+                        <tr><td colspan="8" class="ped-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -92,7 +108,7 @@
             <h3 id="pedModalTitulo"><i class="fa-solid fa-bag-shopping"></i> Novo Pedido</h3>
             <button class="pl-modal-close" onclick="pedFecharModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="pl-modal-body">
+        <div class="pl-modal-body" id="ped-form-body">
             <input type="hidden" id="pedEditId">
             <input type="hidden" id="pedOportunidadeId">
 
@@ -116,10 +132,43 @@
 
             <div class="pl-form-row">
                 <div class="pl-form-group pl-full">
-                    <label>Cliente</label>
-                    <input type="text" id="pedClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="pedBuscarCliente(this.value)">
+                    <label>Emissor</label>
+                    <div class="ped-emissor-toggle">
+                        <label class="ped-emissor-opcao ativo" id="ped-emissor-opcao-usuario">
+                            <input type="radio" name="ped-emissor-tipo" value="usuario" id="ped-emissor-usuario" checked onchange="pedAtualizarEmissorTipo()">
+                            <i class="fa-solid fa-user"></i> Própria empresa
+                        </label>
+                        <label class="ped-emissor-opcao" id="ped-emissor-opcao-terceiro">
+                            <input type="radio" name="ped-emissor-tipo" value="terceiro" id="ped-emissor-terceiro" onchange="pedAtualizarEmissorTipo()">
+                            <i class="fa-solid fa-building"></i> Terceiro (intermediário)
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Empresa Remetente</label>
+                    <input type="text" id="pedRemetenteNome" placeholder="Buscar empresa remetente..." autocomplete="off" oninput="pedBuscarRemetente(this.value)" onfocus="pedMostrarRemetentes(this.value)">
+                    <input type="hidden" id="pedRemetenteId">
+                    <div class="pl-autocomplete" id="pedAutoRemetente"></div>
+                </div>
+                <div class="pl-form-group">
+                    <label>Documento Fiscal</label>
+                    <input type="text" id="pedRemetenteDocumento" placeholder="—" readonly>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Empresa Destinatário</label>
+                    <input type="text" id="pedClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="pedBuscarCliente(this.value)" onfocus="pedMostrarClientes(this.value)">
                     <input type="hidden" id="pedClienteId">
                     <div class="pl-autocomplete" id="pedAutoCliente"></div>
+                </div>
+                <div class="pl-form-group">
+                    <label>Documento Fiscal</label>
+                    <input type="text" id="pedClienteDocumento" placeholder="—" readonly>
                 </div>
             </div>
 
@@ -140,9 +189,6 @@
                     <label>Moeda</label>
                     <select id="pedMoeda" onchange="pedRecalcularTotais()">
                         <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="BRL">BRL</option>
-                        <option value="GBP">GBP</option>
                     </select>
                 </div>
                 <div class="pl-form-group">
@@ -153,7 +199,7 @@
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label>Data do Pedido</label>
+                    <label>Data de Criação Pedido</label>
                     <input type="date" id="pedDataPedido">
                 </div>
                 <div class="pl-form-group">
@@ -169,10 +215,32 @@
                 </div>
             </div>
         </div>
-        <div class="pl-modal-footer">
+        <div class="pl-modal-footer" id="ped-form-footer">
             <button class="pl-btn-cancelar" onclick="pedFecharModal()">Cancelar</button>
             <button class="pl-btn-salvar" id="pedBtnSalvar" onclick="pedSalvar()">
                 <i class="fa-solid fa-floppy-disk"></i> Salvar
+            </button>
+        </div>
+
+        <!-- TELA PÓS-SALVO -->
+        <div class="ped-pos-salvo" id="ped-pos-salvo" style="display:none;">
+            <div class="ped-pos-salvo-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <h3 class="ped-pos-salvo-titulo">Pedido salvo!</h3>
+            <p class="ped-pos-salvo-msg">O que deseja fazer agora?</p>
+            <div class="ped-pos-salvo-numero">
+                <span class="ped-pos-salvo-numero-label">Nº do Pedido</span>
+                <span class="ped-pos-salvo-numero-valor" id="ped-pos-salvo-numero">—</span>
+            </div>
+            <div class="ped-pos-salvo-acoes">
+                <button class="pl-btn-cancelar" onclick="pedFecharPosSalvo()">
+                    <i class="fa-solid fa-door-open"></i> Fechar
+                </button>
+                <button class="pl-btn-salvar" onclick="pedAdicionarOutroPedido()">
+                    <i class="fa-solid fa-plus"></i> Adicionar outro
+                </button>
+            </div>
+            <button class="ped-pos-salvo-pdf" onclick="pedGerarPDF()">
+                <i class="fa-solid fa-file-pdf"></i> Gerar PDF do Pedido
             </button>
         </div>
     </div>
@@ -202,8 +270,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="supabase-api.js"></script>
 <script src="navegador.js"></script>
+<script src="pdf-pedido.js"></script>
 <script src="pedidos.js"></script>
 <script src="suporte.js"></script>
 </body>

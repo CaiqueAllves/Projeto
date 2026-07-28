@@ -9,7 +9,52 @@ let _crExcluirId = null;
 document.addEventListener('DOMContentLoaded', async () => {
     _crCarregarUsuario();
     await crCarregar();
+    await _crVerificarGeracaoViaUrl();
 });
+
+// ── Abertura pré-preenchida a partir de Pedido/Processo (módulos Comercial/Operacional) ──
+
+async function _crVerificarGeracaoViaUrl() {
+    const params      = new URLSearchParams(window.location.search);
+    const pedidoId    = params.get('gerar_pedido_id');
+    const processoId  = params.get('gerar_processo_id');
+    if (!pedidoId && !processoId) return;
+
+    if (pedidoId) {
+        const { data: pedido } = await supabaseClient
+            .from('pedidos')
+            .select('id, numero, cliente_id, valor_total, moeda, parceiros(razao_social, nome_fantasia)')
+            .eq('id', pedidoId).maybeSingle();
+        if (pedido) {
+            crAbrirModal(null, {
+                descricao:   `Pedido ${pedido.numero || ''}`.trim(),
+                clienteId:   pedido.cliente_id || null,
+                clienteNome: pedido.parceiros?.nome_fantasia || pedido.parceiros?.razao_social || '',
+                pedidoId:    pedido.id,
+                pedidoNome:  pedido.numero || '',
+                valor:       pedido.valor_total || '',
+                moeda:       pedido.moeda || 'BRL',
+            });
+        }
+    } else if (processoId) {
+        const { data: processo } = await supabaseClient
+            .from('processos')
+            .select('id, numero_processo, valor_total, moeda')
+            .eq('id', processoId).maybeSingle();
+        if (processo) {
+            // Parceiro não é pré-preenchido: processos usa empresas_cadastradas,
+            // uma tabela diferente de parceiros (usada nas contas). O usuário
+            // seleciona o cliente manualmente.
+            crAbrirModal(null, {
+                descricao:    `Processo ${processo.numero_processo || ''}`.trim(),
+                processoId:   processo.id,
+                processoNome: processo.numero_processo || '',
+                valor:        processo.valor_total || '',
+                moeda:        processo.moeda || 'BRL',
+            });
+        }
+    }
+}
 
 function _crCarregarUsuario() {
     try {
@@ -72,7 +117,7 @@ function crRenderizar() {
         const podeReceber = c.status === 'pendente' || c.status === 'vencido';
 
         return `<tr>
-            <td><strong>${_crEsc(c.descricao)}</strong>${c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.categoria)}</span>` : ''}</td>
+            <td><strong>${_crEsc(c.descricao)}</strong>${c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.categoria)}</span>` : ''}${c.pedidos?.numero ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-bag-shopping"></i> Pedido ${_crEsc(c.pedidos.numero)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_crEsc(c.processos.numero_processo)}</span>` : ''}</td>
             <td>${_crEsc(cliente)}</td>
             <td class="td-valor entrada">${valor}</td>
             <td>${venc}</td>
@@ -129,17 +174,21 @@ async function crMarcarRecebido(id) {
     await atualizarContaReceber(id, { status: 'recebido', data_recebimento: hoje });
 }
 
-function crAbrirModal(id = null) {
+function crAbrirModal(id = null, prefill = null) {
     const c = id ? _crTodas.find(x => x.id === id) : null;
     document.getElementById('crEditId').value = c?.id || '';
     document.getElementById('crModalTitulo').innerHTML = c
         ? '<i class="fa-solid fa-pen"></i> Editar Conta a Receber'
         : '<i class="fa-solid fa-arrow-down"></i> Nova Conta a Receber';
-    document.getElementById('crDescricao').value       = c?.descricao || '';
-    document.getElementById('crClienteNome').value     = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || '';
-    document.getElementById('crClienteId').value       = c?.parceiro_id || '';
-    document.getElementById('crValor').value           = c?.valor || '';
-    document.getElementById('crMoeda').value           = c?.moeda || 'BRL';
+    document.getElementById('crDescricao').value       = c?.descricao || prefill?.descricao || '';
+    document.getElementById('crClienteNome').value     = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || prefill?.clienteNome || '';
+    document.getElementById('crClienteId').value       = c?.parceiro_id || prefill?.clienteId || '';
+    document.getElementById('crPedidoNome').value      = c?.pedidos?.numero || prefill?.pedidoNome || '';
+    document.getElementById('crPedidoId').value         = c?.pedido_id || prefill?.pedidoId || '';
+    document.getElementById('crProcessoNome').value    = c?.processos?.numero_processo || prefill?.processoNome || '';
+    document.getElementById('crProcessoId').value      = c?.processo_id || prefill?.processoId || '';
+    document.getElementById('crValor').value           = c?.valor || prefill?.valor || '';
+    document.getElementById('crMoeda').value           = c?.moeda || prefill?.moeda || 'BRL';
     document.getElementById('crVencimento').value      = c?.data_vencimento || '';
     document.getElementById('crDataRecebimento').value = c?.data_recebimento || '';
     document.getElementById('crStatus').value          = c?.status || 'pendente';
@@ -151,6 +200,8 @@ function crAbrirModal(id = null) {
 function crFecharModal() {
     document.getElementById('crModalOverlay').classList.remove('ativo');
     document.getElementById('crAutoParceiro').innerHTML = '';
+    document.getElementById('crAutoPedido').innerHTML   = '';
+    document.getElementById('crAutoProcesso').innerHTML = '';
 }
 
 async function crSalvar() {
@@ -166,6 +217,8 @@ async function crSalvar() {
     const dados = {
         descricao,
         parceiro_id:      document.getElementById('crClienteId').value || null,
+        pedido_id:        document.getElementById('crPedidoId').value || null,
+        processo_id:      document.getElementById('crProcessoId').value || null,
         valor:            parseFloat(valor),
         moeda:            document.getElementById('crMoeda').value,
         data_vencimento:  venc,
@@ -213,9 +266,77 @@ function crSelecionarParceiro(id, nome) {
     document.getElementById('crAutoParceiro').innerHTML = '';
 }
 
+// ── Autocomplete vínculo — Pedido ────────────────────────────────────────────
+
+let _crBuscaPedidoTimer = null;
+async function crBuscarPedido(termo) {
+    const box = document.getElementById('crAutoPedido');
+    document.getElementById('crPedidoId').value = '';
+    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
+    clearTimeout(_crBuscaPedidoTimer);
+    _crBuscaPedidoTimer = setTimeout(async () => {
+        try {
+            const { data } = await supabaseClient
+                .from('pedidos')
+                .select('id, numero')
+                .ilike('numero', `%${termo}%`)
+                .limit(8);
+            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum pedido encontrado</div>'; return; }
+            box.innerHTML = data.map(p => `
+                <div class="pl-auto-item" onclick="crSelecionarPedido('${p.id}', '${_crEsc(p.numero || '')}')">
+                    <span class="pl-auto-nome">${_crEsc(p.numero || '')}</span>
+                </div>`).join('');
+        } catch (e) {}
+    }, 300);
+}
+
+function crSelecionarPedido(id, numero) {
+    document.getElementById('crPedidoId').value   = id;
+    document.getElementById('crPedidoNome').value = numero;
+    document.getElementById('crAutoPedido').innerHTML = '';
+}
+
+// ── Autocomplete vínculo — Processo ─────────────────────────────────────────
+
+let _crBuscaProcessoTimer = null;
+async function crBuscarProcesso(termo) {
+    const box = document.getElementById('crAutoProcesso');
+    document.getElementById('crProcessoId').value = '';
+    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
+    clearTimeout(_crBuscaProcessoTimer);
+    _crBuscaProcessoTimer = setTimeout(async () => {
+        try {
+            const { data } = await supabaseClient
+                .from('processos')
+                .select('id, numero_processo')
+                .ilike('numero_processo', `%${termo}%`)
+                .limit(8);
+            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo encontrado</div>'; return; }
+            box.innerHTML = data.map(p => `
+                <div class="pl-auto-item" onclick="crSelecionarProcesso('${p.id}', '${_crEsc(p.numero_processo || '')}')">
+                    <span class="pl-auto-nome">${_crEsc(p.numero_processo || '')}</span>
+                </div>`).join('');
+        } catch (e) {}
+    }, 300);
+}
+
+function crSelecionarProcesso(id, numero) {
+    document.getElementById('crProcessoId').value   = id;
+    document.getElementById('crProcessoNome').value = numero;
+    document.getElementById('crAutoProcesso').innerHTML = '';
+}
+
 document.addEventListener('click', e => {
     if (!e.target.closest('#crAutoParceiro') && !e.target.closest('#crClienteNome')) {
         const box = document.getElementById('crAutoParceiro');
+        if (box) box.innerHTML = '';
+    }
+    if (!e.target.closest('#crAutoPedido') && !e.target.closest('#crPedidoNome')) {
+        const box = document.getElementById('crAutoPedido');
+        if (box) box.innerHTML = '';
+    }
+    if (!e.target.closest('#crAutoProcesso') && !e.target.closest('#crProcessoNome')) {
+        const box = document.getElementById('crAutoProcesso');
         if (box) box.innerHTML = '';
     }
 });
