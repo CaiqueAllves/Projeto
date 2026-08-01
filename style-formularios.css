@@ -293,17 +293,9 @@
 }
 
 .topbar-left h2 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--texto);
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.topbar-left h2 i {
-    color: var(--azul);
-    font-size: 15px;
 }
 
 .topbar-right {

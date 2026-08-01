@@ -277,6 +277,7 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
                 is_fornecedor:        dadosEmpresa.tipos.includes('fornecedor'),
                 is_transportadora:    dadosEmpresa.tipos.includes('transportadora'),
                 is_remetente:         dadosEmpresa.tipos.includes('remetente'),
+                modelo:               dadosEmpresa.modelo || 'empresa',
                 tipo_cadastro:        dadosEmpresa.tipo_cadastro,
                 documento:            dadosEmpresa.documento.replace(/\D/g, ''),
                 razao_social:         dadosEmpresa.razao_social,
@@ -405,6 +406,7 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
                 is_fornecedor:        dadosEmpresa.tipos.includes('fornecedor'),
                 is_transportadora:    dadosEmpresa.tipos.includes('transportadora'),
                 is_remetente:         dadosEmpresa.tipos.includes('remetente'),
+                modelo:               dadosEmpresa.modelo || 'empresa',
                 tipo_cadastro:        dadosEmpresa.tipo_cadastro,
                 documento:            dadosEmpresa.documento.replace(/\D/g, ''),
                 razao_social:         dadosEmpresa.razao_social,
@@ -1147,6 +1149,7 @@ async function salvarPropostaDB(dados) {
                 destinatario_doc_tipo:   dados.destinatario_doc_tipo    || null,
                 validade_dias:           dados.validade_dias            || null,
                 obs_status:              dados.obs_status               || null,
+                pedido_id:               dados.pedido_id                || null,
             })
             .select('id, codigo')
             .single();
@@ -1172,15 +1175,15 @@ async function buscarProformaDB(id) {
     }
 }
 
-// Registra o processo mais recente gerado a partir desta proforma. Não força
-// mais status: 'finalizado' — uma proforma aprovada pode gerar vários
-// processos, então o status do kanban continua sendo controlado manualmente.
+// Proforma→Processo é 1:1 — ao gerar o processo, a proforma sai do kanban de
+// "aprovado" (vira finalizado) e não pode gerar outro processo.
 async function marcarProformaFinalizadaDB(proformaId, processoId) {
     try {
         const { error } = await supabaseClient
             .from('proformas')
             .update({
                 processo_gerado_id:   processoId,
+                status:               'finalizado',
                 status_atualizado_em: new Date().toISOString(),
             })
             .eq('id', proformaId);
@@ -1499,6 +1502,7 @@ window.supabaseAPI = {
     buscarPedidos,
     salvarPedido,
     atualizarStatusPedido,
+    avancarStatusPedido,
     excluirPedido,
     vincularProformaAoPedido,
     buscarPedidoIdPorProforma,
@@ -1695,25 +1699,51 @@ async function atualizarStatusPedido(id, status) {
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-// Marca o pedido como vinculado à proforma gerada a partir dele
+const PED_STATUS_ORDEM_AVANCO = ['aguardando', 'confirmado', 'em_producao', 'embarcado', 'entregue'];
+
+// Avança o status do pedido automaticamente ao gerar Proforma/Processo — nunca
+// retrocede um status já mais avançado (ex: pedido Embarcado não volta pra
+// Confirmado só porque gerou uma 2ª proforma) e nunca mexe num pedido Cancelado.
+async function avancarStatusPedido(pedidoId, statusAlvo) {
+    try {
+        const { data: ped, error: errBusca } = await supabaseClient
+            .from('pedidos').select('status').eq('id', pedidoId).single();
+        if (errBusca || !ped) return { sucesso: false, mensagem: errBusca?.message };
+
+        const atual = ped.status || 'aguardando';
+        if (atual === 'cancelado') return { sucesso: true };
+
+        const iAtual = PED_STATUS_ORDEM_AVANCO.indexOf(atual);
+        const iAlvo  = PED_STATUS_ORDEM_AVANCO.indexOf(statusAlvo);
+        if (iAlvo <= iAtual) return { sucesso: true };
+
+        return await atualizarStatusPedido(pedidoId, statusAlvo);
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// Marca o pedido como vinculado à proforma gerada a partir dele, e avança o
+// status pra "Confirmado" (se ainda não tiver ido além disso).
 async function vincularProformaAoPedido(pedidoId, proformaId) {
     try {
         const { error } = await supabaseClient.from('pedidos')
             .update({ proforma_id: proformaId, updated_at: new Date().toISOString() }).eq('id', pedidoId);
         if (error) return { sucesso: false, mensagem: error.message };
+        await avancarStatusPedido(pedidoId, 'confirmado');
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-// Busca o pedido de origem de uma proforma (link reverso de pedidos.proforma_id),
+// Busca o pedido de origem de uma proforma (proformas.pedido_id, 1:N — um
+// pedido pode ter várias proformas, cada proforma sabe de qual pedido nasceu),
 // usado para propagar pedido_id ao processo gerado a partir dessa proforma.
 async function buscarPedidoIdPorProforma(proformaId) {
     try {
-        const { data, error } = await supabaseClient.from('pedidos')
-            .select('id, cliente_id, valor_total, moeda')
-            .eq('proforma_id', proformaId).maybeSingle();
+        const { data, error } = await supabaseClient.from('proformas')
+            .select('pedido_id')
+            .eq('id', proformaId).maybeSingle();
         if (error) return { sucesso: false, mensagem: error.message, data: null };
-        return { sucesso: true, data };
+        if (!data?.pedido_id) return { sucesso: true, data: null };
+        return { sucesso: true, data: { id: data.pedido_id } };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: null }; }
 }
 

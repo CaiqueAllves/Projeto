@@ -419,13 +419,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Restaurar CPF salvo pelo "Lembrar-me"
+    // Restaurar CPF salvo — sobrevive ao logout, mesmo sem "Lembrar-me" ativo
+    const cpfSalvo = localStorage.getItem('cpfSalvo');
+    if (cpfSalvo && cpfInput) {
+        cpfInput.value = cpfSalvo;
+    }
     if (localStorage.getItem('rememberMe') === 'true') {
-        const cpfSalvo = localStorage.getItem('cpfSalvo');
-        if (cpfSalvo && cpfInput) {
-            cpfInput.value = cpfSalvo;
-            document.getElementById('rememberMe').checked = true;
-        }
+        document.getElementById('rememberMe').checked = true;
     }
 
     // Fechar modal ao pressionar ESC

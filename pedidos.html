@@ -53,6 +53,14 @@
                         <option value="entregue">Entregue</option>
                         <option value="cancelado">Cancelado</option>
                     </select>
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="pedBtnViewKanban" onclick="pedSwitchView('kanban')" title="Kanban">
+                            <i class="fa-solid fa-table-columns"></i>
+                        </button>
+                        <button class="view-btn" id="pedBtnViewLista" onclick="pedSwitchView('lista')" title="Lista">
+                            <i class="fa-solid fa-list"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="header-right">
                     <div id="pedExcluidosWrapper">
@@ -76,8 +84,88 @@
                 </div>
             </div>
 
+            <!-- TABS MOBILE -->
+            <div class="kanban-tabs" id="pedKanbanTabs">
+                <button class="kanban-tab active" data-col="aguardando" onclick="pedKanbanSwitchTab(this)">
+                    Aguardando <span class="kanban-tab-count" id="ped-tab-count-aguardando">0</span>
+                </button>
+                <button class="kanban-tab" data-col="confirmado" onclick="pedKanbanSwitchTab(this)">
+                    Confirmado <span class="kanban-tab-count" id="ped-tab-count-confirmado">0</span>
+                </button>
+                <button class="kanban-tab" data-col="em_producao" onclick="pedKanbanSwitchTab(this)">
+                    Em produção <span class="kanban-tab-count" id="ped-tab-count-em_producao">0</span>
+                </button>
+                <button class="kanban-tab" data-col="embarcado" onclick="pedKanbanSwitchTab(this)">
+                    Embarcado <span class="kanban-tab-count" id="ped-tab-count-embarcado">0</span>
+                </button>
+                <button class="kanban-tab" data-col="entregue" onclick="pedKanbanSwitchTab(this)">
+                    Entregue <span class="kanban-tab-count" id="ped-tab-count-entregue">0</span>
+                </button>
+                <button class="kanban-tab" data-col="cancelado" onclick="pedKanbanSwitchTab(this)">
+                    Cancelado <span class="kanban-tab-count" id="ped-tab-count-cancelado">0</span>
+                </button>
+            </div>
+
+            <!-- KANBAN BOARD -->
+            <div class="kanban-board" id="pedKanbanBoard">
+                <div class="kanban-col kanban-col-active" id="ped-col-aguardando">
+                    <div class="kanban-col-header ped-kanban-header-aguardando">
+                        <span class="kanban-col-title"><i class="fa-solid fa-hourglass-half"></i> Aguardando</span>
+                        <span class="kanban-col-count" id="ped-count-aguardando">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="ped-cards-aguardando">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+                <div class="kanban-col" id="ped-col-confirmado">
+                    <div class="kanban-col-header ped-kanban-header-confirmado">
+                        <span class="kanban-col-title"><i class="fa-solid fa-circle-check"></i> Confirmado</span>
+                        <span class="kanban-col-count" id="ped-count-confirmado">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="ped-cards-confirmado">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+                <div class="kanban-col" id="ped-col-em_producao">
+                    <div class="kanban-col-header ped-kanban-header-em_producao">
+                        <span class="kanban-col-title"><i class="fa-solid fa-industry"></i> Em produção</span>
+                        <span class="kanban-col-count" id="ped-count-em_producao">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="ped-cards-em_producao">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+                <div class="kanban-col" id="ped-col-embarcado">
+                    <div class="kanban-col-header ped-kanban-header-embarcado">
+                        <span class="kanban-col-title"><i class="fa-solid fa-ship"></i> Embarcado</span>
+                        <span class="kanban-col-count" id="ped-count-embarcado">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="ped-cards-embarcado">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+                <div class="kanban-col" id="ped-col-entregue">
+                    <div class="kanban-col-header ped-kanban-header-entregue">
+                        <span class="kanban-col-title"><i class="fa-solid fa-box-open"></i> Entregue</span>
+                        <span class="kanban-col-count" id="ped-count-entregue">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="ped-cards-entregue">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+                <div class="kanban-col" id="ped-col-cancelado">
+                    <div class="kanban-col-header ped-kanban-header-cancelado">
+                        <span class="kanban-col-title"><i class="fa-solid fa-ban"></i> Cancelado</span>
+                        <span class="kanban-col-count" id="ped-count-cancelado">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="ped-cards-cancelado">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- TABELA -->
-            <div class="ped-table-wrap">
+            <div class="ped-table-wrap" style="display:none;">
                 <table class="ped-table" id="pedTabela">
                     <thead>
                         <tr>
@@ -265,6 +353,41 @@
     </div>
 </div>
 
+<!-- MODAL AVISO (substitui alert()) -->
+<div class="pl-modal-overlay" id="pedAvisoOverlay" onclick="pedFecharAviso()">
+    <div class="pl-modal pl-modal-sm" onclick="event.stopPropagation()">
+        <div class="pl-modal-header">
+            <h3><i class="fa-solid" id="pedAvisoIcone"></i> <span id="pedAvisoTitulo">Aviso</span></h3>
+            <button class="pl-modal-close" onclick="pedFecharAviso()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pl-modal-body">
+            <p id="pedAvisoMsg"></p>
+        </div>
+        <div class="pl-modal-footer">
+            <button class="pl-btn-salvar" onclick="pedFecharAviso()">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR MUDANÇA DE STATUS -->
+<div class="pl-modal-overlay" id="pedModalConfirmStatusOverlay" onclick="pedFecharModalConfirmStatus()">
+    <div class="pl-modal pl-modal-sm" onclick="event.stopPropagation()">
+        <div class="pl-modal-header">
+            <h3><i class="fa-solid fa-triangle-exclamation"></i> Confirmar mudança de status</h3>
+            <button class="pl-modal-close" onclick="pedFecharModalConfirmStatus()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pl-modal-body">
+            <p id="pedStatusConfirmMsg"></p>
+        </div>
+        <div class="pl-modal-footer">
+            <button class="pl-btn-cancelar" onclick="pedFecharModalConfirmStatus()">Cancelar</button>
+            <button class="pl-btn-salvar" id="pedBtnConfirmarStatus" onclick="pedConfirmarMudancaStatus()">
+                <i class="fa-solid fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="dashboard-footer">
     <span>© 2025 Marpex · Todos os direitos reservados</span>
 </div>
@@ -274,6 +397,7 @@
 <script src="supabase-api.js"></script>
 <script src="navegador.js"></script>
 <script src="pdf-pedido.js"></script>
+<script src="pdf-proforma.js"></script>
 <script src="pedidos.js"></script>
 <script src="suporte.js"></script>
 </body>

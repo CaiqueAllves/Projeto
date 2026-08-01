@@ -105,6 +105,20 @@
 .ped-remetente-tag i { color: #94a3b8; font-size: 11px; }
 .ped-remetente-propria { color: #94a3b8; font-weight: 500; font-style: italic; }
 
+/* ── Etiqueta de etapa (Pedido → Proforma → Processo) ─────────────── */
+.ped-etapa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.ped-etapa-proforma { background: #fef3c7; color: #b45309; }
+.ped-etapa-processo { background: #ede9fe; color: #6d28d9; }
+
 /* ── Select de status inline ───────────────────────────────────── */
 .ped-status-select {
     font-size: 11px;
@@ -415,6 +429,196 @@
 }
 .prof-excluido-restaurar:hover { border-color: #3b82f6; background: #eff6ff; }
 
+/* ── View toggle (kanban/lista) ───────────────────────────────────── */
+.view-toggle {
+    display: flex;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.view-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: white;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.15s;
+}
+.view-btn + .view-btn { border-left: 1.5px solid #e2e8f0; }
+.view-btn.active       { background: var(--azul); color: white; }
+.view-btn:hover:not(.active) { background: #f8fafc; color: #475569; }
+
+/* ── Kanban board ─────────────────────────────────────────────────── */
+.kanban-board {
+    display: flex;
+    gap: 10px;
+    padding: 0 0 24px 0;
+    margin-top: 16px;
+    align-items: flex-start;
+}
+.kanban-col {
+    flex: 1;
+    min-width: 0;
+    background: #f8fafc;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 220px);
+}
+.kanban-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 14px 14px 0 0;
+    border-bottom: 2px solid transparent;
+    flex-shrink: 0;
+}
+.ped-kanban-header-aguardando  { background: #f1f5f9; border-bottom-color: #cbd5e1; }
+.ped-kanban-header-confirmado  { background: #eff6ff; border-bottom-color: #3b82f6; }
+.ped-kanban-header-em_producao { background: #fff7ed; border-bottom-color: #f97316; }
+.ped-kanban-header-embarcado   { background: #f5f3ff; border-bottom-color: #8b5cf6; }
+.ped-kanban-header-entregue    { background: #f0fdf4; border-bottom-color: #22c55e; }
+.ped-kanban-header-cancelado   { background: #fef2f2; border-bottom-color: #ef4444; }
+
+.kanban-col-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ped-kanban-header-aguardando  .kanban-col-title { color: #475569; }
+.ped-kanban-header-confirmado  .kanban-col-title { color: #1d4ed8; }
+.ped-kanban-header-em_producao .kanban-col-title { color: #c2410c; }
+.ped-kanban-header-embarcado   .kanban-col-title { color: #6d28d9; }
+.ped-kanban-header-entregue    .kanban-col-title { color: #15803d; }
+.ped-kanban-header-cancelado   .kanban-col-title { color: #dc2626; }
+
+.kanban-col-count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #475569;
+}
+.kanban-col-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.kanban-vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 16px;
+    color: #cbd5e1;
+    font-size: 0.82rem;
+}
+
+/* ── Card do kanban de pedidos ────────────────────────────────────── */
+.ped-kcard {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ped-kcard-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.ped-kcard-num { font-weight: 700; color: #1e293b; font-size: 13px; }
+.ped-kcard-empresa {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #475569;
+    flex-wrap: wrap;
+}
+.ped-kcard-empresa i:first-child { color: #94a3b8; font-size: 11px; }
+.ped-kcard-arrow { color: #cbd5e1; font-size: 10px; }
+.ped-kcard-valor {
+    font-weight: 700;
+    color: var(--azul);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ped-kcard-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+.ped-kcard-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.ped-kcard-data { font-size: 11px; color: #94a3b8; white-space: nowrap; }
+.ped-kcard-btns {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+/* ── Tabs mobile (kanban) ─────────────────────────────────────────── */
+.kanban-tabs {
+    display: none;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+.kanban-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 11px 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #94a3b8;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: color .15s;
+}
+.kanban-tab.active { color: var(--azul); border-bottom-color: var(--azul); }
+.kanban-tab-count {
+    background: #f1f5f9;
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-size: 0.68rem;
+}
+.kanban-tab.active .kanban-tab-count { background: #eff6ff; color: var(--azul); }
+
 /* ── Mobile ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .ped-table-wrap {
@@ -423,4 +627,9 @@
     .ped-acoes {
         flex-wrap: wrap;
     }
+    .kanban-tabs  { display: flex; flex-wrap: wrap; }
+    .kanban-tab   { flex: 1 1 auto; font-size: 0.7rem; padding: 9px 4px; }
+    .kanban-board { flex-direction: column; gap: 0; }
+    .kanban-col   { display: none; max-height: none; border-radius: 12px; }
+    .kanban-col.kanban-col-active { display: flex; }
 }

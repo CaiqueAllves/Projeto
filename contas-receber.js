@@ -374,7 +374,13 @@ function _crEsc(str) {
     return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
+// automático não deve sobreviver a um logout explícito). cpfSalvo é mantido
+// de propósito, só pra não precisar redigitar o CPF na próxima vez.
 function handleLogout() {
     sessionStorage.removeItem('usuarioLogado');
-    window.location.href = 'index.html';
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('usuarioSalvo');
+    localStorage.removeItem('lastLogin');
+    window.location.href = 'login.html';
 }

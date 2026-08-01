@@ -2,9 +2,11 @@
 // RELATÓRIOS — EMPRESA
 // ========================================
 
-let periodoAtual = 'mensal';
+let periodoAtual = 'anual';
 
-let todasEmpresas = [];
+let todasEmpresas  = [];
+let todasProformas = [];
+let todasProcessos = [];
 const HISTORICO_KEY = 'relatoriosHistorico';
 
 // Helpers — campos booleanos da tabela
@@ -23,8 +25,10 @@ const _tiposStr     = e => {
     return t.join(', ') || '—';
 };
 
-// Deriva o modelo da empresa a partir dos campos disponíveis
+// Usa a coluna modelo salva no cadastro (empresa/company/transportadora/outros);
+// cai no heurístico antigo só pra registros de antes dela existir.
 const _modeloEmpresa = e => {
+    if (e.modelo) return e.modelo;
     if (e.is_transportadora) return 'transportadora';
     const p = (e.pais || '').toLowerCase().trim();
     if (p && p !== 'br' && p !== 'brasil' && p !== 'brazil') return 'company';
@@ -38,11 +42,65 @@ document.addEventListener('DOMContentLoaded', async function () {
     todasEmpresas = resultado.sucesso ? resultado.data : [];
 
     carregarStats(todasEmpresas);
-    renderPreviewPeriodo(todasEmpresas);
-    renderPreviewTipo(todasEmpresas);
-    renderPreviewPais(todasEmpresas);
     renderHistorico();
+
+    carregarStatsProformas();
+    carregarStatsProcessos();
 });
+
+// ========================================
+// STATS — PROFORMAS
+// ========================================
+
+async function carregarStatsProformas() {
+    try {
+        const usuario = obterUsuarioLogado();
+        let query = supabaseClient
+            .from('proformas')
+            .select('id, codigo, status, created_at, valor_total, moeda_principal, destinatario_id, destinatario_razao_social')
+            .neq('status', 'excluido');
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const proformas  = data || [];
+        todasProformas    = proformas;
+        const concluidas = proformas.filter(p => p.status === 'finalizado').length;
+        // "Em Andamento": ainda ativas no funil (enviado/aprovado/pendente).
+        // "Encerrado" fica de fora — representa recusada/fechada sem sucesso,
+        // não é nem concluída nem está em andamento (mesmo padrão do card de
+        // Processos, que também deixa "cancelado" fora das duas contagens).
+        const andamento   = proformas.filter(p => ['enviado', 'aprovado', 'pendente'].includes(p.status)).length;
+
+        document.getElementById('totalProformas').textContent           = proformas.length;
+        document.getElementById('totalProformasConcluidas').textContent = concluidas;
+        document.getElementById('totalProformasAndamento').textContent  = andamento;
+    } catch (err) {
+        console.error('[Relatórios] Erro ao carregar stats de proformas:', err);
+    }
+}
+
+// ========================================
+// STATS — PROCESSOS
+// ========================================
+
+async function carregarStatsProcessos() {
+    try {
+        const res = await window.supabaseAPI.buscarProcessos();
+        const processos = res.sucesso ? (res.data || []) : [];
+        todasProcessos  = processos;
+
+        const concluidos   = processos.filter(p => p.status === 'concluido').length;
+        const emAndamento  = processos.filter(p => !['concluido', 'cancelado'].includes(p.status)).length;
+
+        document.getElementById('totalProcessos').textContent           = processos.length;
+        document.getElementById('totalProcessosConcluidos').textContent = concluidos;
+        document.getElementById('totalProcessosAbertos').textContent    = emAndamento;
+    } catch (err) {
+        console.error('[Relatórios] Erro ao carregar stats de processos:', err);
+    }
+}
 
 // ========================================
 // SELETOR DE MÓDULO
@@ -74,105 +132,17 @@ function verificarPermissoes() {
 // ========================================
 
 function carregarStats(empresas) {
-    const total       = empresas.length;
-    const clientes    = empresas.filter(_eCliente).length;
-    const fornecedores= empresas.filter(_eFornecedor).length;
-    const paises      = new Set(empresas.map(e => e.pais).filter(Boolean)).size;
+    const total          = empresas.length;
+    const fabricantes    = empresas.filter(_eFabricante).length;
+    const fornecedores   = empresas.filter(_eFornecedor).length;
+    const transportadoras= empresas.filter(e => e.modelo === 'transportadora').length;
+    const paises         = new Set(empresas.map(e => e.pais).filter(Boolean)).size;
 
-    document.getElementById('totalEmpresas').textContent    = total;
-    document.getElementById('totalClientes').textContent    = clientes;
-    document.getElementById('totalFornecedores').textContent= fornecedores;
-    document.getElementById('totalPaises').textContent      = paises;
-}
-
-// ========================================
-// PREVIEWS DOS CARDS
-// ========================================
-
-function renderPreviewPeriodo(empresas) {
-    const el = document.getElementById('previewPeriodo');
-    if (!el) return;
-
-    const agora = new Date();
-    const limites = { mensal: 30, trimestral: 90, anual: 365 };
-    const dias = limites[periodoAtual] || 30;
-    const corte = new Date();
-    corte.setDate(corte.getDate() - dias);
-
-    const doPeriodo    = empresas.filter(e => e.created_at && new Date(e.created_at) >= corte);
-    const fabricantes  = doPeriodo.filter(_eFabricante).length;
-    const fornecedores = doPeriodo.filter(_eFornecedor).length;
-
-    el.innerHTML = `
-        <div class="preview-stat-row">
-            <span class="preview-num" style="color:#4776ec;">${doPeriodo.length}</span>
-            <span class="preview-label">empresas no período</span>
-        </div>
-        <div class="preview-sub-row">
-            <span class="preview-chip" style="background:#dcfce7;color:#15803d;">${fabricantes} fabricante${fabricantes !== 1 ? 's' : ''}</span>
-            <span class="preview-chip" style="background:#fefce8;color:#ca8a04;">${fornecedores} fornecedor${fornecedores !== 1 ? 'es' : ''}</span>
-        </div>
-    `;
-}
-
-function renderPreviewTipo(empresas) {
-    const el = document.getElementById('previewTipo');
-    if (!el) return;
-
-    const total       = empresas.length || 1;
-    const fabricantes = empresas.filter(e => _eFabricante(e) && !_eFornecedor(e)).length;
-    const fornecedores= empresas.filter(e => _eFornecedor(e) && !_eFabricante(e)).length;
-    const ambos       = empresas.filter(e => _eFabricante(e) && _eFornecedor(e)).length;
-
-    const pct = n => Math.round((n / total) * 100);
-
-    el.innerHTML = `
-        <div class="preview-bar-item">
-            <span class="preview-bar-label"><span style="color:#22c55e;">●</span> Fabricantes</span>
-            <div class="preview-bar-track"><div class="preview-bar-fill" style="width:${pct(fabricantes)}%;background:#22c55e;"></div></div>
-            <span class="preview-bar-val">${fabricantes}</span>
-        </div>
-        <div class="preview-bar-item">
-            <span class="preview-bar-label"><span style="color:#f59e0b;">●</span> Fornecedores</span>
-            <div class="preview-bar-track"><div class="preview-bar-fill" style="width:${pct(fornecedores)}%;background:#f59e0b;"></div></div>
-            <span class="preview-bar-val">${fornecedores}</span>
-        </div>
-        <div class="preview-bar-item">
-            <span class="preview-bar-label"><span style="color:#6366f1;">●</span> Ambos</span>
-            <div class="preview-bar-track"><div class="preview-bar-fill" style="width:${pct(ambos)}%;background:#6366f1;"></div></div>
-            <span class="preview-bar-val">${ambos}</span>
-        </div>
-    `;
-}
-
-function renderPreviewPais(empresas) {
-    const el = document.getElementById('previewPais');
-    if (!el) return;
-
-    const contagem = {};
-    empresas.forEach(e => {
-        const p = e.pais || 'Não informado';
-        contagem[p] = (contagem[p] || 0) + 1;
-    });
-
-    const ranking = Object.entries(contagem)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 4);
-
-    const max = ranking[0]?.[1] || 1;
-
-    if (ranking.length === 0) {
-        el.innerHTML = `<div class="preview-vazio">Nenhuma empresa cadastrada</div>`;
-        return;
-    }
-
-    el.innerHTML = ranking.map(([pais, qtd], i) => `
-        <div class="preview-bar-item">
-            <span class="preview-bar-label preview-rank"><span class="rank-num">${i + 1}</span>${pais}</span>
-            <div class="preview-bar-track"><div class="preview-bar-fill" style="width:${Math.round((qtd/max)*100)}%;background:#22c55e;"></div></div>
-            <span class="preview-bar-val">${qtd}</span>
-        </div>
-    `).join('');
+    document.getElementById('totalEmpresas').textContent        = total;
+    document.getElementById('totalFabricantes').textContent     = fabricantes;
+    document.getElementById('totalFornecedores').textContent    = fornecedores;
+    document.getElementById('totalTransportadoras').textContent = transportadoras;
+    document.getElementById('totalPaises').textContent          = paises;
 }
 
 // ========================================
@@ -224,6 +194,7 @@ const CONFIG_REL = {
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="empresa" checked> Empresa (Nacional)</label>
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="company" checked> Company (Estrangeira)</label>
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="transportadora" checked> Transportadora</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-modelo" value="outros" checked> Outro</label>
                 </div>
             </div>`
     },
@@ -246,6 +217,7 @@ const CONFIG_REL = {
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="empresa" checked> Empresa (Nacional)</label>
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="company" checked> Company (Estrangeira)</label>
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="transportadora" checked> Transportadora</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-modelo" value="outros" checked> Outro</label>
                 </div>
             </div>`
     },
@@ -268,6 +240,70 @@ const CONFIG_REL = {
                     <option value="0">Todos</option>
                 </select>
             </div>`
+    },
+    'proformas-periodo': {
+        nome:  'Proformas por Período',
+        cor:   'linear-gradient(135deg,#f59e0b,#f97316)',
+        icone: 'fa-solid fa-calendar',
+        params: `
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status</label>
+                <div class="rel-check-row">
+                    <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="enviado" checked> Enviado</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="aprovado" checked> Aprovado</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="pendente" checked> Pendente</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="encerrado" checked> Encerrado</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="finalizado" checked> Finalizado</label>
+                </div>
+            </div>`
+    },
+    'proformas-status': {
+        nome:  'Proformas por Status',
+        cor:   'linear-gradient(135deg,#8b5cf6,#6d28d9)',
+        icone: 'fa-solid fa-chart-bar',
+        params: ''
+    },
+    'proformas-cliente': {
+        nome:  'Proformas por Cliente',
+        cor:   'linear-gradient(135deg,#4776ec,#6366f1)',
+        icone: 'fa-solid fa-building',
+        params: `
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-ranking-star"></i> Exibir no ranking</label>
+                <select id="relRankingTopCliente" class="rel-select" onchange="atualizarPreviewModal()">
+                    <option value="5">Top 5</option>
+                    <option value="10" selected>Top 10</option>
+                    <option value="0">Todos</option>
+                </select>
+            </div>`
+    },
+    'processos-periodo': {
+        nome:  'Processos por Período',
+        cor:   'linear-gradient(135deg,#4776ec,#6366f1)',
+        icone: 'fa-solid fa-calendar',
+        params: `
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status</label>
+                <div class="rel-check-row">
+                    <label class="rel-check"><input type="checkbox" name="rel-proc-status" value="aberto" checked> Aberto</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-proc-status" value="em_andamento" checked> Em Andamento</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-proc-status" value="aguardando_documentos" checked> Aguard. Documentos</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-proc-status" value="concluido" checked> Concluído</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-proc-status" value="cancelado" checked> Cancelado</label>
+                </div>
+            </div>`
+    },
+    'processos-status': {
+        nome:  'Processos por Status',
+        cor:   'linear-gradient(135deg,#22c55e,#16a34a)',
+        icone: 'fa-solid fa-chart-bar',
+        params: ''
+    },
+    'processos-modal': {
+        nome:  'Processos por Modal',
+        cor:   'linear-gradient(135deg,#f59e0b,#f97316)',
+        icone: 'fa-solid fa-globe',
+        params: ''
     }
 };
 
@@ -284,11 +320,16 @@ function gerarRelatorio(tipo) {
     // Parâmetros específicos
     document.getElementById('relParamsEspecificos').innerHTML = cfg.params;
 
-    // Datas padrão (início do mês até hoje)
+    // Datas padrão: últimos 365 dias (mesmo padrão "Anual" já usado nos cards
+    // de estatística — evita a prévia abrir zerada quando não há registros
+    // no mês corrente).
     const hoje = new Date();
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    document.getElementById('relDataInicio').value = inicioMes.toISOString().split('T')[0];
-    document.getElementById('relDataFim').value    = hoje.toISOString().split('T')[0];
+    const corte365 = new Date();
+    corte365.setDate(corte365.getDate() - 365);
+    document.getElementById('relDataInicio').value = corte365.toISOString().split('T')[0];
+    document.getElementById('relDataFim').value     = hoje.toISOString().split('T')[0];
+    document.querySelectorAll('#modalRelatorio .period-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('#modalRelatorio .period-btn[onclick*="anual"]')?.classList.add('active');
 
     // Popular select de países se for o card de país
     if (tipo === 'pais') {
@@ -329,6 +370,32 @@ function filtrarEmpresasPorDatas() {
     return todasEmpresas.filter(e => {
         if (!e.created_at) return true;
         const d = new Date(e.created_at);
+        return d >= inicio && d <= fim;
+    });
+}
+
+function filtrarProformasPorDatas() {
+    const di = document.getElementById('relDataInicio')?.value;
+    const df = document.getElementById('relDataFim')?.value;
+    if (!di || !df) return todasProformas;
+    const inicio = new Date(di);
+    const fim    = new Date(df + 'T23:59:59');
+    return todasProformas.filter(p => {
+        if (!p.created_at) return true;
+        const d = new Date(p.created_at);
+        return d >= inicio && d <= fim;
+    });
+}
+
+function filtrarProcessosPorDatas() {
+    const di = document.getElementById('relDataInicio')?.value;
+    const df = document.getElementById('relDataFim')?.value;
+    if (!di || !df) return todasProcessos;
+    const inicio = new Date(di);
+    const fim    = new Date(df + 'T23:59:59');
+    return todasProcessos.filter(p => {
+        if (!p.criado_em) return true;
+        const d = new Date(p.criado_em);
         return d >= inicio && d <= fim;
     });
 }
@@ -389,6 +456,7 @@ function atualizarPreviewModal() {
             empresa:       filtradas.filter(e => _modeloEmpresa(e) === 'empresa').length,
             company:       filtradas.filter(e => _modeloEmpresa(e) === 'company').length,
             transportadora:filtradas.filter(e => _modeloEmpresa(e) === 'transportadora').length,
+            outros:        filtradas.filter(e => _modeloEmpresa(e) === 'outros').length,
         };
 
         el.innerHTML = `
@@ -401,6 +469,7 @@ function atualizarPreviewModal() {
             </div>
             <div class="prev-linha"><span>Estrangeira (Company)</span><strong>${porModelo.company}</strong></div>
             <div class="prev-linha"><span>Transportadora</span><strong>${porModelo.transportadora}</strong></div>
+            <div class="prev-linha"><span>Outro</span><strong>${porModelo.outros}</strong></div>
         `;
 
     } else if (tipoRelatorioAtual === 'pais') {
@@ -421,6 +490,78 @@ function atualizarPreviewModal() {
         el.innerHTML = ranking.map(([pais, qtd], i) =>
             `<div class="prev-linha"><span><b>${i + 1}.</b> ${pais}</span><strong>${qtd}</strong></div>`
         ).join('');
+
+    } else if (tipoRelatorioAtual === 'proformas-periodo') {
+        const labels    = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado' };
+        const statusSel = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-prof-status"]:checked')].map(c => c.value);
+        const lista     = filtrarProformasPorDatas().filter(p => statusSel.includes(p.status || 'enviado'));
+
+        el.innerHTML = `
+            <div class="prev-linha"><span>Total no período</span><strong>${lista.length}</strong></div>
+            ${statusSel.map(st => `<div class="prev-linha"><span>${labels[st]}</span><strong>${lista.filter(p => (p.status || 'enviado') === st).length}</strong></div>`).join('')}
+        `;
+
+    } else if (tipoRelatorioAtual === 'proformas-status') {
+        const labels = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado' };
+        const lista  = filtrarProformasPorDatas();
+        const total  = lista.length || 1;
+
+        el.innerHTML = Object.keys(labels).map(st => {
+            const n = lista.filter(p => (p.status || 'enviado') === st).length;
+            return `<div class="prev-linha"><span>${labels[st]}</span><strong>${n} (${Math.round((n / total) * 100)}%)</strong></div>`;
+        }).join('');
+
+    } else if (tipoRelatorioAtual === 'proformas-cliente') {
+        const topN = parseInt(document.getElementById('relRankingTopCliente')?.value || '10');
+        const lista = filtrarProformasPorDatas();
+
+        const porCliente = {};
+        lista.forEach(p => {
+            const nome = p.destinatario_razao_social || 'Não informado';
+            if (!porCliente[nome]) porCliente[nome] = { qtd: 0, valor: 0 };
+            porCliente[nome].qtd++;
+            porCliente[nome].valor += Number(p.valor_total) || 0;
+        });
+        let ranking = Object.entries(porCliente).sort((a, b) => b[1].qtd - a[1].qtd);
+        if (topN > 0) ranking = ranking.slice(0, topN);
+
+        if (!ranking.length) {
+            el.innerHTML = `<div class="prev-vazio">Nenhum resultado encontrado</div>`;
+            return;
+        }
+        el.innerHTML = ranking.map(([nome, info], i) =>
+            `<div class="prev-linha"><span><b>${i + 1}.</b> ${nome}</span><strong>${info.qtd}</strong></div>`
+        ).join('');
+
+    } else if (tipoRelatorioAtual === 'processos-periodo') {
+        const labels    = { aberto: 'Aberto', em_andamento: 'Em Andamento', aguardando_documentos: 'Aguard. Documentos', concluido: 'Concluído', cancelado: 'Cancelado' };
+        const statusSel = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-proc-status"]:checked')].map(c => c.value);
+        const lista     = filtrarProcessosPorDatas().filter(p => statusSel.includes(p.status || 'aberto'));
+
+        el.innerHTML = `
+            <div class="prev-linha"><span>Total no período</span><strong>${lista.length}</strong></div>
+            ${statusSel.map(st => `<div class="prev-linha"><span>${labels[st]}</span><strong>${lista.filter(p => (p.status || 'aberto') === st).length}</strong></div>`).join('')}
+        `;
+
+    } else if (tipoRelatorioAtual === 'processos-status') {
+        const labels = { aberto: 'Aberto', em_andamento: 'Em Andamento', aguardando_documentos: 'Aguard. Documentos', concluido: 'Concluído', cancelado: 'Cancelado' };
+        const lista  = filtrarProcessosPorDatas();
+        const total  = lista.length || 1;
+
+        el.innerHTML = Object.keys(labels).map(st => {
+            const n = lista.filter(p => (p.status || 'aberto') === st).length;
+            return `<div class="prev-linha"><span>${labels[st]}</span><strong>${n} (${Math.round((n / total) * 100)}%)</strong></div>`;
+        }).join('');
+
+    } else if (tipoRelatorioAtual === 'processos-modal') {
+        const labels = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre', rodoviario: 'Rodoviário', ferroviario: 'Ferroviário' };
+        const lista  = filtrarProcessosPorDatas();
+        const total  = lista.length || 1;
+
+        el.innerHTML = Object.keys(labels).map(md => {
+            const n = lista.filter(p => p.modal === md).length;
+            return `<div class="prev-linha"><span>${labels[md]}</span><strong>${n} (${Math.round((n / total) * 100)}%)</strong></div>`;
+        }).join('');
     }
 }
 
@@ -438,8 +579,9 @@ function baixarPDF() {
     const usuario  = JSON.parse(sessionStorage.getItem('usuarioLogado') || '{}');
 
     let conteudoTabela = '';
+    let totalRegistros = empresas.length;
 
-    const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora' }[m] || m);
+    const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora', outros: 'Outro' }[m] || m);
 
     if (tipoRelatorioAtual === 'periodo') {
         const tiposSel   = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-tipo"]:checked')].map(c => c.value);
@@ -475,7 +617,7 @@ function baixarPDF() {
             return false;
         });
         if (modelosSel.length) lista = lista.filter(e => modelosSel.includes(_modeloEmpresa(e)));
-        const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora' }[m] || m);
+        const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora', outros: 'Outro' }[m] || m);
         conteudoTabela = `
             <table>
                 <thead><tr><th>Empresa</th><th>Tipo</th><th>Modelo</th><th>País</th><th>Documento</th></tr></thead>
@@ -504,6 +646,116 @@ function baixarPDF() {
                 <thead><tr><th>#</th><th>País</th><th>Empresas</th></tr></thead>
                 <tbody>
                     ${ranking.map(([pais, qtd], i) => `<tr><td>${i + 1}</td><td>${pais}</td><td>${qtd}</td></tr>`).join('')}
+                </tbody>
+            </table>`;
+
+    } else if (tipoRelatorioAtual === 'proformas-periodo') {
+        const labelsProf = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado' };
+        const statusSel  = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-prof-status"]:checked')].map(c => c.value);
+        const lista      = filtrarProformasPorDatas().filter(p => statusSel.includes(p.status || 'enviado'));
+        totalRegistros   = lista.length;
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>Código</th><th>Destinatário</th><th>Status</th><th>Valor</th><th>Data</th></tr></thead>
+                <tbody>
+                    ${lista.map(p => `
+                        <tr>
+                            <td>${p.codigo || '—'}</td>
+                            <td>${p.destinatario_razao_social || '—'}</td>
+                            <td>${labelsProf[p.status] || p.status || '—'}</td>
+                            <td>${p.moeda_principal || 'USD'} ${Number(p.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            <td>${p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '—'}</td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>`;
+
+    } else if (tipoRelatorioAtual === 'proformas-status') {
+        const labelsProf = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado' };
+        const lista      = filtrarProformasPorDatas();
+        totalRegistros   = lista.length;
+        const total      = lista.length || 1;
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>Status</th><th>Quantidade</th><th>Percentual</th></tr></thead>
+                <tbody>
+                    ${Object.keys(labelsProf).map(st => {
+                        const n = lista.filter(p => (p.status || 'enviado') === st).length;
+                        return `<tr><td>${labelsProf[st]}</td><td>${n}</td><td>${Math.round((n / total) * 100)}%</td></tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
+
+    } else if (tipoRelatorioAtual === 'proformas-cliente') {
+        const topN  = parseInt(document.getElementById('relRankingTopCliente')?.value || '10');
+        const lista = filtrarProformasPorDatas();
+        totalRegistros = lista.length;
+        const porCliente = {};
+        lista.forEach(p => {
+            const nome = p.destinatario_razao_social || 'Não informado';
+            if (!porCliente[nome]) porCliente[nome] = { qtd: 0, valor: 0, moeda: p.moeda_principal || 'USD' };
+            porCliente[nome].qtd++;
+            porCliente[nome].valor += Number(p.valor_total) || 0;
+        });
+        let ranking = Object.entries(porCliente).sort((a, b) => b[1].qtd - a[1].qtd);
+        if (topN > 0) ranking = ranking.slice(0, topN);
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>#</th><th>Cliente</th><th>Qtd. Proformas</th><th>Valor Total</th></tr></thead>
+                <tbody>
+                    ${ranking.map(([nome, info], i) => `<tr><td>${i + 1}</td><td>${nome}</td><td>${info.qtd}</td><td>${info.moeda} ${info.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`).join('')}
+                </tbody>
+            </table>`;
+
+    } else if (tipoRelatorioAtual === 'processos-periodo') {
+        const labelsProc = { aberto: 'Aberto', em_andamento: 'Em Andamento', aguardando_documentos: 'Aguard. Documentos', concluido: 'Concluído', cancelado: 'Cancelado' };
+        const statusSel  = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-proc-status"]:checked')].map(c => c.value);
+        const lista      = filtrarProcessosPorDatas().filter(p => statusSel.includes(p.status || 'aberto'));
+        totalRegistros   = lista.length;
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>Processo</th><th>Tipo</th><th>Status</th><th>Origem → Destino</th><th>Modal</th><th>Valor</th></tr></thead>
+                <tbody>
+                    ${lista.map(p => `
+                        <tr>
+                            <td>${p.numero_processo || '—'}</td>
+                            <td>${p.tipo || '—'}</td>
+                            <td>${labelsProc[p.status] || p.status || '—'}</td>
+                            <td>${p.pais_origem || '—'} → ${p.pais_destino || '—'}</td>
+                            <td>${p.modal || '—'}</td>
+                            <td>${p.moeda || 'USD'} ${Number(p.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>`;
+
+    } else if (tipoRelatorioAtual === 'processos-status') {
+        const labelsProc = { aberto: 'Aberto', em_andamento: 'Em Andamento', aguardando_documentos: 'Aguard. Documentos', concluido: 'Concluído', cancelado: 'Cancelado' };
+        const lista      = filtrarProcessosPorDatas();
+        totalRegistros   = lista.length;
+        const total      = lista.length || 1;
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>Status</th><th>Quantidade</th><th>Percentual</th></tr></thead>
+                <tbody>
+                    ${Object.keys(labelsProc).map(st => {
+                        const n = lista.filter(p => (p.status || 'aberto') === st).length;
+                        return `<tr><td>${labelsProc[st]}</td><td>${n}</td><td>${Math.round((n / total) * 100)}%</td></tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
+
+    } else if (tipoRelatorioAtual === 'processos-modal') {
+        const labelsModal = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre', rodoviario: 'Rodoviário', ferroviario: 'Ferroviário' };
+        const lista       = filtrarProcessosPorDatas();
+        totalRegistros    = lista.length;
+        const total       = lista.length || 1;
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>Modal</th><th>Quantidade</th><th>Percentual</th></tr></thead>
+                <tbody>
+                    ${Object.keys(labelsModal).map(md => {
+                        const n = lista.filter(p => p.modal === md).length;
+                        return `<tr><td>${labelsModal[md]}</td><td>${n}</td><td>${Math.round((n / total) * 100)}%</td></tr>`;
+                    }).join('')}
                 </tbody>
             </table>`;
     }
@@ -542,7 +794,7 @@ function baixarPDF() {
         </div>
         <div class="pdf-meta">
             <div class="pdf-meta-item"><strong>Período</strong>${di} até ${df}</div>
-            <div class="pdf-meta-item"><strong>Total de registros</strong>${empresas.length}</div>
+            <div class="pdf-meta-item"><strong>Total de registros</strong>${totalRegistros}</div>
             <div class="pdf-meta-item"><strong>Solicitante</strong>${usuario.nome || '—'}</div>
         </div>
         ${conteudoTabela}

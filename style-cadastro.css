@@ -310,17 +310,9 @@ main {
 }
 
 .topbar-left h2 {
-  color: var(--texto);
-  font-size: 16px;
-  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.topbar-left h2 i {
-  color: var(--azul);
-  font-size: 15px;
 }
 
 .topbar-right {

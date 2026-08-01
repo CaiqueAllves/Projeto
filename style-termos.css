@@ -4,9 +4,6 @@
 
 /* TOPBAR - ELEMENTOS INTERNOS */
 .topbar-left h2 {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--azul);
     display: flex;
     align-items: center;
     gap: 10px;

@@ -76,9 +76,6 @@ main {
 }
 
 .topbar-left h2 {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--azul);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -162,6 +159,7 @@ main {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px;
+    margin-bottom: 24px;
 }
 
 .stat-card {

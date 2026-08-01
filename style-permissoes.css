@@ -38,9 +38,6 @@ main {
 }
 
 .topbar-left h2 {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1e293b;
     display: flex;
     align-items: center;
     gap: 10px;

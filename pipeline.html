@@ -141,7 +141,7 @@
             <div class="pl-form-row">
                 <div class="pl-form-group pl-full">
                     <label>Cliente</label>
-                    <input type="text" id="plClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="plBuscarCliente(this.value)">
+                    <input type="text" id="plClienteNome" placeholder="Buscar empresa..." autocomplete="off" oninput="plBuscarCliente(this.value)" onfocus="plMostrarClientes(this.value)">
                     <input type="hidden" id="plClienteId">
                     <div class="pl-autocomplete" id="plAutoCliente"></div>
                 </div>
@@ -156,9 +156,6 @@
                     <label>Moeda</label>
                     <select id="plMoeda">
                         <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="BRL">BRL</option>
-                        <option value="GBP">GBP</option>
                     </select>
                 </div>
             </div>

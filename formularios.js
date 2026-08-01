@@ -129,6 +129,7 @@ async function salvarEmpresa(e) {
 
     const dados = {
         tipos,
+        modelo,
         tipo_cadastro:       document.getElementById('emp-tipo-cadastro')?.value   || '',
         documento:           document.getElementById('emp-documento')?.value        || '',
         razao_social:        document.getElementById('emp-nome')?.value             || '',
@@ -382,6 +383,11 @@ async function confirmarSalvar() {
         const propostaOrigemId = document.getElementById('proc-proposta-id')?.value || '';
         if (!editandoIdProc && propostaOrigemId && resProc.data?.id) {
             await window.supabaseAPI.marcarProformaFinalizada(propostaOrigemId, resProc.data.id);
+        }
+
+        // Processo gerado a partir de um pedido: avança o status pra "Em produção"
+        if (!editandoIdProc && dadosProc.pedido_id) {
+            await window.supabaseAPI.avancarStatusPedido(dadosProc.pedido_id, 'em_producao');
         }
 
         const tituloEl   = document.getElementById('pos-salvo-titulo');
@@ -1462,6 +1468,7 @@ function _coletarDadosProposta() {
         destinatario_doc_tipo:   g('prop-emp-dest-doc-tipo') || null,
         validade_dias:           g('prop-validade-dias') || null,
         obs_status:              g('prop-obs-status') || null,
+        pedido_id:               g('prop-pedido-id') || null,
     };
 }
 
@@ -3413,16 +3420,63 @@ async function _acCarregarPropostas() {
 async function _propPreencherDoPedido(pedidoId) {
     if (!pedidoId) return;
     try {
-        const { data: pedido, error } = await supabaseClient.from('pedidos').select('*').eq('id', pedidoId).single();
-        if (error || !pedido || !pedido.cliente_id) return;
+        const { data: pedido, error } = await supabaseClient
+            .from('pedidos')
+            .select('*, pedido_itens(*)')
+            .eq('id', pedidoId)
+            .single();
+        if (error || !pedido) return;
 
-        const { data: parceiro } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento').eq('id', pedido.cliente_id).single();
-        if (!parceiro) return;
+        // ── Destinatário (cliente do pedido) ──
+        if (pedido.cliente_id) {
+            const { data: parceiro } = await supabaseClient
+                .from('parceiros').select('id, razao_social, nome_fantasia, documento')
+                .eq('id', pedido.cliente_id).single();
+            if (parceiro) {
+                const buscaEl = document.getElementById('prop-emp-dest-busca');
+                const idEl    = document.getElementById('prop-emp-dest-id');
+                if (buscaEl) buscaEl.value = parceiro.nome_fantasia || parceiro.razao_social || '';
+                if (idEl)    idEl.value    = parceiro.id;
+            }
+        }
 
-        const buscaEl = document.getElementById('prop-emp-dest-busca');
-        const idEl    = document.getElementById('prop-emp-dest-id');
-        if (buscaEl) buscaEl.value = parceiro.nome_fantasia || parceiro.razao_social || '';
-        if (idEl)    idEl.value    = parceiro.id;
+        // ── Emissor (remetente terceiro do pedido, quando houver) ──
+        if (pedido.remetente_parceiro_id) {
+            const { data: remetente } = await supabaseClient
+                .from('parceiros').select('id, razao_social, nome_fantasia, documento')
+                .eq('id', pedido.remetente_parceiro_id).single();
+            if (remetente) {
+                const radioTerceiro = document.getElementById('prop-emissor-terceiro');
+                if (radioTerceiro) {
+                    radioTerceiro.checked = true;
+                    radioTerceiro.dispatchEvent(new Event('change'));
+                }
+                const clienteEl   = document.getElementById('prop-cliente');
+                const clienteIdEl = document.getElementById('prop-cliente-id');
+                if (clienteEl)   clienteEl.value   = remetente.nome_fantasia || remetente.razao_social || '';
+                if (clienteIdEl) clienteIdEl.value = remetente.id;
+                const docEl = document.getElementById('prop-documento');
+                if (docEl && remetente.documento) docEl.value = _mascaraDocBR(remetente.documento);
+            }
+        }
+        // Sem remetente_parceiro_id: mantém "Própria empresa" (padrão já marcado no form)
+
+        // ── Itens + Moeda ──
+        const itensPedido = pedido.pedido_itens || [];
+        if (itensPedido.length) {
+            await _carregarMoedas();
+            const moeda = _acMoedas.find(m => m.sigla === pedido.moeda);
+            const moedaDescricao = moeda?.descricao || _acMoedas[0]?.descricao || '';
+
+            _propItens = itensPedido.map(it => ({
+                produto: it.produto_nome || '',
+                qtd:     Number(it.quantidade) || 1,
+                unidade: it.unidade_medida || 'UN',
+                preco:   Number(it.preco_unitario) || 0,
+                moeda:   moedaDescricao,
+            }));
+            propRenderizarItens();
+        }
     } catch { /* silêncio */ }
 }
 
@@ -4863,10 +4917,13 @@ function _empPreencherEdicao(dados) {
         el.value = el.type === 'text' && !el.readOnly && !el.dataset.noCaps ? v.toUpperCase() : v;
     };
 
-    // Modelo
-    let modelo = 'empresa';
-    if (dados.is_transportadora) modelo = 'transportadora';
-    else if (dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase())) modelo = 'company';
+    // Modelo — usa o valor salvo, se existir (registros antigos sem essa coluna
+    // caem no heurístico por país/transportadora como antes)
+    let modelo = dados.modelo || 'empresa';
+    if (!dados.modelo) {
+        if (dados.is_transportadora) modelo = 'transportadora';
+        else if (dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase())) modelo = 'company';
+    }
     const modeloRadio = document.querySelector(`[name="emp_modelo"][value="${modelo}"]`);
     if (modeloRadio) { modeloRadio.checked = true; onModeloChange(modelo); }
 
@@ -5370,7 +5427,7 @@ async function _carregarMoedas() {
     try {
         const { data } = await supabaseClient
             .from('apoio_moedas')
-            .select('codigo, descricao')
+            .select('codigo, descricao, sigla')
             .order('codigo', { ascending: true });
         _acMoedas = data || [];
     } catch { _acMoedas = []; }

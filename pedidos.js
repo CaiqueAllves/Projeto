@@ -14,6 +14,28 @@ function _pedEscaparFiltro(termo) {
     return String(termo).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+// Aviso centralizado na tela — substitui alert() (que mostra o domínio do
+// Codespace na caixa nativa do navegador, confuso pro usuário final).
+const PED_AVISO_TIPO = {
+    erro: { icone: 'fa-circle-exclamation', cor: '#dc2626', titulo: 'Erro' },
+    aviso: { icone: 'fa-triangle-exclamation', cor: '#f59e0b', titulo: 'Aviso' },
+    info: { icone: 'fa-circle-info', cor: '#4776ec', titulo: 'Aviso' },
+};
+
+function pedAviso(mensagem, tipo = 'aviso') {
+    const cfg = PED_AVISO_TIPO[tipo] || PED_AVISO_TIPO.aviso;
+    const icone = document.getElementById('pedAvisoIcone');
+    const titulo = document.getElementById('pedAvisoTitulo');
+    if (icone) { icone.className = `fa-solid ${cfg.icone}`; icone.style.color = cfg.cor; }
+    if (titulo) titulo.textContent = cfg.titulo;
+    document.getElementById('pedAvisoMsg').textContent = mensagem;
+    document.getElementById('pedAvisoOverlay')?.classList.add('ativo');
+}
+
+function pedFecharAviso() {
+    document.getElementById('pedAvisoOverlay')?.classList.remove('ativo');
+}
+
 const PED_STATUS_LABEL = {
     aguardando:   'Aguardando',
     confirmado:   'Confirmado',
@@ -31,6 +53,23 @@ const PED_STATUS_CLASS = {
     entregue:     'ped-badge-entregue',
     cancelado:    'ped-badge-cancelado',
 };
+
+// Sequência normal do pedido — Cancelado é um estado à parte (só alcançável a
+// partir de qualquer etapa ativa, nunca a partir de Entregue) e não entra nela.
+const PED_STATUS_ORDEM = ['aguardando', 'confirmado', 'em_producao', 'embarcado', 'entregue'];
+const PED_STATUS_CRITICOS = ['cancelado', 'entregue'];
+
+// Só permite avançar/recuar um passo por vez (evita pular etapa ou "resetar"
+// o pedido de volta pro início por engano), ou ir/voltar de Cancelado.
+function _pedTransicaoValida(atual, novo) {
+    if (novo === atual) return true;
+    if (novo === 'cancelado') return atual !== 'entregue';
+    if (atual === 'cancelado') return novo === 'aguardando';
+    const iAtual = PED_STATUS_ORDEM.indexOf(atual);
+    const iNovo  = PED_STATUS_ORDEM.indexOf(novo);
+    if (iAtual === -1 || iNovo === -1) return false;
+    return Math.abs(iNovo - iAtual) === 1;
+}
 
 // ── Inicialização ──────────────────────────────────────────────────────────
 
@@ -110,19 +149,30 @@ async function pedCarregar() {
 
     _pedTodos    = res.data || [];
 
-    // Processos gerados a partir da proforma de cada pedido (pedido -> proforma -> processos)
-    const proformaIds = [...new Set(_pedTodos.map(p => p.proforma_id).filter(Boolean))];
+    // Proformas geradas a partir de cada pedido (1 pedido -> N proformas) e os
+    // processos gerados a partir delas (cada proforma gera no máximo 1 processo).
+    const pedidoIds = _pedTodos.map(p => p.id).filter(Boolean);
+    let proformasMap = {};
     let processosMap = {};
-    if (proformaIds.length > 0) {
-        const { data: procs } = await supabaseClient
-            .from('processos')
-            .select('id, proforma_id')
-            .in('proforma_id', proformaIds);
-        (procs || []).forEach(pr => {
-            (processosMap[pr.proforma_id] ||= []).push(pr);
+    if (pedidoIds.length > 0) {
+        const { data: proformas } = await supabaseClient
+            .from('proformas').select('id, codigo, status, pedido_id').in('pedido_id', pedidoIds);
+        (proformas || []).forEach(pf => {
+            (proformasMap[pf.pedido_id] ||= []).push(pf);
         });
+        const proformaIds = (proformas || []).map(pf => pf.id);
+        if (proformaIds.length > 0) {
+            const { data: procs } = await supabaseClient
+                .from('processos').select('id, proforma_id').in('proforma_id', proformaIds);
+            (procs || []).forEach(pr => {
+                (processosMap[pr.proforma_id] ||= []).push(pr);
+            });
+        }
     }
-    _pedTodos.forEach(p => { p._processos = p.proforma_id ? (processosMap[p.proforma_id] || []) : []; });
+    _pedTodos.forEach(p => {
+        p._proformas = proformasMap[p.id] || [];
+        p._processos = p._proformas.flatMap(pf => processosMap[pf.id] || []);
+    });
 
     _pedFiltrados = [..._pedTodos];
     pedRenderizar();
@@ -147,15 +197,117 @@ function pedFiltrar() {
 
 // ── Renderizar tabela ──────────────────────────────────────────────────────
 
+const PED_KANBAN_COLS = ['aguardando', 'confirmado', 'em_producao', 'embarcado', 'entregue', 'cancelado'];
+let _pedViewMode = 'kanban';
+
 function pedRenderizar() {
+    _pedAtualizarContadores(_pedFiltrados);
+    if (_pedViewMode === 'kanban') _pedRenderizarKanban(_pedFiltrados);
+    else _pedRenderizarTabela(_pedFiltrados);
+}
+
+function _pedAtualizarContadores(lista) {
+    const counts = Object.fromEntries(PED_KANBAN_COLS.map(s => [s, 0]));
+    lista.forEach(p => { counts[p.status || 'aguardando']++; });
+    PED_KANBAN_COLS.forEach(s => {
+        const colCount = document.getElementById(`ped-count-${s}`);
+        const tabCount = document.getElementById(`ped-tab-count-${s}`);
+        if (colCount) colCount.textContent = counts[s];
+        if (tabCount) tabCount.textContent = counts[s];
+    });
+}
+
+function pedSwitchView(mode) {
+    _pedViewMode = mode;
+    document.getElementById('pedBtnViewKanban').classList.toggle('active', mode === 'kanban');
+    document.getElementById('pedBtnViewLista').classList.toggle('active',  mode === 'lista');
+    document.getElementById('pedKanbanBoard').style.display = mode === 'kanban' ? '' : 'none';
+    document.getElementById('pedKanbanTabs').style.display  = mode === 'kanban' ? '' : 'none';
+    document.querySelector('.ped-table-wrap').style.display = mode === 'lista' ? '' : 'none';
+    pedRenderizar();
+}
+
+function pedKanbanSwitchTab(btn) {
+    document.querySelectorAll('#pedKanbanTabs .kanban-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const col = btn.getAttribute('data-col');
+    document.querySelectorAll('#pedKanbanBoard .kanban-col').forEach(c => c.classList.remove('kanban-col-active'));
+    document.getElementById(`ped-col-${col}`)?.classList.add('kanban-col-active');
+}
+
+// ── Kanban ───────────────────────────────────────────────────────────────────
+
+function _pedRenderizarKanban(lista) {
+    const grupos = Object.fromEntries(PED_KANBAN_COLS.map(c => [c, []]));
+    lista.forEach(p => grupos[p.status || 'aguardando'].push(p));
+
+    PED_KANBAN_COLS.forEach(g => {
+        const body = document.getElementById(`ped-cards-${g}`);
+        if (!body) return;
+        body.innerHTML = grupos[g].length === 0
+            ? `<div class="kanban-vazio"><i class="fa-solid fa-inbox"></i><span>Nenhum pedido</span></div>`
+            : grupos[g].map(_pedRenderCardKanban).join('');
+    });
+}
+
+function _pedRenderCardKanban(p) {
+    const cliente   = p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—';
+    const remetente = p.remetente?.nome_fantasia || p.remetente?.razao_social || '';
+    const valor     = p.valor_total
+        ? `${p.moeda || 'USD'} ${Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        : null;
+    const dataEntr  = p.data_entrega_prevista
+        ? new Date(p.data_entrega_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+        : null;
+    const status = p.status || 'aguardando';
+
+    return `
+    <div class="ped-kcard">
+        <div class="ped-kcard-top">
+            <span class="ped-kcard-num">${_pedEscapar(p.numero || '—')}</span>
+            ${_pedEtapaBadge(p)}
+        </div>
+        <div class="ped-kcard-empresa">
+            <i class="fa-solid fa-building"></i>
+            <span>${remetente ? _pedEscapar(remetente) : 'Própria empresa'}</span>
+            <i class="fa-solid fa-arrow-right ped-kcard-arrow"></i>
+            <span>${_pedEscapar(cliente)}</span>
+        </div>
+        ${valor ? `<div class="ped-kcard-valor"><i class="fa-solid fa-sack-dollar"></i> ${valor}</div>` : ''}
+        <div class="ped-kcard-footer">
+            <div class="ped-kcard-meta">
+                ${dataEntr ? `<span class="ped-kcard-data"><i class="fa-regular fa-calendar"></i> Entrega ${dataEntr}</span>` : '<span></span>'}
+                <select class="ped-status-select ped-status-${status}" onchange="pedAlterarStatus('${p.id}', this)">
+                    ${Object.entries(PED_STATUS_LABEL).map(([v, l]) =>
+                        `<option value="${v}" ${v === status ? 'selected' : ''}>${l}</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="ped-kcard-btns">
+                ${_pedBotaoProformas(p)}
+                <button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>
+                ${_pedBotaoProcessos(p)}
+                ${(p._processos && p._processos.length > 0)
+                    ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
+                    : `<button class="pl-btn-acao pl-btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`}
+                <button class="pl-btn-acao pl-btn-editar" onclick="pedAbrirModal('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                <button class="pl-btn-acao pl-btn-excluir" onclick="pedAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ── Lista (tabela) ────────────────────────────────────────────────────────────
+
+function _pedRenderizarTabela(lista) {
     const tbody = document.getElementById('pedTbody');
 
-    if (!_pedFiltrados.length) {
+    if (!lista.length) {
         tbody.innerHTML = '<tr><td colspan="8" class="ped-vazio"><i class="fa-regular fa-folder-open"></i> Nenhum pedido encontrado.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = _pedFiltrados.map(p => {
+    tbody.innerHTML = lista.map(p => {
         const cliente   = p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—';
         const remetente = p.remetente?.nome_fantasia || p.remetente?.razao_social || '';
         const valor     = p.valor_total
@@ -172,7 +324,7 @@ function pedRenderizar() {
         const badgeLabel = PED_STATUS_LABEL[status] || status;
 
         return `<tr class="ped-row ped-row-${status}">
-            <td class="ped-num">${_pedEscapar(p.numero || '—')}</td>
+            <td class="ped-num">${_pedEscapar(p.numero || '—')}${_pedEtapaBadge(p) ? `<br>${_pedEtapaBadge(p)}` : ''}</td>
             <td>${remetente
                 ? `<span class="ped-remetente-tag"><i class="fa-solid fa-building"></i> ${_pedEscapar(remetente)}</span>`
                 : `<span class="ped-remetente-tag ped-remetente-propria"><i class="fa-solid fa-house-flag"></i> Própria empresa</span>`}</td>
@@ -188,9 +340,8 @@ function pedRenderizar() {
                             `<option value="${v}" ${v === status ? 'selected' : ''}>${l}</option>`
                         ).join('')}
                     </select>
-                    ${p.proforma_id
-                        ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProforma('${p.proforma_id}')" title="Ver Proforma gerada"><i class="fa-solid fa-file-invoice-dollar"></i></button>`
-                        : `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>`}
+                    ${_pedBotaoProformas(p)}
+                    <button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>
                     ${_pedBotaoProcessos(p)}
                     ${(p._processos && p._processos.length > 0)
                         ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
@@ -213,11 +364,52 @@ function pedGerarProforma(id) {
     window.open(`formularios.html?tab=proposta&pedido_id=${id}`, '_blank');
 }
 
-function pedVerProforma(proformaId) {
-    window.open(`formularios.html?tab=proposta&id=${proformaId}&modo=visualizar`, '_blank');
+async function pedVerProforma(proformaId) {
+    const btn = event?.currentTarget;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
+    try {
+        const res = await window.supabaseAPI.buscarProforma(proformaId);
+        if (!res.sucesso || !res.data) { pedAviso('Proforma não encontrada.', 'erro'); return; }
+        await gerarPDFProformaDados(res.data);
+    } catch (e) {
+        pedAviso('Erro ao gerar PDF da proforma.', 'erro');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-file-invoice-dollar"></i>'; }
+    }
 }
 
-// ── Ver Processo(s) gerados a partir da proforma do pedido ──────────────────
+function pedVerProformas(pedidoId) {
+    window.open(`proforma.html?pedido_id=${pedidoId}`, '_blank');
+}
+
+function _pedBotaoProformas(p) {
+    const proformas = p._proformas || [];
+    if (!proformas.length) return '';
+    if (proformas.length === 1) {
+        return `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProforma('${proformas[0].id}')" title="Ver Proforma gerada"><i class="fa-solid fa-file-invoice-dollar"></i></button>`;
+    }
+    return `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProformas('${p.id}')" title="Ver Proformas (${proformas.length})"><i class="fa-solid fa-file-invoice-dollar"></i> ${proformas.length}</button>`;
+}
+
+// ── Ver Processo(s) gerados a partir das proformas do pedido ────────────────
+
+// Mostra a etapa mais avançada que o pedido já alcançou na cadeia
+// Pedido → Proforma(s) → Processo(s), pra não depender só do texto do botão.
+function _pedEtapaBadge(p) {
+    const processos = p._processos || [];
+    const proformas = p._proformas || [];
+    if (processos.length > 0) {
+        return `<span class="ped-etapa-badge ped-etapa-processo"><i class="fa-solid fa-diagram-project"></i> Em Processo (${processos.length})</span>`;
+    }
+    if (proformas.length > 1) {
+        return `<span class="ped-etapa-badge ped-etapa-proforma"><i class="fa-solid fa-file-invoice-dollar"></i> ${proformas.length} Proformas geradas</span>`;
+    }
+    if (proformas.length === 1) {
+        const codigo = proformas[0].codigo ? ` ${proformas[0].codigo}` : ' gerada';
+        return `<span class="ped-etapa-badge ped-etapa-proforma"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma${_pedEscapar(codigo)}</span>`;
+    }
+    return '';
+}
 
 function _pedBotaoProcessos(p) {
     const processos = p._processos || [];
@@ -225,15 +417,15 @@ function _pedBotaoProcessos(p) {
     if (processos.length === 1) {
         return `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProcessoUnico('${processos[0].id}')" title="Ver Processo"><i class="fa-solid fa-diagram-project"></i></button>`;
     }
-    return `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProcessos('${p.proforma_id}')" title="Ver Processos (${processos.length})"><i class="fa-solid fa-diagram-project"></i> ${processos.length}</button>`;
+    return `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProcessos('${p.id}')" title="Ver Processos (${processos.length})"><i class="fa-solid fa-diagram-project"></i> ${processos.length}</button>`;
 }
 
 function pedVerProcessoUnico(processoId) {
     window.open(`formularios.html?tab=processo&id=${processoId}&modo=visualizar`, '_blank');
 }
 
-function pedVerProcessos(proformaId) {
-    window.open(`processos.html?proforma_id=${proformaId}`, '_blank');
+function pedVerProcessos(pedidoId) {
+    window.open(`processos.html?pedido_id=${pedidoId}`, '_blank');
 }
 
 // ── Gerar Conta a Receber a partir do pedido ────────────────────────────────
@@ -244,24 +436,83 @@ function pedGerarContaReceber(id) {
 
 // ── Alterar status inline ──────────────────────────────────────────────────
 
+let _pedStatusPendente = null; // { id, novoStatus, selectEl, statusAnterior }
+
 async function pedAlterarStatus(id, selectEl) {
-    const novoStatus = selectEl.value;
+    const pedido = _pedTodos.find(p => p.id === id);
+    const atual  = pedido?.status || 'aguardando';
+    const novo   = selectEl.value;
+
+    if (novo === atual) return;
+
+    if (!_pedTransicaoValida(atual, novo)) {
+        pedAviso(`Não é possível mudar de "${PED_STATUS_LABEL[atual]}" direto para "${PED_STATUS_LABEL[novo]}". Siga a sequência das etapas (ou cancele o pedido).`, 'aviso');
+        selectEl.value = atual;
+        return;
+    }
+
+    if (PED_STATUS_CRITICOS.includes(novo)) {
+        _pedStatusPendente = { id, novoStatus: novo, selectEl, statusAnterior: atual };
+        const msgEl = document.getElementById('pedStatusConfirmMsg');
+        if (msgEl) {
+            msgEl.textContent = novo === 'cancelado'
+                ? `Tem certeza que deseja cancelar o pedido ${pedido?.numero || ''}?`
+                : `Confirmar que o pedido ${pedido?.numero || ''} foi entregue?`;
+        }
+        const btn = document.getElementById('pedBtnConfirmarStatus');
+        if (btn) {
+            btn.className = novo === 'cancelado' ? 'pl-btn-excluir' : 'pl-btn-salvar';
+            btn.innerHTML = novo === 'cancelado'
+                ? '<i class="fa-solid fa-ban"></i> Cancelar Pedido'
+                : '<i class="fa-solid fa-check"></i> Confirmar Entrega';
+        }
+        document.getElementById('pedModalConfirmStatusOverlay')?.classList.add('ativo');
+        return;
+    }
+
+    await _pedAplicarStatus(id, novo);
+}
+
+function pedFecharModalConfirmStatus() {
+    if (_pedStatusPendente) _pedStatusPendente.selectEl.value = _pedStatusPendente.statusAnterior;
+    _pedStatusPendente = null;
+    document.getElementById('pedModalConfirmStatusOverlay')?.classList.remove('ativo');
+}
+
+async function pedConfirmarMudancaStatus() {
+    if (!_pedStatusPendente) return;
+    const { id, novoStatus } = _pedStatusPendente;
+    document.getElementById('pedModalConfirmStatusOverlay')?.classList.remove('ativo');
+    _pedStatusPendente = null;
+    await _pedAplicarStatus(id, novoStatus);
+}
+
+async function _pedAplicarStatus(id, novoStatus) {
     const res = await atualizarStatusPedido(id, novoStatus);
     if (!res.sucesso) {
-        alert('Erro ao atualizar status.');
+        pedAviso('Erro ao atualizar status.', 'erro');
         await pedCarregar();
         return;
     }
     const pedido = _pedTodos.find(p => p.id === id);
+    const statusAnterior = pedido?.status;
     if (pedido) pedido.status = novoStatus;
 
-    // Atualiza a classe do select visualmente
-    selectEl.className = `ped-status-select ped-status-${novoStatus}`;
-    const badge = selectEl.closest('tr')?.querySelector('.ped-badge');
-    if (badge) {
-        badge.className = `ped-badge ${PED_STATUS_CLASS[novoStatus] || ''}`;
-        badge.textContent = PED_STATUS_LABEL[novoStatus] || novoStatus;
+    // Reflete a mudança de volta na Oportunidade que originou o pedido (Pipeline
+    // Comercial), se houver: cancelar o pedido desfaz o "Fechado" no funil (vira
+    // Perdido); reabrir um pedido cancelado volta a marcar a negociação como Fechada.
+    if (pedido?.oportunidade_id) {
+        if (novoStatus === 'cancelado') {
+            await window.supabaseAPI.atualizarEtapaOportunidade(pedido.oportunidade_id, 'perdido');
+        } else if (statusAnterior === 'cancelado' && novoStatus === 'aguardando') {
+            await window.supabaseAPI.atualizarEtapaOportunidade(pedido.oportunidade_id, 'fechado');
+        }
     }
+
+    // Re-render completo: no kanban isso move o card pra coluna nova, na
+    // lista repinta a linha — um patch manual de DOM não dava conta das
+    // duas visões (só funcionava pro <tr> da tabela antiga).
+    pedRenderizar();
 }
 
 // ── Modal criar/editar ─────────────────────────────────────────────────────
@@ -530,13 +781,13 @@ document.addEventListener('click', e => {
 async function pedSalvar() {
     const linhasValidas = _pedItensAtual.filter(it => it.produto_nome?.trim() && it.quantidade > 0);
     if (!linhasValidas.length) {
-        alert('Adicione ao menos um item com produto, quantidade e preço.');
+        pedAviso('Adicione ao menos um item com produto, quantidade e preço.', 'aviso');
         return;
     }
 
     const emissorTipo = document.querySelector('input[name="ped-emissor-tipo"]:checked')?.value || 'usuario';
     if (emissorTipo === 'terceiro' && !document.getElementById('pedRemetenteId').value) {
-        alert('Selecione a Empresa Remetente ou volte pra "Própria empresa".');
+        pedAviso('Selecione a Empresa Remetente ou volte pra "Própria empresa".', 'aviso');
         return;
     }
 
@@ -565,7 +816,7 @@ async function pedSalvar() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar';
 
-    if (!res.sucesso) { alert('Erro: ' + res.mensagem); return; }
+    if (!res.sucesso) { pedAviso('Erro: ' + res.mensagem, 'erro'); return; }
 
     _pedUltimoSalvo = {
         id:                  res.data?.id || id,
@@ -694,7 +945,7 @@ async function pedConfirmarExcluir() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-trash"></i> Excluir';
 
-    if (!res.sucesso) { alert('Erro: ' + res.mensagem); return; }
+    if (!res.sucesso) { pedAviso('Erro: ' + res.mensagem, 'erro'); return; }
     pedFecharModalExcluir();
     await pedCarregar();
 }
@@ -779,7 +1030,7 @@ async function pedRestaurar(id) {
         await pedCarregarExcluidos();
         await pedCarregar();
     } catch (err) {
-        alert('Erro ao restaurar: ' + err.message);
+        pedAviso('Erro ao restaurar: ' + err.message, 'erro');
     }
 }
 
@@ -804,7 +1055,13 @@ function _pedEscaparAtributo(str) {
     return _pedEscapar(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
+// Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
+// automático não deve sobreviver a um logout explícito). cpfSalvo é mantido
+// de propósito, só pra não precisar redigitar o CPF na próxima vez.
 function handleLogout() {
     sessionStorage.removeItem('usuarioLogado');
-    window.location.href = 'index.html';
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('usuarioSalvo');
+    localStorage.removeItem('lastLogin');
+    window.location.href = 'login.html';
 }

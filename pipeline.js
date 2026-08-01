@@ -22,8 +22,27 @@ const PL_ETAPA_LABEL = {
 
 document.addEventListener('DOMContentLoaded', async () => {
     _plCarregarUsuario();
+    await _plCarregarMoedas();
     await plCarregar();
 });
+
+// ── Moedas (tabela apoio_moedas) ─────────────────────────────────────────────
+
+async function _plCarregarMoedas() {
+    const sel = document.getElementById('plMoeda');
+    if (!sel) return;
+    try {
+        const { data } = await supabaseClient
+            .from('apoio_moedas')
+            .select('codigo, descricao, sigla')
+            .order('descricao', { ascending: true });
+        if (data?.length) {
+            sel.innerHTML = data.map(m => `<option value="${m.sigla || m.codigo}">${_plEscapar(m.descricao || '')}</option>`).join('');
+        }
+    } catch (e) {
+        console.warn('[Pipeline] Falha ao carregar moedas:', e);
+    }
+}
 
 function _plCarregarUsuario() {
     try {
@@ -325,38 +344,61 @@ async function plSalvar() {
     await plCarregar();
 }
 
-// ── Autocomplete de clientes ───────────────────────────────────────────────
+// ── Autocomplete de clientes (empresas cadastradas em Parceiros) ───────────
 
 let _plBuscaTimer = null;
+
+async function _plListarClientes(termo, box) {
+    try {
+        const usuario = obterUsuarioLogado();
+        let query = supabaseClient
+            .from('parceiros')
+            .select('id, razao_social, nome_fantasia')
+            .limit(termo ? 8 : 15);
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        if (termo) query = query.or(`razao_social.ilike."%${_plEscaparFiltro(termo)}%",nome_fantasia.ilike."%${_plEscaparFiltro(termo)}%"`);
+        else query = query.order('razao_social', { ascending: true });
+
+        const { data } = await query;
+
+        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma empresa encontrada — cadastre em Empresas primeiro</div>'; return; }
+        box.innerHTML = data.map(p => `
+            <div class="pl-auto-item" onclick="plSelecionarCliente('${p.id}', '${_plEscaparAtributo(p.nome_fantasia || p.razao_social)}')">
+                <span class="pl-auto-nome">${_plEscapar(p.nome_fantasia || p.razao_social)}</span>
+                ${p.nome_fantasia ? `<span class="pl-auto-razao">${_plEscapar(p.razao_social)}</span>` : ''}
+            </div>`).join('');
+    } catch (e) {}
+}
+
 async function plBuscarCliente(termo) {
     const box = document.getElementById('plAutoCliente');
     document.getElementById('plClienteId').value = '';
-    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
-
     clearTimeout(_plBuscaTimer);
-    _plBuscaTimer = setTimeout(async () => {
-        try {
-            const { data } = await supabaseClient
-                .from('parceiros')
-                .select('id, razao_social, nome_fantasia')
-                .or(`razao_social.ilike.%${termo}%,nome_fantasia.ilike.%${termo}%`)
-                .limit(8);
+    _plBuscaTimer = setTimeout(() => _plListarClientes(termo?.length >= 2 ? termo : '', box), 300);
+}
 
-            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum cliente encontrado</div>'; return; }
-
-            box.innerHTML = data.map(p => `
-                <div class="pl-auto-item" onclick="plSelecionarCliente(${p.id}, '${_plEscapar(p.nome_fantasia || p.razao_social)}')">
-                    <span class="pl-auto-nome">${_plEscapar(p.nome_fantasia || p.razao_social)}</span>
-                    ${p.nome_fantasia ? `<span class="pl-auto-razao">${_plEscapar(p.razao_social)}</span>` : ''}
-                </div>`).join('');
-        } catch (e) {}
-    }, 300);
+// Foco no campo: mostra a lista sem apagar o cliente já selecionado (editar oportunidade)
+function plMostrarClientes(termo) {
+    _plListarClientes(termo?.length >= 2 ? termo : '', document.getElementById('plAutoCliente'));
 }
 
 function plSelecionarCliente(id, nome) {
     document.getElementById('plClienteId').value   = id;
     document.getElementById('plClienteNome').value = nome;
     document.getElementById('plAutoCliente').innerHTML = '';
+}
+
+// Escapa valores usados dentro de filtros PostgREST (.or()) — evita que
+// vírgulas/parênteses no termo digitado alterem a estrutura do filtro.
+function _plEscaparFiltro(termo) {
+    return String(termo).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+// Para uso como argumento de string dentro de onclick="fn('...')" — além do
+// escape de HTML acima, escapa barra invertida e aspas simples para não
+// quebrar o literal JS de aspas simples embutido no atributo.
+function _plEscaparAtributo(str) {
+    return _plEscapar(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 document.addEventListener('click', e => {
@@ -414,7 +456,13 @@ function _plEscapar(str) {
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
+// automático não deve sobreviver a um logout explícito). cpfSalvo é mantido
+// de propósito, só pra não precisar redigitar o CPF na próxima vez.
 function handleLogout() {
     sessionStorage.removeItem('usuarioLogado');
-    window.location.href = 'index.html';
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('usuarioSalvo');
+    localStorage.removeItem('lastLogin');
+    window.location.href = 'login.html';
 }

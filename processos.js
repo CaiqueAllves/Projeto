@@ -301,6 +301,9 @@ function _filtrarProcessos(filtro) {
     // Vindo de "Ver Processos (N)" na Proforma — mostra só os processos daquela proforma
     const proformaIdParam = new URLSearchParams(window.location.search).get('proforma_id');
     if (proformaIdParam) list = list.filter(p => p.proforma_id === proformaIdParam);
+    // Vindo de "Ver Processos (N)" no Pedido — mostra os processos de todas as proformas do pedido
+    const pedidoIdParam = new URLSearchParams(window.location.search).get('pedido_id');
+    if (pedidoIdParam) list = list.filter(p => p.pedido_id === pedidoIdParam);
     if (status) list = list.filter(p => _getColuna(p.status || 'aberto') === status);
     if (q) list = list.filter(p => `${p.codigo} ${p.tipo} ${p.empresaExportador} ${p.empresaImportador} ${p.pais_origem} ${p.pais_destino} ${p.status}`.toLowerCase().includes(q));
     return list;
