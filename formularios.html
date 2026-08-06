@@ -1724,6 +1724,12 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
+                                    <!-- Pedido de origem (somente leitura — toda proforma nasce de um pedido) -->
+                                    <div class="form-group full-width" id="prop-pedido-origem-group" style="display:none;">
+                                        <label for="prop-pedido-origem">Pedido</label>
+                                        <input type="text" id="prop-pedido-origem" readonly placeholder="—" style="background:#f8faff;cursor:default;">
+                                    </div>
+
                                     <!-- Tipo -->
                                     <div class="form-group">
                                         <label for="prop-tipo">Tipo <span class="required">*</span></label>
@@ -2392,15 +2398,18 @@
                                                 <label for="prod-nome-idioma">Idioma
                                                     <span class="info-balao" data-tooltip="Idioma em que este nome do produto está escrito. Cada idioma cadastrado poderá futuramente ser selecionado ao gerar documentação de propostas e processos."><i class="fa-solid fa-circle-info"></i></span>
                                                 </label>
-                                                <select id="prod-nome-idioma" name="nome_idioma">
-                                                    <option value="pt">Português</option>
-                                                    <option value="en">Inglês</option>
-                                                    <option value="es">Espanhol</option>
-                                                    <option value="zh">Chinês</option>
-                                                    <option value="fr">Francês</option>
-                                                    <option value="de">Alemão</option>
-                                                    <option value="outro">Outro</option>
-                                                </select>
+                                                <div style="display:flex; flex-direction:column; gap:6px;">
+                                                    <select id="prod-nome-idioma" name="nome_idioma" onchange="prodToggleIdiomaOutro(this)">
+                                                        <option value="de">Alemão</option>
+                                                        <option value="zh">Chinês</option>
+                                                        <option value="es">Espanhol</option>
+                                                        <option value="fr">Francês</option>
+                                                        <option value="en">Inglês</option>
+                                                        <option value="pt" selected>Português</option>
+                                                        <option value="outro">Outro</option>
+                                                    </select>
+                                                    <input type="text" id="prod-nome-idioma-outro" name="nome_idioma_outro" placeholder="Qual idioma?" style="display:none;">
+                                                </div>
                                             </div>
                                             <div class="form-group" style="margin-bottom:0;">
                                                 <label for="prod-nome">Nome do Produto <span class="required">*</span></label>
@@ -2645,8 +2654,8 @@
                                                     </div>
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="prod-embalagem-transporte">Embalagem de Transporte</label>
-                                                    <select id="prod-embalagem-transporte" name="embalagem_transporte">
+                                                    <label for="prod-embalagem-transporte">Modal de Transporte</label>
+                                                    <select id="prod-embalagem-transporte" name="embalagem_transporte" onchange="prodAtualizarCubagemAviso(this)">
                                                         <option value="">Selecione...</option>
                                                         <option value="aereo">Aéreo</option>
                                                         <option value="maritimo">Marítimo</option>
@@ -2672,6 +2681,13 @@
                                                 <div class="form-group">
                                                     <label for="prod-altura">Altura (cm)</label>
                                                     <input type="text" inputmode="decimal" id="prod-altura" name="altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
+                                            </div>
+                                            <!-- Aviso de Cubagem Aérea — só aparece quando Modal de Transporte = Aéreo -->
+                                            <div class="form-group full-width log-sub-row" id="prod-cubagem-aereo-aviso" style="display:none;">
+                                                <div style="background:#eff6ff;border-left:3px solid #4776ec;border-radius:8px;padding:10px 14px;font-size:13px;color:#3b82f6;display:flex;align-items:center;gap:8px;">
+                                                    <i class="fa-solid fa-circle-info"></i>
+                                                    <span>Cubagem Aéreo: C x L x A / 6000</span>
                                                 </div>
                                             </div>
                                             <!-- Peso Bruto | Peso Líquido | Empilhamento Máximo -->
@@ -2806,6 +2822,44 @@
                 </div>
             </div>
 
+            <!-- MODAL CONFIRMAÇÃO DIMENSÕES DA EMBALAGEM -->
+            <div id="prod-modal-confirmar-dimensoes" class="modal-confirm-overlay" style="display:none;">
+                <div class="modal-confirm-box">
+                    <div class="modal-confirm-icon">
+                        <i class="fa-solid fa-ruler-combined"></i>
+                    </div>
+                    <h3 class="modal-confirm-title">Confirmar Embalagem</h3>
+                    <p class="modal-confirm-msg" id="prod-confirmar-dimensoes-msg"></p>
+                    <div class="modal-confirm-actions">
+                        <button class="modal-confirm-btn modal-confirm-nao" onclick="prodAjustarDimensoes()">
+                            <i class="fa-solid fa-pen"></i> Ajustar
+                        </button>
+                        <button class="modal-confirm-btn modal-confirm-sim" onclick="prodConfirmarSalvarEmbalagem()">
+                            <i class="fa-solid fa-check"></i> Confirmar/Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL CONFIRMAÇÃO ALTERAR HS CODE/NALADI (só admin edita) -->
+            <div id="prod-modal-confirmar-radical" class="modal-confirm-overlay" style="display:none;">
+                <div class="modal-confirm-box">
+                    <div class="modal-confirm-icon">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="modal-confirm-title">Alterar Classificação Fiscal</h3>
+                    <p class="modal-confirm-msg">Você tem certeza que deseja alterar o radical dos números informados? Isso poderá causar divergência no SISCOMEX.</p>
+                    <div class="modal-confirm-actions">
+                        <button class="modal-confirm-btn modal-confirm-nao" onclick="prodCancelarAlteracaoRadical()">
+                            <i class="fa-solid fa-xmark"></i> Cancelar
+                        </button>
+                        <button class="modal-confirm-btn modal-confirm-sim" onclick="prodConfirmarAlteracaoRadical()">
+                            <i class="fa-solid fa-check"></i> Confirmar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- MODAL PÓS-SALVO -->
             <div id="modal-pos-salvo" class="modal-confirm-overlay" style="display:none;">
                 <div class="modal-confirm-box">
@@ -2821,6 +2875,9 @@
                     <div class="modal-confirm-actions" id="pos-salvo-acoes">
                         <button class="modal-confirm-btn modal-confirm-nao" onclick="fecharGuia()">
                             <i class="fa-solid fa-door-open"></i> Fechar
+                        </button>
+                        <button class="modal-confirm-btn modal-confirm-pdf" id="pos-salvo-pdf-processo-btn" style="display:none;" onclick="gerarPDFProcesso()">
+                            <i class="fa-solid fa-file-pdf"></i> Obter PDF
                         </button>
                         <button class="modal-confirm-btn modal-confirm-sim" onclick="criarNovo()">
                             <i class="fa-solid fa-plus"></i> Criar outro
@@ -2851,6 +2908,7 @@
 <script src="formularios.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="pdf-processo.js"></script>
+<script src="pdf-proforma.js"></script>
 
 <script src="suporte.js"></script>
 </body>

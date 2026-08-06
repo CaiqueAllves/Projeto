@@ -203,6 +203,27 @@ function _tiposBadges(e) {
     return tipos.map(t => `<span class="tag-tipo tag-${t}">${_TIPO_LABELS[t]}</span>`).join('');
 }
 
+// Formata o documento com pontos/traço na exibição, mesmo quando salvo só
+// com dígitos — idempotente se já vier formatado (só reaplica em cima dos dígitos).
+function _formatarDocumentoExibicao(documento) {
+    const digitos = String(documento || '').replace(/\D/g, '');
+    if (digitos.length === 14) return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    if (digitos.length === 11) return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    return documento || '';
+}
+
+// Identificação da Empresa (CNPJ ou CPF) — usa tipo_cadastro quando existe,
+// senão infere pela quantidade de dígitos (mesmo heurístico já usado ao
+// normalizar o documento no formulário).
+function _docTipoLabel(e) {
+    if (e.tipo_cadastro === 'cnpj') return 'CNPJ';
+    if (e.tipo_cadastro === 'cpf')  return 'CPF';
+    const digitos = String(e.documento || '').replace(/\D/g, '');
+    if (digitos.length === 14) return 'CNPJ';
+    if (digitos.length === 11) return 'CPF';
+    return '';
+}
+
 function renderizarEmpresas(lista) {
     const container = document.getElementById('listaContainer');
     const count     = document.getElementById('listaCount');
@@ -244,7 +265,9 @@ function renderizarEmpresas(lista) {
                         </td>
                         <td class="col-razao" data-label="Razão Social:"><span class="empresa-nome">${e.razao_social || '—'}</span></td>
                         <td class="col-fantasia" data-label="Nome Fantasia:"><span class="empresa-fantasia">${e.nome_fantasia || '<span class="cell-vazio">—</span>'}</span></td>
-                        <td class="col-doc cell-nowrap" data-label="Documento:">${e.documento || '—'}</td>
+                        <td class="col-doc cell-nowrap" data-label="Documento:">${e.documento
+                            ? `${_docTipoLabel(e) ? `<span class="doc-tipo-label">${_docTipoLabel(e)}</span>` : ''}${_formatarDocumentoExibicao(e.documento)}`
+                            : '—'}</td>
                         <td class="col-loc cell-nowrap" data-label="Localização:">${[_normalizarPais(e.pais), e.estado].filter(Boolean).join(' / ') || '—'}</td>
                         <td class="col-tags" data-label="Tags:">${(e.tags && e.tags.length) ? renderTagsMini(e.tags) : '<span class="cell-vazio">—</span>'}</td>
                         <td class="col-acoes" style="text-align:center;white-space:nowrap;" data-label="">

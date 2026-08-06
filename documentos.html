@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css">
     <link rel="stylesheet" href="style-navegador.css">
-    <link rel="stylesheet" href="style-permissoes.css">
+    <link rel="stylesheet" href="style-documentos.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style-mobile.css">
 </head>
@@ -38,50 +38,36 @@
             </div>
         </div>
 
-        <div class="content" style="padding:32px; display:flex; flex-direction:column; gap:28px;">
+        <div class="content" style="padding:32px; display:flex; flex-direction:column; gap:20px;">
 
             <!-- FILTROS E BUSCA -->
             <div class="filtros-container">
-                <div class="filtros-btns">
-                    <button class="filtro-btn active" onclick="filtrarDocumentos('todos')">
-                        <i class="fa-solid fa-list"></i> Todos
-                    </button>
-                    <button class="filtro-btn" onclick="filtrarDocumentos('pendentes')">
-                        <i class="fa-solid fa-clock"></i> Pendentes
-                    </button>
-                    <button class="filtro-btn" onclick="filtrarDocumentos('assinados')">
-                        <i class="fa-solid fa-check-circle"></i> Assinados
-                    </button>
-                </div>
-
                 <div class="busca-container">
                     <input
                         type="text"
                         id="buscaDoc"
-                        placeholder="Buscar documentos..."
-                        onkeyup="buscarDocumentos()"
+                        placeholder="Buscar por nº do pedido ou empresa..."
+                        oninput="docBuscar()"
                     >
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </div>
+
+                <div class="filtros-btns">
+                    <button class="filtro-btn active" id="docFiltroTodos" onclick="docFiltrar('todos')">
+                        <i class="fa-solid fa-list"></i> Todos
+                    </button>
+                    <button class="filtro-btn" id="docFiltroPendentes" onclick="docFiltrar('pendentes')">
+                        <i class="fa-solid fa-clock"></i> Pendentes
+                    </button>
+                    <button class="filtro-btn" id="docFiltroAssinados" onclick="docFiltrar('assinados')">
+                        <i class="fa-solid fa-check-circle"></i> Assinados
+                    </button>
+                </div>
             </div>
 
-            <!-- TABELA DE DOCUMENTOS -->
-            <div style="background:white; border-radius:12px; border:1px solid #f1f5f9; overflow:hidden;">
-                <table id="tabelaDocumentos">
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>Tipo</th>
-                            <th>Tamanho</th>
-                            <th>Data Upload</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Será preenchido dinamicamente via JavaScript -->
-                    </tbody>
-                </table>
+            <!-- LISTA AGRUPADA POR PEDIDO -->
+            <div id="documentosContainer" class="doc-lista">
+                <div class="doc-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>
             </div>
 
         </div>
@@ -94,12 +80,38 @@
     </main>
 </div>
 
+<!-- MODAL — ASSINAR DOCUMENTO (anexa o arquivo assinado) -->
+<div class="doc-modal-overlay" id="docModalAssinatura" style="display:none;">
+    <div class="doc-modal-box">
+        <div class="doc-modal-icon"><i class="fa-solid fa-file-signature"></i></div>
+        <h3 class="doc-modal-title">Assinar Documento</h3>
+        <p class="doc-modal-msg" id="docModalAssinaturaLabel">Documento</p>
+
+        <div class="doc-modal-campo">
+            <label>Assinado por</label>
+            <input type="text" id="docModalAssinadoPor" placeholder="Nome de quem assinou...">
+        </div>
+        <div class="doc-modal-campo">
+            <label>Documento assinado (PDF ou imagem)</label>
+            <input type="file" id="docModalArquivo" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+
+        <div class="doc-modal-acoes">
+            <button class="doc-modal-btn doc-modal-btn-cancelar" onclick="docFecharModalAssinatura()">
+                <i class="fa-solid fa-xmark"></i> Cancelar
+            </button>
+            <button class="doc-modal-btn doc-modal-btn-confirmar" onclick="docConfirmarAssinaturaModal()">
+                <i class="fa-solid fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
 <script src="supabase.min.js"></script>
 <script src="supabase-api.js"></script>
 <script src="auth.js"></script>
 <script src="navegador.js"></script>
-
+<script src="documentos.js"></script>
 <script src="suporte.js"></script>
 </body>
 </html>
-

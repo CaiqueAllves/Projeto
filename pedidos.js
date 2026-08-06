@@ -7,11 +7,20 @@ let _pedFiltrados = [];
 let _pedExcluirId = null;
 let _pedItensAtual = [];
 const _pedItemBuscaTimers = {};
+let _pedUnidadesMedida = [];
 
 // Escapa valores usados dentro de filtros PostgREST (.or()) — evita que
 // vírgulas/parênteses no termo digitado alterem a estrutura do filtro.
 function _pedEscaparFiltro(termo) {
     return String(termo).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+// Data de hoje no formato do <input type="date"> (YYYY-MM-DD), em horário
+// local — evita o efeito de toISOString() jogar pro dia anterior perto da
+// meia-noite em fusos atrás de UTC.
+function _pedHojeISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // Aviso centralizado na tela — substitui alert() (que mostra o domínio do
@@ -76,6 +85,7 @@ function _pedTransicaoValida(atual, novo) {
 document.addEventListener('DOMContentLoaded', async () => {
     _pedCarregarUsuario();
     await _pedCarregarMoedas();
+    await _pedCarregarUnidadesMedida();
     await pedCarregar();
     _pedTratarParametrosUrl();
 });
@@ -98,6 +108,21 @@ async function _pedCarregarMoedas() {
     }
 }
 
+// ── Unidades de Medida (tabela apoio_unidades_medida — Apoio > Comercial) ────
+
+async function _pedCarregarUnidadesMedida() {
+    try {
+        const { data } = await supabaseClient
+            .from('apoio_unidades_medida')
+            .select('unidade, descricao')
+            .order('unidade', { ascending: true });
+        _pedUnidadesMedida = data || [];
+    } catch (e) {
+        console.warn('[Pedidos] Falha ao carregar unidades de medida:', e);
+        _pedUnidadesMedida = [];
+    }
+}
+
 // ── Integração com Pipeline (oportunidade -> pedido) ────────────────────────
 
 function _pedTratarParametrosUrl() {
@@ -106,6 +131,7 @@ function _pedTratarParametrosUrl() {
     const editarId = params.get('editar');
     if (editarId) {
         pedAbrirModal(editarId);
+        if (params.get('modo') === 'visualizar') pedAplicarModoVisualizacao();
         return;
     }
 
@@ -123,6 +149,24 @@ function _pedTratarParametrosUrl() {
             pedRenderizarItens();
         }
     }
+}
+
+// Desabilita todo o formulário do modal e some com o rodapé de ações — usado
+// quando o pedido é aberto só pra consulta (ex: seta "Ver Pedido" na Proforma),
+// mesmo padrão de modo visualização já usado em Processo/Empresa.
+function pedAplicarModoVisualizacao() {
+    const body = document.getElementById('ped-form-body');
+    if (!body) return;
+
+    body.querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = true; });
+
+    const footer = document.getElementById('ped-form-footer');
+    if (footer) footer.style.display = 'none';
+
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:sticky;top:0;z-index:100;background:#1e40af;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;letter-spacing:0.3px;border-radius:8px;margin-bottom:12px;';
+    banner.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:6px;"></i>Modo Visualização — somente leitura';
+    body.insertBefore(banner, body.firstChild);
 }
 
 function _pedCarregarUsuario() {
@@ -163,7 +207,7 @@ async function pedCarregar() {
         const proformaIds = (proformas || []).map(pf => pf.id);
         if (proformaIds.length > 0) {
             const { data: procs } = await supabaseClient
-                .from('processos').select('id, proforma_id').in('proforma_id', proformaIds);
+                .from('processos').select('id, numero_processo, proforma_id').in('proforma_id', proformaIds);
             (procs || []).forEach(pr => {
                 (processosMap[pr.proforma_id] ||= []).push(pr);
             });
@@ -250,50 +294,99 @@ function _pedRenderizarKanban(lista) {
     });
 }
 
+// Identificação da Proforma/Processo do pedido — sempre mostra uma linha,
+// mesmo quando não existe ainda ("Sem Proforma"/"Sem Processo"), pra manter
+// a altura do card previsível independente do estágio em que o pedido está.
+function _pedIdentProforma(p) {
+    const proformas = p._proformas || [];
+    if (!proformas.length) return 'Sem Proforma';
+    if (proformas.length === 1) return `Proforma: ${proformas[0].codigo || '—'}`;
+    return `Proformas: ${proformas.length} geradas`;
+}
+
+function _pedIdentProcesso(p) {
+    const processos = p._processos || [];
+    if (!processos.length) return 'Sem Processo';
+    if (processos.length === 1) return `Processo: ${processos[0].numero_processo || '—'}`;
+    return `Processos: ${processos.length} gerados`;
+}
+
+// Cards do kanban começam recolhidos (só nº/Proforma/Processo) — o Set
+// guarda quais pedidos o usuário já expandiu, pra sobreviver a re-renders
+// completos do board (troca de status, etc. chamam pedRenderizar() inteiro).
+let _pedCardsExpandidos = new Set();
+
+function pedToggleCard(id) {
+    if (_pedCardsExpandidos.has(id)) _pedCardsExpandidos.delete(id);
+    else _pedCardsExpandidos.add(id);
+    pedRenderizar();
+}
+
 function _pedRenderCardKanban(p) {
-    const cliente   = p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—';
-    const remetente = p.remetente?.nome_fantasia || p.remetente?.razao_social || '';
+    const clienteRazao   = p.parceiros?.razao_social || p.parceiros?.nome_fantasia || '—';
+    const remetenteRazao = p.remetente?.razao_social || p.remetente?.nome_fantasia || '';
     const valor     = p.valor_total
         ? `${p.moeda || 'USD'} ${Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-        : null;
+        : '—';
+    const dataCriacao = p.data_pedido
+        ? new Date(p.data_pedido + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+        : '—';
     const dataEntr  = p.data_entrega_prevista
-        ? new Date(p.data_entrega_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-        : null;
+        ? new Date(p.data_entrega_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+        : '—';
     const status = p.status || 'aguardando';
+    const temProcesso = p._processos && p._processos.length > 0;
+    const expandido = _pedCardsExpandidos.has(p.id);
 
     return `
-    <div class="ped-kcard">
+    <div class="ped-kcard ${expandido ? 'ped-kcard-expandido' : ''}" data-status="${status}">
         <div class="ped-kcard-top">
-            <span class="ped-kcard-num">${_pedEscapar(p.numero || '—')}</span>
-            ${_pedEtapaBadge(p)}
+            <span class="ped-kcard-num"><i class="fa-solid fa-hashtag"></i> ${_pedEscapar(p.numero || '—')}</span>
+            <button class="ped-kcard-toggle" onclick="pedToggleCard('${p.id}')" title="${expandido ? 'Recolher' : 'Expandir'}">
+                <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
+            </button>
         </div>
-        <div class="ped-kcard-empresa">
-            <i class="fa-solid fa-building"></i>
-            <span>${remetente ? _pedEscapar(remetente) : 'Própria empresa'}</span>
-            <i class="fa-solid fa-arrow-right ped-kcard-arrow"></i>
-            <span>${_pedEscapar(cliente)}</span>
+        <div class="ped-kcard-ident">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+            <span>${_pedEscapar(_pedIdentProforma(p))}</span>
         </div>
-        ${valor ? `<div class="ped-kcard-valor"><i class="fa-solid fa-sack-dollar"></i> ${valor}</div>` : ''}
+        <div class="ped-kcard-ident">
+            <i class="fa-solid fa-diagram-project"></i>
+            <span>${_pedEscapar(_pedIdentProcesso(p))}</span>
+        </div>
+        <div class="ped-kcard-empresa-linha">
+            <span class="ped-kcard-label">Remetente:</span>
+            <span class="ped-kcard-empresa-valor">${remetenteRazao ? _pedEscapar(remetenteRazao) : 'Própria empresa'}</span>
+        </div>
+        <div class="ped-kcard-empresa-linha">
+            <span class="ped-kcard-label">Destino:</span>
+            <span class="ped-kcard-empresa-valor">${_pedEscapar(clienteRazao)}</span>
+        </div>
+        ${expandido ? `
+        <div class="ped-kcard-valor"><i class="fa-solid fa-sack-dollar"></i><span>${valor}</span></div>
+        <div class="ped-kcard-datas">
+            <span class="ped-kcard-label">Criação:</span> <span>${dataCriacao}</span>
+        </div>
+        <div class="ped-kcard-datas">
+            <span class="ped-kcard-label">Entrega Prevista:</span> <span>${dataEntr}</span>
+        </div>
         <div class="ped-kcard-footer">
-            <div class="ped-kcard-meta">
-                ${dataEntr ? `<span class="ped-kcard-data"><i class="fa-regular fa-calendar"></i> Entrega ${dataEntr}</span>` : '<span></span>'}
-                <select class="ped-status-select ped-status-${status}" onchange="pedAlterarStatus('${p.id}', this)">
-                    ${Object.entries(PED_STATUS_LABEL).map(([v, l]) =>
-                        `<option value="${v}" ${v === status ? 'selected' : ''}>${l}</option>`
-                    ).join('')}
-                </select>
-            </div>
+            <select class="ped-status-select ped-status-${status}" onchange="pedAlterarStatus('${p.id}', this)">
+                ${Object.entries(PED_STATUS_LABEL).map(([v, l]) =>
+                    `<option value="${v}" ${v === status ? 'selected' : ''}>${l}</option>`
+                ).join('')}
+            </select>
             <div class="ped-kcard-btns">
                 ${_pedBotaoProformas(p)}
                 <button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>
                 ${_pedBotaoProcessos(p)}
-                ${(p._processos && p._processos.length > 0)
+                ${temProcesso
                     ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
                     : `<button class="pl-btn-acao pl-btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`}
                 <button class="pl-btn-acao pl-btn-editar" onclick="pedAbrirModal('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="pl-btn-acao pl-btn-excluir" onclick="pedAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </div>
-        </div>
+        </div>` : ''}
     </div>`;
 }
 
@@ -523,7 +616,7 @@ async function pedAbrirModal(id = null) {
     document.getElementById('pedEditId').value         = ped?.id || '';
     document.getElementById('pedOportunidadeId').value = ped?.oportunidade_id || '';
     document.getElementById('pedModalTitulo').innerHTML = ped
-        ? '<i class="fa-solid fa-pen"></i> Editar Pedido'
+        ? `<i class="fa-solid fa-pen"></i> Editar Pedido${ped.numero ? ` — ${_pedEscapar(ped.numero)}` : ''}`
         : '<i class="fa-solid fa-bag-shopping"></i> Novo Pedido';
 
     document.getElementById('pedNumero').value       = ped?.numero || '';
@@ -532,7 +625,7 @@ async function pedAbrirModal(id = null) {
     document.getElementById('pedClienteId').value          = ped?.cliente_id || '';
     document.getElementById('pedClienteDocumento').value    = ped?.parceiros?.documento || '';
     document.getElementById('pedMoeda').value        = ped?.moeda || 'USD';
-    document.getElementById('pedDataPedido').value   = ped?.data_pedido || '';
+    document.getElementById('pedDataPedido').value   = ped?.data_pedido || _pedHojeISO();
     document.getElementById('pedDataEntrega').value  = ped?.data_entrega_prevista || '';
     document.getElementById('pedObservacoes').value  = ped?.observacoes || '';
 
@@ -677,6 +770,10 @@ function pedRenderizarItens() {
     const body = document.getElementById('ped-itens-body');
     if (!body) return;
 
+    const unidades = _pedUnidadesMedida.length > 0
+        ? _pedUnidadesMedida
+        : [{ unidade: 'UN', descricao: 'Unidade' }, { unidade: 'KG', descricao: 'Quilograma' }, { unidade: 'CX', descricao: 'Caixa' }];
+
     body.innerHTML = _pedItensAtual.map((item, i) => `
         <div class="ped-item-card">
             <div class="ped-item-top">
@@ -701,8 +798,9 @@ function pedRenderizarItens() {
                 </div>
                 <div class="ped-item-field ped-item-field--un">
                     <label>Un.</label>
-                    <input type="text" class="ped-item-input" value="${_pedEscapar(item.unidade_medida)}"
-                        oninput="pedAtualizarItem(${i}, 'unidade_medida', this.value)">
+                    <select class="ped-item-input" onchange="pedAtualizarItem(${i}, 'unidade_medida', this.value)">
+                        ${unidades.map(u => `<option value="${u.unidade}"${item.unidade_medida === u.unidade ? ' selected' : ''}>${_pedEscapar(u.unidade)}</option>`).join('')}
+                    </select>
                 </div>
                 <div class="ped-item-field ped-item-field--preco">
                     <label>Preço Unit.</label>
@@ -820,7 +918,7 @@ async function pedSalvar() {
 
     _pedUltimoSalvo = {
         id:                  res.data?.id || id,
-        numero:              dados.numero,
+        numero:              res.data?.numero || dados.numero,
         status:              dados.status,
         clienteNome:         document.getElementById('pedClienteNome').value,
         clienteDocumento:    document.getElementById('pedClienteDocumento').value,

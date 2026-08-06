@@ -200,21 +200,17 @@
             <input type="hidden" id="pedEditId">
             <input type="hidden" id="pedOportunidadeId">
 
+            <!-- Status não aparece no formulário: todo pedido novo nasce "Aguardando"
+                 e só muda depois, pelo select dentro do card (com validação de
+                 sequência e confirmação nas mudanças críticas). -->
+            <input type="hidden" id="pedStatus" value="aguardando">
+
             <div class="pl-form-row">
-                <div class="pl-form-group">
+                <div class="pl-form-group pl-full">
+                    <!-- Gerado automaticamente (padrão PED2026000000, igual Proforma/
+                         Processo) — somente leitura, nunca digitado. -->
                     <label>Nº do Pedido</label>
-                    <input type="text" id="pedNumero" placeholder="Ex: PED-2025-001">
-                </div>
-                <div class="pl-form-group">
-                    <label>Status <span class="pl-req">*</span></label>
-                    <select id="pedStatus">
-                        <option value="aguardando">Aguardando</option>
-                        <option value="confirmado">Confirmado</option>
-                        <option value="em_producao">Em produção</option>
-                        <option value="embarcado">Embarcado</option>
-                        <option value="entregue">Entregue</option>
-                        <option value="cancelado">Cancelado</option>
-                    </select>
+                    <input type="text" id="pedNumero" readonly placeholder="Gerado automaticamente ao salvar">
                 </div>
             </div>
 
@@ -287,8 +283,10 @@
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
+                    <!-- Preenchida automaticamente com a data de hoje ao abrir o
+                         modal (ver pedAbrirModal em pedidos.js) — somente leitura. -->
                     <label>Data de Criação Pedido</label>
-                    <input type="date" id="pedDataPedido">
+                    <input type="date" id="pedDataPedido" readonly>
                 </div>
                 <div class="pl-form-group">
                     <label>Entrega Prevista</label>

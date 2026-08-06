@@ -479,21 +479,22 @@
 ═══════════════════════════════════════════════ */
 .kanban-board {
     display: flex;
-    gap: 10px;
+    gap: 14px;
     padding: 0 0 24px 0;
-    align-items: flex-start;
+    align-items: stretch;
+    overflow-x: auto;
 }
 
 /* ── Colunas ────────────────────────────────── */
 .kanban-col {
     flex: 1;
-    min-width: 0;
+    min-width: 300px;
     background: #f8fafc;
     border-radius: 14px;
     border: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 220px);
+    height: calc(100vh - 220px);
 }
 
 .kanban-col-header {
@@ -554,6 +555,9 @@
 }
 
 /* ── Cards ──────────────────────────────────── */
+/* Recolhido por padrão (mesmo padrão de Pedidos/Proforma): mostra só
+   identificação de Pedido/Proforma, Tipo, Incoterm|Modal e Exportador/
+   Importador. A seta expande revelando Valor, Criação, Status e Ações. */
 .proc-card {
     background: #fff;
     border-radius: 10px;
@@ -566,7 +570,9 @@
     box-shadow: 0 1px 4px rgba(0,0,0,.04);
     transition: box-shadow .18s, transform .18s;
     cursor: default;
+    box-sizing: border-box;
 }
+.proc-card-expandido { min-height: 317px; }
 
 .proc-card:hover {
     box-shadow: 0 4px 14px rgba(0,0,0,.09);
@@ -582,8 +588,8 @@
 .proc-card-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
+    min-width: 0;
 }
 
 .proc-card-hash {
@@ -601,6 +607,10 @@
     display: flex;
     align-items: center;
     gap: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .proc-card-tipo {
@@ -618,32 +628,53 @@
 .proc-card-tipo.tipo-exp-indireta   { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
 .proc-card-tipo.tipo-importacao     { background: #fdf4ff; color: #7e22ce; border-color: #e9d5ff; }
 
-.proc-card-rota,
-.proc-card-empresa {
+/* Seta que expande/recolhe o card por inteiro */
+.proc-card-toggle {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: background .15s, color .15s;
+}
+.proc-card-toggle:hover { background: #e2e8f0; color: #334155; }
+
+/* Identificação de Pedido/Proforma — sempre presentes */
+.proc-card-ident {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.79rem;
-    color: #374151;
-    flex-wrap: wrap;
-}
-
-.proc-card-rota > i:first-child,
-.proc-card-empresa > i:first-child {
-    color: #94a3b8;
     font-size: 0.72rem;
-    width: 13px;
-    flex-shrink: 0;
+    color: #64748b;
+    min-width: 0;
 }
+.proc-card-ident i { flex-shrink: 0; width: 12px; text-align: center; color: #94a3b8; font-size: 0.66rem; }
+.proc-card-ident span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 
-.proc-card-pais {
-    font-weight: 500;
-    color: #1e293b;
+/* Exportador / Importador */
+.proc-card-empresa-linha {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 0.75rem;
+    min-width: 0;
 }
-
-.proc-card-arrow {
-    color: #cbd5e1;
-    font-size: 0.6rem;
+.proc-card-label { color: #94a3b8; font-weight: 600; flex-shrink: 0; }
+.proc-card-empresa-valor {
+    color: #334155;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .proc-card-modal {
@@ -652,22 +683,6 @@
     flex-wrap: wrap;
 }
 
-.proc-card-etapa {
-    font-size: 0.73rem;
-    color: #6d28d9;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 500;
-    background: #f5f3ff;
-    border: 1px solid #ede9fe;
-    border-radius: 6px;
-    padding: 3px 8px;
-    width: fit-content;
-}
-
-.proc-card-etapa i { font-size: 0.62rem; }
-
 .proc-card-valor {
     font-size: 0.78rem;
     font-weight: 700;
@@ -675,8 +690,21 @@
     display: flex;
     align-items: center;
     gap: 5px;
+    min-width: 0;
 }
-.proc-card-valor i { font-size: 0.68rem; }
+.proc-card-valor i { font-size: 0.68rem; flex-shrink: 0; }
+.proc-card-valor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Criação */
+.proc-card-datas {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.69rem;
+    color: #94a3b8;
+    overflow: hidden;
+    white-space: nowrap;
+}
 
 .proc-card-footer {
     border-top: 1px solid #f1f5f9;
@@ -684,40 +712,12 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 2px;
-}
-
-.proc-card-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
+    margin-top: auto;
 }
 
 .proc-card-btns {
     display: flex;
     gap: 5px;
-}
-
-.proc-card-data {
-    font-size: 0.69rem;
-    color: #94a3b8;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.proc-card-atualizado {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.67rem;
-    color: #a78bfa;
-    font-weight: 500;
-}
-
-.proc-card-atualizado i {
-    font-size: 0.6rem;
 }
 
 /* ── Mobile tabs ────────────────────────────── */
@@ -760,7 +760,7 @@
     .kanban-tabs  { display: flex; flex-wrap: wrap; }
     .kanban-tab   { flex: 1 1 auto; font-size: 0.7rem; padding: 9px 4px; }
     .kanban-board { flex-direction: column; gap: 0; }
-    .kanban-col   { display: none; max-height: none; border-radius: 12px; }
+    .kanban-col   { display: none; height: auto; border-radius: 12px; }
     .kanban-col.kanban-col-active { display: flex; }
     .proc-lista-wrap { border-radius: 10px; }
 }

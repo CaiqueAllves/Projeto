@@ -1899,6 +1899,11 @@ form {
     color: #fff;
 }
 
+.modal-confirm-pdf {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
 .modal-pos-codigo {
     display: flex;
     flex-direction: column;

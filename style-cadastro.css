@@ -1230,6 +1230,15 @@ form {
   display: block;
 }
 
+.doc-tipo-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 /* ID Interno */
 .id-interno {
   display: inline-block;

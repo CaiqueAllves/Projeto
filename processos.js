@@ -202,17 +202,24 @@ function _primeiroNome(razaoSocial) {
     return (razaoSocial || '').trim().split(/\s+/)[0] || '—';
 }
 
-function _tempoRelativo(isoStr) {
-    if (!isoStr) return null;
-    const diff = Date.now() - new Date(isoStr).getTime();
-    const min  = Math.floor(diff / 60000);
-    const h    = Math.floor(diff / 3600000);
-    const d    = Math.floor(diff / 86400000);
-    if (min < 1)  return 'agora mesmo';
-    if (min < 60) return `há ${min}min`;
-    if (h   < 24) return `há ${h}h`;
-    if (d   < 30) return `há ${d} dia${d > 1 ? 's' : ''}`;
-    return new Date(isoStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+// Cards do kanban começam recolhidos (mesmo padrão de Pedidos/Proforma) — o
+// Set guarda quais processos o usuário já expandiu, sobrevive a re-renders.
+let _procCardsExpandidos = new Set();
+
+function procToggleCard(id) {
+    if (_procCardsExpandidos.has(id)) _procCardsExpandidos.delete(id);
+    else _procCardsExpandidos.add(id);
+    renderKanban(document.getElementById('filtroProcessos')?.value || '');
+}
+
+function _identPedidoProcesso(p) {
+    if (!p.pedido_id) return 'Sem Pedido';
+    return `Pedido: ${p.pedido_numero || '—'}`;
+}
+
+function _identProformaProcesso(p) {
+    if (!p.proforma_id) return 'Sem Proforma';
+    return `Proforma: ${p.proforma_codigo || '—'}`;
 }
 
 function _renderCard(p) {
@@ -225,61 +232,61 @@ function _renderCard(p) {
     const modalIco   = { aereo: 'fa-plane', maritimo: 'fa-ship', terrestre: 'fa-truck' }[p.modal] || 'fa-route';
     const modalLabel = p.modal ? p.modal.charAt(0).toUpperCase() + p.modal.slice(1) : null;
 
-    const etapaTexto = (() => {
-        if (!p.etapas || p.etapas.length === 0) return null;
-        const pend = p.etapas.find(e => !e.concluida);
-        return pend ? pend.nome : p.etapas[p.etapas.length - 1].nome;
-    })();
-
     const valorTexto = p.valor_total
         ? `${p.moeda || 'USD'} ${Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-        : null;
+        : '—';
 
-    const dataCriacao   = p.criado_em    ? new Date(p.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : null;
-    const dataAtualizado = _tempoRelativo(p.atualizado_em);
+    const dataCriacao = p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
 
     const optStatus = STATUS_OPTS
         .map(o => `<option value="${o.v}" ${status === o.v ? 'selected' : ''}>${o.label}</option>`)
         .join('');
 
+    const expandido = _procCardsExpandidos.has(p.id);
+
     return `
-    <div class="proc-card" id="proc-card-${escapeHtml(p.id)}" data-grupo="${coluna}">
+    <div class="proc-card ${expandido ? 'proc-card-expandido' : ''}" id="proc-card-${escapeHtml(p.id)}" data-grupo="${coluna}">
         <div class="proc-card-top">
             <span class="proc-card-codigo"><i class="fa-solid fa-hashtag proc-card-hash"></i>${escapeHtml(p.codigo.replace(/^PROC/,''))}</span>
-            ${tipoLabel ? `<span class="proc-card-tipo ${tipoClasse}">${escapeHtml(tipoLabel)}</span>` : ''}
+            <button class="proc-card-toggle" data-action="toggle-card" data-id="${escapeHtml(p.id)}" title="${expandido ? 'Recolher' : 'Expandir'}">
+                <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
+            </button>
         </div>
-        ${(p.pais_origem || p.pais_destino) ? `
-        <div class="proc-card-rota">
-            <i class="fa-solid fa-earth-americas"></i>
-            <span class="proc-card-pais">${escapeHtml(p.pais_origem || '—')}</span>
-            <i class="fa-solid fa-arrow-right proc-card-arrow"></i>
-            <span class="proc-card-pais">${escapeHtml(p.pais_destino || '—')}</span>
+        <div class="proc-card-ident">
+            <i class="fa-solid fa-bag-shopping"></i>
+            <span>${escapeHtml(_identPedidoProcesso(p))}</span>
+        </div>
+        <div class="proc-card-ident">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+            <span>${escapeHtml(_identProformaProcesso(p))}</span>
+        </div>
+        ${tipoLabel ? `
+        <div class="proc-card-modal">
+            <span class="proc-card-tipo ${tipoClasse}">${escapeHtml(tipoLabel)}</span>
         </div>` : ''}
         ${(modalLabel || p.incoterm) ? `
         <div class="proc-card-modal">
             ${modalLabel ? `<span class="tag-badge"><i class="fa-solid ${modalIco}"></i> ${modalLabel}</span>` : ''}
             ${p.incoterm ? `<span class="tag-badge">${escapeHtml(p.incoterm)}</span>` : ''}
         </div>` : ''}
-        ${imp ? `
-        <div class="proc-card-empresa">
-            <i class="fa-solid fa-handshake"></i>
-            <span class="proc-card-pais">${escapeHtml(exp)}</span>
-            <i class="fa-solid fa-arrow-right proc-card-arrow"></i>
-            <span class="proc-card-pais">${escapeHtml(_primeiroNome(imp))}</span>
-        </div>` : ''}
-        ${etapaTexto ? `
-        <div class="proc-card-etapa"><i class="fa-solid fa-circle-dot"></i> ${escapeHtml(etapaTexto)}</div>` : ''}
-        ${valorTexto ? `
-        <div class="proc-card-valor"><i class="fa-solid fa-sack-dollar"></i> ${escapeHtml(valorTexto)}</div>` : ''}
+        <div class="proc-card-empresa-linha">
+            <span class="proc-card-label">Remetente:</span>
+            <span class="proc-card-empresa-valor">${escapeHtml(exp)}</span>
+        </div>
+        <div class="proc-card-empresa-linha">
+            <span class="proc-card-label">Destinatário:</span>
+            <span class="proc-card-empresa-valor">${imp ? escapeHtml(_primeiroNome(imp)) : '—'}</span>
+        </div>
+        ${expandido ? `
+        <div class="proc-card-valor"><i class="fa-solid fa-sack-dollar"></i><span>${escapeHtml(valorTexto)}</span></div>
+        <div class="proc-card-datas">
+            <span class="proc-card-label">Criação:</span> <span>${dataCriacao}</span>
+        </div>
         <div class="proc-card-footer">
-            <div class="proc-card-meta">
-                ${dataCriacao ? `<span class="proc-card-data"><i class="fa-regular fa-calendar"></i> Criado em ${dataCriacao}</span>` : '<span></span>'}
-                <select class="proc-status-select proc-status-${escapeHtml(status)}"
-                        onchange="procAlterarStatus('${escapeHtml(p.id)}', this)">
-                    ${optStatus}
-                </select>
-            </div>
-            ${dataAtualizado ? `<div class="proc-card-atualizado"><i class="fa-solid fa-rotate-right"></i> ${dataAtualizado}</div>` : ''}
+            <select class="proc-status-select proc-status-${escapeHtml(status)}"
+                    onchange="procAlterarStatus('${escapeHtml(p.id)}', this)">
+                ${optStatus}
+            </select>
             ${p.proforma_id ? `<button class="btn-ver-processo" data-action="ver-proforma" data-id="${escapeHtml(p.proforma_id)}"><i class="fa-solid fa-file-invoice-dollar"></i> Ver Proforma ${escapeHtml(p.proforma_codigo || '')}</button>` : ''}
             ${p.pedido_id ? `<button class="btn-ver-processo" data-action="ver-pedido" data-id="${escapeHtml(p.pedido_id)}"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido ${escapeHtml(p.pedido_numero || '')}</button>` : ''}
             <div class="proc-card-btns">
@@ -290,7 +297,7 @@ function _renderCard(p) {
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-receber" data-id="${escapeHtml(p.id)}" title="Gerar Conta a Receber"><i class="fa-solid fa-arrow-down"></i></button>
                 <button class="btn-acao btn-excluir" data-action="excluir"    data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </div>
-        </div>
+        </div>` : ''}
     </div>`;
 }
 
@@ -409,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (action === 'gerar-conta-pagar')   window.open(`contas-pagar.html?gerar_processo_id=${id}`, '_blank');
         if (action === 'gerar-conta-receber') window.open(`contas-receber.html?gerar_processo_id=${id}`, '_blank');
         if (action === 'excluir')      abrirModalExcluir(id);
+        if (action === 'toggle-card')  procToggleCard(id);
     }
     document.getElementById('kanbanBoard')?.addEventListener('click', _handleAcao);
     document.getElementById('listaContainer')?.addEventListener('click', _handleAcao);

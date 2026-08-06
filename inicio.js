@@ -737,11 +737,12 @@ function criarGraficoProformas(proformas) {
     const ctx = document.getElementById('chartProformas');
     if (!ctx) return;
 
-    const labels = ['Enviado', 'Aprovado', 'Pendente', 'Encerrado', 'Finalizado'];
-    const keys   = ['enviado', 'aprovado', 'pendente', 'encerrado', 'finalizado'];
-    const colors = ['#4776ec', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
-    // 'recusado' é status legado, hoje contabilizado como "Encerrado" (mesmo mapeamento de proforma.js _profGetColuna)
-    const colunaDe = status => (status === 'recusado') ? 'encerrado' : (status || 'enviado');
+    const labels = ['Enviado', 'Aprovado', 'Pendente', 'Encerrado'];
+    const keys   = ['enviado', 'aprovado', 'pendente', 'encerrado'];
+    const colors = ['#4776ec', '#22c55e', '#f59e0b', '#ef4444'];
+    // 'recusado'/'finalizado' são status legados, hoje contabilizados como
+    // "Encerrado" (mesmo mapeamento de proforma.js _profGetColuna)
+    const colunaDe = status => (status === 'recusado' || status === 'finalizado') ? 'encerrado' : (status || 'enviado');
     const counts = keys.map(k => proformas.filter(p => colunaDe(p.status) === k).length);
 
     if (counts.every(c => c === 0)) {

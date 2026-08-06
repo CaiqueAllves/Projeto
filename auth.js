@@ -38,53 +38,17 @@ function verificarAutenticacao(opcoes = {}) {
     }
 
     if (usuarioAtual) {
-        // Usuário autenticado - atualizar interface
-        const displayUsername = document.getElementById('displayUsername');
-        const empresaNome = document.getElementById('empresaNome');
+        _authAtualizarInterface(usuarioAtual);
+        _authNotificarSolicitacoesPendentes(usuarioAtual);
 
-        if (displayUsername) {
-            displayUsername.textContent = usuarioAtual.nome;
-        }
-        if (empresaNome) {
-            empresaNome.textContent = usuarioAtual.empresa;
-        }
-
-        // Avatar na topbar (todas as páginas)
-        if (usuarioAtual.avatar_url) {
-            const avatarWrap = document.querySelector('.user-avatar');
-            if (avatarWrap) {
-                const icon = avatarWrap.querySelector('i');
-                if (icon) icon.style.display = 'none';
-                let img = avatarWrap.querySelector('img');
-                if (!img) {
-                    img = document.createElement('img');
-                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;top:0;left:0;';
-                    avatarWrap.style.position = 'relative';
-                    avatarWrap.appendChild(img);
-                }
-                img.src = usuarioAtual.avatar_url;
-                img.style.display = 'block';
-            }
-
-            // Atualizar botão de conta mobile
-            const contaBtn = document.querySelector('.mob-conta-btn');
-            if (contaBtn) {
-                contaBtn.innerHTML = `<img src="${usuarioAtual.avatar_url}" class="mob-conta-avatar-img" alt="avatar">`;
-            }
-        }
-
-        // Notificar admin sobre solicitações pendentes
-        if (usuarioAtual.perfil === 'admin' && usuarioAtual.empresa_id && window.supabaseAPI) {
-            setTimeout(async () => {
-                const resultado = await window.supabaseAPI.buscarSolicitacoes();
-                if (resultado.sucesso && resultado.data && resultado.data.length > 0) {
-                    const qtd = resultado.data.length;
-                    mostrarNotificacao(
-                        `Você tem ${qtd} solicitação(ões) pendente(s) de entrada na empresa. Acesse Configurações > Usuários para aprovar.`,
-                        'warning'
-                    );
-                }
-            }, 1000);
+        // O snapshot acima (sessionStorage/localStorage) pode estar desatualizado
+        // — nome, avatar, empresa ou cargo podem ter mudado desde o último login
+        // manual, e o auto-login via "Lembrar-me" nunca reconsultava o banco pra
+        // refletir isso. Busca os dados reais em segundo plano e re-renderiza.
+        if (window.supabaseAPI?.atualizarUsuarioLogado) {
+            window.supabaseAPI.atualizarUsuarioLogado().then(atualizado => {
+                if (atualizado) _authAtualizarInterface(atualizado);
+            });
         }
     } else if (redirecionar) {
         // Não autenticado - redirecionar para login
@@ -92,6 +56,63 @@ function verificarAutenticacao(opcoes = {}) {
     } else {
         // Não autenticado, mas página pública: exibir versão para visitante
         document.body.classList.add('visitante-anonimo');
+    }
+}
+
+function _authAtualizarInterface(usuarioAtual) {
+    const displayUsername = document.getElementById('displayUsername');
+    const empresaNome = document.getElementById('empresaNome');
+
+    if (displayUsername) {
+        displayUsername.textContent = usuarioAtual.nome;
+    }
+    if (empresaNome) {
+        empresaNome.textContent = usuarioAtual.empresa;
+    }
+
+    // Avatar na topbar (todas as páginas)
+    if (usuarioAtual.avatar_url) {
+        const avatarWrap = document.querySelector('.user-avatar');
+        if (avatarWrap) {
+            const icon = avatarWrap.querySelector('i');
+            if (icon) icon.style.display = 'none';
+            let img = avatarWrap.querySelector('img');
+            if (!img) {
+                img = document.createElement('img');
+                img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;top:0;left:0;';
+                avatarWrap.style.position = 'relative';
+                avatarWrap.appendChild(img);
+            }
+            img.src = usuarioAtual.avatar_url;
+            img.style.display = 'block';
+        }
+
+        // Atualizar botão de conta mobile
+        const contaBtn = document.querySelector('.mob-conta-btn');
+        if (contaBtn) {
+            contaBtn.innerHTML = `<img src="${usuarioAtual.avatar_url}" class="mob-conta-avatar-img" alt="avatar">`;
+        }
+    }
+}
+
+// Roda uma única vez por carregamento de página, mesmo que a interface seja
+// re-renderizada depois com os dados atualizados do banco (evita notificação
+// duplicada quando o refresh em segundo plano chama _authAtualizarInterface de novo).
+let _authSolicitacoesNotificadas = false;
+function _authNotificarSolicitacoesPendentes(usuarioAtual) {
+    if (_authSolicitacoesNotificadas) return;
+    if (usuarioAtual.perfil === 'admin' && usuarioAtual.empresa_id && window.supabaseAPI) {
+        _authSolicitacoesNotificadas = true;
+        setTimeout(async () => {
+            const resultado = await window.supabaseAPI.buscarSolicitacoes();
+            if (resultado.sucesso && resultado.data && resultado.data.length > 0) {
+                const qtd = resultado.data.length;
+                mostrarNotificacao(
+                    `Você tem ${qtd} solicitação(ões) pendente(s) de entrada na empresa. Acesse Configurações > Usuários para aprovar.`,
+                    'warning'
+                );
+            }
+        }, 1000);
     }
 }
 

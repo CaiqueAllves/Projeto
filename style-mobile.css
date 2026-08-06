@@ -671,26 +671,35 @@
         margin-bottom: 8px !important;
     }
 
-    /* ── Kanban: card compacto ─────────── */
+    /* ── Kanban: seta de expandir/recolher — alvo de toque maior que os
+       22x22px do desktop (Pedidos, Proforma e Processos usam a mesma classe
+       por página: .ped-kcard-toggle / .prof-card-toggle / .proc-card-toggle) */
+    .ped-kcard-toggle,
+    .prof-card-toggle,
+    .proc-card-toggle {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 13px !important;
+    }
+
+    /* ── Kanban: card compacto (Pedidos/Proforma/Processos) ── */
+    .ped-kcard,
+    .prof-card,
     .proc-card {
         padding: 12px !important;
         gap: 7px !important;
     }
 
     /* ── Card footer ───────────────────── */
+    .ped-kcard-footer,
+    .prof-card-footer,
     .proc-card-footer {
         gap: 8px !important;
         padding-top: 8px !important;
     }
 
-    /* Linha 1: data (esq) | status (dir) */
-    .proc-card-meta {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        gap: 6px !important;
-    }
-
+    .ped-status-select,
+    .prof-status-select,
     .proc-status-select {
         width: auto !important;
         min-width: 0 !important;
@@ -699,13 +708,16 @@
         padding: 4px 10px !important;
     }
 
-    .proc-card-data {
+    /* Linha de data (Criação / Entrega Prevista) */
+    .ped-kcard-datas,
+    .prof-card-datas,
+    .proc-card-datas {
         font-size: 0.7rem !important;
-        flex-shrink: 1 !important;
-        min-width: 0 !important;
     }
 
-    /* Linha 2: 4 botões em grid igual */
+    /* Linha de ações: grid de botões touch-friendly (Pedidos/Proforma/Processos) */
+    .ped-kcard-btns,
+    .prof-card-btns,
     .proc-card-btns {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
@@ -713,6 +725,8 @@
         width: 100% !important;
     }
 
+    .ped-kcard-btns .pl-btn-acao,
+    .prof-card-btns .btn-acao,
     .proc-card-btns .btn-acao {
         width: 100% !important;
         max-width: none !important;

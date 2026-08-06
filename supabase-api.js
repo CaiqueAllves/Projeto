@@ -501,6 +501,52 @@ function obterUsuarioLogado() {
     return str ? JSON.parse(str) : null;
 }
 
+// Reconsulta os dados do usuário logado direto do banco (nome, avatar, cargo,
+// empresa) e atualiza sessionStorage/localStorage. Necessário porque o
+// auto-login via "Lembrar-me" (ver auth.js) só reaproveita o snapshot salvo
+// no momento do login manual original — sem isso, mudanças feitas depois
+// (outro dispositivo, edição pelo admin, troca de avatar) nunca apareciam
+// pra quem entra via sessão lembrada.
+async function atualizarUsuarioLogado() {
+    try {
+        const atual = obterUsuarioLogado();
+        if (!atual?.id) return null;
+
+        const { data: usuario, error } = await supabaseClient
+            .from('usuarios')
+            .select('id, cpf, nome_completo, email, perfil, ativo, empresa_id, avatar_url, empresas(razao_social)')
+            .eq('id', atual.id)
+            .single();
+        if (error || !usuario) return null;
+
+        if (!usuario.ativo) {
+            // Usuário foi desativado nesse meio tempo — encerra a sessão.
+            sessionStorage.removeItem('usuarioLogado');
+            localStorage.removeItem('rememberMe');
+            localStorage.removeItem('usuarioSalvo');
+            window.location.href = 'login.html';
+            return null;
+        }
+
+        const atualizado = {
+            id:         usuario.id,
+            cpf:        usuario.cpf,
+            nome:       usuario.nome_completo,
+            email:      usuario.email,
+            perfil:     usuario.perfil,
+            empresa:    usuario.empresas?.razao_social || '',
+            empresa_id: usuario.empresa_id,
+            avatar_url: usuario.avatar_url || null,
+        };
+
+        sessionStorage.setItem('usuarioLogado', JSON.stringify(atualizado));
+        if (localStorage.getItem('rememberMe') === 'true' && localStorage.getItem('usuarioSalvo')) {
+            localStorage.setItem('usuarioSalvo', JSON.stringify(atualizado));
+        }
+        return atualizado;
+    } catch (err) { return null; }
+}
+
 // ========================================
 // USUÁRIOS E PERMISSÕES
 // ========================================
@@ -977,6 +1023,57 @@ async function buscarProdutos(apenasAtivos = false) {
     }
 }
 
+// Payload compartilhado entre criar/editar — mapeia 1:1 com as colunas reais
+// de produtos (ver database-produtos-completo.sql). idiomas/embalagens/
+// documentos chegam prontos como array (montados em _coletarDadosProduto()).
+function _prodMontarPayload(dados) {
+    return {
+        sku:                     dados.sku,
+        nome:                    dados.nome,
+        status:                  dados.status || 'ativo',
+        ncm:                     dados.ncm || null,
+        cest:                    dados.cest || null,
+        gtin:                    dados.gtin || null,
+        hscode:                  dados.hscode || null,
+        naladi_nesh:             dados.naladi_nesh || null,
+        dun14:                   dados.dun14 || null,
+        ncm_utrib:               dados.ncm_utrib || null,
+        ncm_descricao:           dados.ncm_descricao || null,
+        ncm_descricao_completa:  dados.ncm_descricao_completa || null,
+        imagem_url:              dados.imagem_url || null,
+        descricao:               dados.descricao || null,
+        categoria:               dados.categoria || null,
+        tipo:                    dados.tipo || null,
+        marca:                   dados.marca || null,
+        unidade_medida:          dados.unidade_medida || null,
+        lote:                    dados.lote || null,
+        data_fabricacao:         dados.data_fabricacao || null,
+        data_validade:           dados.data_validade || null,
+        referencia_interna:      dados.referencia_interna || null,
+        referencia_fornecedor:   dados.referencia_fornecedor || null,
+        referencia_outra:        dados.referencia_outra || null,
+        empresa_parceira_id:     dados.empresa_parceira_id || null,
+        preco_custo:             dados.preco_custo || null,
+        custos_fixos:            dados.custos_fixos || null,
+        imposto:                 dados.imposto || null,
+        preco_venda:             dados.preco_venda || null,
+        margem:                  dados.margem || null,
+        lucro_liquido:           dados.lucro_liquido || null,
+        moeda:                   dados.moeda || null,
+        obs_preco:               dados.obs_preco || null,
+        controla_estoque:        dados.controla_estoque !== false,
+        venda_sem_estoque:       !!dados.venda_sem_estoque,
+        estoque_atual:           dados.estoque_atual || null,
+        estoque_minimo:          dados.estoque_minimo || null,
+        estoque_maximo:          dados.estoque_maximo || null,
+        obs_estoque:             dados.obs_estoque || null,
+        obs_logistica:           dados.obs_logistica || null,
+        nomes_idiomas:           dados.nomes_idiomas || [],
+        embalagens:              dados.embalagens || [],
+        documentos:              dados.documentos || [],
+    };
+}
+
 async function salvarProduto(dados) {
     try {
         const usuario = obterUsuarioLogado();
@@ -985,18 +1082,9 @@ async function salvarProduto(dados) {
         const { data, error } = await supabaseClient
             .from('produtos')
             .insert({
-                codigo_interno:          dados.codigo_interno || null,
-                descricao:               dados.descricao,
-                descricao_complementar:  dados.descricao_complementar || null,
-                ncm:                     dados.ncm || null,
-                unidade_medida:          dados.unidade_medida || 'UN',
-                peso_bruto:              dados.peso_bruto || null,
-                peso_liquido:            dados.peso_liquido || null,
-                pais_origem:             dados.pais_origem || null,
-                fabricante:              dados.fabricante || null,
-                marca:                   dados.marca || null,
-                empresa_id:              usuario.empresa_id,
-                criado_por:              usuario.id
+                ..._prodMontarPayload(dados),
+                empresa_id: usuario.empresa_id,
+                criado_por: usuario.id,
             })
             .select()
             .single();
@@ -1015,13 +1103,27 @@ async function editarProduto(id, dados) {
 
         const { error } = await supabaseClient
             .from('produtos')
-            .update({ ...dados, atualizado_em: new Date().toISOString() })
+            .update({ ..._prodMontarPayload(dados), atualizado_em: new Date().toISOString() })
             .eq('id', id)
             .eq('empresa_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
+    }
+}
+
+async function buscarProdutoPorId(id) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('produtos')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) return { sucesso: false, mensagem: error.message, data: null };
+        return { sucesso: true, data };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message, data: null };
     }
 }
 
@@ -1118,8 +1220,9 @@ async function salvarPropostaDB(dados) {
                 tipo:                dados.tipo                || null,
                 proposito:           dados.proposito           || null,
                 status:              'pendente',
-                emissor_tipo:        dados.emissor_tipo        || 'usuario',
-                parceiro_id:         dados.parceiro_id         || null,
+                emissor_tipo:          dados.emissor_tipo          || 'usuario',
+                parceiro_id:           dados.parceiro_id           || null,
+                parceiro_razao_social: dados.parceiro_razao_social || null,
                 documento:           dados.documento           || null,
                 documento_tipo:      dados.documento_tipo      || null,
                 modal:               dados.modal               || null,
@@ -1151,7 +1254,7 @@ async function salvarPropostaDB(dados) {
                 obs_status:              dados.obs_status               || null,
                 pedido_id:               dados.pedido_id                || null,
             })
-            .select('id, codigo')
+            .select('*')
             .single();
 
         if (error) return { sucesso: false, mensagem: error.message };
@@ -1176,14 +1279,15 @@ async function buscarProformaDB(id) {
 }
 
 // Proforma→Processo é 1:1 — ao gerar o processo, a proforma sai do kanban de
-// "aprovado" (vira finalizado) e não pode gerar outro processo.
+// "aprovado" e vai pra "encerrado" (etapa "finalizado" foi removida do kanban)
+// e não pode gerar outro processo.
 async function marcarProformaFinalizadaDB(proformaId, processoId) {
     try {
         const { error } = await supabaseClient
             .from('proformas')
             .update({
                 processo_gerado_id:   processoId,
-                status:               'finalizado',
+                status:               'encerrado',
                 status_atualizado_em: new Date().toISOString(),
             })
             .eq('id', proformaId);
@@ -1203,6 +1307,7 @@ async function atualizarProformaDB(id, dados) {
                 proposito:                dados.proposito                || null,
                 emissor_tipo:             dados.emissor_tipo             || 'usuario',
                 parceiro_id:              dados.parceiro_id              || null,
+                parceiro_razao_social:    dados.parceiro_razao_social    || null,
                 documento:                dados.documento                || null,
                 documento_tipo:           dados.documento_tipo           || null,
                 modal:                    dados.modal                    || null,
@@ -1234,7 +1339,7 @@ async function atualizarProformaDB(id, dados) {
                 obs_status:               dados.obs_status               || null,
             })
             .eq('id', id)
-            .select('id, codigo')
+            .select('*')
             .single();
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
@@ -1459,6 +1564,7 @@ async function excluirContaReceber(id) {
 
 window.supabaseAPI = {
     login: loginSupabase,
+    atualizarUsuarioLogado,
     cadastrar: cadastrarContaSupabase,
     salvarEmpresa: salvarEmpresaCadastrada,
     editarEmpresa: editarEmpresaCadastrada,
@@ -1484,6 +1590,7 @@ window.supabaseAPI = {
     atualizarProcesso,
     excluirProcesso,
     buscarProdutos,
+    buscarProdutoPorId,
     salvarProduto,
     editarProduto,
     excluirProduto,
@@ -1506,6 +1613,9 @@ window.supabaseAPI = {
     excluirPedido,
     vincularProformaAoPedido,
     buscarPedidoIdPorProforma,
+    buscarDocumentosPedidos,
+    marcarDocumentoAssinado,
+    excluirDocumentoPedido,
     // Financeiro
     buscarContasPagar,
     buscarContasPagarPeriodo,
@@ -1636,13 +1746,43 @@ async function buscarPedidos() {
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
 }
 
+// Gera o número do pedido no mesmo padrão de Proforma (PRO...) e Processo
+// (PROC...): PED{ano}{sequencial de 6 dígitos}, ex. PED2026000001. Busca o
+// maior número já usado no ano pra essa empresa e soma 1, em vez de contar
+// linhas (evita colisão quando pedidos antigos foram excluídos).
+async function _gerarNumeroPedido(empresaId) {
+    const ano     = new Date().getFullYear();
+    const pattern = `PED${ano}%`;
+
+    const { data } = await supabaseClient
+        .from('pedidos')
+        .select('numero')
+        .eq('empresa_proprietaria_id', empresaId)
+        .like('numero', pattern)
+        .order('numero', { ascending: false })
+        .limit(1);
+
+    let seq = 1;
+    if (data && data.length > 0) {
+        const ultimo = data[0].numero;
+        const num    = parseInt(ultimo?.slice(`PED${ano}`.length), 10);
+        if (!isNaN(num)) seq = num + 1;
+    }
+
+    return `PED${ano}${String(seq).padStart(6, '0')}`;
+}
+
 // itens: [{ produto_id, produto_nome, quantidade, unidade_medida, preco_unitario }]
 async function salvarPedido(dados, id = null, itens = []) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+
+        // Número gerado automaticamente só na criação — edição preserva o que já existe.
+        const numero = id ? (dados.numero || null) : await _gerarNumeroPedido(usuario.empresa_id);
+
         const payload = {
-            numero: dados.numero || null, cliente_id: dados.cliente_id || null,
+            numero, cliente_id: dados.cliente_id || null,
             remetente_parceiro_id: dados.remetente_parceiro_id || null,
             proforma_id: dados.proforma_id || null, oportunidade_id: dados.oportunidade_id || null,
             status: dados.status || 'aguardando', valor_total: dados.valor_total || null,
@@ -1655,6 +1795,7 @@ async function salvarPedido(dados, id = null, itens = []) {
             result = await supabaseClient.from('pedidos').update(payload).eq('id', id).select().single();
         } else {
             payload.empresa_proprietaria_id = usuario.empresa_id;
+            payload.criado_por = usuario.nome || usuario.email || 'Desconhecido';
             result = await supabaseClient.from('pedidos').insert(payload).select().single();
         }
         if (result.error) return { sucesso: false, mensagem: result.error.message };
@@ -1760,6 +1901,63 @@ async function excluirPedido(id) {
                 excluido_por: usuario?.nome || usuario?.email || 'Desconhecido',
             })
             .eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// ========================================
+// DOCUMENTOS DO PEDIDO (tela Documentos)
+// ========================================
+
+async function buscarDocumentosPedidos(pedidoIds) {
+    try {
+        if (!pedidoIds || !pedidoIds.length) return { sucesso: true, data: [] };
+        const { data, error } = await supabaseClient
+            .from('pedido_documentos')
+            .select('*')
+            .in('pedido_id', pedidoIds);
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+// Marca/desmarca assinatura, com o arquivo do documento já assinado
+// anexado (upload real via Storage, path/nome gravados aqui). Também serve
+// pra criar a linha de um documento customizado (assinado=false, só com
+// tipo_label). Não existe e-signature real nesta app: "assinadoPor" é texto
+// livre digitado pelo usuário (quem assinou fisicamente, pode ser um
+// terceiro); "enviado_por" é sempre o usuário logado que fez o upload,
+// capturado automaticamente — pode ser uma pessoa diferente de quem assinou.
+// "assinado_em" é a data/hora capturada pelo sistema — nunca digitada.
+async function marcarDocumentoAssinado(pedidoId, tipoDocumento, assinado, assinadoPor = null, tipoLabel = null, arquivoPath = null, arquivoNome = null) {
+    try {
+        const usuario = obterUsuarioLogado();
+        const { data, error } = await supabaseClient
+            .from('pedido_documentos')
+            .upsert({
+                pedido_id:      pedidoId,
+                tipo_documento: tipoDocumento,
+                tipo_label:     tipoLabel,
+                assinado:       assinado,
+                assinado_por:   assinado ? assinadoPor : null,
+                assinado_em:    assinado ? new Date().toISOString() : null,
+                arquivo_path:   assinado ? arquivoPath : null,
+                arquivo_nome:   assinado ? arquivoNome : null,
+                enviado_por:    assinado ? (usuario?.nome || usuario?.email || null) : null,
+                atualizado_em:  new Date().toISOString(),
+                atualizado_por: usuario?.id || null,
+            }, { onConflict: 'pedido_id,tipo_documento' })
+            .select()
+            .single();
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function excluirDocumentoPedido(id) {
+    try {
+        const { error } = await supabaseClient.from('pedido_documentos').delete().eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }

@@ -7,6 +7,7 @@ let periodoAtual = 'anual';
 let todasEmpresas  = [];
 let todasProformas = [];
 let todasProcessos = [];
+let todasProdutos  = [];
 const HISTORICO_KEY = 'relatoriosHistorico';
 
 // Helpers — campos booleanos da tabela
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     carregarStatsProformas();
     carregarStatsProcessos();
+    carregarStatsProdutos();
 });
 
 // ========================================
@@ -57,7 +59,7 @@ async function carregarStatsProformas() {
         const usuario = obterUsuarioLogado();
         let query = supabaseClient
             .from('proformas')
-            .select('id, codigo, status, created_at, valor_total, moeda_principal, destinatario_id, destinatario_razao_social')
+            .select('id, codigo, status, created_at, valor_total, moeda_principal, destinatario_id, destinatario_razao_social, processo_gerado_id')
             .neq('status', 'excluido');
         if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
 
@@ -66,7 +68,10 @@ async function carregarStatsProformas() {
 
         const proformas  = data || [];
         todasProformas    = proformas;
-        const concluidas = proformas.filter(p => p.status === 'finalizado').length;
+        // Etapa "finalizado" foi removida do kanban (virou "encerrado"), que
+        // agora também é usado pra fechamento sem sucesso — então "concluída"
+        // usa o sinal confiável de que gerou processo, não mais o texto do status.
+        const concluidas = proformas.filter(p => p.processo_gerado_id).length;
         // "Em Andamento": ainda ativas no funil (enviado/aprovado/pendente).
         // "Encerrado" fica de fora — representa recusada/fechada sem sucesso,
         // não é nem concluída nem está em andamento (mesmo padrão do card de
@@ -99,6 +104,25 @@ async function carregarStatsProcessos() {
         document.getElementById('totalProcessosAbertos').textContent    = emAndamento;
     } catch (err) {
         console.error('[Relatórios] Erro ao carregar stats de processos:', err);
+    }
+}
+
+// ========================================
+// STATS — PRODUTOS
+// ========================================
+
+async function carregarStatsProdutos() {
+    try {
+        const res = await window.supabaseAPI.buscarProdutos();
+        const produtos = res.sucesso ? (res.data || []) : [];
+        todasProdutos  = produtos;
+
+        const ativos = produtos.filter(p => (p.status || 'ativo') === 'ativo').length;
+
+        document.getElementById('totalProdutos').textContent       = produtos.length;
+        document.getElementById('totalProdutosAtivos').textContent = ativos;
+    } catch (err) {
+        console.error('[Relatórios] Erro ao carregar stats de produtos:', err);
     }
 }
 
@@ -253,7 +277,6 @@ const CONFIG_REL = {
                     <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="aprovado" checked> Aprovado</label>
                     <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="pendente" checked> Pendente</label>
                     <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="encerrado" checked> Encerrado</label>
-                    <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="finalizado" checked> Finalizado</label>
                 </div>
             </div>`
     },
@@ -304,6 +327,35 @@ const CONFIG_REL = {
         cor:   'linear-gradient(135deg,#f59e0b,#f97316)',
         icone: 'fa-solid fa-globe',
         params: ''
+    },
+    'produtos-listagem': {
+        nome:  'Listagem Geral de Produtos',
+        cor:   'linear-gradient(135deg,#9333ea,#6366f1)',
+        icone: 'fa-solid fa-list',
+        params: `
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status</label>
+                <div class="rel-check-row">
+                    <label class="rel-check"><input type="checkbox" name="rel-prod-status" value="ativo" checked> Ativo</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-prod-status" value="pendente" checked> Pendente</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-prod-status" value="pausado" checked> Pausado</label>
+                    <label class="rel-check"><input type="checkbox" name="rel-prod-status" value="inativo" checked> Inativo</label>
+                </div>
+            </div>`
+    },
+    'produtos-ncm': {
+        nome:  'Produtos por NCM',
+        cor:   'linear-gradient(135deg,#22c55e,#16a34a)',
+        icone: 'fa-solid fa-barcode',
+        params: `
+            <div class="rel-param-group">
+                <label class="rel-param-label"><i class="fa-solid fa-ranking-star"></i> Exibir no ranking</label>
+                <select id="relRankingTopNcm" class="rel-select" onchange="atualizarPreviewModal()">
+                    <option value="5">Top 5</option>
+                    <option value="10" selected>Top 10</option>
+                    <option value="0">Todos</option>
+                </select>
+            </div>`
     }
 };
 
@@ -394,6 +446,19 @@ function filtrarProcessosPorDatas() {
     const inicio = new Date(di);
     const fim    = new Date(df + 'T23:59:59');
     return todasProcessos.filter(p => {
+        if (!p.criado_em) return true;
+        const d = new Date(p.criado_em);
+        return d >= inicio && d <= fim;
+    });
+}
+
+function filtrarProdutosPorDatas() {
+    const di = document.getElementById('relDataInicio')?.value;
+    const df = document.getElementById('relDataFim')?.value;
+    if (!di || !df) return todasProdutos;
+    const inicio = new Date(di);
+    const fim    = new Date(df + 'T23:59:59');
+    return todasProdutos.filter(p => {
         if (!p.criado_em) return true;
         const d = new Date(p.criado_em);
         return d >= inicio && d <= fim;
@@ -492,7 +557,7 @@ function atualizarPreviewModal() {
         ).join('');
 
     } else if (tipoRelatorioAtual === 'proformas-periodo') {
-        const labels    = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado' };
+        const labels    = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado' };
         const statusSel = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-prof-status"]:checked')].map(c => c.value);
         const lista     = filtrarProformasPorDatas().filter(p => statusSel.includes(p.status || 'enviado'));
 
@@ -502,7 +567,7 @@ function atualizarPreviewModal() {
         `;
 
     } else if (tipoRelatorioAtual === 'proformas-status') {
-        const labels = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado' };
+        const labels = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado' };
         const lista  = filtrarProformasPorDatas();
         const total  = lista.length || 1;
 
@@ -562,6 +627,33 @@ function atualizarPreviewModal() {
             const n = lista.filter(p => p.modal === md).length;
             return `<div class="prev-linha"><span>${labels[md]}</span><strong>${n} (${Math.round((n / total) * 100)}%)</strong></div>`;
         }).join('');
+
+    } else if (tipoRelatorioAtual === 'produtos-listagem') {
+        const labelsProd = { ativo: 'Ativo', pendente: 'Pendente', pausado: 'Pausado', inativo: 'Inativo' };
+        const statusSel  = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-prod-status"]:checked')].map(c => c.value);
+        const lista      = filtrarProdutosPorDatas().filter(p => statusSel.includes(p.status || 'ativo'));
+
+        el.innerHTML = `
+            <div class="prev-linha"><span>Total no período</span><strong>${lista.length}</strong></div>
+            ${statusSel.map(st => `<div class="prev-linha"><span>${labelsProd[st]}</span><strong>${lista.filter(p => (p.status || 'ativo') === st).length}</strong></div>`).join('')}
+        `;
+
+    } else if (tipoRelatorioAtual === 'produtos-ncm') {
+        const topN  = parseInt(document.getElementById('relRankingTopNcm')?.value || '10');
+        const lista = filtrarProdutosPorDatas();
+
+        const contagem = {};
+        lista.forEach(p => { const n = p.ncm || 'Não informado'; contagem[n] = (contagem[n] || 0) + 1; });
+        let ranking = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
+        if (topN > 0) ranking = ranking.slice(0, topN);
+
+        if (ranking.length === 0) {
+            el.innerHTML = `<div class="prev-vazio">Nenhum resultado encontrado</div>`;
+            return;
+        }
+        el.innerHTML = ranking.map(([ncm, qtd], i) =>
+            `<div class="prev-linha"><span><b>${i + 1}.</b> ${ncm}</span><strong>${qtd}</strong></div>`
+        ).join('');
     }
 }
 
@@ -650,7 +742,7 @@ function baixarPDF() {
             </table>`;
 
     } else if (tipoRelatorioAtual === 'proformas-periodo') {
-        const labelsProf = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado' };
+        const labelsProf = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado' };
         const statusSel  = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-prof-status"]:checked')].map(c => c.value);
         const lista      = filtrarProformasPorDatas().filter(p => statusSel.includes(p.status || 'enviado'));
         totalRegistros   = lista.length;
@@ -670,7 +762,7 @@ function baixarPDF() {
             </table>`;
 
     } else if (tipoRelatorioAtual === 'proformas-status') {
-        const labelsProf = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado' };
+        const labelsProf = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado' };
         const lista      = filtrarProformasPorDatas();
         totalRegistros   = lista.length;
         const total      = lista.length || 1;
@@ -756,6 +848,43 @@ function baixarPDF() {
                         const n = lista.filter(p => p.modal === md).length;
                         return `<tr><td>${labelsModal[md]}</td><td>${n}</td><td>${Math.round((n / total) * 100)}%</td></tr>`;
                     }).join('')}
+                </tbody>
+            </table>`;
+
+    } else if (tipoRelatorioAtual === 'produtos-listagem') {
+        const labelsProd = { ativo: 'Ativo', pendente: 'Pendente', pausado: 'Pausado', inativo: 'Inativo' };
+        const statusSel  = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-prod-status"]:checked')].map(c => c.value);
+        const lista      = filtrarProdutosPorDatas().filter(p => statusSel.includes(p.status || 'ativo'));
+        totalRegistros   = lista.length;
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>SKU</th><th>Nome</th><th>NCM</th><th>Unidade</th><th>Status</th></tr></thead>
+                <tbody>
+                    ${lista.map(p => `
+                        <tr>
+                            <td>${p.sku || '—'}</td>
+                            <td>${p.nome || '—'}</td>
+                            <td>${p.ncm || '—'}</td>
+                            <td>${p.unidade_medida || '—'}</td>
+                            <td>${labelsProd[p.status] || p.status || '—'}</td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>`;
+
+    } else if (tipoRelatorioAtual === 'produtos-ncm') {
+        const topN  = parseInt(document.getElementById('relRankingTopNcm')?.value || '10');
+        const lista = filtrarProdutosPorDatas();
+        totalRegistros = lista.length;
+        const contagem = {};
+        lista.forEach(p => { const n = p.ncm || 'Não informado'; contagem[n] = (contagem[n] || 0) + 1; });
+        let ranking = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
+        if (topN > 0) ranking = ranking.slice(0, topN);
+        const totalLista = lista.length || 1;
+        conteudoTabela = `
+            <table>
+                <thead><tr><th>#</th><th>NCM</th><th>Produtos</th><th>Percentual</th></tr></thead>
+                <tbody>
+                    ${ranking.map(([ncm, qtd], i) => `<tr><td>${i + 1}</td><td>${ncm}</td><td>${qtd}</td><td>${Math.round((qtd / totalLista) * 100)}%</td></tr>`).join('')}
                 </tbody>
             </table>`;
     }

@@ -2,6 +2,19 @@
    PEDIDOS — ESTILOS
 ======================================== */
 
+/* Nº do Pedido / Data de Criação: preenchidos automaticamente, só leitura */
+#pedNumero[readonly],
+#pedDataPedido[readonly] {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+}
+/* readonly em <input type="date"> não bloqueia o seletor de calendário em
+   todo navegador — trava a interação de vez, já que o valor é escrito só
+   por JS (pedAbrirModal). */
+#pedDataPedido[readonly] { pointer-events: none; }
+
+
 .ped-table-wrap {
     margin-top: 16px;
     background: white;
@@ -115,6 +128,7 @@
     font-size: 10.5px;
     font-weight: 700;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 .ped-etapa-proforma { background: #fef3c7; color: #b45309; }
 .ped-etapa-processo { background: #ede9fe; color: #6d28d9; }
@@ -134,6 +148,10 @@
     background-repeat: no-repeat;
     background-position: right 8px center;
     padding-right: 22px;
+    max-width: 128px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
 .ped-status-aguardando  { background-color: #f1f5f9; color: #475569; border-color: #e2e8f0; }
@@ -194,7 +212,7 @@
 }
 
 .ped-item-field--qtd   { width: 90px; }
-.ped-item-field--un    { width: 80px; }
+.ped-item-field--un    { width: 110px; }
 .ped-item-field--preco { width: 120px; }
 .ped-item-field--total { min-width: 100px; }
 
@@ -457,14 +475,15 @@
 /* ── Kanban board ─────────────────────────────────────────────────── */
 .kanban-board {
     display: flex;
-    gap: 10px;
+    gap: 14px;
     padding: 0 0 24px 0;
     margin-top: 16px;
     align-items: flex-start;
+    overflow-x: auto;
 }
 .kanban-col {
     flex: 1;
-    min-width: 0;
+    min-width: 300px;
     background: #f8fafc;
     border-radius: 14px;
     border: 1px solid #e2e8f0;
@@ -513,10 +532,10 @@
 .kanban-col-body {
     flex: 1;
     overflow-y: auto;
-    padding: 8px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 .kanban-vazio {
     display: flex;
@@ -529,33 +548,102 @@
 }
 
 /* ── Card do kanban de pedidos ────────────────────────────────────── */
+/* Altura padronizada: min-height cobre todas as linhas de informação (nº do
+   pedido, proforma, processo, remetente, destino, valor, datas, status e
+   ações) com 1 linha de botões — cards com 2 linhas de botões ainda crescem
+   além disso, mas o texto (nomes longos etc.) sempre trunca com "…" em vez
+   de quebrar linha, pra manter a altura previsível entre resoluções. */
 .ped-kcard {
     background: white;
     border: 1px solid #e2e8f0;
+    border-left: 3px solid #cbd5e1;
     border-radius: 10px;
-    padding: 12px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 9px;
+    box-sizing: border-box;
 }
+.ped-kcard[data-status="aguardando"]  { border-left-color: #cbd5e1; }
+.ped-kcard[data-status="confirmado"]  { border-left-color: #3b82f6; }
+.ped-kcard[data-status="em_producao"] { border-left-color: #f97316; }
+.ped-kcard[data-status="embarcado"]   { border-left-color: #8b5cf6; }
+.ped-kcard[data-status="entregue"]    { border-left-color: #22c55e; }
+.ped-kcard[data-status="cancelado"]   { border-left-color: #ef4444; }
+/* Expandido: mesma altura padronizada de antes, calculada pra caber todas as
+   linhas de informação + 1 linha de botões. Recolhido não leva min-height —
+   fica curto de propósito, só com nº do pedido, Proforma e Processo. */
+.ped-kcard-expandido { min-height: 284px; }
+
 .ped-kcard-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    flex-wrap: wrap;
+    min-width: 0;
 }
-.ped-kcard-num { font-weight: 700; color: #1e293b; font-size: 13px; }
-.ped-kcard-empresa {
+
+/* Seta que expande/recolhe o card por inteiro */
+.ped-kcard-toggle {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: background .15s, color .15s;
+}
+.ped-kcard-toggle:hover { background: #e2e8f0; color: #334155; }
+.ped-kcard-num {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
-    color: #475569;
-    flex-wrap: wrap;
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
-.ped-kcard-empresa i:first-child { color: #94a3b8; font-size: 11px; }
-.ped-kcard-arrow { color: #cbd5e1; font-size: 10px; }
+.ped-kcard-num i { color: #94a3b8; font-size: 11px; }
+
+/* Identificação de Proforma/Processo — sempre presentes, mesmo vazias */
+.ped-kcard-ident {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: #64748b;
+    min-width: 0;
+}
+.ped-kcard-ident i { flex-shrink: 0; width: 12px; text-align: center; color: #94a3b8; font-size: 10.5px; }
+.ped-kcard-ident span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Empresa Remetente / Empresa Destino */
+.ped-kcard-empresa-linha {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 11.5px;
+    min-width: 0;
+}
+.ped-kcard-label { color: #94a3b8; font-weight: 600; flex-shrink: 0; }
+.ped-kcard-empresa-valor {
+    color: #334155;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
 .ped-kcard-valor {
     font-weight: 700;
     color: var(--azul);
@@ -563,25 +651,40 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
 }
+.ped-kcard-valor i { flex-shrink: 0; }
+.ped-kcard-valor span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* Data de Criação / Data de Entrega Prevista (uma linha cada) */
+.ped-kcard-datas {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #94a3b8;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.ped-kcard-datas .ped-kcard-label { font-size: 11px; }
+
 .ped-kcard-footer {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding-top: 8px;
+    gap: 10px;
+    padding-top: 10px;
     border-top: 1px solid #f1f5f9;
+    margin-top: auto;
 }
-.ped-kcard-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-.ped-kcard-data { font-size: 11px; color: #94a3b8; white-space: nowrap; }
 .ped-kcard-btns {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     flex-wrap: wrap;
 }
 
@@ -618,6 +721,18 @@
     font-size: 0.68rem;
 }
 .kanban-tab.active .kanban-tab-count { background: #eff6ff; color: var(--azul); }
+
+/* ── Desktop: estica o kanban até o rodapé fixo ───────────────────── */
+/* Sem isso, quando os cards recolhidos deixam o board mais baixo que a tela,
+   a barra de rolagem horizontal ficava colada embaixo dos cards em vez de
+   no final da página. Escopado a min-width pra não mexer no layout mobile
+   (que já empilha as colunas verticalmente e rola a página inteira). */
+@media (min-width: 769px) {
+    main    { display: flex; flex-direction: column; }
+    .content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .kanban-board { flex: 1; min-height: 0; align-items: stretch; }
+    .kanban-col   { max-height: none; }
+}
 
 /* ── Mobile ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {

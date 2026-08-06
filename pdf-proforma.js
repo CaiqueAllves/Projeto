@@ -127,17 +127,17 @@ async function gerarPDFProformaDados(d) {
         sf('bold',7.5,AZUL); doc.text('ITENS DA PROFORMA',ML+7,Y+4.2); Y+=9;
 
         // Colunas (total usável = 269mm)
-        const CodW=16, ProdW=30, HsW=15, PaisOW=18, FabW=24, MarcaW=18, CompW=30, VolW=16, QtdW=13, VlrW=26;
-        const xCod=ML, xProd=xCod+CodW, xHs=xProd+ProdW, xPaisO=xHs+HsW,
-              xFab=xPaisO+PaisOW, xMarca=xFab+FabW, xComp=xMarca+MarcaW,
+        const CodW=16, ProdW=30, HsW=15, NcmW=18, FabW=24, MarcaW=18, CompW=30, VolW=16, QtdW=13, VlrW=26;
+        const xCod=ML, xProd=xCod+CodW, xHs=xProd+ProdW, xNcm=xHs+HsW,
+              xFab=xNcm+NcmW, xMarca=xFab+FabW, xComp=xMarca+MarcaW,
               xVol=xComp+CompW, xQtd=xVol+VolW, xVlr=xQtd+QtdW, xTot=xVlr+VlrW;
 
         function cabI(){
             rx(ML,Y,W-ML*2,8,NAVY); sf('bold',5.5,BRANCO);
             doc.text('CÓDIGO',xCod+2,Y+5.5);
-            doc.text('PRODUTO',xProd+2,Y+5.5);
+            doc.text('DESCRIÇÃO DO PRODUTO',xProd+2,Y+5.5);
             doc.text('HS CODE',xHs+2,Y+5.5);
-            doc.text('PAÍS ORIG.',xPaisO+2,Y+5.5);
+            doc.text('NCM',xNcm+2,Y+5.5);
             doc.text('FABRICANTE',xFab+2,Y+5.5);
             doc.text('MARCA',xMarca+2,Y+5.5);
             doc.text('COMPOSIÇÃO',xComp+2,Y+5.5);
@@ -157,13 +157,13 @@ async function gerarPDFProformaDados(d) {
             pg(rH+2); if(doc.getNumberOfPages()>pag){pag=doc.getNumberOfPages();cabI();}
             rx(ML,Y,W-ML*2,rH,i%2===0?CINZA_BG:BRANCO);
             doc.setDrawColor(...BORDA); doc.setLineWidth(0.15); doc.line(ML,Y+rH,MR,Y+rH);
-            [xProd,xHs,xPaisO,xFab,xMarca,xComp,xVol,xQtd,xVlr,xTot].forEach(cx=>lv(cx,Y,Y+rH));
+            [xProd,xHs,xNcm,xFab,xMarca,xComp,xVol,xQtd,xVlr,xTot].forEach(cx=>lv(cx,Y,Y+rH));
             const t=(item.qtd||0)*(item.preco||0); tot+=t;
             const tY=Y+3.8;
             sf('bold',6,AZUL);   doc.text(doc.splitTextToSize(item.sku||item.codigo||'—',CodW-3)[0],xCod+2,tY);
             sf('normal',6,PRETO); prodL.forEach((ln,li)=>doc.text(ln,xProd+2,tY+li*4.2));
-            sf('normal',5.5,CINZA); doc.text(vv(item.hs_code||item.ncm),xHs+2,tY);
-            doc.text(vv(item.pais_origem),xPaisO+2,tY);
+            sf('normal',5.5,CINZA); doc.text(vv(item.hs_code),xHs+2,tY);
+            doc.text(vv(item.ncm),xNcm+2,tY);
             fabL.forEach((ln,li)=>doc.text(ln,xFab+2,tY+li*4.2));
             doc.text(vv(item.marca),xMarca+2,tY);
             sf('normal',5.5,CINZA); compL.forEach((ln,li)=>doc.text(ln,xComp+2,tY+li*4.2));

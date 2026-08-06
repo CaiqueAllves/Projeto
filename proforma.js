@@ -7,7 +7,7 @@ let _profExcluirId  = null;
 let _profListaAtual = [];
 let _viewMode        = 'kanban';
 
-const KANBAN_COLS = ['enviado', 'aprovado', 'pendente', 'encerrado', 'finalizado'];
+const KANBAN_COLS = ['pendente', 'enviado', 'aprovado', 'encerrado'];
 
 // ── Nova Proforma agora nasce de um Pedido ──
 function profIrParaPedidos() {
@@ -27,13 +27,13 @@ function _profEscapar(value) {
 }
 
 function _profStatusLabel(status) {
-    const map = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', finalizado: 'Finalizado', recusado: 'Encerrado' };
+    const map = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado', recusado: 'Encerrado' };
     return map[status] || 'Ativo';
 }
 
-// Mapeia status (incl. legado "recusado") para a coluna do kanban
+// Mapeia status (incl. legado "recusado"/"finalizado") pra coluna do kanban
 function _profGetColuna(status) {
-    const map = { enviado: 'enviado', aprovado: 'aprovado', pendente: 'pendente', encerrado: 'encerrado', finalizado: 'finalizado', recusado: 'encerrado' };
+    const map = { enviado: 'enviado', aprovado: 'aprovado', pendente: 'pendente', encerrado: 'encerrado', recusado: 'encerrado', finalizado: 'encerrado' };
     return map[status] || 'enviado';
 }
 
@@ -68,9 +68,19 @@ function _profBotaoPedido(p) {
     return `<button class="btn-ver-processo" onclick="profVerPedido('${p._pedidoOrigemId}')"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido de origem</button>`;
 }
 
+// Identificação do pedido de origem — sempre mostra uma linha, mesmo que por
+// algum motivo não exista (não deveria acontecer, toda proforma nasce de um pedido).
+function _profIdentPedido(p) {
+    if (!p._pedidoOrigemId) return 'Sem Pedido';
+    return `Pedido: ${p._pedidoNumero || '—'}`;
+}
+
 function _profEmissorNome(p) {
     if (p.emissor_tipo === 'terceiro') {
-        return p.parceiro?.nome_fantasia || p.parceiro?.razao_social || '—';
+        // parceiro_id só resolve quando aponta pra um registro real de
+        // "empresas" — quando a proforma nasce de um Pedido, o remetente vem
+        // de "parceiros" (tabela/ID diferentes), então cai no snapshot em texto.
+        return p.parceiro?.nome_fantasia || p.parceiro?.razao_social || p.parceiro_razao_social || '—';
     }
     return '(Própria empresa)';
 }
@@ -83,7 +93,7 @@ function _profDestinatarioNome(p) {
 }
 
 function profAtualizarContadores(lista) {
-    const counts = { enviado: 0, aprovado: 0, pendente: 0, encerrado: 0, finalizado: 0 };
+    const counts = { enviado: 0, aprovado: 0, pendente: 0, encerrado: 0 };
     lista.forEach(p => { counts[_profGetColuna(p.status || 'enviado')]++; });
 
     KANBAN_COLS.forEach(s => {
@@ -148,12 +158,24 @@ async function profCarregarLista() {
             });
         }
 
+        // Número do pedido de origem — pra mostrar na identificação do card.
+        const pedidoIds = [...new Set(proformas.map(p => p.pedido_id).filter(Boolean))];
+        let pedidoNumeroMap = {};
+        if (pedidoIds.length > 0) {
+            const { data: peds } = await supabaseClient
+                .from('pedidos')
+                .select('id, numero')
+                .in('id', pedidoIds);
+            (peds || []).forEach(pd => { pedidoNumeroMap[pd.id] = pd.numero; });
+        }
+
         _profTodos = proformas.map(p => ({
             ...p,
             parceiro:         empresaMap[p.parceiro_id]      || null,
             destinatario_emp: empresaMap[p.destinatario_id]  || null,
             _processos:       processosMap[p.id] || [],
             _pedidoOrigemId:  p.pedido_id || null,
+            _pedidoNumero:    p.pedido_id ? (pedidoNumeroMap[p.pedido_id] || '') : '',
         }));
 
         profFiltrar();
@@ -186,58 +208,72 @@ function profRenderKanban(lista) {
     });
 }
 
+// Cards do kanban começam recolhidos (mesmo padrão de Pedidos) — o Set guarda
+// quais proformas o usuário já expandiu, sobrevive a re-renders do board inteiro.
+let _profCardsExpandidos = new Set();
+
+function profToggleCard(id) {
+    if (_profCardsExpandidos.has(id)) _profCardsExpandidos.delete(id);
+    else _profCardsExpandidos.add(id);
+    profRenderConteudo(_profListaAtual);
+}
+
 function _profRenderCard(p) {
     const status      = _profGetColuna(p.status || 'enviado');
     const tipoLabel    = _profTipoLabel(p.tipo);
     const modalIco     = _profModalIcon(p.modal);
     const modalLabel   = p.modal ? p.modal.charAt(0).toUpperCase() + p.modal.slice(1) : null;
-    const dataEmis     = p.data_emissao ? new Date(p.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : null;
-    const dataAtualizado = p.status_atualizado_em ? new Date(p.status_atualizado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : null;
+    const dataEmis     = p.data_emissao ? new Date(p.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
     const emissor      = _profEmissorNome(p);
     const destinatario = _profDestinatarioNome(p);
     const valorTexto   = p.valor_total
         ? `${p.moeda_principal || 'USD'} ${Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-        : null;
+        : '—';
+    const expandido = _profCardsExpandidos.has(p.id);
 
     const optStatus = KANBAN_COLS.map(s =>
         `<option value="${s}" ${status === s ? 'selected' : ''}>${_profStatusLabel(s)}</option>`
     ).join('');
 
     return `
-    <div class="prof-card" id="prof-kcard-${p.id}" data-status="${status}">
+    <div class="prof-card ${expandido ? 'prof-card-expandido' : ''}" id="prof-kcard-${p.id}" data-status="${status}">
         <div class="prof-card-top">
             <span class="prof-card-codigo">${_profEscapar(p.codigo) || '—'}</span>
-            ${tipoLabel ? `<span class="prof-card-tipo">${_profEscapar(tipoLabel)}</span>` : ''}
+            <button class="prof-card-toggle" onclick="profToggleCard('${p.id}')" title="${expandido ? 'Recolher' : 'Expandir'}">
+                <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
+            </button>
         </div>
-        ${(p.origem_pais || p.destino_pais) ? `
-        <div class="prof-card-rota">
-            <i class="fa-solid fa-earth-americas"></i>
-            <span class="prof-card-pais">${_profEscapar(p.origem_pais) || '—'}</span>
-            <i class="fa-solid fa-arrow-right prof-card-arrow"></i>
-            <span class="prof-card-pais">${_profEscapar(p.destino_pais) || '—'}</span>
+        <div class="prof-card-ident">
+            <i class="fa-solid fa-bag-shopping"></i>
+            <span>${_profEscapar(_profIdentPedido(p))}</span>
+            ${p._pedidoOrigemId ? `<button class="prof-card-ident-seta" onclick="profVerPedido('${p._pedidoOrigemId}')" title="Ver Pedido de origem"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>` : ''}
+        </div>
+        ${tipoLabel ? `
+        <div class="prof-card-modal">
+            <span class="prof-card-tipo">${_profEscapar(tipoLabel)}</span>
         </div>` : ''}
         ${(modalLabel || p.incoterm) ? `
         <div class="prof-card-modal">
             ${modalLabel ? `<span class="tag-badge"><i class="fa-solid ${modalIco}"></i> ${_profEscapar(modalLabel)}</span>` : ''}
             ${p.incoterm ? `<span class="tag-badge">${_profEscapar(p.incoterm)}</span>` : ''}
         </div>` : ''}
-        <div class="prof-card-empresa">
-            <i class="fa-solid fa-handshake"></i>
-            <span class="prof-card-pais">${_profEscapar(emissor)}</span>
-            <i class="fa-solid fa-arrow-right prof-card-arrow"></i>
-            <span class="prof-card-pais">${_profEscapar(destinatario)}</span>
+        <div class="prof-card-empresa-linha">
+            <span class="prof-card-label">Remetente:</span>
+            <span class="prof-card-empresa-valor">${_profEscapar(emissor)}</span>
         </div>
-        ${valorTexto ? `
-        <div class="prof-card-valor"><i class="fa-solid fa-sack-dollar"></i> ${_profEscapar(valorTexto)}</div>` : ''}
+        <div class="prof-card-empresa-linha">
+            <span class="prof-card-label">Destinatário:</span>
+            <span class="prof-card-empresa-valor">${_profEscapar(destinatario)}</span>
+        </div>
+        ${expandido ? `
+        <div class="prof-card-valor"><i class="fa-solid fa-sack-dollar"></i><span>${_profEscapar(valorTexto)}</span></div>
+        <div class="prof-card-datas">
+            <span class="prof-card-label">Criação:</span> <span>${dataEmis}</span>
+        </div>
         <div class="prof-card-footer">
-            <div class="prof-card-meta">
-                ${dataEmis ? `<span class="prof-card-data"><i class="fa-regular fa-calendar"></i> Criado em ${dataEmis}</span>` : '<span></span>'}
-                <select class="prof-status-select prof-status-${status}" onchange="profAlterarStatus('${p.id}', this)">
-                    ${optStatus}
-                </select>
-            </div>
-            ${dataAtualizado ? `<div class="prof-card-atualizado"><i class="fa-solid fa-rotate-right"></i> Atualizado em ${dataAtualizado}</div>` : ''}
-            ${_profBotaoPedido(p)}
+            <select class="prof-status-select prof-status-${status}" onchange="profAlterarStatus('${p.id}', this)">
+                ${optStatus}
+            </select>
             ${_profBotaoProcesso(p, status)}
             <div class="prof-card-btns">
                 <button class="btn-acao btn-ver"     onclick="profVisualizar('${p.id}')" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
@@ -245,7 +281,7 @@ function _profRenderCard(p) {
                 <button class="btn-acao btn-editar"  onclick="profEditar('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-acao btn-excluir" onclick="profAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </div>
-        </div>
+        </div>` : ''}
     </div>`;
 }
 
@@ -438,7 +474,7 @@ function profVerProcesso(processoId) {
 }
 
 function profVerPedido(pedidoId) {
-    window.open(`pedidos.html?editar=${pedidoId}`, '_blank');
+    window.open(`pedidos.html?editar=${pedidoId}&modo=visualizar`, '_blank');
 }
 
 // ── Excluir (soft delete) ─────────────────

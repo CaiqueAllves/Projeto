@@ -105,7 +105,6 @@
 .prof-count-aprovado  { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
 .prof-count-pendente  { background:#fffbeb; color:#d97706; border-color:#fde68a; }
 .prof-count-encerrado  { background:#f1f5f9; color:#475569; border-color:#e2e8f0; }
-.prof-count-finalizado { background:#f5f3ff; color:#7c3aed; border-color:#ddd6fe; }
 
 /* ── Altura das linhas ───────────────────── */
 #listaContainer .empresa-tabela tbody tr {
@@ -164,7 +163,6 @@
 .prof-status-select.prof-status-aprovado  { background-color:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
 .prof-status-select.prof-status-pendente  { background-color:#fffbeb; color:#d97706; border-color:#fde68a; }
 .prof-status-select.prof-status-encerrado  { background-color:#f1f5f9; color:#475569; border-color:#e2e8f0; }
-.prof-status-select.prof-status-finalizado { background-color:#f5f3ff; color:#7c3aed; border-color:#ddd6fe; }
 
 /* ── Botão Excluídos ─────────────────────── */
 .btn-excluidos {
@@ -401,7 +399,6 @@
 .kanban-header-aprovado  { background: #f0fdf4; border-bottom-color: #16a34a; }
 .kanban-header-pendente  { background: #fffbeb; border-bottom-color: #f59e0b; }
 .kanban-header-encerrado { background: #f8fafc; border-bottom-color: #64748b; }
-.kanban-header-finalizado { background: #f5f3ff; border-bottom-color: #7c3aed; }
 
 .kanban-col-title {
     font-size: 0.78rem;
@@ -414,7 +411,6 @@
 .kanban-header-aprovado  .kanban-col-title { color: #15803d; }
 .kanban-header-pendente  .kanban-col-title { color: #b45309; }
 .kanban-header-encerrado .kanban-col-title { color: #475569; }
-.kanban-header-finalizado .kanban-col-title { color: #6d28d9; }
 
 .kanban-col-count {
     font-size: 0.72rem;
@@ -445,6 +441,10 @@
 }
 
 /* ── Card do kanban ───────────────────────── */
+/* Recolhido por padrão (mesmo padrão de Pedidos): mostra só identificação de
+   Pedido/Proforma, Tipo, Incoterm|Modal e Remetente/Destinatário. A seta
+   expande revelando Valor, Criação, Status e Ações. min-height só se aplica
+   expandido, calculado pra caber tudo sem cortar conteúdo. */
 .prof-card {
     background: #fff;
     border-radius: 10px;
@@ -457,7 +457,9 @@
     box-shadow: 0 1px 4px rgba(0,0,0,.04);
     transition: box-shadow .18s, transform .18s;
     cursor: default;
+    box-sizing: border-box;
 }
+.prof-card-expandido { min-height: 317px; }
 
 .prof-card:hover {
     box-shadow: 0 4px 14px rgba(0,0,0,.09);
@@ -468,13 +470,12 @@
 .prof-card[data-status="aprovado"]  { border-left-color: #16a34a; }
 .prof-card[data-status="pendente"]  { border-left-color: #f59e0b; }
 .prof-card[data-status="encerrado"]  { border-left-color: #64748b; }
-.prof-card[data-status="finalizado"] { border-left-color: #7c3aed; }
 
 .prof-card-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
+    min-width: 0;
 }
 
 .prof-card-codigo {
@@ -482,6 +483,10 @@
     font-weight: 700;
     color: #1e293b;
     font-family: 'Courier New', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .prof-card-tipo {
@@ -493,24 +498,75 @@
     background: #f1f5f9;
     color: #64748b;
     border: 1px solid #e2e8f0;
+    flex-shrink: 0;
 }
 
-.prof-card-rota,
-.prof-card-empresa {
+/* Seta que expande/recolhe o card por inteiro */
+.prof-card-toggle {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: background .15s, color .15s;
+}
+.prof-card-toggle:hover { background: #e2e8f0; color: #334155; }
+
+/* Identificação de Pedido/Proforma — sempre presentes */
+.prof-card-ident {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.79rem;
-    color: #374151;
-    flex-wrap: wrap;
-}
-
-.prof-card-rota > i:first-child,
-.prof-card-empresa > i:first-child {
-    color: #94a3b8;
     font-size: 0.72rem;
-    width: 13px;
+    color: #64748b;
+    min-width: 0;
+}
+.prof-card-ident i { flex-shrink: 0; width: 12px; text-align: center; color: #94a3b8; font-size: 0.66rem; }
+.prof-card-ident span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Seta "ver pedido de origem" ao lado da identificação */
+.prof-card-ident-seta {
     flex-shrink: 0;
+    margin-left: auto;
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    border-radius: 4px;
+    transition: background .15s, color .15s;
+}
+.prof-card-ident-seta:hover { background: #eff6ff; color: #2563eb; }
+
+/* Remetente / Destinatário */
+.prof-card-empresa-linha {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 0.75rem;
+    min-width: 0;
+}
+.prof-card-label { color: #94a3b8; font-weight: 600; flex-shrink: 0; }
+.prof-card-empresa-valor {
+    color: #334155;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .prof-card-valor {
@@ -520,23 +576,26 @@
     display: flex;
     align-items: center;
     gap: 5px;
+    min-width: 0;
 }
-.prof-card-valor i { font-size: 0.68rem; }
-
-.prof-card-pais {
-    font-weight: 500;
-    color: #1e293b;
-}
-
-.prof-card-arrow {
-    color: #cbd5e1;
-    font-size: 0.6rem;
-}
+.prof-card-valor i { font-size: 0.68rem; flex-shrink: 0; }
+.prof-card-valor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 
 .prof-card-modal {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+}
+
+/* Criação */
+.prof-card-datas {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.69rem;
+    color: #94a3b8;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .prof-card-footer {
@@ -545,35 +604,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 2px;
-}
-
-.prof-card-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-}
-
-.prof-card-data {
-    font-size: 0.69rem;
-    color: #94a3b8;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.prof-card-atualizado {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.67rem;
-    color: #a78bfa;
-    font-weight: 500;
-}
-
-.prof-card-atualizado i {
-    font-size: 0.6rem;
+    margin-top: auto;
 }
 
 .prof-card-btns {

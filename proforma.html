@@ -52,11 +52,10 @@
                     </div>
                     <select id="filtroStatus" class="filter-select" onchange="profFiltrar()">
                         <option value="">Todos os status</option>
+                        <option value="pendente">Pendente</option>
                         <option value="enviado">Enviado</option>
                         <option value="aprovado">Aprovado</option>
-                        <option value="pendente">Pendente</option>
                         <option value="encerrado">Encerrado</option>
-                        <option value="finalizado">Finalizado</option>
                     </select>
                     <div class="view-toggle">
                         <button class="view-btn active" id="btnViewKanban" onclick="switchView('kanban')" title="Kanban">
@@ -91,26 +90,32 @@
 
             <!-- TABS MOBILE -->
             <div class="kanban-tabs" id="kanbanTabs">
-                <button class="kanban-tab active" data-col="enviado" onclick="kanbanSwitchTab(this)">
+                <button class="kanban-tab active" data-col="pendente" onclick="kanbanSwitchTab(this)">
+                    Pendente <span class="kanban-tab-count" id="tab-count-pendente">0</span>
+                </button>
+                <button class="kanban-tab" data-col="enviado" onclick="kanbanSwitchTab(this)">
                     Enviado <span class="kanban-tab-count" id="tab-count-enviado">0</span>
                 </button>
                 <button class="kanban-tab" data-col="aprovado" onclick="kanbanSwitchTab(this)">
                     Aprovado <span class="kanban-tab-count" id="tab-count-aprovado">0</span>
                 </button>
-                <button class="kanban-tab" data-col="pendente" onclick="kanbanSwitchTab(this)">
-                    Pendente <span class="kanban-tab-count" id="tab-count-pendente">0</span>
-                </button>
                 <button class="kanban-tab" data-col="encerrado" onclick="kanbanSwitchTab(this)">
                     Encerrado <span class="kanban-tab-count" id="tab-count-encerrado">0</span>
-                </button>
-                <button class="kanban-tab" data-col="finalizado" onclick="kanbanSwitchTab(this)">
-                    Finalizado <span class="kanban-tab-count" id="tab-count-finalizado">0</span>
                 </button>
             </div>
 
             <!-- KANBAN BOARD -->
             <div class="kanban-board" id="kanbanBoard">
-                <div class="kanban-col kanban-col-active" id="col-enviado">
+                <div class="kanban-col kanban-col-active" id="col-pendente">
+                    <div class="kanban-col-header kanban-header-pendente">
+                        <span class="kanban-col-title"><i class="fa-solid fa-clock"></i> Pendente</span>
+                        <span class="kanban-col-count" id="count-pendente">0</span>
+                    </div>
+                    <div class="kanban-col-body" id="cards-pendente">
+                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    </div>
+                </div>
+                <div class="kanban-col" id="col-enviado">
                     <div class="kanban-col-header kanban-header-enviado">
                         <span class="kanban-col-title"><i class="fa-solid fa-paper-plane"></i> Enviado</span>
                         <span class="kanban-col-count" id="count-enviado">0</span>
@@ -128,30 +133,12 @@
                         <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                     </div>
                 </div>
-                <div class="kanban-col" id="col-pendente">
-                    <div class="kanban-col-header kanban-header-pendente">
-                        <span class="kanban-col-title"><i class="fa-solid fa-clock"></i> Pendente</span>
-                        <span class="kanban-col-count" id="count-pendente">0</span>
-                    </div>
-                    <div class="kanban-col-body" id="cards-pendente">
-                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
-                    </div>
-                </div>
                 <div class="kanban-col" id="col-encerrado">
                     <div class="kanban-col-header kanban-header-encerrado">
                         <span class="kanban-col-title"><i class="fa-solid fa-box-archive"></i> Encerrado</span>
                         <span class="kanban-col-count" id="count-encerrado">0</span>
                     </div>
                     <div class="kanban-col-body" id="cards-encerrado">
-                        <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
-                    </div>
-                </div>
-                <div class="kanban-col" id="col-finalizado">
-                    <div class="kanban-col-header kanban-header-finalizado">
-                        <span class="kanban-col-title"><i class="fa-solid fa-flag-checkered"></i> Finalizado</span>
-                        <span class="kanban-col-count" id="count-finalizado">0</span>
-                    </div>
-                    <div class="kanban-col-body" id="cards-finalizado">
                         <div class="kanban-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                     </div>
                 </div>
@@ -174,9 +161,6 @@
                         </span>
                         <span class="prof-count-badge prof-count-encerrado" id="countEncerrado" style="display:none;">
                             <i class="fa-solid fa-box-archive"></i> <span id="countEncerradoNum">0</span> encerradas
-                        </span>
-                        <span class="prof-count-badge prof-count-finalizado" id="countFinalizado" style="display:none;">
-                            <i class="fa-solid fa-flag-checkered"></i> <span id="countFinalizadoNum">0</span> finalizadas
                         </span>
                     </div>
                 </div>

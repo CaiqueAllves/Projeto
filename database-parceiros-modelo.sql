@@ -43,7 +43,12 @@ COMMENT ON COLUMN parceiros.modelo IS 'Modelo escolhido no cadastro: empresa (Fa
 -- Recria a view pra expor a coluna nova no "p.*" (SELECT * numa view não
 -- acompanha automaticamente colunas adicionadas depois na tabela — precisa
 -- recriar a view pra ela "ver" a coluna nova).
-CREATE OR REPLACE VIEW vw_parceiros_completo AS
+-- Precisa ser DROP + CREATE (não CREATE OR REPLACE): a coluna "modelo" nova
+-- entra no meio da lista de colunas de "p.*" (antes de "contatos"), e o
+-- Postgres só permite REPLACE quando as colunas existentes não mudam de
+-- posição/nome — só permite acrescentar colunas no final.
+DROP VIEW IF EXISTS vw_parceiros_completo;
+CREATE VIEW vw_parceiros_completo AS
 SELECT
     p.*,
     COALESCE(

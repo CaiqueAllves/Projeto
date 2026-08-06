@@ -279,7 +279,269 @@ function removerContato2() {
     ['emp-contato2-nome','emp-contato2-cargo','emp-contato2-tel','emp-contato2-whats']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
-function salvarProduto(e)  { e.preventDefault(); alert('Produto salvo com sucesso! (integração pendente)'); }
+let _prodEditandoId = null;
+
+// Recalcula margem/lucro líquido a partir dos valores brutos — os campos
+// prod-margem/prod-lucro-liquido só guardam texto formatado ("12,34%",
+// "R$ 123,45") pra exibição, não dá pra salvar isso direto como número.
+function _prodCalcularMargemLucroBrutos() {
+    const preco = _prodValorMonetario(document.getElementById('prod-preco-venda'));
+    const custo = _prodValorMonetario(document.getElementById('prod-preco-custo'));
+    const fixos = _prodValorMonetario(document.getElementById('prod-custos-fixos'));
+    const taxas = _prodValorMonetario(document.getElementById('prod-imposto'));
+    const lucro = preco - (custo + fixos + taxas);
+    return {
+        margem:        preco > 0 ? Number(((lucro / preco) * 100).toFixed(4)) : null,
+        lucro_liquido: preco > 0 ? Number(lucro.toFixed(4)) : null,
+    };
+}
+
+// Idiomas do nome/descrição — linha base (prod-nome-idioma) + até 3 linhas
+// extras (prodAdicionarIdiomaExtra). Guardado como array pra poder ser
+// selecionado depois na hora de gerar documentação de proposta/processo.
+function _prodColetarIdiomas() {
+    const idiomas = [];
+
+    const idiomaBase = document.getElementById('prod-nome-idioma')?.value || 'pt';
+    idiomas.push({
+        idioma:       idiomaBase,
+        idioma_outro: idiomaBase === 'outro' ? (document.getElementById('prod-nome-idioma-outro')?.value.trim() || '') : null,
+        nome:         document.getElementById('prod-nome')?.value.trim() || '',
+        descricao:    document.getElementById('prod-descricao')?.value.trim() || '',
+    });
+
+    document.querySelectorAll('#prod-idiomas-extra-container > div[id^="prod-idioma-row-"]').forEach(row => {
+        const idioma    = row.querySelector('select[name^="idioma_idioma_"]')?.value || 'pt';
+        const idiomaOut = row.querySelector('input[name^="idioma_outro_"]')?.value.trim() || '';
+        const nome      = row.querySelector('input[name^="nome_idioma_"]')?.value.trim() || '';
+        const descricao = row.querySelector('textarea[name^="descricao_idioma_"]')?.value.trim() || '';
+        if (!nome && !descricao) return; // linha extra deixada em branco
+        idiomas.push({ idioma, idioma_outro: idioma === 'outro' ? idiomaOut : null, nome, descricao });
+    });
+
+    return idiomas;
+}
+
+// Documentos — só os do tipo "Link externo" são persistidos: o tipo "Arquivo
+// local" ainda não tem bucket de Storage configurado nesta app (o arquivo só
+// existe como object URL temporário no navegador, se perde ao recarregar).
+function _prodColetarDocumentos() {
+    const documentos = [];
+    document.querySelectorAll('#prod-docs-lista > div[id^="prod-doc-item-"]').forEach(item => {
+        const id  = item.id.replace('prod-doc-item-', '');
+        const tipo = document.getElementById(`prod-doc-tipo-${id}`)?.value || '';
+        if (!tipo) return;
+        const ehLink = document.getElementById(`prod-doc-fonte-link-${id}`)?.classList.contains('ativo');
+        if (!ehLink) return;
+        const url = document.getElementById(`prod-doc-url-${id}`)?.value.trim() || '';
+        if (!url) return;
+        const descricao = document.getElementById(`prod-doc-desc-${id}`)?.value.trim() || null;
+        documentos.push({ tipo, descricao, url });
+    });
+    return documentos;
+}
+
+function _coletarDadosProduto() {
+    const g  = id => document.getElementById(id)?.value.trim() || '';
+    const gv = id => _prodValorMonetario(document.getElementById(id));
+    const { margem, lucro_liquido } = _prodCalcularMargemLucroBrutos();
+
+    return {
+        sku:                    g('prod-sku'),
+        nome:                   g('prod-nome'),
+        status:                 g('prod-status') || 'ativo',
+        ncm:                    g('prod-ncm'),
+        cest:                   g('prod-cest'),
+        gtin:                   g('prod-gtin'),
+        hscode:                 g('prod-hscode'),
+        naladi_nesh:            g('prod-naladi-nesh'),
+        dun14:                  g('prod-dun14'),
+        ncm_utrib:              g('prod-ncm-utrib'),
+        ncm_descricao:          g('prod-ncm-descricao'),
+        ncm_descricao_completa: g('prod-ncm-descricao-completa'),
+        imagem_url:             g('prod-imagem-url'),
+        descricao:              g('prod-descricao'),
+        categoria:              g('prod-categoria'),
+        tipo:                   g('prod-tipo'),
+        marca:                  g('prod-marca'),
+        unidade_medida:         g('prod-unidade'),
+        lote:                   g('prod-lote'),
+        data_fabricacao:        g('prod-data-fabricacao') || null,
+        data_validade:          g('prod-data-validade') || null,
+        referencia_interna:     g('prod-ref-interna'),
+        referencia_fornecedor:  g('prod-ref-fornecedor'),
+        referencia_outra:       g('prod-ref-outra'),
+        empresa_parceira_id:    g('prod-empresa-id') || null,
+        preco_custo:            gv('prod-preco-custo')   || null,
+        custos_fixos:           gv('prod-custos-fixos')  || null,
+        imposto:                gv('prod-imposto')       || null,
+        preco_venda:            gv('prod-preco-venda')   || null,
+        margem,
+        lucro_liquido,
+        moeda:                  g('prod-moeda-codigo'),
+        obs_preco:              g('prod-obs-preco'),
+        controla_estoque:       document.getElementById('prod-controla-estoque')?.checked ?? true,
+        venda_sem_estoque:      document.getElementById('prod-venda-sem-estoque')?.checked ?? false,
+        estoque_atual:          parseFloat(g('prod-estoque-atual'))   || null,
+        estoque_minimo:         parseFloat(g('prod-estoque-minimo'))  || null,
+        estoque_maximo:         parseFloat(g('prod-estoque-maximo'))  || null,
+        obs_estoque:            g('prod-obs-estoque'),
+        obs_logistica:          g('prod-obs-logistica'),
+        nomes_idiomas:          _prodColetarIdiomas(),
+        embalagens:             _prodEmbalagens,
+        documentos:             _prodColetarDocumentos(),
+    };
+}
+
+async function salvarProduto(e) {
+    e.preventDefault();
+
+    const dados = _coletarDadosProduto();
+    if (!dados.sku)  { alert('Informe o SKU do produto.');           document.getElementById('prod-sku')?.focus();  return; }
+    if (!dados.nome) { alert('Informe o Nome do Produto.');          document.getElementById('prod-nome')?.focus(); return; }
+
+    const btn = document.querySelector('#form-produto .btn-save');
+    const textoOriginal = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...'; }
+
+    const jaExistia = !!_prodEditandoId;
+    const res = jaExistia
+        ? await window.supabaseAPI.editarProduto(_prodEditandoId, dados)
+        : await window.supabaseAPI.salvarProduto(dados);
+
+    if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal; }
+
+    if (!res.sucesso) {
+        mostrarNotificacao('Erro ao salvar produto: ' + (res.mensagem || 'Tente novamente.'), 'erro');
+        return;
+    }
+
+    if (!jaExistia && res.data?.id) _prodEditandoId = res.data.id;
+    mostrarNotificacao(jaExistia ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!', 'sucesso');
+}
+
+function _prodFormatarMonetario(num) {
+    if (num === null || num === undefined || num === '') return '';
+    return Number(num).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function _prodPreencherEdicao(dados) {
+    if (!dados) return;
+    _prodEditandoId = dados.id;
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+
+    set('prod-sku', dados.sku);
+    set('prod-nome', dados.nome);
+    set('prod-status', dados.status || 'ativo');
+    set('prod-ncm', dados.ncm);
+    set('prod-cest', dados.cest);
+    set('prod-gtin', dados.gtin);
+    set('prod-hscode', dados.hscode);
+    set('prod-naladi-nesh', dados.naladi_nesh);
+    set('prod-dun14', dados.dun14);
+    set('prod-ncm-utrib', dados.ncm_utrib);
+    set('prod-ncm-descricao', dados.ncm_descricao);
+    set('prod-ncm-descricao-completa', dados.ncm_descricao_completa);
+    set('prod-imagem-url', dados.imagem_url);
+    set('prod-descricao', dados.descricao);
+    set('prod-categoria', dados.categoria);
+    set('prod-tipo', dados.tipo);
+    set('prod-marca', dados.marca);
+    set('prod-unidade', dados.unidade_medida);
+    set('prod-lote', dados.lote);
+    set('prod-data-fabricacao', dados.data_fabricacao);
+    set('prod-data-validade', dados.data_validade);
+    set('prod-ref-interna', dados.referencia_interna);
+    set('prod-ref-fornecedor', dados.referencia_fornecedor);
+    set('prod-ref-outra', dados.referencia_outra);
+
+    // Empresa parceira ("Identificação da Empresa") — busca à parte só pra exibir
+    // nome/documento, já que buscarProdutoPorId não traz esse join.
+    if (dados.empresa_parceira_id) {
+        set('prod-empresa-id', dados.empresa_parceira_id);
+        try {
+            const { data: emp } = await supabaseClient.from('empresas')
+                .select('razao_social, nome_fantasia, documento').eq('id', dados.empresa_parceira_id).single();
+            if (emp) {
+                set('prod-empresa-busca', emp.nome_fantasia || emp.razao_social);
+                set('prod-empresa-doc', emp.documento);
+            }
+        } catch (_) {}
+    }
+
+    set('prod-preco-custo', _prodFormatarMonetario(dados.preco_custo));
+    set('prod-custos-fixos', _prodFormatarMonetario(dados.custos_fixos));
+    set('prod-imposto', _prodFormatarMonetario(dados.imposto));
+    set('prod-preco-venda', _prodFormatarMonetario(dados.preco_venda));
+    set('prod-obs-preco', dados.obs_preco);
+
+    // Moeda — mesma lógica: hidden guarda o código, texto exibido busca a descrição
+    if (dados.moeda) {
+        set('prod-moeda-codigo', dados.moeda);
+        try {
+            const moedas = await _carregarMoedas();
+            const m = (moedas || []).find(x => x.codigo === dados.moeda);
+            set('prod-moeda', m?.descricao || dados.moeda);
+        } catch (_) { set('prod-moeda', dados.moeda); }
+    }
+
+    const controlaEl = document.getElementById('prod-controla-estoque');
+    if (controlaEl) controlaEl.checked = dados.controla_estoque !== false;
+    const vendaSemEl = document.getElementById('prod-venda-sem-estoque');
+    if (vendaSemEl) vendaSemEl.checked = !!dados.venda_sem_estoque;
+    set('prod-estoque-atual', dados.estoque_atual);
+    set('prod-estoque-minimo', dados.estoque_minimo);
+    set('prod-estoque-maximo', dados.estoque_maximo);
+    set('prod-obs-estoque', dados.obs_estoque);
+    set('prod-obs-logistica', dados.obs_logistica);
+
+    if (typeof prodAtualizarEstoqueConfig === 'function') prodAtualizarEstoqueConfig();
+    if (typeof prodCalcularNivelEstoque   === 'function') prodCalcularNivelEstoque();
+    if (typeof prodCalcularResultados     === 'function') prodCalcularResultados();
+
+    // Idiomas: linha base + recria as extras (máx. 3) já salvas
+    const idiomas = dados.nomes_idiomas || [];
+    if (idiomas[0]) {
+        set('prod-nome-idioma', idiomas[0].idioma || 'pt');
+        set('prod-nome', idiomas[0].nome ?? dados.nome);
+        set('prod-descricao', idiomas[0].descricao ?? dados.descricao);
+        const selBase = document.getElementById('prod-nome-idioma');
+        if (selBase) prodToggleIdiomaOutro(selBase);
+        if (idiomas[0].idioma === 'outro') set('prod-nome-idioma-outro', idiomas[0].idioma_outro);
+    }
+    idiomas.slice(1).forEach(item => {
+        prodAdicionarIdiomaExtra();
+        const rows = document.querySelectorAll('#prod-idiomas-extra-container > div[id^="prod-idioma-row-"]');
+        const row  = rows[rows.length - 1];
+        if (!row) return;
+        const selectEl = row.querySelector('select[name^="idioma_idioma_"]');
+        const outroEl  = row.querySelector('input[name^="idioma_outro_"]');
+        const nomeEl   = row.querySelector('input[name^="nome_idioma_"]');
+        const descEl   = row.querySelector('textarea[name^="descricao_idioma_"]');
+        if (selectEl) { selectEl.value = item.idioma || 'pt'; prodToggleIdiomaOutro(selectEl); }
+        if (outroEl && item.idioma === 'outro') outroEl.value = item.idioma_outro || '';
+        if (nomeEl) nomeEl.value = item.nome || '';
+        if (descEl) descEl.value = item.descricao || '';
+    });
+
+    // Embalagens — array pronto, só re-renderiza a tabela
+    _prodEmbalagens = dados.embalagens || [];
+    if (typeof _prodRenderTabelaEmbalagens === 'function') _prodRenderTabelaEmbalagens();
+
+    // Documentos (só os do tipo link — arquivos locais nunca foram persistidos)
+    (dados.documentos || []).forEach(doc => {
+        prodAdicionarDocumento();
+        const id = _prodDocCount;
+        const tipoEl = document.getElementById(`prod-doc-tipo-${id}`);
+        if (tipoEl) { tipoEl.value = doc.tipo || ''; prodTipoDocChange(tipoEl, id); }
+        const descEl = document.getElementById(`prod-doc-desc-${id}`);
+        if (descEl && doc.descricao) descEl.value = doc.descricao;
+        prodToggleFonteDoc(id, 'link');
+        const urlEl = document.getElementById(`prod-doc-url-${id}`);
+        if (urlEl) { urlEl.value = doc.url || ''; prodAtualizarPreviewLink(id); }
+    });
+}
 
 // ========================================
 // SALVAR — PROCESSO
@@ -334,12 +596,14 @@ async function confirmarSalvar() {
             const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
             const codigoEl  = document.getElementById('pos-salvo-codigo');
             const pdfWrap   = document.getElementById('pos-salvo-pdf-wrap');
+            const pdfProcessoBtn = document.getElementById('pos-salvo-pdf-processo-btn');
 
             if (tituloEl)   tituloEl.textContent  = editandoId ? 'Proforma atualizada!' : 'Proforma salva!';
             if (msgEl)      msgEl.textContent      = 'O que deseja fazer agora?';
             if (codigoEl)   codigoEl.textContent   = codigo;
             if (codigoWrap) codigoWrap.style.display = '';
             if (pdfWrap)    pdfWrap.style.display    = '';
+            if (pdfProcessoBtn) pdfProcessoBtn.style.display = 'none';
 
             posModal.style.display = 'flex';
 
@@ -349,7 +613,10 @@ async function confirmarSalvar() {
                 await window.supabaseAPI.vincularProformaAoPedido(pedidoOrigemId, res.data.id);
             }
 
-            // Auto-gerar PDF ao salvar
+            // Auto-gerar PDF ao salvar (layout unificado — precisa do registro
+            // completo, não só id/codigo, por isso salvarProposta/atualizarProforma
+            // agora retornam a linha inteira)
+            _propUltimoSalvo = res.data;
             gerarPDFProposta();
         } else {
             mostrarNotificacao('Erro ao salvar proposta: ' + (res.mensagem || 'Tente novamente.'), 'erro');
@@ -390,13 +657,15 @@ async function confirmarSalvar() {
             await window.supabaseAPI.avancarStatusPedido(dadosProc.pedido_id, 'em_producao');
         }
 
-        const tituloEl   = document.getElementById('pos-salvo-titulo');
-        const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
-        const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
+        const tituloEl      = document.getElementById('pos-salvo-titulo');
+        const codigoWrap    = document.getElementById('pos-salvo-codigo-wrap');
+        const pdfWrap       = document.getElementById('pos-salvo-pdf-wrap');
+        const pdfProcessoBtn = document.getElementById('pos-salvo-pdf-processo-btn');
 
         if (tituloEl)   tituloEl.textContent = editandoIdProc ? 'Processo atualizado!' : 'Processo salvo!';
         if (codigoWrap) codigoWrap.style.display = 'none';
         if (pdfWrap)    pdfWrap.style.display    = 'none';
+        if (pdfProcessoBtn) pdfProcessoBtn.style.display = '';
 
         posModal.style.display = 'flex';
     } else {
@@ -857,558 +1126,22 @@ function salvarProposta(e) {
     modalEl.style.display = 'flex';
 }
 
+
 // ========================================
 // PDF — PROPOSTA
 // ========================================
+// Layout unificado com o PDF gerado a partir de registros já salvos (Proforma
+// e Pedidos) — pdf-proforma.js:gerarPDFProformaDados(d), formato A4 paisagem.
+// _propUltimoSalvo é preenchido em confirmarSalvar() logo após o insert/update.
+
+let _propUltimoSalvo = null;
 
 async function gerarPDFProposta() {
-    const jsPDFLib = window.jspdf;
-    if (!jsPDFLib) {
-        alert('Biblioteca jsPDF não carregada. Recarregue a página e tente novamente.');
+    if (!_propUltimoSalvo) {
+        mostrarNotificacao('Não há uma proforma salva pra gerar o PDF.', 'erro');
         return;
     }
-    const { jsPDF } = jsPDFLib;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-    const W  = 210;
-    const ML = 14;
-    const MR = 196;
-    let   Y  = 0;
-
-    // ── Paleta ────────────────────────────────
-    const NAVY       = [10,  40,  90];
-    const AZUL       = [30,  86, 160];
-    const AZUL_MED   = [59, 130, 246];
-    const AZUL_CLARO = [219, 234, 254];
-    const CINZA      = [100, 116, 139];
-    const CINZA_BG   = [248, 250, 252];
-    const CINZA_IMG  = [220, 226, 235];
-    const BORDA      = [209, 219, 234];
-    const PRETO      = [15,  23,  42];
-    const BRANCO     = [255, 255, 255];
-
-    // ── Helpers ───────────────────────────────
-    function setFont(style, size, color) {
-        doc.setFont('helvetica', style);
-        doc.setFontSize(size);
-        doc.setTextColor(...(color || PRETO));
-    }
-
-    function linhav(x, y1, y2, cor, esp) {
-        doc.setDrawColor(...(cor || BORDA));
-        doc.setLineWidth(esp || 0.2);
-        doc.line(x, y1, x, y2);
-    }
-
-    function rect(x, y, w, h, cor, raio) {
-        doc.setFillColor(...cor);
-        doc.setDrawColor(...cor);
-        if (raio) doc.roundedRect(x, y, w, h, raio, raio, 'F');
-        else      doc.rect(x, y, w, h, 'F');
-    }
-
-    function campo(label, valor, x, y, maxW) {
-        setFont('bold', 6.5, CINZA);
-        doc.text(label.toUpperCase(), x, y);
-        setFont('normal', 9, PRETO);
-        const v = String(valor || '—');
-        doc.text(maxW ? doc.splitTextToSize(v, maxW)[0] : v, x, y + 4.5);
-    }
-
-    function secHeader(titulo) {
-        checarPagina(14);
-        Y += 4;
-        rect(ML,     Y, 3,              6, AZUL);
-        rect(ML + 3, Y, W - ML * 2 - 3, 6, AZUL_CLARO);
-        setFont('bold', 8, AZUL);
-        doc.text(titulo.toUpperCase(), ML + 7, Y + 4.2);
-        Y += 9;
-    }
-
-    function checarPagina(altura) {
-        if (Y + altura > 272) { doc.addPage(); Y = 20; }
-    }
-
-    function val(id) {
-        const el = document.getElementById(id);
-        if (!el) return '—';
-        if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '—';
-        return el.value?.trim() || '—';
-    }
-
-    function txtArea(id) {
-        return document.getElementById(id)?.value?.trim() || '';
-    }
-
-    function _enderecoLinha(d) {
-        if (!d) return '—';
-        const p = [d.endereco, d.numero ? `nº ${d.numero}` : null, d.complemento, d.bairro].filter(Boolean);
-        return p.length ? p.join(', ') : '—';
-    }
-
-    function _cidadeEstado(d) {
-        if (!d) return '—';
-        const p = [d.cidade, d.estado].filter(Boolean);
-        return p.length ? p.join(' — ') : '—';
-    }
-
-    // ── Pré-carregamento de imagens ────────────
-    const imageCache = {};
-    const itensComImg = (_propItens || []).filter(it => it.imagem_url);
-    if (itensComImg.length > 0) {
-        await Promise.allSettled(itensComImg.map(async it => {
-            try {
-                const blob = await (await fetch(it.imagem_url)).blob();
-                await new Promise(res => {
-                    const r = new FileReader();
-                    r.onloadend = () => { imageCache[it.imagem_url] = r.result; res(); };
-                    r.readAsDataURL(blob);
-                });
-            } catch {}
-        }));
-    }
-
-    const dataGeracao = new Date().toLocaleString('pt-BR', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-    });
-    const codigo      = val('prop-codigo');
-    const responsavel = window._usuarioLogado?.nome || window._usuarioLogado?.email || '';
-
-    // ════════════════════════════════════════
-    // CABEÇALHO
-    // ════════════════════════════════════════
-    rect(0, 0, W, 36, NAVY);
-    rect(0, 0, 4, 36, AZUL_MED);
-
-    setFont('bold', 20, BRANCO);
-    doc.text('MARPEX', ML + 3, 13);
-    setFont('normal', 7.5, [160, 190, 240]);
-    doc.text('Gestão de Comércio Exterior', ML + 3, 19.5);
-
-    setFont('bold', 13, BRANCO);
-    doc.text('PROFORMA INVOICE', W - ML, 11, { align: 'right' });
-    setFont('normal', 9, [160, 190, 240]);
-    doc.text(codigo !== '—' ? codigo : 'Sem código', W - ML, 19, { align: 'right' });
-    setFont('normal', 7, [120, 160, 220]);
-    doc.text('Gerado em: ' + dataGeracao, W - ML, 26, { align: 'right' });
-    if (responsavel) {
-        doc.text('Responsável: ' + responsavel, W - ML, 32, { align: 'right' });
-    }
-
-    Y = 41;
-
-    // ════════════════════════════════════════
-    // BARRA DE INFO RÁPIDA (5 colunas)
-    // ════════════════════════════════════════
-    const tipoEl   = document.getElementById('prop-tipo');
-    const tipoTxt  = tipoEl?.options[tipoEl?.selectedIndex]?.text || '—';
-    const modalEl  = document.getElementById('prop-modal');
-    const modal    = modalEl?.value || '';
-    const modalTxt = modalEl?.options[modalEl?.selectedIndex]?.text || '—';
-    const incoterm    = document.getElementById('prop-incoterm')?.value || '—';
-    const proposito   = val('prop-proposito');
-    const dataEmissao  = val('prop-data-emissao');
-    const dataValidade = val('prop-data-validade');
-
-    doc.setFillColor(...CINZA_BG);
-    doc.setDrawColor(...BORDA);
-    doc.setLineWidth(0.3);
-    doc.rect(ML, Y, W - ML * 2, 15, 'FD');
-
-    const colW5 = (W - ML * 2) / 5;
-    for (let i = 1; i <= 4; i++) linhav(ML + colW5 * i, Y + 2, Y + 13, BORDA, 0.2);
-
-    [
-        { label: 'Tipo',      valor: tipoTxt   },
-        { label: 'Propósito', valor: proposito },
-        { label: 'Modal',     valor: modalTxt  },
-        { label: 'Incoterm',  valor: incoterm  },
-        { label: 'Emissão',   valor: dataEmissao },
-    ].forEach((info, i) => {
-        const cx = ML + colW5 * i + colW5 / 2;
-        setFont('bold', 6.5, CINZA);
-        doc.text(info.label.toUpperCase(), cx, Y + 6, { align: 'center' });
-        setFont('bold', 8.5, AZUL);
-        doc.text(doc.splitTextToSize(info.valor, colW5 - 4)[0], cx, Y + 12, { align: 'center' });
-    });
-
-    Y += 19;
-
-    // ════════════════════════════════════════
-    // EMISSOR + DESTINATÁRIO (lado a lado)
-    // ════════════════════════════════════════
-    checarPagina(56);
-
-    const emissorTipo   = document.querySelector('input[name="prop-emissor-tipo"]:checked')?.value || 'usuario';
-    const emissorNome   = emissorTipo === 'usuario' ? val('prop-usuario-empresa') : val('prop-cliente');
-    const docEmissor    = val('prop-documento');
-
-    const emDados    = window._dadosEmpresaTenant || {};
-    const emEndereco = _enderecoLinha(emDados);
-    const emCidEst   = _cidadeEstado(emDados);
-    const emCep      = emDados.cep || '—';
-    const emPais     = emDados.pais || val('prop-origem-pais') || '—';
-
-    const btnCad        = document.getElementById('prop-btn-emp-dest-cadastrada');
-    const isCad         = btnCad?.classList.contains('ativo');
-    const razaoDest     = isCad ? val('prop-emp-dest-busca') : val('prop-emp-dest-razao');
-    const docDestTipoEl = document.getElementById('prop-emp-dest-doc-tipo');
-    const docDestTipo   = docDestTipoEl?.options[docDestTipoEl?.selectedIndex]?.text || '';
-    const docDest       = val('prop-emp-dest-doc');
-    const docDestLabel  = docDestTipo && docDest !== '—' ? `${docDestTipo}: ${docDest}` : docDest;
-
-    const destId      = document.getElementById('prop-emp-dest-id')?.value;
-    const destDados   = destId ? (_acEmpresas.find(e => e.id === destId) || null) : null;
-    const destEndereco= _enderecoLinha(destDados);
-    const destCidEst  = _cidadeEstado(destDados);
-    const destCep     = destDados?.cep || '—';
-    const destPais    = destDados?.pais || val('prop-destino-pais') || '—';
-
-    const hW  = (W - ML * 2 - 5) / 2;
-    const boxH = 52;
-    const bY   = Y;
-
-    doc.setFillColor(...BRANCO);
-    doc.setDrawColor(...BORDA);
-    doc.setLineWidth(0.3);
-    doc.rect(ML,          bY, hW, boxH, 'FD');
-    doc.rect(ML + hW + 5, bY, hW, boxH, 'FD');
-
-    rect(ML,          bY, 3,      8, AZUL);
-    rect(ML + 3,      bY, hW - 3, 8, AZUL_CLARO);
-    rect(ML + hW + 5, bY, 3,      8, AZUL);
-    rect(ML + hW + 8, bY, hW - 3, 8, AZUL_CLARO);
-
-    setFont('bold', 8, AZUL);
-    doc.text('EMISSOR',      ML + 7,       bY + 5.5);
-    doc.text('DESTINATÁRIO', ML + hW + 10, bY + 5.5);
-
-    const cYb = bY + 12;
-    campo('Empresa / Nome',    emissorNome,  ML + 4,       cYb,      hW - 8);
-    campo('Identificação',     docEmissor,   ML + 4,       cYb + 10, hW - 8);
-    campo('País',              emPais,       ML + 4,       cYb + 20, hW - 8);
-    campo('Endereço',          emEndereco,   ML + 4,       cYb + 30, hW - 8);
-    campo('Cidade / Estado',   emCidEst,     ML + 4,       cYb + 40, hW - 8);
-
-    campo('Razão Social / Nome',  razaoDest,    ML + hW + 9, cYb,      hW - 8);
-    campo('Identificação Fiscal', docDestLabel, ML + hW + 9, cYb + 10, hW - 8);
-    campo('País',                 destPais,     ML + hW + 9, cYb + 20, hW - 8);
-    campo('Endereço',             destEndereco, ML + hW + 9, cYb + 30, hW - 8);
-    campo('Cidade / Estado',      destCidEst,   ML + hW + 9, cYb + 40, hW - 8);
-
-    Y += boxH + 4;
-
-    // ════════════════════════════════════════
-    // ROTA DE EXPORTAÇÃO
-    // ════════════════════════════════════════
-    secHeader('Rota de Exportação');
-
-    checarPagina(16);
-    const rMid = W / 2;
-    campo('País de Origem',  val('prop-origem-pais'),  ML,        Y, 70);
-    campo('País de Destino', val('prop-destino-pais'), rMid + 10, Y, 70);
-
-    setFont('normal', 14, AZUL_MED);
-    doc.text('→', rMid, Y + 5, { align: 'center' });
-    doc.setDrawColor(...BORDA);
-    doc.setLineWidth(0.2);
-    doc.setLineDashPattern([1.5, 1], 0);
-    doc.line(ML + 66, Y + 2.5, rMid - 7, Y + 2.5);
-    doc.line(rMid + 7, Y + 2.5, rMid + 9, Y + 2.5);
-    doc.setLineDashPattern([], 0);
-    Y += 11;
-
-    if (modal === 'maritimo') {
-        checarPagina(12);
-        campo('Porto de Origem',  val('prop-porto-origem'),  ML,        Y, 80);
-        campo('Porto de Destino', val('prop-porto-destino'), rMid + 10, Y, 80);
-        Y += 11;
-    } else if (modal === 'aereo') {
-        checarPagina(12);
-        campo('Aeroporto de Origem',  val('prop-aeroporto-origem'),  ML,        Y, 80);
-        campo('Aeroporto de Destino', val('prop-aeroporto-destino'), rMid + 10, Y, 80);
-        Y += 11;
-    } else if (modal === 'terrestre') {
-        checarPagina(12);
-        campo('Fronteira de Saída',   val('prop-fronteira-saida'),   ML,        Y, 80);
-        campo('Fronteira de Entrada', val('prop-fronteira-entrada'), rMid + 10, Y, 80);
-        Y += 11;
-    }
-    Y += 3;
-
-    // ════════════════════════════════════════
-    // ITENS DA PROFORMA
-    // ════════════════════════════════════════
-    if (_propItens && _propItens.length > 0) {
-        secHeader('Itens da Proforma');
-        checarPagina(14);
-
-        // Colunas (total = MR - ML = 182mm):
-        // IMG(10) SKU(16) PRODUTO(26) DESCRIÇÃO(50) QTD(10) UN(10) PREÇO(21) MOEDA(14) TOTAL(25) = 182
-        const IMG_W   = 10;
-        const SKU_W   = 16;
-        const PROD_W  = 26;
-        const DESC_W  = 50;
-        const QTD_W   = 10;
-        const UN_W    = 10;
-        const PRECO_W = 21;
-        const MOEDA_W = 14;
-        const TOTAL_W = 25;
-
-        const xImg   = ML;
-        const xSku   = xImg   + IMG_W;
-        const xProd  = xSku   + SKU_W;
-        const xDesc  = xProd  + PROD_W;
-        const xQtd   = xDesc  + DESC_W;
-        const xUn    = xQtd   + QTD_W;
-        const xPreco = xUn    + UN_W;
-        const xMoeda = xPreco + PRECO_W;
-        const xTotal = xMoeda + MOEDA_W;  // xTotal + TOTAL_W = MR
-
-        function desenharCabecalhoItens() {
-            rect(ML, Y, W - ML * 2, 8, NAVY);
-            setFont('bold', 6.5, BRANCO);
-            doc.text('IMG',         xImg  + IMG_W / 2,   Y + 5.5, { align: 'center' });
-            doc.text('CÓD. SKU',    xSku  + 2,           Y + 5.5);
-            doc.text('PRODUTO',     xProd + 2,           Y + 5.5);
-            doc.text('DESCRIÇÃO',   xDesc + 2,           Y + 5.5);
-            doc.text('QTD',         xQtd  + QTD_W - 1,  Y + 5.5, { align: 'right' });
-            doc.text('UN',          xUn   + 2,           Y + 5.5);
-            doc.text('PREÇO UNIT.', xPreco + 2,          Y + 5.5);
-            doc.text('MOEDA',       xMoeda + 2,          Y + 5.5);
-            doc.text('TOTAL',       MR - 1,              Y + 5.5, { align: 'right' });
-            Y += 9;
-        }
-
-        desenharCabecalhoItens();
-
-        let totalGeral = 0;
-        let totalMoeda = '';
-        let paginaAtual = doc.getNumberOfPages();
-
-        _propItens.forEach((item, i) => {
-            const prodLinhas = doc.splitTextToSize(item.produto || '—', PROD_W - 3);
-            const descLinhas = item.descricao
-                ? doc.splitTextToSize(item.descricao, DESC_W - 3)
-                : [];
-            const maxLinhas = Math.max(prodLinhas.length, descLinhas.length, 1);
-            const rowH = Math.max(12, maxLinhas * 4.5 + 4);
-
-            checarPagina(rowH + 2);
-
-            if (doc.getNumberOfPages() > paginaAtual) {
-                paginaAtual = doc.getNumberOfPages();
-                desenharCabecalhoItens();
-            }
-
-            rect(ML, Y, W - ML * 2, rowH, i % 2 === 0 ? CINZA_BG : BRANCO);
-            doc.setDrawColor(...BORDA);
-            doc.setLineWidth(0.15);
-            doc.line(ML, Y + rowH, MR, Y + rowH);
-
-            const divisores = [xSku, xProd, xDesc, xQtd, xUn, xPreco, xMoeda, xTotal];
-            divisores.forEach(cx => linhav(cx, Y, Y + rowH, BORDA, 0.1));
-
-            const total = (item.qtd || 0) * (item.preco || 0);
-            totalGeral += total;
-            if (!totalMoeda && item.moeda) totalMoeda = item.moeda;
-
-            const tY = Y + 4.5;
-
-            // Imagem
-            const imgBase64 = item.imagem_url ? imageCache[item.imagem_url] : null;
-            const imgBoxW = IMG_W - 2;
-            const imgBoxH = rowH - 2;
-            if (imgBase64) {
-                try {
-                    const imgFmt = (item.imagem_url || '').toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
-                    doc.addImage(imgBase64, imgFmt, xImg + 1, Y + 1, imgBoxW, imgBoxH);
-                } catch {
-                    rect(xImg + 1, Y + 1, imgBoxW, imgBoxH, CINZA_IMG);
-                }
-            } else {
-                rect(xImg + 1, Y + 1, imgBoxW, imgBoxH, CINZA_IMG);
-            }
-
-            // SKU
-            setFont('bold', 7, AZUL);
-            doc.text(doc.splitTextToSize(item.sku || '—', SKU_W - 3)[0], xSku + 2, tY);
-
-            // Produto (multi-linha)
-            setFont('normal', 7.5, PRETO);
-            prodLinhas.forEach((ln, li) => doc.text(ln, xProd + 2, tY + li * 4.5));
-
-            // Descrição (multi-linha)
-            setFont('normal', 7, CINZA);
-            descLinhas.forEach((ln, li) => doc.text(ln, xDesc + 2, tY + li * 4.5));
-
-            // QTD
-            setFont('bold', 7.5, PRETO);
-            doc.text(String(item.qtd ?? 0), xQtd + QTD_W - 2, tY, { align: 'right' });
-
-            // UN
-            setFont('normal', 7, CINZA);
-            doc.text(String(item.unidade || '—'), xUn + 2, tY);
-
-            // Preço
-            setFont('normal', 7.5, PRETO);
-            doc.text(
-                (item.preco || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                xPreco + 2, tY
-            );
-
-            // Moeda
-            setFont('normal', 7, CINZA);
-            doc.text(item.moeda || '—', xMoeda + 2, tY);
-
-            // Total
-            setFont('bold', 8, PRETO);
-            doc.text(
-                total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                MR - 2, tY, { align: 'right' }
-            );
-
-            Y += rowH;
-        });
-
-        checarPagina(10);
-        rect(ML, Y, W - ML * 2, 9, NAVY);
-        setFont('bold', 7.5, [160, 190, 240]);
-        doc.text('TOTAL GERAL', xImg + 2, Y + 6);
-        if (totalMoeda) { setFont('normal', 7.5, [160, 190, 240]); doc.text(totalMoeda, xMoeda + 2, Y + 6); }
-        setFont('bold', 10, BRANCO);
-        doc.text(
-            totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-            MR - 2, Y + 6.5, { align: 'right' }
-        );
-        Y += 12;
-    }
-
-    // ════════════════════════════════════════
-    // CONDIÇÕES COMERCIAIS + DATAS (lado a lado)
-    // ════════════════════════════════════════
-    checarPagina(38);
-
-    const formaPag  = val('prop-forma-pagamento');
-    const prazoPag  = val('prop-prazo-pagamento');
-    const prazoPers = val('prop-prazo-personalizado');
-    const prazoFinal = document.getElementById('prop-prazo-pagamento')?.value === 'personalizado'
-        ? (prazoPers !== '—' ? prazoPers : prazoPag)
-        : prazoPag;
-
-    const ccHW = (W - ML * 2 - 5) / 2;
-    const ccY  = Y;
-
-    rect(ML,            ccY, 3,        6, AZUL);
-    rect(ML + 3,        ccY, ccHW - 3,  6, AZUL_CLARO);
-    rect(ML + ccHW + 5, ccY, 3,        6, AZUL);
-    rect(ML + ccHW + 8, ccY, ccHW - 3,  6, AZUL_CLARO);
-    setFont('bold', 7.5, AZUL);
-    doc.text('CONDIÇÕES COMERCIAIS', ML + 6,        ccY + 4.2);
-    doc.text('DATAS',                ML + ccHW + 9, ccY + 4.2);
-
-    Y = ccY + 9;
-    campo('Forma de Pagamento', formaPag,                  ML + 4,        Y,      ccHW - 8);
-    campo('Prazo de Pagamento', prazoFinal,                ML + 4,        Y + 12, ccHW - 8);
-    campo('Data de Emissão',    dataEmissao,               ML + ccHW + 9, Y,      ccHW - 8);
-    campo('Data de Vencimento', dataValidade,              ML + ccHW + 9, Y + 12, ccHW - 8);
-    campo('Validade',           val('prop-validade-dias'), ML + ccHW + 9, Y + 24, ccHW - 8);
-    Y += 32;
-
-    // ════════════════════════════════════════
-    // OBSERVAÇÕES
-    // ════════════════════════════════════════
-    const obsGeral  = txtArea('prop-observacoes');
-    const obsStatus = txtArea('prop-obs-status');
-    const obsCond   = txtArea('prop-condicoes-obs');
-
-    if (obsGeral || obsStatus || obsCond) {
-        secHeader('Observações');
-
-        const renderObs = (titulo, texto) => {
-            if (!texto) return;
-            checarPagina(14);
-            setFont('bold', 7, CINZA);
-            doc.text(titulo.toUpperCase(), ML + 3, Y);
-            Y += 4;
-            setFont('normal', 8.5, PRETO);
-            const linhas = doc.splitTextToSize(texto, W - ML * 2 - 6);
-            checarPagina(linhas.length * 5 + 4);
-            doc.text(linhas, ML + 3, Y);
-            Y += linhas.length * 5 + 4;
-        };
-
-        renderObs('Observações Gerais',                  obsGeral);
-        renderObs('Observações de Status',               obsStatus);
-        renderObs('Observações — Condições Comerciais',  obsCond);
-    }
-
-    // ════════════════════════════════════════
-    // NUMERAÇÃO DE DOCUMENTOS
-    // ════════════════════════════════════════
-    const docsIds = [
-        { id: 'prop-doc-num-proforma',   label: 'Proforma Invoice' },
-        { id: 'prop-doc-num-commercial', label: 'Commercial Invoice' },
-        { id: 'prop-doc-num-packing',    label: 'Packing List' },
-        { id: 'prop-doc-num-awb',        label: 'AWB' },
-        { id: 'prop-doc-num-bl',         label: 'BL — Bill of Lading' },
-        { id: 'prop-doc-num-crt',        label: 'CRT' },
-    ];
-
-    const docsPreenchidos = docsIds.filter(d => document.getElementById(d.id)?.value?.trim());
-
-    if (docsPreenchidos.length > 0) {
-        secHeader('Numeração de Documentos');
-        const colW3 = (W - ML * 2) / 3;
-        docsPreenchidos.forEach((d, i) => {
-            const col = i % 3;
-            const row = Math.floor(i / 3);
-            if (col === 0) checarPagina(14);
-            campo(d.label, document.getElementById(d.id).value, ML + col * colW3 + 2, Y + row * 14, colW3 - 6);
-        });
-        Y += Math.ceil(docsPreenchidos.length / 3) * 14 + 4;
-    }
-
-    // ════════════════════════════════════════
-    // ÁREA DE ASSINATURA
-    // ════════════════════════════════════════
-    checarPagina(28);
-    Y += 6;
-    const sigW = (W - ML * 2 - 10) / 2;
-
-    doc.setDrawColor(...BORDA);
-    doc.setLineWidth(0.4);
-    doc.line(ML,             Y + 14, ML + sigW,            Y + 14);
-    doc.line(ML + sigW + 10, Y + 14, ML + sigW * 2 + 10,   Y + 14);
-
-    setFont('normal', 7.5, CINZA);
-    doc.text(emissorNome !== '—' ? emissorNome : 'Emissor',      ML + sigW / 2,             Y + 19, { align: 'center' });
-    doc.text(razaoDest   !== '—' ? razaoDest   : 'Destinatário', ML + sigW + 10 + sigW / 2, Y + 19, { align: 'center' });
-    setFont('bold', 6.5, CINZA);
-    doc.text('ASSINATURA DO EMISSOR',      ML + sigW / 2,             Y + 24, { align: 'center' });
-    doc.text('ASSINATURA DO DESTINATÁRIO', ML + sigW + 10 + sigW / 2, Y + 24, { align: 'center' });
-
-    // ════════════════════════════════════════
-    // RODAPÉ
-    // ════════════════════════════════════════
-    const totalPags = doc.getNumberOfPages();
-    for (let p = 1; p <= totalPags; p++) {
-        doc.setPage(p);
-        rect(0, 282, W, 15, NAVY);
-        rect(0, 282, 4, 15, AZUL_MED);
-        setFont('bold', 7.5, BRANCO);
-        doc.text('MARPEX', ML + 3, 288);
-        setFont('normal', 6.5, [160, 190, 240]);
-        doc.text('Gestão de Comércio Exterior', ML + 3, 293);
-        setFont('normal', 7, [160, 190, 240]);
-        doc.text(`Página ${p} de ${totalPags}`, W / 2, 291, { align: 'center' });
-        setFont('normal', 6.5, [160, 190, 240]);
-        doc.text(dataGeracao, W - ML, 291, { align: 'right' });
-    }
-
-    const nomeArq = `proforma_${codigo !== '—' ? codigo : 'sem-codigo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
-    doc.save(nomeArq);
+    await gerarPDFProformaDados(_propUltimoSalvo);
 }
 
 // ========================================
@@ -1439,6 +1172,12 @@ function _coletarDadosProposta() {
         proposito:           g('prop-proposito'),
         emissor_tipo:        emissorTipo,
         parceiro_id:         g('prop-cliente-id') || null,
+        // Snapshot em texto do nome do remetente terceiro — parceiro_id só é
+        // válido quando aponta pra um registro real de "empresas"; quando a
+        // proforma nasce de um Pedido, o remetente vem de "parceiros" (tabela
+        // diferente, outro espaço de ID), então esse texto é o que garante a
+        // exibição correta mesmo sem um parceiro_id (empresas) válido.
+        parceiro_razao_social: emissorTipo === 'terceiro' ? (g('prop-cliente') || null) : null,
         documento:           g('prop-documento'),
         documento_tipo:      g('prop-documento-tipo'),
         modal:               g('prop-modal'),
@@ -3427,20 +3166,48 @@ async function _propPreencherDoPedido(pedidoId) {
             .single();
         if (error || !pedido) return;
 
+        // ── Exibição do pedido de origem (somente leitura) ──
+        const origemEl    = document.getElementById('prop-pedido-origem');
+        const origemGroup = document.getElementById('prop-pedido-origem-group');
+        if (origemEl)    origemEl.value = pedido.numero || pedidoId;
+        if (origemGroup) origemGroup.style.display = '';
+
         // ── Destinatário (cliente do pedido) ──
+        // O cliente do pedido vem da tabela "parceiros" (BIGINT), não
+        // "empresas" (UUID) — que é o que prop-emp-dest-id normalmente
+        // referencia. Usa o modo de texto livre (mesmo campo que já existe
+        // pra empresa não cadastrada) em vez de gravar um ID de tabela errada,
+        // que fazia o card da proforma mostrar "Destinatário: —".
         if (pedido.cliente_id) {
             const { data: parceiro } = await supabaseClient
                 .from('parceiros').select('id, razao_social, nome_fantasia, documento')
                 .eq('id', pedido.cliente_id).single();
             if (parceiro) {
-                const buscaEl = document.getElementById('prop-emp-dest-busca');
-                const idEl    = document.getElementById('prop-emp-dest-id');
-                if (buscaEl) buscaEl.value = parceiro.nome_fantasia || parceiro.razao_social || '';
-                if (idEl)    idEl.value    = parceiro.id;
+                const razaoEl    = document.getElementById('prop-emp-dest-razao');
+                const razaoGroup = document.getElementById('prop-emp-dest-razao-group');
+                const buscaGroup = document.getElementById('prop-emp-dest-busca-group');
+                if (razaoEl)    razaoEl.value = parceiro.nome_fantasia || parceiro.razao_social || '';
+                if (razaoGroup) razaoGroup.style.display = '';
+                if (buscaGroup) buscaGroup.style.display = 'none';
+                if (parceiro.documento) {
+                    const docEl     = document.getElementById('prop-emp-dest-doc');
+                    const docTipoEl = document.getElementById('prop-emp-dest-doc-tipo');
+                    const docGroup  = document.getElementById('prop-emp-dest-doc-group');
+                    if (docEl) docEl.value = parceiro.documento;
+                    if (docTipoEl) {
+                        const digitos = String(parceiro.documento).replace(/\D/g, '');
+                        docTipoEl.value = digitos.length === 11 ? 'cpf' : 'cnpj';
+                    }
+                    if (docGroup) docGroup.style.display = '';
+                }
             }
         }
 
         // ── Emissor (remetente terceiro do pedido, quando houver) ──
+        // Mesmo problema do destinatário: remetente_parceiro_id é um ID de
+        // "parceiros", não de "empresas" (prop-cliente-id normalmente espera
+        // um ID de empresas via autocomplete) — não seta o hidden, só o nome
+        // visível, que agora é salvo em parceiro_razao_social (snapshot).
         if (pedido.remetente_parceiro_id) {
             const { data: remetente } = await supabaseClient
                 .from('parceiros').select('id, razao_social, nome_fantasia, documento')
@@ -3451,10 +3218,8 @@ async function _propPreencherDoPedido(pedidoId) {
                     radioTerceiro.checked = true;
                     radioTerceiro.dispatchEvent(new Event('change'));
                 }
-                const clienteEl   = document.getElementById('prop-cliente');
-                const clienteIdEl = document.getElementById('prop-cliente-id');
-                if (clienteEl)   clienteEl.value   = remetente.nome_fantasia || remetente.razao_social || '';
-                if (clienteIdEl) clienteIdEl.value = remetente.id;
+                const clienteEl = document.getElementById('prop-cliente');
+                if (clienteEl) clienteEl.value = remetente.nome_fantasia || remetente.razao_social || '';
                 const docEl = document.getElementById('prop-documento');
                 if (docEl && remetente.documento) docEl.value = _mascaraDocBR(remetente.documento);
             }
@@ -4087,85 +3852,16 @@ function iniciarIncotermModal() {
 // ========================================
 
 // ── Idiomas do produto ────────────────────
-let _prodIdiomaCount    = 0; // nomes: começa sem extras; máx 3
-let _prodDescIdiomaCount = 0; // descrições: nenhum extra visível; máx 3
 
-function prodAdicionarIdioma() {
-    if (_prodIdiomaCount >= 3) return;
-    _prodIdiomaCount++;
-
-    // 1º clique — revelar o Idioma 2 já existente no HTML
-    if (_prodIdiomaCount === 1) {
-        const g2 = document.getElementById('prod-nome-idioma2-grupo');
-        if (g2) g2.style.display = '';
-        return;
-    }
-
-    // 2º e 3º cliques — criar Idioma 3 e 4 dinamicamente
-    const num = _prodIdiomaCount + 1;
-    const container = document.getElementById('prod-idiomas-extras');
-    if (!container) return;
-
-    const div = document.createElement('div');
-    div.id = `prod-idioma-grupo-${num}`;
-    div.style.cssText = 'display:flex;align-items:flex-end;gap:6px;flex:1;min-width:200px;';
-    div.innerHTML = `
-        <div class="form-group" style="flex:1;margin-bottom:0;">
-            <label for="prod-nome-idioma${num}">Idioma ${num}</label>
-            <input type="text" id="prod-nome-idioma${num}" name="nome_idioma${num}" placeholder="Nome em outro idioma">
-        </div>
-        <button type="button" onclick="prodRemoverIdioma(${num})" class="btn-acao btn-excluir" title="Remover" style="margin-bottom:2px;">
-            <i class="fa-solid fa-xmark"></i>
-        </button>`;
-    container.appendChild(div);
-
-    if (_prodIdiomaCount >= 3) {
-        document.getElementById('btn-add-idioma').style.display = 'none';
-    }
-}
-
-function prodRemoverIdioma(num) {
-    if (num === 2) {
-        const g2 = document.getElementById('prod-nome-idioma2-grupo');
-        if (g2) g2.style.display = 'none';
-    } else {
-        document.getElementById(`prod-idioma-grupo-${num}`)?.remove();
-    }
-    _prodIdiomaCount--;
-    const btn = document.getElementById('btn-add-idioma');
-    if (btn) btn.style.display = '';
-}
-
-function prodAdicionarDescIdioma() {
-    if (_prodDescIdiomaCount >= 3) return;
-    _prodDescIdiomaCount++;
-
-    const num = _prodDescIdiomaCount + 1; // idioma 2, 3 ou 4
-    const container = document.getElementById('prod-desc-idiomas-extras');
-    if (!container) return;
-
-    const div = document.createElement('div');
-    div.id = `prod-desc-idioma-grupo-${num}`;
-    div.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <label for="prod-descricao-idioma${num}">Idioma ${num}</label>
-            <button type="button" onclick="prodRemoverDescIdioma(${num})" class="btn-acao btn-excluir" title="Remover" style="width:22px;height:22px;font-size:10px;">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <textarea id="prod-descricao-idioma${num}" name="descricao_idioma${num}" placeholder="Descrição em outro idioma..." maxlength="100"></textarea>`;
-    container.appendChild(div);
-
-    if (_prodDescIdiomaCount >= 3) {
-        document.getElementById('btn-add-desc-idioma').style.display = 'none';
-    }
-}
-
-function prodRemoverDescIdioma(num) {
-    document.getElementById(`prod-desc-idioma-grupo-${num}`)?.remove();
-    _prodDescIdiomaCount--;
-    const btn = document.getElementById('btn-add-desc-idioma');
-    if (btn) btn.style.display = '';
+// Mostra/esconde o campo de texto livre ao lado do select quando "Outro" é
+// escolhido — usado tanto na linha base (prod-nome-idioma) quanto nas linhas
+// extras criadas por prodAdicionarIdiomaExtra().
+function prodToggleIdiomaOutro(selectEl) {
+    const outroInput = selectEl.nextElementSibling;
+    if (!outroInput) return;
+    const ehOutro = selectEl.value === 'outro';
+    outroInput.style.display = ehOutro ? '' : 'none';
+    if (!ehOutro) outroInput.value = '';
 }
 
 function prodToggleObs(toggle) {
@@ -4335,19 +4031,31 @@ function iniciarAutocompleteNcmProduto() {
     if (!input || !lista) return;
 
     function limparCamposNcm() {
-        ['prod-ncm-descricao', 'prod-ncm-descricao-completa', 'prod-ncm-utrib'].forEach(id => {
+        ['prod-ncm-descricao', 'prod-ncm-descricao-completa', 'prod-ncm-utrib', 'prod-hscode'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
+    }
+
+    // HS Code são os (até) 6 primeiros dígitos do NCM (NCM = HS + 2 dígitos
+    // específicos do Mercosul), formatado em pares "XX.XX.XX". Alguns registros
+    // de apoio_ncm são níveis mais amplos da hierarquia (capítulo/posição, com
+    // só 2 ou 4 dígitos) — nesses casos deriva com o que tiver, sem exigir 6.
+    function _derivarHsCodeDoNcm(ncmValor) {
+        const digitos = String(ncmValor || '').replace(/\D/g, '').slice(0, 6);
+        if (!digitos) return '';
+        return digitos.match(/.{1,2}/g).join('.');
     }
 
     function preencherCamposNcm(item) {
         const desc    = document.getElementById('prod-ncm-descricao');
         const full    = document.getElementById('prod-ncm-descricao-completa');
         const utrib   = document.getElementById('prod-ncm-utrib');
-        if (desc)  desc.value  = item.dataset.descricao || '';
-        if (full)  full.value  = item.dataset.descricaoCompleta || '';
-        if (utrib) utrib.value = item.dataset.utrib || '';
+        const hscode  = document.getElementById('prod-hscode');
+        if (desc)   desc.value   = item.dataset.descricao || '';
+        if (full)   full.value   = item.dataset.descricaoCompleta || '';
+        if (utrib)  utrib.value  = item.dataset.utrib || '';
+        if (hscode) hscode.value = _derivarHsCodeDoNcm(item.dataset.ncm);
     }
 
     async function mostrar() {
@@ -4391,6 +4099,67 @@ function iniciarAutocompleteNcmProduto() {
 }
 
 // ========================================
+// PRODUTO — PROTEÇÃO DO RADICAL (HS CODE / NALADI-NESH)
+// ========================================
+// HS Code (e futuramente NALADI/NESH) são derivados do NCM — mudar o "radical"
+// à mão pode gerar divergência no SISCOMEX. Usuário não-admin não pode editar
+// esses campos (fica readonly); admin pode, mas passa por uma confirmação.
+
+let _prodRadicalPendente = null; // { el, valorAnterior }
+
+function prodAplicarBloqueioRadical() {
+    const usuario = obterUsuarioLogado();
+    const ehAdmin = usuario?.perfil === 'admin';
+
+    ['prod-hscode', 'prod-naladi-nesh'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        if (!ehAdmin) {
+            el.readOnly = true;
+            el.style.background = '#f8faff';
+            el.style.cursor = 'not-allowed';
+            el.title = 'Somente um administrador pode alterar este campo';
+            el.addEventListener('focus', prodAvisoBloqueioRadical);
+        } else {
+            el.addEventListener('focus', () => { el.dataset.valorAnterior = el.value; });
+            el.addEventListener('change', () => prodChangeCampoRadical(el));
+        }
+    });
+}
+
+function prodAvisoBloqueioRadical() {
+    mostrarNotificacao('Somente um administrador pode alterar este campo. Peça para um administrador da empresa fazer essa alteração.', 'warning');
+    document.activeElement?.blur();
+}
+
+// Dispara só quando o valor realmente mudou por digitação do admin — não
+// quando o autocomplete de NCM preenche o campo programaticamente (setar
+// .value via JS não dispara 'change').
+function prodChangeCampoRadical(inputEl) {
+    const anterior = inputEl.dataset.valorAnterior ?? '';
+    if (inputEl.value.trim() === anterior.trim()) return;
+
+    _prodRadicalPendente = { el: inputEl, valorAnterior: anterior };
+    const modal = document.getElementById('prod-modal-confirmar-radical');
+    if (modal) modal.style.display = 'flex';
+}
+
+function prodCancelarAlteracaoRadical() {
+    if (_prodRadicalPendente) _prodRadicalPendente.el.value = _prodRadicalPendente.valorAnterior;
+    _prodRadicalPendente = null;
+    const modal = document.getElementById('prod-modal-confirmar-radical');
+    if (modal) modal.style.display = 'none';
+}
+
+function prodConfirmarAlteracaoRadical() {
+    if (_prodRadicalPendente) _prodRadicalPendente.el.dataset.valorAnterior = _prodRadicalPendente.el.value;
+    _prodRadicalPendente = null;
+    const modal = document.getElementById('prod-modal-confirmar-radical');
+    if (modal) modal.style.display = 'none';
+}
+
+// ========================================
 // PRODUTO — IDIOMAS EXTRAS (Nome + Descrição)
 // ========================================
 
@@ -4415,15 +4184,18 @@ function prodAdicionarIdiomaExtra() {
     row.innerHTML = `
         <div class="form-group" style="margin-bottom:0;">
             <label>Idioma</label>
-            <select name="idioma_idioma_${id}">
-                <option value="pt">Português</option>
-                <option value="en">Inglês</option>
-                <option value="es">Espanhol</option>
-                <option value="zh">Chinês</option>
-                <option value="fr">Francês</option>
-                <option value="de">Alemão</option>
-                <option value="outro">Outro</option>
-            </select>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <select name="idioma_idioma_${id}" onchange="prodToggleIdiomaOutro(this)">
+                    <option value="de">Alemão</option>
+                    <option value="zh">Chinês</option>
+                    <option value="es">Espanhol</option>
+                    <option value="fr">Francês</option>
+                    <option value="en">Inglês</option>
+                    <option value="pt" selected>Português</option>
+                    <option value="outro">Outro</option>
+                </select>
+                <input type="text" name="idioma_outro_${id}" placeholder="Qual idioma?" style="display:none;">
+            </div>
         </div>
         <div class="form-group" style="margin-bottom:0;">
             <label>${labelNome} — Idioma ${num + 1}</label>
@@ -4471,8 +4243,12 @@ function prodAdicionarMedidaCaixa() {
 
     const row = document.createElement('div');
     row.id = `prod-medida-caixa-row-${id}`;
-    row.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:12px; align-items:end;';
+    row.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:12px; align-items:end;';
     row.innerHTML = `
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Volume ${num > 1 ? num : ''}</label>
+            <input type="text" inputmode="decimal" name="caixa_volume_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+        </div>
         <div class="form-group" style="margin-bottom:0;">
             <label>Comprimento ${num > 1 ? num : ''} (cm)</label>
             <input type="text" inputmode="decimal" name="caixa_comprimento_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
@@ -4540,11 +4316,20 @@ function _prodEmbalagemSetCamposDisabled(desabilitado) {
         .forEach(el => { el.disabled = desabilitado; });
 }
 
+// Mostra o lembrete de cubagem aérea (C x L x A / 6000) só quando o Modal de
+// Transporte escolhido for Aéreo.
+function prodAtualizarCubagemAviso(selectEl) {
+    const aviso = document.getElementById('prod-cubagem-aereo-aviso');
+    if (aviso) aviso.style.display = selectEl?.value === 'aereo' ? '' : 'none';
+}
+
 function prodLimparFormEmbalagem() {
     _PROD_EMBALAGEM_CAMPOS.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
+
+    prodAtualizarCubagemAviso(document.getElementById('prod-embalagem-transporte'));
 
     const outrosWrapper = document.getElementById('prod-acond-outros-wrapper');
     if (outrosWrapper) outrosWrapper.style.display = 'none';
@@ -4574,6 +4359,18 @@ function _prodEmbalagemColetarDados() {
         const el = document.getElementById(id);
         dados[id] = el ? el.value.trim() : '';
     });
+
+    // Medidas de caixa extras (linhas dinâmicas) — antes eram só decorativas,
+    // nunca entravam no objeto salvo em _prodEmbalagens.
+    dados.medidas_caixa = [];
+    document.querySelectorAll('#prod-medidas-caixas-container > div').forEach(row => {
+        const volume      = row.querySelector('input[name^="caixa_volume_"]')?.value.trim() || '';
+        const comprimento = row.querySelector('input[name^="caixa_comprimento_"]')?.value.trim() || '';
+        const largura     = row.querySelector('input[name^="caixa_largura_"]')?.value.trim() || '';
+        const altura      = row.querySelector('input[name^="caixa_altura_"]')?.value.trim() || '';
+        if (volume || comprimento || largura || altura) dados.medidas_caixa.push({ volume, comprimento, largura, altura });
+    });
+
     return dados;
 }
 
@@ -4586,6 +4383,25 @@ function _prodEmbalagemPreencherForm(dados) {
     const isOutros       = /^outros?$/i.test((dados['prod-acondicionamento'] || '').trim());
     const outrosWrapper  = document.getElementById('prod-acond-outros-wrapper');
     if (outrosWrapper) outrosWrapper.style.display = isOutros ? '' : 'none';
+
+    prodAtualizarCubagemAviso(document.getElementById('prod-embalagem-transporte'));
+
+    // Recria as linhas de medida de caixa extras salvas (prodLimparFormEmbalagem
+    // já zerou o container antes desta função ser chamada em editar/visualizar)
+    (dados.medidas_caixa || []).forEach(m => {
+        prodAdicionarMedidaCaixa();
+        const rows = document.querySelectorAll('#prod-medidas-caixas-container > div');
+        const row = rows[rows.length - 1];
+        if (!row) return;
+        const vol  = row.querySelector('input[name^="caixa_volume_"]');
+        const comp = row.querySelector('input[name^="caixa_comprimento_"]');
+        const larg = row.querySelector('input[name^="caixa_largura_"]');
+        const alt  = row.querySelector('input[name^="caixa_altura_"]');
+        if (vol)  vol.value  = m.volume || '';
+        if (comp) comp.value = m.comprimento || '';
+        if (larg) larg.value = m.largura || '';
+        if (alt)  alt.value  = m.altura || '';
+    });
 }
 
 function _prodEmbalagemFecharForm() {
@@ -4595,6 +4411,9 @@ function _prodEmbalagemFecharForm() {
     _prodEmbalagemSetCamposDisabled(false);
 }
 
+// Antes de salvar de verdade, pede pro usuário conferir se as dimensões batem
+// com o modal de transporte escolhido (o app não valida isso automaticamente
+// — é só um lembrete visual, ver prodConfirmarSalvarEmbalagem/prodAjustarDimensoes).
 function prodSalvarEmbalagem() {
     const nomeEl = document.getElementById('prod-embalagem-nome');
     if (!nomeEl.value.trim()) {
@@ -4602,6 +4421,43 @@ function prodSalvarEmbalagem() {
         nomeEl.focus();
         return;
     }
+
+    // Tipo de Embalagem e Tipo de Acondicionamento são livres, mas pelo menos
+    // um dos dois precisa estar preenchido antes de salvar — sinaliza direto
+    // nos dois campos (borda vermelha) em vez de um alert() do navegador.
+    const embalagemEl = document.getElementById('prod-embalagem');
+    const acondicionamentoEl = document.getElementById('prod-acondicionamento');
+    if (!embalagemEl.value.trim() && !acondicionamentoEl.value.trim()) {
+        [embalagemEl, acondicionamentoEl].forEach(el => {
+            el.style.borderColor = '#dc2626';
+            el.addEventListener('input',  () => { el.style.borderColor = ''; }, { once: true });
+        });
+        mostrarNotificacao('Preencha pelo menos o Tipo de Embalagem ou o Tipo de Acondicionamento.', 'warning');
+        embalagemEl.focus();
+        return;
+    }
+
+    const transporteEl = document.getElementById('prod-embalagem-transporte');
+    const modalLabel = _PROD_EMBALAGEM_TRANSPORTE_LABELS[transporteEl?.value] || 'não informado';
+    const msgEl = document.getElementById('prod-confirmar-dimensoes-msg');
+    if (msgEl) msgEl.innerHTML = `Verificar se as dimensões informadas são aceitas dentro do modal de transporte informado: <strong>${_prodEscapeHtml(modalLabel)}</strong>.`;
+
+    const modal = document.getElementById('prod-modal-confirmar-dimensoes');
+    if (modal) modal.style.display = 'flex';
+}
+
+// "Ajustar" — só fecha o aviso, mantém o formulário de embalagem aberto pro
+// usuário corrigir as dimensões antes de tentar salvar de novo.
+function prodAjustarDimensoes() {
+    const modal = document.getElementById('prod-modal-confirmar-dimensoes');
+    if (modal) modal.style.display = 'none';
+}
+
+// "Confirmar/Salvar" — segue com o salvamento de verdade (lógica que antes
+// estava direto em prodSalvarEmbalagem).
+function prodConfirmarSalvarEmbalagem() {
+    const modal = document.getElementById('prod-modal-confirmar-dimensoes');
+    if (modal) modal.style.display = 'none';
 
     const dados = _prodEmbalagemColetarDados();
 
@@ -5217,6 +5073,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarAutocompleteMoedaProduto();
     iniciarAutocompleteEmbalagemProduto();
     iniciarAutocompleteAcondicionamentoProduto();
+    prodAplicarBloqueioRadical();
 
     // Proposta
     const _urlParams    = new URLSearchParams(window.location.search);
@@ -5267,6 +5124,16 @@ document.addEventListener('DOMContentLoaded', async function () {
                 if (typeof gerarPDFProcesso === 'function') gerarPDFProcesso();
                 setTimeout(() => window.close(), 800);
             }, 600);
+        }
+    }
+
+    // Produto — pré-preencher ao editar via ?tab=produto&id=...
+    if (_urlTab === 'produto' && _urlId) {
+        const resProd = await window.supabaseAPI.buscarProdutoPorId(_urlId);
+        if (resProd.sucesso && resProd.data) {
+            await _prodPreencherEdicao(resProd.data);
+        } else {
+            mostrarNotificacao('Produto não encontrado.', 'erro');
         }
     }
 
@@ -5947,6 +5814,20 @@ async function propCarregarEdicao(id) {
     const display = document.getElementById('prop-codigo-display');
     if (display) display.textContent = d.codigo || '—';
 
+    // Pedido de origem (somente leitura)
+    if (d.pedido_id) {
+        g('prop-pedido-id', d.pedido_id);
+        const origemEl    = document.getElementById('prop-pedido-origem');
+        const origemGroup = document.getElementById('prop-pedido-origem-group');
+        if (origemGroup) origemGroup.style.display = '';
+        try {
+            const { data: pedido } = await supabaseClient.from('pedidos').select('numero').eq('id', d.pedido_id).single();
+            if (origemEl) origemEl.value = pedido?.numero || d.pedido_id;
+        } catch (_) {
+            if (origemEl) origemEl.value = d.pedido_id;
+        }
+    }
+
     // Campos simples
     g('prop-tipo',           d.tipo);
     g('prop-proposito',      d.proposito);
@@ -5986,8 +5867,12 @@ async function propCarregarEdicao(id) {
         radioEl.checked = true;
         radioEl.dispatchEvent(new Event('change'));
     }
-    if (emissorTipo === 'terceiro' && d.parceiro_id) {
-        g('prop-cliente-id', d.parceiro_id);
+    if (emissorTipo === 'terceiro') {
+        if (d.parceiro_id) g('prop-cliente-id', d.parceiro_id);
+        // Nome visível: prioriza o snapshot em texto (sempre confiável) — o
+        // autocomplete por ID só re-preenche o texto se o usuário reabrir a
+        // busca, então sem isso o campo ficava em branco na edição.
+        if (d.parceiro_razao_social) g('prop-cliente', d.parceiro_razao_social);
     }
 
     // Destinatário
