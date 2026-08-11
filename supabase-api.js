@@ -1024,7 +1024,7 @@ async function buscarProdutos(apenasAtivos = false) {
 }
 
 // Payload compartilhado entre criar/editar — mapeia 1:1 com as colunas reais
-// de produtos (ver database-produtos-completo.sql). idiomas/embalagens/
+// de produtos (ver database/database-produtos-completo.sql). idiomas/embalagens/
 // documentos chegam prontos como array (montados em _coletarDadosProduto()).
 function _prodMontarPayload(dados) {
     return {
@@ -1175,7 +1175,7 @@ async function buscarTenantEmpresa() {
         const usuario = obterUsuarioLogado();
         if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Usuário sem empresa_id na sessão.' };
         // ie/im/suframa/cep/estado/cidade/endereco/numero/complemento exigem
-        // database-empresas-endereco.sql já rodado (ver project-sql-pendentes)
+        // database/database-empresas-endereco.sql já rodado (ver project-sql-pendentes)
         // — sem isso essa consulta falha com 400 "column does not exist".
         const { data, error } = await supabaseClient
             .from('empresas')

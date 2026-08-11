@@ -2,7 +2,7 @@
 // WIDGET DE SUPORTE — injeta em todas as páginas
 // ========================================
 //
-// Tabela e bucket de Storage necessários no Supabase: ver database-chamados.sql
+// Tabela e bucket de Storage necessários no Supabase: ver database/database-chamados.sql
 
 // ── Configurações ────────────────────────────────────────────────────────────
 
