@@ -456,15 +456,6 @@
     flex-shrink: 0;
 }
 
-.pendencia-modulo {
-    padding: 3px 10px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 600;
-    flex-shrink: 0;
-    border: 1px solid;
-}
-
 .pendencia-arrow {
     font-size: 11px;
     color: #cbd5e1;
@@ -476,6 +467,91 @@
     color: #4776ec;
     transform: translateX(2px);
 }
+
+/* ── Pendências do Sistema: tabela 1 linha por Pedido, com expandir ──
+   Mesmo padrão visual da tela Documentos (style-documentos.css). ── */
+.pend-tabela {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.pend-tabela thead th {
+    text-align: left;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 6px 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pend-tabela tbody tr.pend-linha td {
+    padding: 10px 8px;
+    font-size: 13px;
+    color: #334155;
+    border-bottom: 1px solid #f8fafc;
+    vertical-align: middle;
+}
+
+.pend-tabela tbody tr.pend-linha:hover { background: #fafcff; }
+.pend-tabela tbody tr:last-child td { border-bottom: none; }
+
+.pend-col-seta { width: 32px; text-align: center; }
+
+.pend-toggle {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    transition: background .15s, color .15s;
+}
+.pend-toggle:hover { background: #f1f5f9; color: #475569; }
+
+.pend-pedido-numero { font-weight: 700; color: #1e293b; font-size: 13px; }
+.pend-pedido-parceiro { font-size: 11.5px; color: #94a3b8; margin-top: 1px; }
+
+.pend-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.pend-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.pend-tag-pedido   { background: #f1f5f9; color: #64748b; }
+.pend-tag-proforma { background: #fffbeb; color: #b45309; }
+.pend-tag-processo { background: #eff6ff; color: #1d4ed8; }
+.pend-tag-doc       { background: #fef2f2; color: #dc2626; }
+
+.pend-linha-detalhe td {
+    padding: 0 8px 12px 40px;
+    border-bottom: 1px solid #f8fafc;
+    background: #fafcff;
+}
+
+.pend-detalhe-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+}
+
+.pend-detalhe-linha {
+    font-size: 12.5px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pend-detalhe-linha i { color: #94a3b8; width: 14px; text-align: center; }
+.pend-detalhe-linha a { color: #4776ec; font-weight: 600; text-decoration: none; margin-left: auto; white-space: nowrap; }
+.pend-detalhe-linha a:hover { text-decoration: underline; }
 
 /* ========================================
    GRÁFICOS

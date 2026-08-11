@@ -1173,16 +1173,19 @@ async function atualizarTenantEmpresa(dados) {
 async function buscarTenantEmpresa() {
     try {
         const usuario = obterUsuarioLogado();
-        if (!usuario?.empresa_id) return { sucesso: false };
+        if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Usuário sem empresa_id na sessão.' };
+        // ie/im/suframa/cep/estado/cidade/endereco/numero/complemento exigem
+        // database-empresas-endereco.sql já rodado (ver project-sql-pendentes)
+        // — sem isso essa consulta falha com 400 "column does not exist".
         const { data, error } = await supabaseClient
             .from('empresas')
             .select('id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento')
             .eq('id', usuario.empresa_id)
             .single();
-        if (error) return { sucesso: false };
+        if (error) return { sucesso: false, mensagem: error.message, detalhes: error, empresaIdUsada: usuario.empresa_id };
         return { sucesso: true, data };
     } catch (err) {
-        return { sucesso: false };
+        return { sucesso: false, mensagem: err.message };
     }
 }
 
@@ -1217,6 +1220,8 @@ async function salvarPropostaDB(dados) {
                 codigo:              codigo,
                 empresa_id:          usuario.empresa_id || null,
                 criado_por:          usuario.id,
+                idioma:              dados.idioma              || 'pt',
+                idioma_outro:        dados.idioma_outro        || null,
                 tipo:                dados.tipo                || null,
                 proposito:           dados.proposito           || null,
                 status:              'pendente',
@@ -1303,6 +1308,8 @@ async function atualizarProformaDB(id, dados) {
         const { data, error } = await supabaseClient
             .from('proformas')
             .update({
+                idioma:                   dados.idioma                   || 'pt',
+                idioma_outro:             dados.idioma_outro             || null,
                 tipo:                     dados.tipo                     || null,
                 proposito:                dados.proposito                || null,
                 emissor_tipo:             dados.emissor_tipo             || 'usuario',

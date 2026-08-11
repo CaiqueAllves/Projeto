@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     mostrarDataAtual();
     carregarTarefas();
     renderizarTarefas();
+    carregarPendenciasSistema().then(renderizarTarefas);
 
     // Buscar empresas do Supabase uma única vez e compartilhar com todas as funções
     const resultado = await buscarEmpresasCadastradas();
@@ -164,56 +165,100 @@ function salvarTarefas() {
     localStorage.setItem(_chaveTarefas(), JSON.stringify(tarefas));
 }
 
-function coletarPendenciasModulos() {
-    const pendencias = [];
+// ========================================
+// PENDÊNCIAS DO SISTEMA (dados reais do Supabase)
+// ========================================
+// Critérios confirmados com o usuário: Pedido com status "aguardando",
+// Proforma com status "pendente", Processo com status "aberto", e
+// documentos já feitos mas ainda não assinados (usa a mesma taxonomia/
+// cálculo de doc-tipos.js, compartilhada com a tela Documentos). Produtos
+// pendentes (status "pendente") não pertencem a um Pedido específico, por
+// isso ficam numa lista separada, fora da tabela.
 
-    // Processos: aberto ou em andamento
-    const processos = JSON.parse(localStorage.getItem('processosCadastros') || '[]');
-    processos
-        .filter(p => p.status === 'aberto' || p.status === 'andamento')
-        .forEach(p => {
-            pendencias.push({
-                moduloLabel: 'Processo',
-                moduloCor: '#7c3aed',
-                icone: 'fa-solid fa-file-lines',
-                titulo: `${p.codigo ? p.codigo + ' · ' : ''}${p.cliente || p.tipo || 'Sem descrição'}`,
-                descricao: p.status === 'andamento' ? 'Em andamento' : 'Aberto',
-                link: 'processos.html'
-            });
+let _pendPedidos            = []; // pedidos com pelo menos 1 pendência, já com o detalhe calculado
+let _pendProdutosPendentes  = [];
+let _pendExpandidos         = new Set();
+
+async function carregarPendenciasSistema() {
+    const usuario = obterUsuarioLogado();
+    if (!usuario) { _pendPedidos = []; _pendProdutosPendentes = []; return; }
+
+    const resPedidos = await buscarPedidos();
+    const pedidos = resPedidos.sucesso ? (resPedidos.data || []) : [];
+    const pedidoIds = pedidos.map(p => p.id).filter(Boolean);
+
+    const proformasMap = {};
+    const processosMap = {};
+    let docsMap = {};
+
+    if (pedidoIds.length > 0) {
+        const { data: proformas } = await supabaseClient
+            .from('proformas').select('id, codigo, modal, status, pedido_id').in('pedido_id', pedidoIds);
+        (proformas || []).forEach(pf => { (proformasMap[pf.pedido_id] ||= []).push(pf); });
+
+        const proformaIds = (proformas || []).map(pf => pf.id);
+        if (proformaIds.length > 0) {
+            const { data: procs } = await supabaseClient
+                .from('processos').select('id, numero_processo, status, proforma_id, documentos').in('proforma_id', proformaIds);
+            (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
+        }
+
+        const resDocs = await window.supabaseAPI.buscarDocumentosPedidos(pedidoIds);
+        (resDocs.data || []).forEach(d => { (docsMap[d.pedido_id] ||= {})[d.tipo_documento] = d; });
+    }
+
+    _pendPedidos = pedidos.map(p => {
+        const proformasDoPedido = proformasMap[p.id] || [];
+        const processosDoPedido = proformasDoPedido.flatMap(pf => processosMap[pf.id] || []);
+        const docsSalvos        = docsMap[p.id] || {};
+
+        const pedidoPendente     = p.status === 'aguardando';
+        const proformasPendentes = proformasDoPedido.filter(pf => pf.status === 'pendente');
+        const processosAbertos   = processosDoPedido.filter(pr => pr.status === 'aberto');
+
+        // Só conta documentos "feitos" pra saber quantos ainda faltam assinar
+        // — um tipo que nunca foi gerado não é uma pendência de assinatura.
+        let docsFeitos = 0, docsAssinados = 0;
+        docTiposDoPedido(proformasDoPedido, docsSalvos).forEach(tipo => {
+            if (tipo.custom) return;
+            const reg = docsSalvos[tipo.id];
+            const assinado = !!reg?.assinado;
+            const feito = assinado || docFeitoAutomatico(processosDoPedido, tipo.id);
+            if (feito) { docsFeitos++; if (assinado) docsAssinados++; }
         });
+        const temDocPendente = docsFeitos > docsAssinados;
 
-    // Produtos inativos
-    const produtos = JSON.parse(localStorage.getItem('produtosCadastros') || '[]');
-    produtos
-        .filter(p => p.statusAtivo === 'inativo')
-        .forEach(p => {
-            pendencias.push({
-                moduloLabel: 'Produto',
-                moduloCor: '#0891b2',
-                icone: 'fa-solid fa-box',
-                titulo: p.nomeProduto || p.nome || 'Sem nome',
-                descricao: 'Inativo',
-                link: 'produtos.html'
-            });
-        });
+        const temPendencia = pedidoPendente || proformasPendentes.length > 0 || processosAbertos.length > 0 || temDocPendente;
+        if (!temPendencia) return null;
 
-    return pendencias;
+        return {
+            pedido: p,
+            remetente:    p.remetente?.nome_fantasia || p.remetente?.razao_social || 'Própria empresa',
+            destinatario: p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—',
+            pedidoPendente, proformasPendentes, processosAbertos,
+            docsFeitos, docsAssinados, temDocPendente,
+        };
+    }).filter(Boolean);
+
+    const resProdutos = await window.supabaseAPI.buscarProdutos();
+    const produtos = resProdutos.sucesso ? (resProdutos.data || []) : [];
+    _pendProdutosPendentes = produtos.filter(pr => pr.status === 'pendente');
 }
 
 function renderizarTarefas() {
     const container = document.getElementById('tasksContainer');
     if (!container) return;
 
-    const pendencias = coletarPendenciasModulos();
-    const totalPendente = tarefas.filter(t => !t.concluida).length + pendencias.length;
+    const totalPendencias = _pendPedidos.length + _pendProdutosPendentes.length;
+    const totalPendente   = tarefas.filter(t => !t.concluida).length + totalPendencias;
 
     const badge = document.getElementById('tarefasCountBadge');
     if (badge) badge.textContent = totalPendente || '';
 
     const section = document.getElementById('tasks-section');
-    if (section) section.style.display = (tarefas.length === 0 && pendencias.length === 0) ? 'none' : '';
+    if (section) section.style.display = (tarefas.length === 0 && totalPendencias === 0) ? 'none' : '';
 
-    if (tarefas.length === 0 && pendencias.length === 0) return;
+    if (tarefas.length === 0 && totalPendencias === 0) return;
 
     container.innerHTML = '';
 
@@ -249,25 +294,37 @@ function renderizarTarefas() {
         container.appendChild(group);
     }
 
-    // Grupo 2: Pendências dos módulos
-    if (pendencias.length > 0) {
+    // Grupo 2: Pendências do Sistema — 1 linha por Pedido, com expandir
+    if (_pendPedidos.length > 0) {
         const group = document.createElement('div');
         group.className = 'tasks-group';
-        group.innerHTML = `<div class="tasks-group-header pendencias-header"><i class="fa-solid fa-triangle-exclamation"></i> Pendências do Sistema <span class="pendencias-count">${pendencias.length}</span></div>`;
+        group.innerHTML = `
+            <div class="tasks-group-header pendencias-header"><i class="fa-solid fa-triangle-exclamation"></i> Pendências do Sistema <span class="pendencias-count">${_pendPedidos.length}</span></div>
+            <table class="pend-tabela">
+                <thead><tr><th class="pend-col-seta"></th><th>Pedido</th><th>Pendências</th></tr></thead>
+                <tbody>${_pendPedidos.map(_pendRenderLinha).join('')}</tbody>
+            </table>`;
+        container.appendChild(group);
+    }
 
-        pendencias.forEach(p => {
+    // Grupo 3: Produtos Pendentes — lista simples, não pertence a um Pedido
+    if (_pendProdutosPendentes.length > 0) {
+        const group = document.createElement('div');
+        group.className = 'tasks-group';
+        group.innerHTML = `<div class="tasks-group-header pendencias-header"><i class="fa-solid fa-box"></i> Produtos Pendentes <span class="pendencias-count">${_pendProdutosPendentes.length}</span></div>`;
+
+        _pendProdutosPendentes.forEach(produto => {
             const item = document.createElement('div');
             item.className = 'task-item pendencia-item';
-            item.onclick = () => window.location.href = p.link;
+            item.onclick = () => window.open(`formularios.html?tab=produto&id=${produto.id}`, '_blank');
             item.innerHTML = `
-                <div class="pendencia-icon" style="background:${p.moduloCor}18; color:${p.moduloCor};">
-                    <i class="${p.icone}"></i>
+                <div class="pendencia-icon" style="background:#0891b218; color:#0891b2;">
+                    <i class="fa-solid fa-box"></i>
                 </div>
                 <div class="task-content">
-                    <div class="task-title">${p.titulo}</div>
-                    <div class="task-meta">${p.descricao}</div>
+                    <div class="task-title">${produto.nome || 'Sem nome'}</div>
+                    <div class="task-meta">SKU: ${produto.sku || '—'} · Cadastro pendente</div>
                 </div>
-                <div class="pendencia-modulo" style="background:${p.moduloCor}15; color:${p.moduloCor}; border-color:${p.moduloCor}30;">${p.moduloLabel}</div>
                 <i class="fa-solid fa-chevron-right pendencia-arrow"></i>
             `;
             group.appendChild(item);
@@ -275,6 +332,58 @@ function renderizarTarefas() {
 
         container.appendChild(group);
     }
+}
+
+function pendToggleLinha(pedidoId) {
+    if (_pendExpandidos.has(pedidoId)) _pendExpandidos.delete(pedidoId);
+    else _pendExpandidos.add(pedidoId);
+    renderizarTarefas();
+}
+
+function _pendRenderLinha(item) {
+    const pedidoId  = item.pedido.id;
+    const expandido = _pendExpandidos.has(pedidoId);
+
+    const tags = [];
+    if (item.pedidoPendente) tags.push(`<span class="pend-tag pend-tag-pedido">Pedido Aguardando</span>`);
+    if (item.proformasPendentes.length) tags.push(`<span class="pend-tag pend-tag-proforma">Proforma Pendente${item.proformasPendentes.length > 1 ? ` (${item.proformasPendentes.length})` : ''}</span>`);
+    if (item.processosAbertos.length) tags.push(`<span class="pend-tag pend-tag-processo">Processo Aberto${item.processosAbertos.length > 1 ? ` (${item.processosAbertos.length})` : ''}</span>`);
+    if (item.temDocPendente) tags.push(`<span class="pend-tag pend-tag-doc">${item.docsAssinados}/${item.docsFeitos} assinados</span>`);
+
+    const linhaResumo = `
+        <tr class="pend-linha">
+            <td class="pend-col-seta">
+                <button class="pend-toggle" onclick="pendToggleLinha('${pedidoId}')" title="${expandido ? 'Recolher' : 'Expandir'}">
+                    <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
+                </button>
+            </td>
+            <td>
+                <div class="pend-pedido-numero">${item.pedido.numero || '—'}</div>
+                <div class="pend-pedido-parceiro">${item.destinatario}</div>
+            </td>
+            <td class="pend-tags">${tags.join('')}</td>
+        </tr>`;
+
+    if (!expandido) return linhaResumo;
+
+    const detalhes = [];
+    if (item.pedidoPendente) {
+        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-bag-shopping"></i> Pedido está <strong>aguardando</strong> confirmação. <a href="pedidos.html?editar=${pedidoId}">Abrir pedido</a></div>`);
+    }
+    item.proformasPendentes.forEach(pf => {
+        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-invoice"></i> Proforma <strong>${pf.codigo || '—'}</strong> está pendente. <a href="formularios.html?tab=proposta&id=${pf.id}" target="_blank">Abrir proforma</a></div>`);
+    });
+    item.processosAbertos.forEach(pr => {
+        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-diagram-project"></i> Processo <strong>${pr.numero_processo || '—'}</strong> está aberto. <a href="formularios.html?tab=processo&id=${pr.id}" target="_blank">Abrir processo</a></div>`);
+    });
+    if (item.temDocPendente) {
+        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-signature"></i> Documentos: <strong>${item.docsAssinados}/${item.docsFeitos}</strong> assinados. <a href="documentos.html">Abrir documentos</a></div>`);
+    }
+
+    return linhaResumo + `
+        <tr class="pend-linha-detalhe">
+            <td colspan="3"><div class="pend-detalhe-wrap">${detalhes.join('')}</div></td>
+        </tr>`;
 }
 
 function adicionarTarefa() {

@@ -6,36 +6,9 @@
 // um pedido é: um conjunto fixo (universal) + o conjunto específico do
 // modal de transporte da(s) proforma(s) geradas a partir dele + quaisquer
 // tipos customizados que o usuário tenha adicionado.
-
-const DOC_TIPOS_UNIVERSAIS = [
-    { id: 'proforma',   label: 'Nº Proforma Invoice' },
-    { id: 'commercial', label: 'Nº Commercial Invoice' },
-    { id: 'packing',    label: 'Nº Packing List' },
-    { id: 'due',        label: 'Nº DUE' },
-    { id: 'le',         label: 'Nº Licença de Exportação (LE)' },
-    { id: 'certorigem', label: 'Nº Certificado de Origem' },
-    { id: 'ctn',        label: 'Nº Conhecimento de Transporte Nacional' },
-    { id: 'nfe',        label: 'Nº Nota Fiscal de Exportação' },
-];
-
-const DOC_TIPOS_MODAL = {
-    aereo: [
-        { id: 'awb',       label: 'Nº AWB' },
-        { id: 'manifesto', label: 'Nº Manifesto de Carga' },
-    ],
-    maritimo: [
-        { id: 'fcl',     label: 'Nº FCL — Full Container Load' },
-        { id: 'lcl',     label: 'Nº LCL — Less than Container Load' },
-        { id: 'bl',      label: 'Nº BL — Bill of Lading' },
-        { id: 'apolice', label: 'Nº Apólice de Seguro' },
-    ],
-    terrestre: [
-        { id: 'crt',    label: 'Nº CRT — Conhecimento de Transporte Internacional' },
-        { id: 'micdta', label: 'Nº MIC/DTA' },
-    ],
-};
-
-const DOC_MODAL_LABEL = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' };
+// Taxonomia (DOC_TIPOS_UNIVERSAIS/DOC_TIPOS_MODAL/DOC_MODAL_LABEL) e os
+// helpers docTiposDoPedido()/docFeitoAutomatico() vêm de doc-tipos.js,
+// compartilhado com a seção "Pendências do Sistema" em inicio.js.
 
 const DOC_LABELS_PEDIDO   = { aguardando: 'Aguardando', confirmado: 'Confirmado', em_producao: 'Em Produção', embarcado: 'Embarcado', entregue: 'Entregue', cancelado: 'Cancelado' };
 const DOC_LABELS_PROFORMA = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado' };
@@ -94,33 +67,6 @@ async function docCarregar() {
     docRenderizar();
 }
 
-function _docTiposDoPedido(p) {
-    const tipos = [...DOC_TIPOS_UNIVERSAIS];
-    const modais = [...new Set((p._proformas || []).map(pf => pf.modal).filter(Boolean))];
-    modais.forEach(modal => {
-        (DOC_TIPOS_MODAL[modal] || []).forEach(t => tipos.push({ ...t, modal }));
-    });
-    const salvos = _docSalvos[p.id] || {};
-    Object.values(salvos).forEach(reg => {
-        const jaExiste = tipos.some(t => t.id === reg.tipo_documento);
-        if (!jaExiste && String(reg.tipo_documento).startsWith('custom_')) {
-            tipos.push({ id: reg.tipo_documento, label: reg.tipo_label || 'Documento', custom: true });
-        }
-    });
-    return tipos;
-}
-
-// "Feito" não é mais marcado manualmente: pros tipos fixos/por modal, o
-// sistema verifica se o campo Nº correspondente já foi preenchido na seção
-// "Documentos" do formulário de Processo (processos.documentos, JSONB com
-// as mesmas chaves de DOC_TIPOS_UNIVERSAIS/DOC_TIPOS_MODAL).
-function _docFeitoAutomatico(p, tipoId) {
-    return (p._processos || []).some(pr => {
-        const valor = pr.documentos?.[tipoId];
-        return valor !== undefined && valor !== null && String(valor).trim() !== '';
-    });
-}
-
 function _docColunaProforma(p) {
     const lista = p._proformas || [];
     if (!lista.length) return { texto: '—', statusTexto: '—' };
@@ -146,7 +92,7 @@ function docRenderizar() {
     const linhas = _docPedidos.map(p => {
         const remetente    = p.remetente?.nome_fantasia || p.remetente?.razao_social || 'Própria empresa';
         const destinatario = p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—';
-        const tipos   = _docTiposDoPedido(p);
+        const tipos   = docTiposDoPedido(p._proformas, _docSalvos[p.id]);
         const salvos  = _docSalvos[p.id] || {};
 
         const docRows = tipos.map(tipo => {
@@ -154,7 +100,7 @@ function docRenderizar() {
             const assinado = !!reg?.assinado;
             // Documento assinado conta como feito automaticamente, mesmo que
             // o campo Nº correspondente não tenha sido preenchido no Processo.
-            const feito = tipo.custom ? null : (assinado || _docFeitoAutomatico(p, tipo.id));
+            const feito = tipo.custom ? null : (assinado || docFeitoAutomatico(p._processos, tipo.id));
             return {
                 tipo, feito, assinado,
                 assinadoPor: reg?.assinado_por,

@@ -809,6 +809,12 @@
                                         </div>
                                     </div>
 
+                                    <!-- Remetente do Pedido de origem — visível apenas quando Usuário, ocupa o slot de Identificação da Empresa -->
+                                    <div class="form-group" id="proc-emissor-pedido-remetente-group" style="display:none;">
+                                        <label for="proc-emissor-pedido-remetente">Remetente</label>
+                                        <input type="text" id="proc-emissor-pedido-remetente" name="pedido_remetente" placeholder="Remetente do pedido de origem" readonly>
+                                    </div>
+
                                     <div class="form-group">
                                         <label for="proc-documento">
                                             Número de Identificação
@@ -1724,35 +1730,64 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
-                                    <!-- Pedido de origem (somente leitura — toda proforma nasce de um pedido) -->
-                                    <div class="form-group full-width" id="prop-pedido-origem-group" style="display:none;">
-                                        <label for="prop-pedido-origem">Pedido</label>
-                                        <input type="text" id="prop-pedido-origem" readonly placeholder="—" style="background:#f8faff;cursor:default;">
-                                    </div>
+                                    <!-- Linha 1: Pedido | Idioma | Tipo | Propósito -->
+                                    <div class="form-group full-width">
+                                        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
 
-                                    <!-- Tipo -->
-                                    <div class="form-group">
-                                        <label for="prop-tipo">Tipo <span class="required">*</span></label>
-                                        <select id="prop-tipo" name="tipo">
-                                            <option value="">Selecione...</option>
-                                            <option value="exportacao_direta">Exportação Direta</option>
-                                            <option value="exportacao_indireta">Exportação Indireta</option>
-                                        </select>
-                                    </div>
+                                            <!-- Pedido raiz — toda proforma nasce de um pedido -->
+                                            <div class="form-group" id="prop-pedido-origem-group" style="margin-bottom:0;">
+                                                <label for="prop-pedido-origem">Pedido <span class="required">*</span></label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prop-pedido-origem" placeholder="Digite ou selecione um pedido..." autocomplete="off">
+                                                    <div class="autocomplete-list" id="prop-pedido-origem-lista"></div>
+                                                </div>
+                                            </div>
 
-                                    <!-- Propósito -->
-                                    <div class="form-group">
-                                        <label for="prop-proposito">Propósito <span class="required">*</span></label>
-                                        <select id="prop-proposito" name="proposito">
-                                            <option value="">Selecione...</option>
-                                            <option value="vendas">Vendas</option>
-                                            <option value="amostra">Amostra</option>
-                                            <option value="troca">Troca</option>
-                                            <option value="doacao">Doação</option>
-                                            <option value="conserto">Conserto / Reparo</option>
-                                            <option value="retorno">Retorno</option>
-                                            <option value="exposicao">Exposição / Feira</option>
-                                        </select>
+                                            <!-- Idioma -->
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-idioma">Idioma
+                                                    <span class="info-balao" data-tooltip="Idioma em que esta Proforma será gerada/documentada."><i class="fa-solid fa-circle-info"></i></span>
+                                                </label>
+                                                <div style="display:flex; flex-direction:row; gap:12px;">
+                                                    <select id="prop-idioma" name="idioma" onchange="prodToggleIdiomaOutro(this)" style="flex:1;">
+                                                        <option value="de">Alemão</option>
+                                                        <option value="zh">Chinês</option>
+                                                        <option value="es">Espanhol</option>
+                                                        <option value="fr">Francês</option>
+                                                        <option value="en">Inglês</option>
+                                                        <option value="pt" selected>Português</option>
+                                                        <option value="outro">Outro</option>
+                                                    </select>
+                                                    <input type="text" id="prop-idioma-outro" name="idioma_outro" placeholder="Qual idioma?" style="display:none; flex:1;">
+                                                </div>
+                                            </div>
+
+                                            <!-- Tipo -->
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-tipo">Tipo <span class="required">*</span></label>
+                                                <select id="prop-tipo" name="tipo">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="exportacao_direta">Exportação Direta</option>
+                                                    <option value="exportacao_indireta">Exportação Indireta</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Propósito -->
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-proposito">Propósito <span class="required">*</span></label>
+                                                <select id="prop-proposito" name="proposito">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="vendas">Vendas</option>
+                                                    <option value="amostra">Amostra</option>
+                                                    <option value="troca">Troca</option>
+                                                    <option value="doacao">Doação</option>
+                                                    <option value="conserto">Conserto / Reparo</option>
+                                                    <option value="retorno">Retorno</option>
+                                                    <option value="exposicao">Exposição / Feira</option>
+                                                </select>
+                                            </div>
+
+                                        </div>
                                     </div>
 
                                     <!-- Emissor -->
@@ -2876,15 +2911,12 @@
                         <button class="modal-confirm-btn modal-confirm-nao" onclick="fecharGuia()">
                             <i class="fa-solid fa-door-open"></i> Fechar
                         </button>
-                        <button class="modal-confirm-btn modal-confirm-pdf" id="pos-salvo-pdf-processo-btn" style="display:none;" onclick="gerarPDFProcesso()">
-                            <i class="fa-solid fa-file-pdf"></i> Obter PDF
-                        </button>
                         <button class="modal-confirm-btn modal-confirm-sim" onclick="criarNovo()">
                             <i class="fa-solid fa-plus"></i> Criar outro
                         </button>
                     </div>
                     <div id="pos-salvo-pdf-wrap" style="display:none; margin-top:12px;">
-                        <button class="btn-pdf modal-btn-pdf" onclick="gerarPDFProposta()">
+                        <button class="btn-pdf modal-btn-pdf" id="pos-salvo-pdf-btn" onclick="gerarPDFProposta()">
                             <i class="fa-solid fa-file-pdf"></i> Gerar PDF da Proposta
                         </button>
                     </div>

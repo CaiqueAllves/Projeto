@@ -596,14 +596,17 @@ async function confirmarSalvar() {
             const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
             const codigoEl  = document.getElementById('pos-salvo-codigo');
             const pdfWrap   = document.getElementById('pos-salvo-pdf-wrap');
-            const pdfProcessoBtn = document.getElementById('pos-salvo-pdf-processo-btn');
+            const pdfBtn    = document.getElementById('pos-salvo-pdf-btn');
 
             if (tituloEl)   tituloEl.textContent  = editandoId ? 'Proforma atualizada!' : 'Proforma salva!';
             if (msgEl)      msgEl.textContent      = 'O que deseja fazer agora?';
             if (codigoEl)   codigoEl.textContent   = codigo;
             if (codigoWrap) codigoWrap.style.display = '';
             if (pdfWrap)    pdfWrap.style.display    = '';
-            if (pdfProcessoBtn) pdfProcessoBtn.style.display = 'none';
+            if (pdfBtn) {
+                pdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Gerar PDF da Proposta';
+                pdfBtn.onclick   = () => gerarPDFProposta();
+            }
 
             posModal.style.display = 'flex';
 
@@ -657,15 +660,24 @@ async function confirmarSalvar() {
             await window.supabaseAPI.avancarStatusPedido(dadosProc.pedido_id, 'em_producao');
         }
 
-        const tituloEl      = document.getElementById('pos-salvo-titulo');
-        const codigoWrap    = document.getElementById('pos-salvo-codigo-wrap');
-        const pdfWrap       = document.getElementById('pos-salvo-pdf-wrap');
-        const pdfProcessoBtn = document.getElementById('pos-salvo-pdf-processo-btn');
+        const tituloEl   = document.getElementById('pos-salvo-titulo');
+        const msgEl      = document.getElementById('pos-salvo-msg');
+        const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
+        const codigoEl   = document.getElementById('pos-salvo-codigo');
+        const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
+        const pdfBtn     = document.getElementById('pos-salvo-pdf-btn');
+
+        const numeroProcesso = resProc.data?.numero_processo || '—';
 
         if (tituloEl)   tituloEl.textContent = editandoIdProc ? 'Processo atualizado!' : 'Processo salvo!';
-        if (codigoWrap) codigoWrap.style.display = 'none';
-        if (pdfWrap)    pdfWrap.style.display    = 'none';
-        if (pdfProcessoBtn) pdfProcessoBtn.style.display = '';
+        if (msgEl)      msgEl.textContent    = 'O que deseja fazer agora?';
+        if (codigoEl)   codigoEl.textContent = numeroProcesso;
+        if (codigoWrap) codigoWrap.style.display = '';
+        if (pdfWrap)    pdfWrap.style.display    = '';
+        if (pdfBtn) {
+            pdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Gerar PDF do Processo';
+            pdfBtn.onclick   = () => gerarPDFProcesso();
+        }
 
         posModal.style.display = 'flex';
     } else {
@@ -1168,6 +1180,8 @@ function _coletarDadosProposta() {
 
     return {
         codigo:              g('prop-codigo'),
+        idioma:              g('prop-idioma'),
+        idioma_outro:        g('prop-idioma') === 'outro' ? (g('prop-idioma-outro') || null) : null,
         tipo:                g('prop-tipo'),
         proposito:           g('prop-proposito'),
         emissor_tipo:        emissorTipo,
@@ -2868,37 +2882,79 @@ function iniciarCamposStatus() {
 // EMISSOR
 // ========================================
 
+// Cache local (não depende do timing/sucesso do fetch feito lá no
+// DOMContentLoaded pra window._dadosEmpresaTenant) — se aquele tiver
+// falhado silenciosamente, essa função tenta buscar de novo na hora.
+let _procEmpresaPropria = null;
+
+// Nome do remetente do Pedido de origem (via Proforma → pedido_id →
+// remetente_parceiro_id) — mostrado no campo "Remetente" quando Emissor =
+// Usuário, no lugar do dropdown Identificação da Empresa. Preenchido por
+// _procPreencherDaProforma().
+let _procPedidoRemetenteNome = null;
+async function _procCarregarEmpresaPropria() {
+    if (_procEmpresaPropria) return _procEmpresaPropria;
+    if (window._dadosEmpresaTenant) return (_procEmpresaPropria = window._dadosEmpresaTenant);
+    try {
+        const res = await window.supabaseAPI.buscarTenantEmpresa();
+        if (res.sucesso) {
+            _procEmpresaPropria = res.data;
+        } else {
+            console.warn('[Processo] buscarTenantEmpresa() não retornou sucesso:', res);
+            mostrarNotificacao('Falha ao buscar dados da empresa: ' + (res.mensagem || 'erro desconhecido') + (res.empresaIdUsada ? ' (empresa_id: ' + res.empresaIdUsada + ')' : ''), 'erro');
+        }
+    } catch (e) {
+        console.error('[Processo] erro ao buscar dados da própria empresa:', e);
+        mostrarNotificacao('Erro ao buscar dados da empresa: ' + e.message, 'erro');
+    }
+    return _procEmpresaPropria;
+}
+
 function iniciarEmissor() {
     const radios      = document.querySelectorAll('input[name="proc-emissor-tipo"]');
     const grupoEmp    = document.getElementById('proc-emissor-empresa-group');
     const docInput    = document.getElementById('proc-documento');
     const origemPais  = document.getElementById('proc-origem-pais');
 
-    function atualizar() {
+    async function atualizar() {
         const val = document.querySelector('input[name="proc-emissor-tipo"]:checked')?.value;
 
         document.querySelectorAll('.emissor-opcao').forEach(l => l.classList.remove('ativo'));
         document.querySelector('input[name="proc-emissor-tipo"]:checked')
             ?.closest('.emissor-opcao')?.classList.add('ativo');
 
-        const grupoTipoDoc = document.getElementById('proc-documento-tipo-group');
+        const grupoTipoDoc     = document.getElementById('proc-documento-tipo-group');
+        const grupoPedidoRem   = document.getElementById('proc-emissor-pedido-remetente-group');
 
         if (val === 'usuario') {
-            if (grupoEmp)    grupoEmp.style.display    = 'none';
-            if (grupoTipoDoc) grupoTipoDoc.style.display = '';
+            if (grupoEmp)      grupoEmp.style.display      = 'none';
+            if (grupoTipoDoc)  grupoTipoDoc.style.display  = 'none';
+            if (grupoPedidoRem) grupoPedidoRem.style.display = '';
+            const remetentePedidoEl = document.getElementById('proc-emissor-pedido-remetente');
+            if (remetentePedidoEl) remetentePedidoEl.value = _procPedidoRemetenteNome || '';
+            const emp = await _procCarregarEmpresaPropria();
             if (docInput) {
                 docInput.readOnly    = false;
                 docInput.placeholder = 'Informe o CNPJ / CPF';
-                const userDoc = window._usuarioLogado?.documento || '';
-                if (!docInput.value) docInput.value = userDoc;
+                if (!docInput.value) docInput.value = emp?.cnpj || '';
             }
             if (origemPais) {
                 origemPais.readOnly    = false;
                 origemPais.placeholder = 'Selecione o país de origem';
+                if (!origemPais.value) await _preencherPaisPorPrefixo('proc-origem', 'Brasil');
             }
+            // Endereço de Origem = endereço registrado da própria empresa
+            const _setSeVazio = (id, val) => { const el = document.getElementById(id); if (el && !el.value) el.value = val || ''; };
+            _setSeVazio('proc-origem-cep',         emp?.cep);
+            _setSeVazio('proc-origem-estado',      emp?.estado);
+            _setSeVazio('proc-origem-cidade',      emp?.cidade);
+            _setSeVazio('proc-origem-endereco',    emp?.endereco);
+            _setSeVazio('proc-origem-numero',      emp?.numero);
+            _setSeVazio('proc-origem-complemento', emp?.complemento);
         } else {
-            if (grupoEmp)    grupoEmp.style.display    = '';
-            if (grupoTipoDoc) grupoTipoDoc.style.display = 'none';
+            if (grupoEmp)      grupoEmp.style.display      = '';
+            if (grupoTipoDoc)  grupoTipoDoc.style.display  = 'none';
+            if (grupoPedidoRem) grupoPedidoRem.style.display = 'none';
             if (docInput) {
                 docInput.readOnly    = true;
                 docInput.placeholder = 'Preenchido automaticamente';
@@ -3156,6 +3212,75 @@ async function _acCarregarPropostas() {
     } catch { _acPropostas = []; }
 }
 
+let _acPedidosAbertos = [];
+
+async function _acCarregarPedidosAbertos() {
+    if (_acPedidosAbertos.length > 0) return;
+    try {
+        const usuario = obterUsuarioLogado();
+        // "Em aberto" = ainda em andamento (fora excluído/cancelado/entregue).
+        let query = supabaseClient
+            .from('pedidos')
+            .select('id, numero')
+            .not('status', 'in', '(excluido,cancelado,entregue)')
+            .order('created_at', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        const { data } = await query;
+        _acPedidosAbertos = (data || []).map(p => ({ id: p.id, nome: p.numero, label: p.numero }));
+    } catch { _acPedidosAbertos = []; }
+}
+
+function _acMostrarPedidos(inputEl, listaEl, termo) {
+    const q = (termo || '').trim().toLowerCase();
+    const filtrados = q
+        ? _acPedidosAbertos.filter(p => (p.nome || '').toLowerCase().includes(q))
+        : _acPedidosAbertos;
+
+    if (filtrados.length === 0) {
+        listaEl.innerHTML = '<div class="autocomplete-vazio">Nenhum pedido em aberto encontrado</div>';
+    } else {
+        listaEl.innerHTML = filtrados.slice(0, 30).map(p => `
+            <div class="autocomplete-item"
+                 data-id="${p.id}"
+                 data-nome="${(p.nome || '').replace(/"/g, '&quot;')}">
+                <span class="ac-nome">${p.nome || ''}</span>
+            </div>`).join('');
+    }
+    _acPosicionar(inputEl, listaEl);
+    listaEl.classList.add('aberta');
+}
+
+function iniciarAutocompletePropPedido() {
+    const input    = document.getElementById('prop-pedido-origem');
+    const lista    = document.getElementById('prop-pedido-origem-lista');
+    const idOculto = document.getElementById('prop-pedido-id');
+    if (!input || !lista) return;
+
+    input.addEventListener('focus', async () => {
+        await _acCarregarPedidosAbertos();
+        _acMostrarPedidos(input, lista, input.value);
+    });
+
+    input.addEventListener('input', () => {
+        if (idOculto) idOculto.value = '';
+        _acMostrarPedidos(input, lista, input.value);
+    });
+
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        input.value = item.getAttribute('data-nome');
+        const selId = item.getAttribute('data-id');
+        if (idOculto) idOculto.value = selId;
+        _acFechar(lista);
+        _propPreencherDoPedido(selId);
+    });
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.autocomplete-wrapper')) _acFechar(lista);
+    });
+}
+
 async function _propPreencherDoPedido(pedidoId) {
     if (!pedidoId) return;
     try {
@@ -3186,9 +3311,15 @@ async function _propPreencherDoPedido(pedidoId) {
                 const razaoEl    = document.getElementById('prop-emp-dest-razao');
                 const razaoGroup = document.getElementById('prop-emp-dest-razao-group');
                 const buscaGroup = document.getElementById('prop-emp-dest-busca-group');
+                const btnCad     = document.getElementById('prop-btn-emp-dest-cadastrada');
                 if (razaoEl)    razaoEl.value = parceiro.nome_fantasia || parceiro.razao_social || '';
                 if (razaoGroup) razaoGroup.style.display = '';
                 if (buscaGroup) buscaGroup.style.display = 'none';
+                // A validação em confirmarSalvar() decide qual campo checar
+                // com base nessa classe — sem tirar "ativo" daqui, ela
+                // continuava exigindo prop-emp-dest-busca (vazio) mesmo com
+                // a Razão Social já preenchida, bloqueando o envio.
+                if (btnCad) btnCad.classList.remove('ativo');
                 if (parceiro.documento) {
                     const docEl     = document.getElementById('prop-emp-dest-doc');
                     const docTipoEl = document.getElementById('prop-emp-dest-doc-tipo');
@@ -3251,6 +3382,24 @@ async function _procPreencherDaProforma(id) {
         const { data, error } = await supabaseClient.from('proformas').select('*').eq('id', id).single();
         if (error || !data) return;
 
+        // Remetente do Pedido de origem (mostrado no campo "Remetente" quando
+        // Emissor = Usuário — ver iniciarEmissor()). Se o pedido não tem
+        // remetente_parceiro_id, o remetente é a própria empresa do tenant.
+        if (data.pedido_id) {
+            const { data: pedidoOrigem } = await supabaseClient
+                .from('pedidos').select('remetente_parceiro_id').eq('id', data.pedido_id).single();
+            if (pedidoOrigem?.remetente_parceiro_id) {
+                const { data: remetenteParceiro } = await supabaseClient
+                    .from('parceiros').select('razao_social, nome_fantasia')
+                    .eq('id', pedidoOrigem.remetente_parceiro_id).single();
+                _procPedidoRemetenteNome = remetenteParceiro?.nome_fantasia || remetenteParceiro?.razao_social || null;
+            } else if (pedidoOrigem) {
+                _procPedidoRemetenteNome = 'Própria empresa';
+            }
+            const remetentePedidoEl = document.getElementById('proc-emissor-pedido-remetente');
+            if (remetentePedidoEl) remetentePedidoEl.value = _procPedidoRemetenteNome || '';
+        }
+
         // Tipo
         const tipoEl = document.getElementById('proc-tipo');
         if (tipoEl && data.tipo) { tipoEl.value = data.tipo; tipoEl.dispatchEvent(new Event('change')); }
@@ -3288,21 +3437,49 @@ async function _procPreencherDaProforma(id) {
         _set('proc-fronteira-saida',  data.fronteira_saida);
         _set('proc-fronteira-entrada',data.fronteira_entrada);
 
-        // Emissor / parceiro
+        // Emissor / parceiro (terceiro) — parceiro_id referencia "parceiros" (bigint),
+        // não uma tabela "empresas_cadastradas" (que nem existe ao vivo).
         if (data.emissor_tipo === 'terceiro' && data.parceiro_id) {
             const radioTerceiro = document.getElementById('proc-emissor-terceiro');
             if (radioTerceiro) {
                 radioTerceiro.checked = true;
                 radioTerceiro.dispatchEvent(new Event('change'));
             }
-            // Preenche campo empresa/cliente com o nome do parceiro (buscado separadamente)
-            const { data: emp } = await supabaseClient.from('empresas_cadastradas').select('id, razao_social, nome_fantasia').eq('id', data.parceiro_id).single();
+            const { data: emp } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia').eq('id', data.parceiro_id).single();
             if (emp) {
                 const clienteEl = document.getElementById('proc-cliente');
                 const clienteIdEl = document.getElementById('proc-cliente-id');
                 if (clienteEl) clienteEl.value = emp.nome_fantasia || emp.razao_social;
                 if (clienteIdEl) clienteIdEl.value = emp.id;
             }
+        }
+
+        // Destinatário — endereço registrado do parceiro de destino da proforma
+        // (destinatario_id também referencia "parceiros"). Preenche o mesmo
+        // endereço completo já cadastrado, em vez de deixar em branco.
+        if (data.destinatario_id) {
+            const { data: destParceiro } = await supabaseClient
+                .from('parceiros')
+                .select('id, razao_social, nome_fantasia, cep, estado, cidade, bairro, endereco, numero, complemento')
+                .eq('id', data.destinatario_id).single();
+            if (destParceiro) {
+                const buscaEl = document.getElementById('proc-emp-dest-busca');
+                const idEl    = document.getElementById('proc-emp-dest-id');
+                if (buscaEl) buscaEl.value = destParceiro.nome_fantasia || destParceiro.razao_social || '';
+                if (idEl)    idEl.value    = destParceiro.id;
+
+                _set('proc-destino-cep',         destParceiro.cep);
+                _set('proc-destino-estado',      destParceiro.estado);
+                _set('proc-destino-cidade',      destParceiro.cidade);
+                _set('proc-destino-bairro',      destParceiro.bairro);
+                _set('proc-destino-endereco',    destParceiro.endereco);
+                _set('proc-destino-numero',      destParceiro.numero);
+                _set('proc-destino-complemento', destParceiro.complemento);
+            }
+        } else if (data.destinatario_razao_social) {
+            // Proforma nasceu de um Pedido em modo texto-livre (sem destinatario_id) — só o nome
+            const buscaEl = document.getElementById('proc-emp-dest-busca');
+            if (buscaEl) buscaEl.value = data.destinatario_razao_social;
         }
     } catch { /* silêncio */ }
 }
@@ -5028,6 +5205,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     const _hoje = new Date().toISOString().split('T')[0];
     const _inputAbertura = document.getElementById('proc-data-abertura');
     if (_inputAbertura && !_inputAbertura.value) _inputAbertura.value = _hoje;
+    const _selectStatusProc = document.getElementById('proc-status');
+    if (_selectStatusProc && !_selectStatusProc.value) _selectStatusProc.value = 'aberto';
 
     aplicarMascaraDocumentoProcesso();
     iniciarEmissor();
@@ -5096,6 +5275,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarValidadeProposta();
     iniciarAutocompletePaisOrigemProposta();
     iniciarAutocompletePaisDestinoProposta();
+    iniciarAutocompletePropPedido();
     iniciarAutocompletePropCliente();
     iniciarAutocompleteEmpresaDestinoProposta();
     iniciarAutocompleteAeroportos();
@@ -5746,9 +5926,9 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
 // PROPOSTA — CÓDIGO AUTO-GERADO
 // ========================================
 
-async function _propPreencherPaisOrigem(valorPais) {
-    const paisInput = document.getElementById('prop-origem-pais');
-    const paisCod   = document.getElementById('prop-origem-pais-codigo');
+async function _preencherPaisPorPrefixo(prefixoId, valorPais) {
+    const paisInput = document.getElementById(`${prefixoId}-pais`);
+    const paisCod   = document.getElementById(`${prefixoId}-pais-codigo`);
     if (!paisInput || !valorPais) return;
 
     await _acCarregarPaises();
@@ -5764,6 +5944,10 @@ async function _propPreencherPaisOrigem(valorPais) {
 
     paisInput.value = pais ? pais.descricao : valorPais;
     if (paisCod) paisCod.value = pais ? pais.codigo : valorPais;
+}
+
+async function _propPreencherPaisOrigem(valorPais) {
+    return _preencherPaisPorPrefixo('prop-origem', valorPais);
 }
 
 // ========================================
@@ -5826,6 +6010,14 @@ async function propCarregarEdicao(id) {
         } catch (_) {
             if (origemEl) origemEl.value = d.pedido_id;
         }
+    }
+
+    // Idioma
+    g('prop-idioma', d.idioma || 'pt');
+    const idiomaOutroEl = document.getElementById('prop-idioma-outro');
+    if (idiomaOutroEl) {
+        idiomaOutroEl.value = d.idioma === 'outro' ? (d.idioma_outro || '') : '';
+        idiomaOutroEl.style.display = d.idioma === 'outro' ? '' : 'none';
     }
 
     // Campos simples

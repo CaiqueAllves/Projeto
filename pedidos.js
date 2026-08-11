@@ -380,6 +380,7 @@ function _pedRenderCardKanban(p) {
                 ${_pedBotaoProformas(p)}
                 <button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>
                 ${_pedBotaoProcessos(p)}
+                ${_pedBotaoGerarProcesso(p)}
                 ${temProcesso
                     ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
                     : `<button class="pl-btn-acao pl-btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`}
@@ -436,6 +437,7 @@ function _pedRenderizarTabela(lista) {
                     ${_pedBotaoProformas(p)}
                     <button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>
                     ${_pedBotaoProcessos(p)}
+                    ${_pedBotaoGerarProcesso(p)}
                     ${(p._processos && p._processos.length > 0)
                         ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
                         : `<button class="pl-btn-acao pl-btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`}
@@ -513,12 +515,37 @@ function _pedBotaoProcessos(p) {
     return `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProcessos('${p.id}')" title="Ver Processos (${processos.length})"><i class="fa-solid fa-diagram-project"></i> ${processos.length}</button>`;
 }
 
+// Botão "Gerar Processo" — só habilitado quando já existe exatamente 1
+// Proforma (o Processo nasce dela, não direto do Pedido) e ainda não há
+// nenhum Processo gerado. Mesmo padrão visual do botão "Gerar Conta a
+// Receber" (desabilitado com tooltip explicando o pré-requisito faltando).
+function _pedBotaoGerarProcesso(p) {
+    const proformas = p._proformas || [];
+    const processos = p._processos || [];
+    if (processos.length > 0) return '';
+    if (proformas.length === 1) {
+        return `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProcesso('${proformas[0].id}')" title="Gerar Processo"><i class="fa-solid fa-diagram-project"></i></button>`;
+    }
+    if (proformas.length > 1) {
+        return `<button class="pl-btn-acao pl-btn-editar" onclick="pedVerProformas('${p.id}')" title="Selecione uma Proforma pra gerar o Processo"><i class="fa-solid fa-diagram-project"></i></button>`;
+    }
+    return `<button class="pl-btn-acao pl-btn-editar" disabled title="Gere uma Proforma antes de criar o Processo" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-diagram-project"></i></button>`;
+}
+
 function pedVerProcessoUnico(processoId) {
     window.open(`formularios.html?tab=processo&id=${processoId}&modo=visualizar`, '_blank');
 }
 
 function pedVerProcessos(pedidoId) {
     window.open(`processos.html?pedido_id=${pedidoId}`, '_blank');
+}
+
+function pedGerarProcesso(proformaId) {
+    window.open(`formularios.html?tab=processo&proforma_id=${proformaId}`, '_blank');
+}
+
+function pedGerarProcesso(proformaId) {
+    window.open(`formularios.html?tab=processo&proforma_id=${proformaId}`, '_blank');
 }
 
 // ── Gerar Conta a Receber a partir do pedido ────────────────────────────────
@@ -669,7 +696,8 @@ async function _pedCarregarEmpresaPropria() {
     try {
         const res = await window.supabaseAPI.buscarTenantEmpresa();
         if (res.sucesso) _pedEmpresaPropria = res.data;
-    } catch (e) {}
+        else console.warn('[Pedidos] buscarTenantEmpresa() não retornou sucesso:', res);
+    } catch (e) { console.error('[Pedidos] erro ao buscar dados da própria empresa:', e); }
     return _pedEmpresaPropria;
 }
 
@@ -682,9 +710,13 @@ async function pedAtualizarEmissorTipo() {
     const docInput  = document.getElementById('pedRemetenteDocumento');
 
     if (tipo === 'usuario') {
-        const emp = await _pedCarregarEmpresaPropria();
+        const emp     = await _pedCarregarEmpresaPropria();
+        const usuario = obterUsuarioLogado();
         document.getElementById('pedRemetenteId').value = '';
-        nomeInput.value    = emp?.nome_fantasia || emp?.razao_social || '';
+        // Fallback pro nome da empresa já salvo na própria sessão de login
+        // (usuario.empresa) — não depende de uma segunda consulta que pode
+        // falhar (ex: RLS, timing) e deixar o campo vazio sem avisar nada.
+        nomeInput.value    = emp?.nome_fantasia || emp?.razao_social || usuario?.empresa || '';
         nomeInput.readOnly = true;
         docInput.value     = emp?.cnpj || '';
     } else {
