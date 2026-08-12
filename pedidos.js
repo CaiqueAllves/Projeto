@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await _pedCarregarMoedas();
     await _pedCarregarUnidadesMedida();
     await pedCarregar();
-    _pedTratarParametrosUrl();
+    await _pedTratarParametrosUrl();
 });
 
 // ── Moedas (tabela apoio_moedas) ─────────────────────────────────────────────
@@ -125,23 +125,39 @@ async function _pedCarregarUnidadesMedida() {
 
 // ── Integração com Pipeline (oportunidade -> pedido) ────────────────────────
 
-function _pedTratarParametrosUrl() {
+async function _pedTratarParametrosUrl() {
     const params = new URLSearchParams(window.location.search);
 
     const editarId = params.get('editar');
     if (editarId) {
-        pedAbrirModal(editarId);
+        await pedAbrirModal(editarId);
         if (params.get('modo') === 'visualizar') pedAplicarModoVisualizacao();
         return;
     }
 
     const oportunidadeId = params.get('oportunidade_id');
     if (oportunidadeId) {
-        pedAbrirModal();
+        await pedAbrirModal();
         document.getElementById('pedOportunidadeId').value = oportunidadeId;
         document.getElementById('pedClienteNome').value    = params.get('cliente_nome') || '';
         document.getElementById('pedClienteId').value      = params.get('cliente_id')   || '';
         document.getElementById('pedMoeda').value          = params.get('moeda')        || 'USD';
+
+        // Remetente da Oportunidade — repassa pro Pedido novo, se houver.
+        const remetenteId = params.get('remetente_parceiro_id');
+        if (remetenteId) {
+            document.getElementById('pedRemetenteId').value   = remetenteId;
+            document.getElementById('pedRemetenteNome').value = params.get('remetente_nome') || '';
+            document.getElementById('ped-emissor-terceiro').checked = true;
+            await pedAtualizarEmissorTipo();
+            try {
+                const { data: remetente } = await supabaseClient
+                    .from('parceiros').select('documento').eq('id', remetenteId).single();
+                if (remetente?.documento) {
+                    document.getElementById('pedRemetenteDocumento').value = _pedMascaraDocBR(remetente.documento);
+                }
+            } catch (e) {}
+        }
 
         const valorParam = parseFloat(params.get('valor'));
         if (valorParam > 0) {
@@ -650,7 +666,7 @@ async function pedAbrirModal(id = null) {
     document.getElementById('pedStatus').value       = ped?.status || 'aguardando';
     document.getElementById('pedClienteNome').value       = ped?.parceiros?.nome_fantasia || ped?.parceiros?.razao_social || '';
     document.getElementById('pedClienteId').value          = ped?.cliente_id || '';
-    document.getElementById('pedClienteDocumento').value    = ped?.parceiros?.documento || '';
+    document.getElementById('pedClienteDocumento').value    = ped?.parceiros?.documento ? _pedMascaraDocBR(ped.parceiros.documento) : '';
     document.getElementById('pedMoeda').value        = ped?.moeda || 'USD';
     document.getElementById('pedDataPedido').value   = ped?.data_pedido || _pedHojeISO();
     document.getElementById('pedDataEntrega').value  = ped?.data_entrega_prevista || '';
@@ -659,7 +675,7 @@ async function pedAbrirModal(id = null) {
     // Emissor: própria empresa (padrão) ou terceiro/intermediário
     document.getElementById('pedRemetenteNome').value       = ped?.remetente?.nome_fantasia || ped?.remetente?.razao_social || '';
     document.getElementById('pedRemetenteId').value          = ped?.remetente_parceiro_id || '';
-    document.getElementById('pedRemetenteDocumento').value   = ped?.remetente?.documento || '';
+    document.getElementById('pedRemetenteDocumento').value   = ped?.remetente?.documento ? _pedMascaraDocBR(ped.remetente.documento) : '';
     const emissorTipo = ped?.remetente_parceiro_id ? 'terceiro' : 'usuario';
     document.getElementById(`ped-emissor-${emissorTipo}`).checked = true;
     await pedAtualizarEmissorTipo();
@@ -718,7 +734,7 @@ async function pedAtualizarEmissorTipo() {
         // falhar (ex: RLS, timing) e deixar o campo vazio sem avisar nada.
         nomeInput.value    = emp?.nome_fantasia || emp?.razao_social || usuario?.empresa || '';
         nomeInput.readOnly = true;
-        docInput.value     = emp?.cnpj || '';
+        docInput.value     = emp?.cnpj ? _pedMascaraDocBR(emp.cnpj) : '';
     } else {
         nomeInput.readOnly = false;
         if (document.getElementById('pedRemetenteId').value === '') {
@@ -769,7 +785,7 @@ function pedMostrarRemetentes(termo) {
 function pedSelecionarRemetente(id, nome, documento) {
     document.getElementById('pedRemetenteId').value        = id;
     document.getElementById('pedRemetenteNome').value      = nome;
-    document.getElementById('pedRemetenteDocumento').value = documento || '';
+    document.getElementById('pedRemetenteDocumento').value = documento ? _pedMascaraDocBR(documento) : '';
     document.getElementById('pedAutoRemetente').innerHTML  = '';
 }
 
@@ -1040,7 +1056,7 @@ function pedMostrarClientes(termo) {
 function pedSelecionarCliente(id, nome, documento) {
     document.getElementById('pedClienteId').value         = id;
     document.getElementById('pedClienteNome').value       = nome;
-    document.getElementById('pedClienteDocumento').value  = documento || '';
+    document.getElementById('pedClienteDocumento').value  = documento ? _pedMascaraDocBR(documento) : '';
     document.getElementById('pedAutoCliente').innerHTML    = '';
 }
 
@@ -1183,6 +1199,22 @@ function _pedEscapar(str) {
 // quebrar o literal JS de aspas simples embutido no atributo.
 function _pedEscaparAtributo(str) {
     return _pedEscapar(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+// CPF (11 dígitos): 000.000.000-00 — CNPJ (14 dígitos): 00.000.000/0000-00
+function _pedMascaraDocBR(valor) {
+    const d = String(valor || '').replace(/\D/g, '').slice(0, 14);
+    if (d.length <= 11) {
+        if (d.length > 9) return d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6,9) + '-' + d.slice(9);
+        if (d.length > 6) return d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6);
+        if (d.length > 3) return d.slice(0,3) + '.' + d.slice(3);
+        return d;
+    }
+    if (d.length > 12) return d.slice(0,2) + '.' + d.slice(2,5) + '.' + d.slice(5,8) + '/' + d.slice(8,12) + '-' + d.slice(12);
+    if (d.length > 8)  return d.slice(0,2) + '.' + d.slice(2,5) + '.' + d.slice(5,8) + '/' + d.slice(8);
+    if (d.length > 5)  return d.slice(0,2) + '.' + d.slice(2,5) + '.' + d.slice(5);
+    if (d.length > 2)  return d.slice(0,2) + '.' + d.slice(2);
+    return d;
 }
 
 // Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login

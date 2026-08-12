@@ -542,6 +542,47 @@
     background: white;
 }
 .pl-form-group textarea { resize: vertical; }
+.pl-form-group input[readonly] { background: #f1f5f9; color: #64748b; cursor: default; }
+
+/* ── Observações retrátil (mesmo padrão do formulário de Proforma) ────────── */
+.pl-obs-wrapper { margin-top: 0; }
+
+.pl-obs-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    user-select: none;
+    transition: background 0.15s, color 0.15s;
+}
+.pl-obs-toggle:hover {
+    background: #eff6ff;
+    color: #3b82f6;
+    border-color: #bfdbfe;
+}
+.pl-obs-toggle.aberto {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #93c5fd;
+}
+.pl-obs-icon {
+    font-size: 11px;
+    transition: transform 0.2s ease;
+}
+.pl-obs-toggle.aberto .pl-obs-icon { transform: rotate(180deg); }
+
+.pl-obs-content {
+    display: none;
+    padding-top: 8px;
+}
+.pl-obs-content textarea { width: 100%; }
 
 /* Autocomplete */
 .pl-autocomplete {

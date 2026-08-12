@@ -1682,12 +1682,28 @@ async function buscarOportunidades() {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
+
         let query = supabaseClient
             .from('oportunidades')
-            .select('*, parceiros(razao_social, nome_fantasia)')
+            .select(`*,
+                parceiros!oportunidades_cliente_id_fkey(razao_social, nome_fantasia, documento),
+                remetente:parceiros!oportunidades_remetente_parceiro_id_fkey(razao_social, nome_fantasia, documento)`)
             .order('updated_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
-        const { data, error } = await query;
+        let { data, error } = await query;
+
+        // Fallback pra antes de database-oportunidades-remetente.sql rodar:
+        // sem a coluna/FK remetente_parceiro_id, o join acima falha (400) —
+        // volta pra consulta só com o Destinatário até a migração ser aplicada.
+        if (error) {
+            let queryFallback = supabaseClient
+                .from('oportunidades')
+                .select('*, parceiros!oportunidades_cliente_id_fkey(razao_social, nome_fantasia, documento)')
+                .order('updated_at', { ascending: false });
+            if (usuario.empresa_id) queryFallback = queryFallback.eq('empresa_proprietaria_id', usuario.empresa_id);
+            ({ data, error } = await queryFallback);
+        }
+
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
@@ -1699,6 +1715,7 @@ async function salvarOportunidade(dados, id = null) {
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
         const payload = {
             titulo: dados.titulo, cliente_id: dados.cliente_id || null,
+            remetente_parceiro_id: dados.remetente_parceiro_id || null,
             valor: dados.valor || null, moeda: dados.moeda || 'USD',
             etapa: dados.etapa || 'lead', probabilidade: dados.probabilidade ?? 50,
             responsavel: dados.responsavel || null, data_prevista: dados.data_prevista || null,

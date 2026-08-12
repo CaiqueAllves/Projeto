@@ -139,18 +139,35 @@
             </div>
 
             <div class="pl-form-row">
-                <div class="pl-form-group pl-full">
-                    <label>Cliente</label>
-                    <input type="text" id="plClienteNome" placeholder="Buscar empresa..." autocomplete="off" oninput="plBuscarCliente(this.value)" onfocus="plMostrarClientes(this.value)">
-                    <input type="hidden" id="plClienteId">
-                    <div class="pl-autocomplete" id="plAutoCliente"></div>
+                <div class="pl-form-group">
+                    <label>Remetente</label>
+                    <input type="text" id="plRemetenteNome" placeholder="Buscar empresa..." autocomplete="off" oninput="plBuscarEmpresa('remetente', this.value)" onfocus="plMostrarEmpresas('remetente', this.value)">
+                    <input type="hidden" id="plRemetenteId">
+                    <div class="pl-autocomplete" id="plAutoRemetente"></div>
+                </div>
+                <div class="pl-form-group">
+                    <label>Identificação Fiscal</label>
+                    <input type="text" id="plRemetenteDocumento" placeholder="—" readonly>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Destinatário</label>
+                    <input type="text" id="plDestinatarioNome" placeholder="Buscar empresa..." autocomplete="off" oninput="plBuscarEmpresa('destinatario', this.value)" onfocus="plMostrarEmpresas('destinatario', this.value)">
+                    <input type="hidden" id="plDestinatarioId">
+                    <div class="pl-autocomplete" id="plAutoDestinatario"></div>
+                </div>
+                <div class="pl-form-group">
+                    <label>Identificação Fiscal</label>
+                    <input type="text" id="plDestinatarioDocumento" placeholder="—" readonly>
                 </div>
             </div>
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
                     <label>Valor</label>
-                    <input type="number" id="plValor" placeholder="0.00" min="0" step="0.01">
+                    <input type="text" id="plValor" placeholder="0,00" inputmode="decimal" oninput="plMascaraMonetaria(this)">
                 </div>
                 <div class="pl-form-group">
                     <label>Moeda</label>
@@ -160,7 +177,7 @@
                 </div>
             </div>
 
-            <div class="pl-form-row">
+            <div class="pl-form-row" id="plEtapaGroup" style="display:none;">
                 <div class="pl-form-group">
                     <label>Etapa</label>
                     <select id="plEtapa">
@@ -171,27 +188,57 @@
                         <option value="perdido">Perdido</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="pl-form-row">
                 <div class="pl-form-group">
                     <label>Probabilidade (%)</label>
                     <input type="number" id="plProbabilidade" value="50" min="0" max="100">
                 </div>
-            </div>
-
-            <div class="pl-form-row">
                 <div class="pl-form-group">
                     <label>Responsável</label>
                     <input type="text" id="plResponsavel" placeholder="Nome do responsável">
                 </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Data de Criação</label>
+                    <input type="date" id="plDataCriacao" readonly>
+                </div>
+                <div class="pl-form-group">
+                    <label>Prazo Hábil</label>
+                    <select id="plPrazoDias" onchange="plAtualizarPrazo()">
+                        <option value="">Selecione...</option>
+                        <option value="2">2 dias</option>
+                        <option value="5">5 dias</option>
+                        <option value="7">7 dias</option>
+                        <option value="15">15 dias</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
                 <div class="pl-form-group">
                     <label>Previsão de Fechamento</label>
-                    <input type="date" id="plDataPrevista">
+                    <input type="date" id="plDataPrevista" readonly>
+                </div>
+            </div>
+
+            <div class="pl-form-row" id="plPrazoCustomGroup" style="display:none;">
+                <div class="pl-form-group">
+                    <label>Quantos dias de prazo?</label>
+                    <input type="number" id="plPrazoCustom" min="1" placeholder="Ex: 30" oninput="plAtualizarPrazoCustom()">
                 </div>
             </div>
 
             <div class="pl-form-row">
-                <div class="pl-form-group pl-full">
-                    <label>Observações</label>
-                    <textarea id="plObservacoes" rows="3" placeholder="Detalhes da oportunidade..."></textarea>
+                <div class="pl-form-group pl-full pl-obs-wrapper">
+                    <div class="pl-obs-toggle" onclick="plToggleObs(this)">
+                        <span>Observações</span>
+                        <i class="fa-solid fa-chevron-down pl-obs-icon"></i>
+                    </div>
+                    <div class="pl-obs-content">
+                        <textarea id="plObservacoes" rows="3" placeholder="Detalhes da oportunidade..."></textarea>
+                    </div>
                 </div>
             </div>
         </div>

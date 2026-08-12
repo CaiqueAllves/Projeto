@@ -3365,6 +3365,7 @@ async function _propPreencherDoPedido(pedidoId) {
             const moedaDescricao = moeda?.descricao || _acMoedas[0]?.descricao || '';
 
             _propItens = itensPedido.map(it => ({
+                produto_id: it.produto_id || null,
                 produto: it.produto_nome || '',
                 qtd:     Number(it.quantidade) || 1,
                 unidade: it.unidade_medida || 'UN',
@@ -6089,6 +6090,7 @@ async function propCarregarEdicao(id) {
     if (Array.isArray(d.itens) && d.itens.length > 0) {
         await Promise.all([_carregarMoedas(), _carregarUnidades()]);
         _propItens = d.itens.map(it => ({
+            produto_id: it.produto_id || null,
             produto:  it.produto  || '',
             qtd:      it.qtd      ?? it.quantidade ?? 1,
             unidade:  it.unidade  || (_acUnidades[0]?.unidade || 'UN'),
@@ -6250,7 +6252,7 @@ async function propAdicionarItem() {
     await Promise.all([_carregarMoedas(), _carregarUnidades()]);
     const _moedaDefault   = _acMoedas.length   > 0 ? _acMoedas[0].descricao   : '';
     const _unidadeDefault = _acUnidades.length  > 0 ? _acUnidades[0].unidade   : 'un';
-    _propItens.push({ produto: '', qtd: 1, unidade: _unidadeDefault, preco: 0, moeda: _moedaDefault });
+    _propItens.push({ produto_id: null, produto: '', qtd: 1, unidade: _unidadeDefault, preco: 0, moeda: _moedaDefault });
     propRenderizarItens();
 }
 

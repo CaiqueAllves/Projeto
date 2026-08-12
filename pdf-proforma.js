@@ -121,6 +121,30 @@ async function gerarPDFProformaDados(d) {
 
     // ── ITENS ─────────────────────────────────
     const itens=d.itens||[];
+
+    // Resolve nome/descrição de cada item no idioma escolhido na Proforma —
+    // só pros itens vinculados a um produto cadastrado (produto_id). Itens
+    // digitados livremente (sem produto_id) mantêm o texto já salvo.
+    const produtoIds = [...new Set(itens.map(i => i.produto_id).filter(Boolean))];
+    if (produtoIds.length > 0 && d.idioma && typeof supabaseClient !== 'undefined') {
+        try {
+            const { data: produtosDados } = await supabaseClient
+                .from('produtos').select('id, nomes_idiomas').in('id', produtoIds);
+            const mapaIdiomas = {};
+            (produtosDados || []).forEach(p => { mapaIdiomas[p.id] = p.nomes_idiomas || []; });
+            itens.forEach(item => {
+                if (!item.produto_id) return;
+                const opcoes = mapaIdiomas[item.produto_id] || [];
+                const match = opcoes.find(o =>
+                    o.idioma === d.idioma && (d.idioma !== 'outro' || o.idioma_outro === d.idioma_outro));
+                if (match) {
+                    if (match.nome)      item.produto    = match.nome;
+                    if (match.descricao) item.descricao  = match.descricao;
+                }
+            });
+        } catch (e) { /* silêncio — mantém o texto já salvo no item */ }
+    }
+
     if(itens.length>0){
         pg(14); Y+=4;
         rx(ML,Y,3,6,AZUL); rx(ML+3,Y,W-ML*2-3,6,AZUL_CLARO);
