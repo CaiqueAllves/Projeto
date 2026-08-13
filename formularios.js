@@ -543,6 +543,47 @@ async function _prodPreencherEdicao(dados) {
     });
 }
 
+// Pré-preenchimento vindo do upload de Excel/PDF em produtos.html — só os
+// campos escalares simples do topo do formulário (o parser não tenta
+// extrair estrutura aninhada como embalagens/idiomas/documentos).
+async function _prodPreencherDoUpload(dados) {
+    if (!dados || !Object.keys(dados).length) return;
+
+    const set = (id, val) => {
+        if (val === undefined || val === null || val === '') return;
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    };
+
+    set('prod-sku', dados.sku);
+    set('prod-nome', dados.nome);
+    set('prod-descricao', dados.descricao);
+    set('prod-categoria', dados.categoria);
+    set('prod-tipo', dados.tipo);
+    set('prod-marca', dados.marca);
+    set('prod-ncm', dados.ncm);
+    set('prod-unidade', dados.unidade_medida);
+    set('prod-status', dados.status || 'ativo');
+    set('prod-estoque-atual', dados.estoque_atual);
+    set('prod-estoque-minimo', dados.estoque_minimo);
+
+    if (dados.preco_custo != null) set('prod-preco-custo', _prodFormatarMonetario(dados.preco_custo));
+    if (dados.preco_venda != null) set('prod-preco-venda', _prodFormatarMonetario(dados.preco_venda));
+
+    if (dados.moeda) {
+        set('prod-moeda-codigo', dados.moeda);
+        try {
+            const moedas = await _carregarMoedas();
+            const m = (moedas || []).find(x => x.codigo === dados.moeda);
+            set('prod-moeda', m?.descricao || dados.moeda);
+        } catch (_) { set('prod-moeda', dados.moeda); }
+    }
+
+    if (typeof prodCalcularResultados === 'function') prodCalcularResultados();
+
+    mostrarNotificacao('Dados do arquivo preenchidos automaticamente. Confira antes de salvar.', 'sucesso');
+}
+
 // ========================================
 // SALVAR — PROCESSO
 // ========================================
@@ -5107,8 +5148,16 @@ function _empPreencherDoUpload(dados) {
 
     // Se tiver CEP mas não endereço, dispara busca automática
     const cepEl = document.getElementById('emp-cep');
-    if (cepEl && cepEl.value.replace(/\D/g, '').length === 8 && !dados.estado) {
-        cepEl.dispatchEvent(new Event('input'));
+    if (cepEl && cepEl.value.replace(/\D/g, '').length === 8 && !dados.endereco) {
+        buscarCEPEmpresa();
+    }
+
+    // Contato (e-mail e telefone do 1º contato)
+    const primeiroContato = document.querySelector('#emp-contato-rows .contato-lista-row');
+    if (primeiroContato && (dados.email_contato || dados.telefone_contato)) {
+        const ins = primeiroContato.querySelectorAll('input');
+        if (ins[2] && dados.email_contato)    ins[2].value = dados.email_contato.toLowerCase();
+        if (ins[3] && dados.telefone_contato) ins[3].value = String(dados.telefone_contato).replace(/\D/g, '');
     }
 }
 
@@ -5315,6 +5364,15 @@ document.addEventListener('DOMContentLoaded', async function () {
             await _prodPreencherEdicao(resProd.data);
         } else {
             mostrarNotificacao('Produto não encontrado.', 'erro');
+        }
+    }
+
+    // Produto — pré-preenchimento via upload (vindo de produtos.html)
+    if (_urlTab === 'produto' && _urlParams.get('from_upload') === '1') {
+        const dadosRaw = sessionStorage.getItem('_uploadProdutoDados');
+        if (dadosRaw) {
+            sessionStorage.removeItem('_uploadProdutoDados');
+            await _prodPreencherDoUpload(JSON.parse(dadosRaw));
         }
     }
 

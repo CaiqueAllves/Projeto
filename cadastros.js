@@ -1052,41 +1052,59 @@ function _uploadParsearTexto(texto) {
         if (cpfM && cpfM[0].replace(/\D/g, '').length === 11) d.cpf_raw = cpfM[0].replace(/\D/g, '');
     }
 
-    // Razão Social
-    const razaoM = t.match(/(?:Raz[aã]o\s*Social|Nome\s*Empresarial)[:\s]+([A-ZÀ-Ú][A-Za-zÀ-ú0-9\s&.,'"()-]{2,80}?)(?=\s{2,}|CNPJ|CPF|Endere|Inscri|Bairro|$)/i);
+    // Razão Social — terminadores ampliados pro formato do Cartão CNPJ da
+    // Receita ("NOME EMPRESARIAL ... TÍTULO DO ESTABELECIMENTO ..."), que
+    // não tem nenhum dos rótulos antigos logo em seguida.
+    const razaoM = t.match(/(?:Raz[aã]o\s*Social|Nome\s*Empresarial)[:\s]+([A-ZÀ-Ú][A-Za-zÀ-ú0-9\s&.,'"()-]{2,80}?)(?=\s*(?:CNPJ|CPF|Endere[cç]o|Logradouro|Inscri[cç][aã]o|Bairro|CEP|T[íi]tulo|Porte|C[oó]digo|N[uú]mero|Complemento)\b|$)/i);
     if (razaoM) d.razao_social = razaoM[1].trim().replace(/\s+/g, ' ');
 
-    // Nome Fantasia
-    const fantasiaM = t.match(/(?:Nome\s*Fantasia|Fantasia)[:\s]+([A-Za-zÀ-ú0-9\s&.,'"()-]{2,60}?)(?=\s{2,}|CNPJ|CPF|Endere|$)/i);
+    // Nome Fantasia — no Cartão CNPJ o rótulo vem entre parênteses
+    // ("(NOME DE FANTASIA)"), então aceita ")" colado antes do valor.
+    const fantasiaM = t.match(/(?:Nome\s*Fantasia|Fantasia)[:\s)]+([A-Za-zÀ-ú0-9\s&.,'"()-]{2,60}?)(?=\s*(?:CNPJ|CPF|Endere[cç]o|Porte|C[oó]digo)\b|$)/i);
     if (fantasiaM) d.nome_fantasia = fantasiaM[1].trim().replace(/\s+/g, ' ');
 
     // IE
     const ieM = t.match(/(?:Inscri[cç][aã]o\s*Estadual|I\.?E\.?)[:\s]+([0-9.\-/ISENTOisento]{3,20})/i);
     if (ieM) d.inscricao_estadual = ieM[1].trim();
 
-    // CEP
-    const cepM = t.match(/\b\d{5}-\d{3}\b/);
-    if (cepM) d.cep = cepM[0];
+    // CEP — aceita ponto após os 2 primeiros dígitos (formato "07.223-190"
+    // usado no Cartão CNPJ) além do "01310-100"/"01310100" já suportados.
+    const cepM = t.match(/\b(\d{2})\.?(\d{3})-?(\d{3})\b/);
+    if (cepM) d.cep = `${cepM[1]}${cepM[2]}-${cepM[3]}`;
 
     // UF
     const ufM = t.match(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/);
     if (ufM) d.estado = ufM[1];
 
-    // Cidade
-    const cidadeM = t.match(/(?:Cidade|Munic[ií]pio)[:\s]+([A-Za-zÀ-ú\s]{3,40}?)(?=[-,/\s]{0,3}(?:AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO|\d))/i);
+    // Cidade / Município — tenta "Município" primeiro. No Cartão CNPJ, o
+    // valor de "BAIRRO/DISTRITO" pode conter a palavra "Cidade" dentro do
+    // próprio nome do bairro (ex: "Cidade Industrial Satélite de São
+    // Paulo"), o que fazia o regex de "Cidade" morder esse texto errado
+    // antes mesmo de chegar no rótulo real "MUNICÍPIO".
+    const TERM_CIDADE = /(?=\s*(?:UF|CEP|Bairro)\b|\s*\b(?:AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b|$)/;
+    let cidadeM = t.match(new RegExp(`Munic[ií]pio[:\\s]+([A-Za-zÀ-ú\\s]{3,40}?)${TERM_CIDADE.source}`, 'i'));
+    if (!cidadeM) cidadeM = t.match(new RegExp(`\\bCidade[:\\s]+([A-Za-zÀ-ú\\s]{3,40}?)${TERM_CIDADE.source}`, 'i'));
     if (cidadeM) d.cidade = cidadeM[1].trim();
 
-    // Bairro
-    const bairroM = t.match(/Bairro[:\s]+([A-Za-zÀ-ú\s]{3,40}?)(?=\s{2,}|CEP|Cidade|\d{5})/i);
+    // Bairro — o texto já vem com as quebras de linha achatadas em espaço
+    // simples (ver `t` acima), então "\s{2,}" nunca bate; o corte real
+    // precisa ser pelos rótulos dos próximos campos. Aceita "/Distrito"
+    // colado no rótulo (formato do Cartão CNPJ: "BAIRRO/DISTRITO").
+    const bairroM = t.match(/Bairro(?:\s*\/\s*Distrito)?[:\s]+([A-Za-zÀ-ú\s]{3,40}?)(?=\s*(?:CEP|Cidade|Munic[ií]pio|Endere[cç]o|Logradouro|N[uú]mero|N[°º]|Complemento|UF)\b|\s*\d{5}|$)/i);
     if (bairroM) d.bairro = bairroM[1].trim();
 
-    // Endereço / Logradouro
-    const endM = t.match(/(?:Endere[cç]o|Logradouro)[:\s]+([A-Za-zÀ-ú0-9\s.,°ª-]{5,80}?)(?=\s{2,}|Bairro|CEP|\d{5})/i);
+    // Endereço / Logradouro — mesmo cuidado: sem o corte pelos rótulos dos
+    // campos seguintes, a captura "vazava" pra dentro de Número/Complemento.
+    const endM = t.match(/(?:Endere[cç]o|Logradouro)[:\s]+([A-Za-zÀ-ú0-9\s.,°ª-]{5,80}?)(?=\s*(?:Bairro|CEP|Cidade|Munic[ií]pio|N[uú]mero|N[°º]|Complemento)\b|\s*\d{5}|$)/i);
     if (endM) d.endereco = endM[1].trim().replace(/\s+/g, ' ');
 
     // Número
     const numM = t.match(/(?:N[uú]mero|N[°º]\.?)[:\s]*(\d{1,6}|S\/N)/i);
     if (numM) d.numero = numM[1];
+
+    // Complemento
+    const compM = t.match(/Complemento[:\s]+([A-Za-zÀ-ú0-9\s.,°ª-]{1,40}?)(?=\s*(?:CEP|Bairro|Cidade|Munic[ií]pio|UF)\b|\s*\d{5}|$)/i);
+    if (compM) d.complemento = compM[1].trim();
 
     // E-mail
     const emailM = t.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
