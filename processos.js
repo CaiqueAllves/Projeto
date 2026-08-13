@@ -334,6 +334,16 @@ function renderKanban(filtro) {
             ? `<div class="kanban-vazio"><i class="fa-solid fa-inbox"></i><span>${q ? 'Sem resultados' : 'Nenhum processo'}</span></div>`
             : grupos[g].map(_renderCard).join('');
     });
+
+    // Sincroniza a aba mobile (Kanban) com o status escolhido no filtro —
+    // sem isso, a coluna visível podia ficar "presa" numa aba diferente da
+    // que o usuário acabou de filtrar, dando a impressão de que o filtro
+    // não fez nada.
+    const statusFiltro = document.getElementById('filtroStatusProcesso')?.value || '';
+    if (statusFiltro) {
+        const tab = document.querySelector(`.kanban-tab[data-col="${statusFiltro}"]`);
+        if (tab) kanbanSwitchTab(tab);
+    }
 }
 
 function renderLista(filtro) {

@@ -253,6 +253,15 @@ function pedFiltrar() {
     });
 
     pedRenderizar();
+
+    // Sincroniza a aba mobile (Kanban) com o status escolhido no filtro —
+    // sem isso, a coluna visível podia ficar "presa" numa aba diferente da
+    // que o usuário acabou de filtrar, dando a impressão de que o filtro
+    // não fez nada.
+    if (status) {
+        const tab = document.querySelector(`#pedKanbanTabs .kanban-tab[data-col="${status}"]`);
+        if (tab) pedKanbanSwitchTab(tab);
+    }
 }
 
 // ── Renderizar tabela ──────────────────────────────────────────────────────

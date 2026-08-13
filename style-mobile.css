@@ -187,11 +187,18 @@
     .charts-section { overflow: hidden !important; }
 
     /* ── Page headers ──────────────────── */
+    /* Empilha em linhas bem definidas: busca (linha própria) / filtro+toggle
+       de visualização (linha própria) / ações (linha própria). Evita usar
+       `flex: 1 1 auto` em containers flex aninhados sem conteúdo intrínseco
+       (ex: .header-left > .filter-wrapper), que colapsa pra largura 0 no
+       Chrome mobile — daí o campo de busca "sumir" e o conteúdo vizinho
+       vazar pra fora do cartão. */
     .page-header {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        gap: 8px !important;
+        flex-wrap: wrap !important;
+        row-gap: 8px !important;
+        column-gap: 8px !important;
         align-items: center !important;
         padding: 10px 12px !important;
         margin: 0 0 8px 0 !important;
@@ -200,22 +207,14 @@
         border-radius: 10px !important;
     }
 
-    .header-left {
-        display: flex !important;
-        align-items: center !important;
-        flex: 1 1 auto !important;
-        width: auto !important;
-        min-width: 0 !important;
-    }
-
+    /* header-left/header-right viram invisíveis pro layout (display:contents)
+       — seus filhos se juntam direto na linha do .page-header, controlados
+       por `order` mais abaixo. Isso permite, por ex., o toggle Kanban/Lista
+       (que vive dentro de header-left) e o botão "Excluídos" (que vive
+       dentro de header-right) ficarem na mesma linha visual. */
+    .header-left,
     .header-right {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        gap: 6px !important;
-        justify-content: flex-end !important;
-        flex-shrink: 0 !important;
-        align-items: center !important;
+        display: contents !important;
     }
 
     /* ── Botões só com ícones em mobile ── */
@@ -240,6 +239,14 @@
 
     .header-right button i {
         font-size: 18px !important;
+    }
+
+    /* ── Processos: o botão "Excluídos" tem um ícone extra de seta (dropdown)
+       além da lixeira, que Pedidos/Proforma não têm — deixava o botão mais
+       largo que os outros no mobile (ícone só). Esconde a seta, mantendo só
+       a lixeira, pro botão ficar quadrado igual aos vizinhos. ── */
+    .btn-excluidos .fa-chevron-down {
+        display: none !important;
     }
 
     .header-right button:active {
@@ -277,13 +284,13 @@
         box-shadow: 0 4px 8px rgba(71,118,236,0.3) !important;
     }
 
-    /* ── Input de pesquisa ────────────── */
+    /* ── Busca — sempre a caixa inteira, ocupando a linha própria ── */
     .filter-wrapper {
-        flex: 1 1 auto !important;
+        flex: 1 1 100% !important;
         position: relative !important;
         display: flex !important;
         align-items: center !important;
-        width: auto !important;
+        width: 100% !important;
         min-width: 0 !important;
     }
 
@@ -315,6 +322,56 @@
         pointer-events: none !important;
         top: 50% !important;
         transform: translateY(-50%) !important;
+    }
+
+    /* ── Select de status (Pedidos, Proforma, Processos) — escondido no
+       mobile: os chips de status logo abaixo do cabeçalho (.kanban-tab)
+       já fazem esse mesmo filtro, então o select ficava redundante. ── */
+    .filter-select {
+        display: none !important;
+    }
+
+    .view-toggle {
+        flex: 0 0 auto !important;
+        height: 44px !important;
+    }
+
+    .view-btn {
+        width: 40px !important;
+        height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* ── Ordem das linhas: busca / [toggle .... Excluídos + Novo ...]
+       — toggle Kanban/Lista fica à esquerda; Excluídos agora fica
+       encostado no botão "Novo ...", os dois empurrados pro final da
+       linha juntos (margin-left:auto no primeiro do par já basta, o
+       segundo só segue colado por causa do `gap` normal do flex). ── */
+    .filter-wrapper { order: 1 !important; }
+    .view-toggle    { order: 2 !important; }
+
+    #pedExcluidosWrapper,
+    #profExcluidosWrapper,
+    #procExcluidosWrapper {
+        order: 4 !important;
+        flex: 0 0 auto !important;
+        margin-left: auto !important;
+    }
+
+    .btn-cadastrar {
+        order: 5 !important;
+    }
+
+    /* Produtos não tem o wrapper de Excluídos pra carregar o empurrão pra
+       direita — nesse caso o próprio botão "Novo Produto" precisa dele. */
+    .header-right:not(:has(#pedExcluidosWrapper, #profExcluidosWrapper, #procExcluidosWrapper)) .btn-cadastrar {
+        margin-left: auto !important;
+    }
+
+    .btn-upload {
+        order: 6 !important;
     }
 
     /* ── Lista de itens (cantos completos no mobile) ── */
@@ -660,15 +717,67 @@
     .kanban-col {
         border-radius: 10px !important;
         min-height: calc(100vh - 250px) !important;
+        width: 100% !important;
     }
 
+    /* O board vira coluna única no mobile, mas o `align-items: flex-start`
+       do desktop (pra colunas lado a lado não esticarem verticalmente)
+       "vaza" pra esse layout e passa a significar "não estica na
+       horizontal" — a coluna ativa (e os cards dentro dela) então cresciam
+       pra caber no texto mais longo em vez de respeitar a largura da tela,
+       estourando os cards pra fora da viewport. */
     .kanban-board {
         padding: 0 0 16px 0 !important;
+        align-items: stretch !important;
+        width: 100% !important;
     }
 
+    /* ── Botões de status (Pedidos/Proforma/Processos) — faixa de chips
+       rolável horizontalmente em vez de quebrar linha de forma desigual
+       (ex: 5 tabs numa linha e a 6ª sozinha, centralizada, na de baixo) ── */
+    /* min-height explícito porque overflow-x:auto + overflow-y:hidden (este
+       último herdado do CSS de desktop) faz o Chrome parar de esticar a
+       altura do container pro conteúdo dos chips — sem isso a faixa
+       colapsa pra só a altura do padding (uns 8px), cortando quase tudo. */
     .kanban-tabs {
-        border-radius: 10px !important;
-        margin-bottom: 8px !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        gap: 8px !important;
+        padding: 2px 2px 6px 2px !important;
+        margin-bottom: 4px !important;
+        min-height: 44px !important;
+    }
+
+    .kanban-tabs::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .kanban-tab {
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        background: #f3f4f6 !important;
+        border: 1.5px solid transparent !important;
+        border-bottom: 1.5px solid transparent !important;
+        border-radius: 20px !important;
+        padding: 9px 14px !important;
+        color: #6b7280 !important;
+    }
+
+    .kanban-tab.active {
+        background: #eff6ff !important;
+        border-color: #4776ec !important;
+        color: #4776ec !important;
+    }
+
+    .kanban-tab-count {
+        font-size: 0.68rem !important;
     }
 
     /* ── Kanban: seta de expandir/recolher — alvo de toque maior que os

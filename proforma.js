@@ -439,6 +439,15 @@ function profFiltrar() {
     );
 
     profRenderConteudo(lista);
+
+    // Sincroniza a aba mobile (Kanban) com o status escolhido no filtro —
+    // sem isso, a coluna visível podia ficar "presa" numa aba diferente da
+    // que o usuário acabou de filtrar, dando a impressão de que o filtro
+    // não fez nada.
+    if (s) {
+        const tab = document.querySelector(`.kanban-tab[data-col="${s}"]`);
+        if (tab) kanbanSwitchTab(tab);
+    }
 }
 
 // ── Editar ────────────────────────────────
