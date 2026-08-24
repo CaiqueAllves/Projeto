@@ -13,11 +13,13 @@ function gerarPDFPedido(pedido) {
     const MR = 196;
     let   Y  = 0;
 
+    const NAVY       = [10,  40,  90];
     const AZUL       = [30,  86, 160];
-    const AZUL_CLARO = [235, 242, 255];
+    const AZUL_MED   = [59, 130, 246];
+    const AZUL_CLARO = [219, 234, 254];
     const CINZA      = [100, 116, 139];
     const CINZA_BG   = [248, 250, 252];
-    const BORDA      = [226, 232, 240];
+    const BORDA      = [209, 219, 234];
     const PRETO      = [15,  23,  42];
     const BRANCO     = [255, 255, 255];
 
@@ -64,25 +66,35 @@ function gerarPDFPedido(pedido) {
         return iso ? new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
     }
 
+    // Endereço vem como objeto (endereco/numero/complemento/bairro/cidade/
+    // estado/cep/pais) buscado no cadastro do parceiro (ou da própria
+    // empresa) na hora de salvar — pode ser null se a busca falhou.
+    function fmtEndereco(e) {
+        if (!e) return null;
+        const rua = [e.endereco, e.numero].filter(Boolean).join(', ');
+        return (rua + (e.complemento ? ` - ${e.complemento}` : '')) || null;
+    }
+
     // ════════════════════════════════════════
     // CABEÇALHO
     // ════════════════════════════════════════
-    rect(0, 0, W, 28, AZUL);
+    rect(0, 0, W, 28, NAVY);
+    rect(0, 0, 4, 28, AZUL_MED);
 
     setFont('bold', 18, BRANCO);
     doc.text('MARPEX', ML, 12);
 
-    setFont('normal', 8, [200, 220, 255]);
+    setFont('normal', 8, [160, 190, 240]);
     doc.text('Gestão de Comércio Exterior', ML, 18);
 
     setFont('bold', 11, BRANCO);
     doc.text('PEDIDO', W - ML, 10, { align: 'right' });
 
-    setFont('normal', 9, [200, 220, 255]);
+    setFont('normal', 9, [160, 190, 240]);
     doc.text(pedido.numero || 'Sem número', W - ML, 17, { align: 'right' });
 
     const dataGeracao = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    setFont('normal', 7, [180, 200, 240]);
+    setFont('normal', 7, [120, 160, 220]);
     doc.text('Gerado em: ' + dataGeracao, W - ML, 24, { align: 'right' });
 
     Y = 34;
@@ -120,14 +132,28 @@ function gerarPDFPedido(pedido) {
     // ════════════════════════════════════════
     // EMISSOR / DESTINATÁRIO
     // ════════════════════════════════════════
-    secHeader('Empresa Remetente');
+    const emissorLabel = pedido.emissorTipo === 'terceiro' ? 'Terceiro (Intermediário)' : 'Própria Empresa';
+
+    secHeader(`Empresa Remetente — ${emissorLabel}`);
     campo('Empresa', pedido.remetenteNome || 'Própria empresa', ML, Y, 110);
     campo('Documento Fiscal', pedido.remetenteDocumento, ML + 120, Y, 62);
+    Y += 12;
+    campo('Endereço', fmtEndereco(pedido.remetenteEndereco), ML, Y, 172);
+    Y += 12;
+    campo('Cidade / Estado', pedido.remetenteEndereco ? [pedido.remetenteEndereco.cidade, pedido.remetenteEndereco.estado].filter(Boolean).join(' / ') : null, ML, Y, 80);
+    campo('CEP', pedido.remetenteEndereco?.cep, ML + 90, Y, 40);
+    campo('País', pedido.remetenteEndereco?.pais, ML + 135, Y, 47);
     Y += 14;
 
     secHeader('Empresa Destinatário');
     campo('Empresa', pedido.clienteNome, ML, Y, 110);
     campo('Documento Fiscal', pedido.clienteDocumento, ML + 120, Y, 62);
+    Y += 12;
+    campo('Endereço', fmtEndereco(pedido.clienteEndereco), ML, Y, 172);
+    Y += 12;
+    campo('Cidade / Estado', pedido.clienteEndereco ? [pedido.clienteEndereco.cidade, pedido.clienteEndereco.estado].filter(Boolean).join(' / ') : null, ML, Y, 80);
+    campo('CEP', pedido.clienteEndereco?.cep, ML + 90, Y, 40);
+    campo('País', pedido.clienteEndereco?.pais, ML + 135, Y, 47);
     Y += 14;
 
     // ════════════════════════════════════════
@@ -208,11 +234,14 @@ function gerarPDFPedido(pedido) {
     const totalPags = doc.getNumberOfPages();
     for (let p = 1; p <= totalPags; p++) {
         doc.setPage(p);
-        linha(ML, 284, MR, BORDA, 0.3);
-        setFont('normal', 7, CINZA);
-        doc.text('Marpex — Gestão de Comércio Exterior', ML, 289);
+        rect(0, 277, W, 20, NAVY);
+        rect(0, 277, 4, 20, AZUL_MED);
+        setFont('bold', 8, BRANCO);
+        doc.text('MARPEX', ML + 3, 285);
+        setFont('normal', 7, [160, 190, 240]);
+        doc.text('Gestão de Comércio Exterior', ML + 3, 292);
         doc.text(`Página ${p} de ${totalPags}`, W / 2, 289, { align: 'center' });
-        doc.text(dataGeracao, MR, 289, { align: 'right' });
+        doc.text(dataGeracao, W - ML, 289, { align: 'right' });
     }
 
     doc.save(`pedido_${pedido.numero || 'sem-numero'}_${new Date().toISOString().slice(0, 10)}.pdf`);

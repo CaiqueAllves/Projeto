@@ -933,6 +933,29 @@ document.addEventListener('click', e => {
     document.querySelectorAll('[id^="ped-item-auto-"]').forEach(b => b.innerHTML = '');
 });
 
+// Endereço completo pro PDF do Pedido — o formulário só coleta nome/documento
+// de Remetente/Destinatário, o endereço mora no cadastro (parceiros, ou na
+// própria empresa quando o emissor é "usuário").
+async function _pedBuscarEnderecoParceiro(id) {
+    if (!id) return null;
+    try {
+        const { data } = await supabaseClient
+            .from('parceiros')
+            .select('endereco, numero, complemento, bairro, cidade, estado, cep, pais')
+            .eq('id', id).maybeSingle();
+        return data || null;
+    } catch (e) { return null; }
+}
+
+async function _pedBuscarEnderecoEmpresaPropria() {
+    try {
+        const res = await window.supabaseAPI.buscarTenantEmpresa();
+        if (!res.sucesso || !res.data) return null;
+        const d = res.data;
+        return { endereco: d.endereco, numero: d.numero, complemento: d.complemento, bairro: null, cidade: d.cidade, estado: d.estado, cep: d.cep, pais: 'Brasil' };
+    } catch (e) { return null; }
+}
+
 async function pedSalvar() {
     const linhasValidas = _pedItensAtual.filter(it => it.produto_nome?.trim() && it.quantidade > 0);
     if (!linhasValidas.length) {
@@ -973,14 +996,24 @@ async function pedSalvar() {
 
     if (!res.sucesso) { pedAviso('Erro: ' + res.mensagem, 'erro'); return; }
 
+    // Endereço completo de Remetente/Destinatário pro PDF — busca em paralelo,
+    // sem travar a tela caso alguma das duas falhe.
+    const [enderecoRemetente, enderecoCliente] = await Promise.all([
+        emissorTipo === 'terceiro' ? _pedBuscarEnderecoParceiro(dados.remetente_parceiro_id) : _pedBuscarEnderecoEmpresaPropria(),
+        _pedBuscarEnderecoParceiro(dados.cliente_id),
+    ]);
+
     _pedUltimoSalvo = {
         id:                  res.data?.id || id,
         numero:              res.data?.numero || dados.numero,
         status:              dados.status,
+        emissorTipo,
         clienteNome:         document.getElementById('pedClienteNome').value,
         clienteDocumento:    document.getElementById('pedClienteDocumento').value,
+        clienteEndereco:     enderecoCliente,
         remetenteNome:       document.getElementById('pedRemetenteNome').value,
         remetenteDocumento:  document.getElementById('pedRemetenteDocumento').value,
+        remetenteEndereco:   enderecoRemetente,
         valor_total:         dados.valor_total,
         moeda:               dados.moeda,
         data_pedido:         dados.data_pedido,
