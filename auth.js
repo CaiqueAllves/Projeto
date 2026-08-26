@@ -21,6 +21,38 @@ window.addEventListener('load', function() {
     }
 });
 
+// Conta sandbox (cadastro sem chave/empresa, ver login.js `realizarCadastro`)
+// tem 24h de acesso — `empresa_expira_em` só existe pra esse tipo de conta,
+// vira null assim que o usuário se vincula a uma empresa de verdade.
+function _authSandboxExpirado(usuarioAtual) {
+    return !!usuarioAtual.empresa_expira_em && new Date(usuarioAtual.empresa_expira_em) <= new Date();
+}
+
+function _authEncerrarSessaoExpirada() {
+    sessionStorage.removeItem('usuarioLogado');
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('usuarioSalvo');
+    localStorage.removeItem('lastLogin');
+}
+
+// Bloqueia ações de criação/edição/upload de dados de negócio pra contas
+// sandbox ainda sem empresa vinculada — a expiração de 24h em si já é
+// tratada em verificarAutenticacao()/verificarAutoLogin()/handleLogin
+// (login.js), então se chegou até aqui a sessão é válida, só falta saber
+// se está vinculada a uma empresa real. Usar como guarda de uma linha:
+// `if (!exigirEmpresaVinculada()) return;` no topo de toda função que salva
+// ou envia arquivo.
+function exigirEmpresaVinculada() {
+    const usuario = (typeof obterUsuarioLogado === 'function')
+        ? obterUsuarioLogado()
+        : JSON.parse(sessionStorage.getItem('usuarioLogado') || 'null');
+    if (usuario && usuario.empresa_status === 'sandbox') {
+        mostrarNotificacao('Ação indisponível em conta sem empresa vinculada. Acesse Perfil para inserir uma chave de empresa ou cadastrar a sua.', 'warning');
+        return false;
+    }
+    return true;
+}
+
 // Verificar se usuário está autenticado
 function verificarAutenticacao(opcoes = {}) {
     const redirecionar = opcoes.redirecionar !== false;
@@ -35,6 +67,12 @@ function verificarAutenticacao(opcoes = {}) {
     } else if (rememberMe && usuarioLocal) {
         usuarioAtual = JSON.parse(usuarioLocal);
         sessionStorage.setItem('usuarioLogado', usuarioLocal);
+    }
+
+    if (usuarioAtual && _authSandboxExpirado(usuarioAtual)) {
+        _authEncerrarSessaoExpirada();
+        window.location.href = 'login.html?trial_expirado=1';
+        return;
     }
 
     if (usuarioAtual) {
@@ -121,8 +159,18 @@ function verificarAutoLogin() {
     const usuarioSessao = sessionStorage.getItem('usuarioLogado');
     const usuarioLocal = localStorage.getItem('usuarioSalvo');
     const rememberMe = localStorage.getItem('rememberMe') === 'true';
-    
-    if (usuarioSessao || (rememberMe && usuarioLocal)) {
+    const usuarioAtual = usuarioSessao ? JSON.parse(usuarioSessao) : ((rememberMe && usuarioLocal) ? JSON.parse(usuarioLocal) : null);
+
+    if (usuarioAtual && _authSandboxExpirado(usuarioAtual)) {
+        // Sessão existia mas o prazo de 24h já bateu — encerra e deixa a
+        // tela de login normal aparecer, com o aviso, em vez de seguir pro
+        // auto-login (senão o usuário nunca vê a tela pra se vincular).
+        _authEncerrarSessaoExpirada();
+        mostrarNotificacao('Seu período de avaliação de 24h expirou. Insira uma chave de empresa ou cadastre sua empresa para continuar.', 'error');
+        return;
+    }
+
+    if (usuarioAtual) {
         // Já está logado - redirecionar para dashboard
         window.location.href = 'inicio.html';
     } else {

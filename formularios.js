@@ -50,6 +50,7 @@ let _empEditandoId = null;
 
 async function salvarEmpresa(e) {
     e.preventDefault();
+    if (!exigirEmpresaVinculada()) return;
 
     // Modo tenant: salva direto na tabela empresas e volta para perfil
     if (window._tenantEmpresaId) {
@@ -88,7 +89,7 @@ async function salvarEmpresa(e) {
             if (document.querySelector(`[name="tipo_${t}"]`)?.checked) tipos.push(t);
         });
         if (tipos.length === 0) {
-            mostrarNotificacao('Selecione pelo menos um Tipo de empresa.', 'warning');
+            mostrarNotificacao('Selecione uma opção em "Tipo" de empresa: Fabricante ou Fornecedor.', 'warning');
             return;
         }
     }
@@ -400,6 +401,7 @@ function _coletarDadosProduto() {
 
 async function salvarProduto(e) {
     e.preventDefault();
+    if (!exigirEmpresaVinculada()) return;
 
     const dados = _coletarDadosProduto();
     if (!dados.sku)  { alert('Informe o SKU do produto.');           document.getElementById('prod-sku')?.focus();  return; }
@@ -595,6 +597,7 @@ async function _prodPreencherDoUpload(dados) {
 
 function salvarProcesso(e) {
     e.preventDefault();
+    if (!exigirEmpresaVinculada()) return;
 
     const tipo = document.getElementById('proc-tipo')?.value;
     if (!tipo) {
@@ -1075,6 +1078,7 @@ function fecharGuiaProcesso() { fecharGuia(); }
 
 function salvarProposta(e) {
     e.preventDefault();
+    if (!exigirEmpresaVinculada()) return;
 
     const erros = [];
     let primeiroEl = null;

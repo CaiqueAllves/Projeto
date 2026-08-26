@@ -821,6 +821,7 @@ function validarFormulario() {
 // ========================================
 
 async function salvarCadastro() {
+    if (!exigirEmpresaVinculada()) return;
     const btnSalvar = document.querySelector('.btn-save');
     btnSalvar.classList.add('loading');
     btnSalvar.disabled = true;
@@ -892,6 +893,7 @@ async function salvarCadastro() {
 // ========================================
 
 async function processarUpload(input) {
+    if (!exigirEmpresaVinculada()) return;
     const arquivo = input.files[0];
     if (!arquivo) return;
 

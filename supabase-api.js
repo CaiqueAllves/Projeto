@@ -20,7 +20,7 @@ async function loginSupabase(cpf, senha) {
     try {
         const { data: usuario, error } = await supabaseClient
             .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, bloqueado_ate, tentativas_login, senha_hash, empresa_id, avatar_url, empresas(razao_social)')
+            .select('id, cpf, nome_completo, email, perfil, ativo, bloqueado_ate, tentativas_login, senha_hash, empresa_id, avatar_url, empresas(razao_social, status, expira_em)')
             .eq('cpf', cpf)
             .single();
 
@@ -61,6 +61,8 @@ async function loginSupabase(cpf, senha) {
                 perfil: usuario.perfil,
                 empresa: usuario.empresas?.razao_social || '',
                 empresa_id: usuario.empresa_id,
+                empresa_status: usuario.empresas?.status || null,
+                empresa_expira_em: usuario.empresas?.expira_em || null,
                 avatar_url: usuario.avatar_url || null
             }
         };
@@ -110,6 +112,7 @@ async function cadastrarContaSupabase(dados) {
         let perfil = 'admin';
         let empresaSolicitadaId = null;
         let aviso = null;
+        let sandboxInfo = null;
 
         if (chaveEmpresa) {
             // Tentar entrar em empresa existente via chave
@@ -144,6 +147,35 @@ async function cadastrarContaSupabase(dados) {
             }
 
             empresaId = empresaCriada.id;
+
+        } else {
+            // Nem chave nem razão social: cria conta sandbox de 24h — o
+            // usuário pode navegar o sistema, mas não criar/enviar nada
+            // (ver exigirEmpresaVinculada() em auth.js) até se vincular a
+            // uma empresa de verdade via Perfil.
+            const expiraEm = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+            const { data: empresaCriada, error: erroEmpresa } = await supabaseClient
+                .from('empresas')
+                .insert({
+                    razao_social: `Conta Sandbox — ${nome}`,
+                    nome_fantasia: `Conta Sandbox — ${nome}`,
+                    email,
+                    status: 'sandbox',
+                    plano: 'free',
+                    chave_empresa: gerarChaveEmpresa(), // preenche a coluna UNIQUE, mesmo não sendo divulgada
+                    expira_em: expiraEm,
+                })
+                .select()
+                .single();
+
+            if (erroEmpresa) {
+                console.error('[Supabase] Erro ao criar conta sandbox:', erroEmpresa);
+                return { sucesso: false, mensagem: 'Erro ao criar conta: ' + erroEmpresa.message };
+            }
+
+            empresaId = empresaCriada.id;
+            sandboxInfo = { expira_em: expiraEm };
         }
 
         // Criar usuário sem empresa_id primeiro (evita FK timing issue)
@@ -187,7 +219,7 @@ async function cadastrarContaSupabase(dados) {
             }
         }
 
-        return { sucesso: true, mensagem: 'Conta criada com sucesso!', usuario: novoUsuario, chave_gerada: chaveGerada, aviso };
+        return { sucesso: true, mensagem: 'Conta criada com sucesso!', usuario: novoUsuario, chave_gerada: chaveGerada, aviso, sandbox: sandboxInfo };
 
     } catch (err) {
         console.error('[Supabase] Erro ao cadastrar:', err);
@@ -252,6 +284,60 @@ async function responderSolicitacao(solicitacaoId, aprovado) {
         }
 
         return { sucesso: true };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
+// Usada na tela de Perfil por contas sandbox (sem empresa vinculada) pra
+// pedir entrada numa empresa existente — mesmo fluxo de aprovação pendente
+// do cadastro (não altera usuarios.empresa_id na hora; só responderSolicitacao,
+// quando aprovado, faz isso).
+async function solicitarEntradaEmpresa(chaveEmpresa) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+
+        const { data: empresaEncontrada } = await supabaseClient
+            .from('empresas')
+            .select('id, razao_social')
+            .eq('chave_empresa', (chaveEmpresa || '').toUpperCase())
+            .maybeSingle();
+
+        if (!empresaEncontrada) {
+            return { sucesso: false, mensagem: 'Chave de empresa não encontrada.' };
+        }
+
+        const { data: solExistente } = await supabaseClient
+            .from('solicitacoes_empresa')
+            .select('id')
+            .eq('usuario_id', usuario.id)
+            .eq('empresa_id', empresaEncontrada.id)
+            .eq('status', 'pendente')
+            .maybeSingle();
+
+        if (solExistente) {
+            return { sucesso: false, mensagem: `Você já tem uma solicitação pendente para "${empresaEncontrada.razao_social}".` };
+        }
+
+        const { error: erroSol } = await supabaseClient
+            .from('solicitacoes_empresa')
+            .insert({
+                usuario_id: usuario.id,
+                empresa_id: empresaEncontrada.id,
+                nome_usuario: usuario.nome,
+                email_usuario: usuario.email
+            });
+
+        if (erroSol) return { sucesso: false, mensagem: 'Erro ao enviar solicitação: ' + erroSol.message };
+
+        await supabaseClient.rpc('notificar_admin_email', {
+            p_empresa_id: empresaEncontrada.id,
+            p_nome_usuario: usuario.nome,
+            p_email_usuario: usuario.email
+        }).catch(() => {});
+
+        return { sucesso: true, mensagem: `Solicitação enviada para "${empresaEncontrada.razao_social}". Aguarde a aprovação do responsável.` };
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
     }
@@ -514,7 +600,7 @@ async function atualizarUsuarioLogado() {
 
         const { data: usuario, error } = await supabaseClient
             .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, empresa_id, avatar_url, empresas(razao_social)')
+            .select('id, cpf, nome_completo, email, perfil, ativo, empresa_id, avatar_url, empresas(razao_social, status, expira_em)')
             .eq('id', atual.id)
             .single();
         if (error || !usuario) return null;
@@ -536,6 +622,8 @@ async function atualizarUsuarioLogado() {
             perfil:     usuario.perfil,
             empresa:    usuario.empresas?.razao_social || '',
             empresa_id: usuario.empresa_id,
+            empresa_status:    usuario.empresas?.status || null,
+            empresa_expira_em: usuario.empresas?.expira_em || null,
             avatar_url: usuario.avatar_url || null,
         };
 
@@ -703,7 +791,7 @@ async function buscarDadosPerfilCompleto() {
 
         const { data, error } = await supabaseClient
             .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, cargo, telefone, avatar_url, ultimo_login, criado_em, empresa_id, empresas(id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento)')
+            .select('id, cpf, nome_completo, email, perfil, ativo, cargo, telefone, avatar_url, ultimo_login, criado_em, empresa_id, empresas(id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento, status, expira_em)')
             .eq('id', usuario.id)
             .single();
 
@@ -1170,6 +1258,46 @@ async function atualizarTenantEmpresa(dados) {
     }
 }
 
+// Usada na tela de Perfil por contas sandbox (sem empresa vinculada) pra
+// cadastrar a própria empresa nova — acesso total imediato (diferente de
+// solicitarEntradaEmpresa, que pede aprovação). A empresa sandbox anterior
+// do usuário fica órfã (fora de escopo migrar/limpar).
+async function registrarEmpresaPropria({ razaoSocial, cnpj }) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+        if (!razaoSocial) return { sucesso: false, mensagem: 'Informe a Razão Social.' };
+
+        const chaveGerada = gerarChaveEmpresa();
+        const { data: empresaCriada, error: erroEmpresa } = await supabaseClient
+            .from('empresas')
+            .insert({
+                razao_social: razaoSocial,
+                nome_fantasia: razaoSocial,
+                cnpj: cnpj || null,
+                email: usuario.email,
+                status: 'ativo',
+                plano: 'free',
+                chave_empresa: chaveGerada
+            })
+            .select()
+            .single();
+
+        if (erroEmpresa) return { sucesso: false, mensagem: 'Erro ao criar empresa: ' + erroEmpresa.message };
+
+        const { error: erroUsuario } = await supabaseClient
+            .from('usuarios')
+            .update({ empresa_id: empresaCriada.id })
+            .eq('id', usuario.id);
+
+        if (erroUsuario) return { sucesso: false, mensagem: 'Erro ao vincular usuário à empresa: ' + erroUsuario.message };
+
+        return { sucesso: true, chave_gerada: chaveGerada, data: empresaCriada };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
 async function buscarTenantEmpresa() {
     try {
         const usuario = obterUsuarioLogado();
@@ -1580,6 +1708,7 @@ window.supabaseAPI = {
     buscarEmpresaPorId,
     buscarSolicitacoes: buscarSolicitacoesPendentes,
     responderSolicitacao: responderSolicitacao,
+    solicitarEntradaEmpresa,
     buscarUsuarios: buscarUsuariosDaEmpresa,
     atualizarPerfil: atualizarPerfilUsuario,
     atualizarPermissoes: atualizarPermissoesUsuario,
@@ -1602,6 +1731,7 @@ window.supabaseAPI = {
     editarProduto,
     excluirProduto,
     atualizarTenantEmpresa,
+    registrarEmpresaPropria,
     buscarTenantEmpresa,
     salvarProposta: salvarPropostaDB,
     buscarProforma: buscarProformaDB,

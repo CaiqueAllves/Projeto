@@ -286,6 +286,59 @@
                         </div>
                     </div>
 
+                    <!-- VINCULAR EMPRESA (conta sandbox, sem empresa de verdade ainda) -->
+                    <div class="perfil-section-card" id="secaoVincularEmpresa" style="display:none;">
+                        <div class="perfil-section-header">
+                            <div class="perfil-section-header-left">
+                                <div class="perfil-section-icon" style="background:#fef3c7; color:#d97706;">
+                                    <i class="fa-solid fa-hourglass-half"></i>
+                                </div>
+                                <div>
+                                    <h3>Acesso Limitado</h3>
+                                    <p id="vincularEmpresaContagem">Restam 24h de acesso limitado. Vincule sua conta a uma empresa para continuar usando o sistema.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="perfil-section-body">
+                            <div class="perfil-form-grid">
+                                <div class="perfil-form-group">
+                                    <label>Já tem uma chave de empresa?</label>
+                                    <input type="text" id="vincularChaveInput" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase;">
+                                </div>
+                                <div class="perfil-form-group" style="align-self:end;">
+                                    <button type="button" class="btn-editar-empresa" id="btnSolicitarEntrada" onclick="vincularPorChave()">
+                                        <i class="fa-solid fa-right-to-bracket"></i> Solicitar entrada
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="seg-ultimo-acesso" style="margin:20px 0;"></div>
+
+                            <div class="perfil-form-grid">
+                                <div class="perfil-form-group">
+                                    <label>Tipo de Documento</label>
+                                    <select id="vincularTipoDoc">
+                                        <option value="cnpj">CNPJ</option>
+                                        <option value="outro">Outro</option>
+                                    </select>
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Documento</label>
+                                    <input type="text" id="vincularDocInput" placeholder="Número do documento">
+                                </div>
+                                <div class="perfil-form-group">
+                                    <label>Razão Social</label>
+                                    <input type="text" id="vincularRazaoInput" placeholder="Nome da sua empresa">
+                                </div>
+                                <div class="perfil-form-group" style="align-self:end;">
+                                    <button type="button" class="btn-editar-empresa" id="btnCadastrarEmpresaPropria" onclick="cadastrarMinhaEmpresa()">
+                                        <i class="fa-solid fa-building-circle-check"></i> Cadastrar empresa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- PLANO E USUÁRIOS (admin) -->
                     <div class="perfil-section-card" id="secaoPlano" style="display:none;">
                         <div class="perfil-section-header">

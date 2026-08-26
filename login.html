@@ -211,18 +211,19 @@
                     </div>
                 </div>
                 <div class="input-group">
-                    <label for="chaveEmpresa"><i class="fa-solid fa-key"></i> Chave da Empresa</label>
-                    <input type="text" id="chaveEmpresa" placeholder="xxxx-xxxx-xxxx-xxxx">
-                    <small style="color: #6b7280; margin-top: 4px; display: block;">Tem uma chave? Insira aqui para entrar na empresa existente.</small>
-                </div>
-                <div class="input-group-divider" style="display: flex; align-items: center; gap: 12px; margin: 2px 0 14px;">
-                    <hr style="flex: 1; border: none; border-top: 1px solid #e5e7eb;">
-                    <span style="color: #9ca3af; font-size: 13px; white-space: nowrap;">ou crie uma nova empresa</span>
-                    <hr style="flex: 1; border: none; border-top: 1px solid #e5e7eb;">
+                    <div onclick="toggleChaveEmpresa()" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;">
+                        <span style="font-size:14px; color:#4776ec; font-weight:600;"><i class="fa-solid fa-key"></i> Já tem uma chave de empresa?</span>
+                        <i class="fa-solid fa-chevron-down" id="chaveEmpresaIcon" style="color:#4776ec; transition:transform .2s;"></i>
+                    </div>
+                    <div id="chaveEmpresaContent" style="display:none; margin-top:10px;">
+                        <label for="chaveEmpresa">Chave da Empresa</label>
+                        <input type="text" id="chaveEmpresa" placeholder="xxxx-xxxx-xxxx-xxxx">
+                        <small style="color: #6b7280; margin-top: 4px; display: block;">Insira a chave pra entrar na empresa existente.</small>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="input-group">
-                        <label for="tipoDocEmpresa">Identificação da Empresa <span style="color:#dc2626;">*</span></label>
+                        <label for="tipoDocEmpresa">Identificação da Empresa</label>
                         <select id="tipoDocEmpresa" onchange="cadAlterarTipoDoc()">
                             <option value="">Selecione...</option>
                             <option value="cnpj">CNPJ</option>
@@ -230,13 +231,14 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="docEmpresa">Número de Identificação <span style="color:#dc2626;">*</span></label>
+                        <label for="docEmpresa">Número de Identificação</label>
                         <input type="text" id="docEmpresa" placeholder="Selecione o tipo primeiro" disabled maxlength="18" oninput="this.value=cadMascaraDoc(this.value)">
                     </div>
                 </div>
                 <div class="input-group">
-                    <label for="empresa">Razão Social <span style="color:#dc2626;">*</span></label>
+                    <label for="empresa">Razão Social</label>
                     <input type="text" id="empresa" placeholder="Nome da empresa">
+                    <small style="color:#6b7280; margin-top:4px; display:block;">Deixe em branco pra começar sem empresa — você terá acesso limitado por 24h até se vincular a uma.</small>
                 </div>
                 <div class="input-group">
                     <label for="emailCadastro">E-mail <span style="color: #dc2626;">*</span></label>
@@ -244,7 +246,12 @@
                 </div>
                 <div class="input-group">
                     <label for="senhaCadastro">Senha <span style="color: #dc2626;">*</span></label>
-                    <input type="password" id="senhaCadastro" placeholder="Mínimo 6 caracteres">
+                    <div class="password-wrapper">
+                        <input type="password" id="senhaCadastro" placeholder="Mínimo 6 caracteres">
+                        <button type="button" class="toggle-password" onclick="toggleSenhaCadastro()">
+                            <i class="fa-solid fa-eye" id="toggleIconCadastro"></i>
+                        </button>
+                    </div>
                 </div>
                 <label class="checkbox-label">
                     <input type="checkbox" id="aceitarTermos">
@@ -272,6 +279,21 @@
             <p style="color: #374151; margin-bottom: 20px;">
                 Sua empresa foi criada! Compartilhe esta chave com os membros da equipe para que eles possam entrar na mesma empresa.
             </p>
+            <div style="text-align:left; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:6px 16px; margin-bottom:18px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eef0f2;">
+                    <span style="color:#6b7280; font-size:13px;">Razão Social</span>
+                    <span id="chaveInfoRazaoSocial" style="color:#111827; font-weight:600; font-size:13px; text-align:right;">—</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eef0f2;">
+                    <span style="color:#6b7280; font-size:13px;">Identificação da Empresa</span>
+                    <span id="chaveInfoTipoDoc" style="color:#111827; font-weight:600; font-size:13px; text-align:right;">—</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
+                    <span style="color:#6b7280; font-size:13px;">Número de Identificação</span>
+                    <span id="chaveInfoNumDoc" style="color:#111827; font-weight:600; font-size:13px; text-align:right;">—</span>
+                </div>
+            </div>
+            <small style="color:#9ca3af; font-size:11px; letter-spacing:0.5px; display:block; margin-bottom:6px;">CHAVE DA EMPRESA</small>
             <div id="chaveDisplay" style="
                 background: #f3f4f6;
                 border: 2px dashed #6366f1;

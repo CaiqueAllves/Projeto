@@ -957,6 +957,7 @@ async function _pedBuscarEnderecoEmpresaPropria() {
 }
 
 async function pedSalvar() {
+    if (!exigirEmpresaVinculada()) return;
     const linhasValidas = _pedItensAtual.filter(it => it.produto_nome?.trim() && it.quantidade > 0);
     if (!linhasValidas.length) {
         pedAviso('Adicione ao menos um item com produto, quantidade e preço.', 'aviso');

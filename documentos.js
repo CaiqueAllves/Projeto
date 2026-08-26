@@ -289,6 +289,7 @@ function docFecharModalAssinatura() {
 }
 
 async function docConfirmarAssinaturaModal() {
+    if (!exigirEmpresaVinculada()) return;
     if (!_docAssinaturaAlvo) return;
     const { pedidoId, tipoId, tipoLabel } = _docAssinaturaAlvo;
 
@@ -364,6 +365,7 @@ function docCancelarPersonalizado() {
 }
 
 async function docSalvarPersonalizado(pedidoId) {
+    if (!exigirEmpresaVinculada()) return;
     const input = document.getElementById(`docNovoNome_${pedidoId}`);
     const nome = input?.value.trim();
     if (!nome) {

@@ -134,6 +134,7 @@ function renderTabela(filtro) {
 // UPLOAD — EXCEL (LOTE) OU PDF (1 PRODUTO)
 // --------------------------------------------------
 async function processarUploadProdutos(input) {
+    if (!exigirEmpresaVinculada()) return;
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
     const ext  = (file.name.split('.').pop() || '').toLowerCase();

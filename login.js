@@ -85,7 +85,7 @@ function validarCPF(cpf) {
 function togglePassword() {
     const passwordInput = document.getElementById('password');
     const toggleIcon = document.getElementById('toggleIcon');
-    
+
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
         toggleIcon.classList.remove('fa-eye');
@@ -95,6 +95,32 @@ function togglePassword() {
         toggleIcon.classList.remove('fa-eye-slash');
         toggleIcon.classList.add('fa-eye');
     }
+}
+
+// Alternar visibilidade da senha — formulário de Cadastro
+function toggleSenhaCadastro() {
+    const passwordInput = document.getElementById('senhaCadastro');
+    const toggleIcon = document.getElementById('toggleIconCadastro');
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('fa-eye');
+        toggleIcon.classList.add('fa-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
+    }
+}
+
+// Expande/recolhe o campo "Chave da Empresa" no formulário de Cadastro —
+// fica escondido por padrão, já que a maioria cria uma empresa nova.
+function toggleChaveEmpresa() {
+    const content = document.getElementById('chaveEmpresaContent');
+    const icon    = document.getElementById('chaveEmpresaIcon');
+    const aberto  = content.style.display !== 'none';
+    content.style.display = aberto ? 'none' : 'block';
+    icon.style.transform  = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 
 // Preencher credenciais de teste (agora com CPF)
@@ -170,6 +196,28 @@ function cadAlterarTipoDoc() {
     }
 }
 
+// Mesma máscara de cadMascaraDoc, mas recebendo o tipo direto — usado pra
+// exibir o documento no modal de Chave da Empresa, depois que o formulário
+// de cadastro já foi resetado (o select tipoDocEmpresa não existe mais).
+function _formatarDocEmpresa(digits, tipo) {
+    const d = String(digits || '').replace(/\D/g, '');
+    if (tipo === 'cpf') {
+        const n = d.slice(0, 11);
+        let o = n.slice(0, 3);
+        if (n.length > 3) o += '.' + n.slice(3, 6);
+        if (n.length > 6) o += '.' + n.slice(6, 9);
+        if (n.length > 9) o += '-' + n.slice(9, 11);
+        return o;
+    }
+    const n = d.slice(0, 14);
+    let o = n.slice(0, 2);
+    if (n.length > 2)  o += '.' + n.slice(2, 5);
+    if (n.length > 5)  o += '.' + n.slice(5, 8);
+    if (n.length > 8)  o += '/' + n.slice(8, 12);
+    if (n.length > 12) o += '-' + n.slice(12, 14);
+    return o;
+}
+
 function cadMascaraDoc(valor) {
     const d    = valor.replace(/\D/g, '');
     const tipo = document.getElementById('tipoDocEmpresa')?.value;
@@ -209,18 +257,17 @@ async function realizarCadastro() {
         return;
     }
 
-    // Campos da empresa obrigatórios quando não usa chave
-    if (!chaveEmpresa) {
+    // Campos da empresa só são obrigatórios quando o usuário está de fato
+    // criando uma empresa nova (preencheu a Razão Social). Deixar tudo em
+    // branco (sem chave e sem razão social) é um caminho válido — vira uma
+    // conta sandbox de 24h (ver cadastrarContaSupabase).
+    if (!chaveEmpresa && empresa) {
         if (!tipoDoc) {
             mostrarNotificacao('Selecione o tipo de identificação da empresa.', 'error');
             return;
         }
         if (!docEmpresa) {
             mostrarNotificacao('Preencha o Número de Identificação da empresa.', 'error');
-            return;
-        }
-        if (!empresa) {
-            mostrarNotificacao('Preencha a Razão Social da empresa.', 'error');
             return;
         }
     }
@@ -261,8 +308,13 @@ async function realizarCadastro() {
             enviarEmailBoasVindas({ nome, email, empresa });
 
             if (resultado.chave_gerada) {
+                document.getElementById('chaveInfoRazaoSocial').textContent = empresa || '—';
+                document.getElementById('chaveInfoTipoDoc').textContent = tipoDoc === 'cpf' ? 'CPF' : tipoDoc === 'cnpj' ? 'CNPJ' : '—';
+                document.getElementById('chaveInfoNumDoc').textContent = docEmpresa ? _formatarDocEmpresa(docEmpresa, tipoDoc) : '—';
                 document.getElementById('chaveDisplay').textContent = resultado.chave_gerada;
                 document.getElementById('modalChave').classList.add('active');
+            } else if (resultado.sandbox) {
+                mostrarNotificacao('Conta criada! Você tem 24h de acesso limitado — vá em Perfil pra vincular sua empresa.', 'warning');
             } else if (resultado.aviso) {
                 mostrarNotificacao(resultado.aviso, 'warning');
             } else {
@@ -359,10 +411,16 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
 
 // Validação em tempo real
 document.addEventListener('DOMContentLoaded', function() {
+    // Veio de uma página autenticada onde a sessão expirou (conta sandbox,
+    // 24h vencidas) — ver verificarAutenticacao() em auth.js.
+    if (new URLSearchParams(window.location.search).get('trial_expirado') === '1') {
+        mostrarNotificacao('Seu período de avaliação de 24h expirou. Insira uma chave de empresa ou cadastre sua empresa para continuar.', 'error');
+    }
+
     const cpfInput = document.getElementById('cpf');
     const password = document.getElementById('password');
     const cpfCadastro = document.getElementById('cpfCadastro');
-    
+
     // Aplicar máscara no CPF de login
     if (cpfInput) {
         aplicarMascaraCPF(cpfInput);
@@ -492,6 +550,18 @@ window.handleLogin = async function(event) {
     const resultado = await window.supabaseAPI.login(cpfInput, password);
 
     if (resultado.sucesso) {
+        // Conta sandbox cujo prazo de 24h já venceu — não grava sessão
+        // nenhuma, nem redireciona. Cobre o caso de alguém que ficou
+        // deslogado até o prazo vencer (a checagem em auth.js cobre quem
+        // já estava logado quando o prazo bateu).
+        const expiraEm = resultado.usuario.empresa_expira_em;
+        if (expiraEm && new Date(expiraEm) <= new Date()) {
+            btnLogin.classList.remove('loading');
+            btnLogin.disabled = false;
+            mostrarNotificacao('Seu período de avaliação de 24h expirou. Insira uma chave de empresa ou cadastre sua empresa para continuar.', 'error');
+            return false;
+        }
+
         successMessage.style.display = 'flex';
         mostrarNotificacao('Login realizado com sucesso! Redirecionando...', 'success');
 
@@ -503,6 +573,8 @@ window.handleLogin = async function(event) {
             nome: resultado.usuario.nome,
             empresa: resultado.usuario.empresa,
             empresa_id: resultado.usuario.empresa_id,
+            empresa_status: resultado.usuario.empresa_status || null,
+            empresa_expira_em: resultado.usuario.empresa_expira_em || null,
             email: resultado.usuario.email,
             perfil: resultado.usuario.perfil,
             avatar_url: resultado.usuario.avatar_url || null

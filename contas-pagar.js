@@ -210,6 +210,7 @@ function cpFecharModal() {
 }
 
 async function cpSalvar() {
+    if (!exigirEmpresaVinculada()) return;
     const descricao = document.getElementById('cpDescricao').value.trim();
     const valor     = document.getElementById('cpValor').value;
     const venc      = document.getElementById('cpVencimento').value;

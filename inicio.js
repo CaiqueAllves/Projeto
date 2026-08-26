@@ -78,7 +78,7 @@ function atualizarInformacoesUsuario() {
         // Atualizar email
         const userEmail = document.getElementById('userEmail');
         if (userEmail) {
-            userEmail.textContent = `${usuario.username}@${usuario.empresa.toLowerCase().replace(/\s+/g, '')}.com`;
+            userEmail.textContent = usuario.email || '—';
         }
     }
 }

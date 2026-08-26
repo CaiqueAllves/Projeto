@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (empresaId) {
             const { data: empData, error: empErr } = await supabaseClient
                 .from('empresas')
-                .select('id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento')
+                .select('id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento, status, expira_em')
                 .eq('id', empresaId)
                 .single();
             console.log('[Perfil] query direta empresas:', { empData, empErr });
@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     try { preencherSidebar(); }    catch(e) { console.error('[Perfil] preencherSidebar:', e); }
     try { preencherFormulario(); } catch(e) { console.error('[Perfil] preencherFormulario:', e); }
     try { preencherEmpresa(); }    catch(e) { console.error('[Perfil] preencherEmpresa:', e); }
+    try { preencherVincularEmpresa(); } catch(e) { console.error('[Perfil] preencherVincularEmpresa:', e); }
     atualizarTopbar(); // atualiza avatar no topbar após ter dadosPerfil
 
     // Preencher dados mascarados nos canais de segurança
@@ -261,6 +262,75 @@ function copiarChave(chave) {
 }
 
 // ========================================
+// VINCULAR EMPRESA (conta sandbox — sem empresa de verdade ainda)
+// ========================================
+
+function preencherVincularEmpresa() {
+    const secao = document.getElementById('secaoVincularEmpresa');
+    if (!secao) return;
+
+    const status = dadosPerfil?.empresas?.status || usuarioAtual?.empresa_status;
+    if (status !== 'sandbox') {
+        secao.style.display = 'none';
+        return;
+    }
+
+    secao.style.display = 'block';
+
+    const expiraEm = dadosPerfil?.empresas?.expira_em || usuarioAtual?.empresa_expira_em;
+    const contagemEl = document.getElementById('vincularEmpresaContagem');
+    if (contagemEl && expiraEm) {
+        const horasRestantes = Math.max(0, Math.ceil((new Date(expiraEm) - new Date()) / (1000 * 60 * 60)));
+        contagemEl.textContent = horasRestantes > 0
+            ? `Restam ${horasRestantes}h de acesso limitado. Vincule sua conta a uma empresa para continuar usando o sistema.`
+            : 'Seu acesso limitado expirou. Vincule sua conta a uma empresa para continuar usando o sistema.';
+    }
+}
+
+async function vincularPorChave() {
+    const chave = document.getElementById('vincularChaveInput')?.value.trim();
+    if (!chave) { mostrarToast('Informe a chave de empresa.', 'erro'); return; }
+
+    const btn = document.getElementById('btnSolicitarEntrada');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...'; }
+
+    const res = await window.supabaseAPI.solicitarEntradaEmpresa(chave);
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Solicitar entrada'; }
+
+    if (res.sucesso) {
+        mostrarToast(res.mensagem, 'sucesso');
+        document.getElementById('vincularChaveInput').value = '';
+    } else {
+        mostrarToast(res.mensagem || 'Erro ao solicitar entrada.', 'erro');
+    }
+}
+
+async function cadastrarMinhaEmpresa() {
+    const razaoSocial = document.getElementById('vincularRazaoInput')?.value.trim();
+    const doc = document.getElementById('vincularDocInput')?.value.trim();
+    if (!razaoSocial) { mostrarToast('Informe a Razão Social.', 'erro'); return; }
+
+    const btn = document.getElementById('btnCadastrarEmpresaPropria');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cadastrando...'; }
+
+    const res = await window.supabaseAPI.registrarEmpresaPropria({ razaoSocial, cnpj: doc });
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-building-circle-check"></i> Cadastrar empresa'; }
+
+    if (!res.sucesso) {
+        mostrarToast(res.mensagem || 'Erro ao cadastrar empresa.', 'erro');
+        return;
+    }
+
+    mostrarToast(`Empresa cadastrada! Chave: ${res.chave_gerada}`, 'sucesso');
+    if (window.supabaseAPI.atualizarUsuarioLogado) {
+        await window.supabaseAPI.atualizarUsuarioLogado();
+    }
+    setTimeout(() => window.location.reload(), 1500);
+}
+
+// ========================================
 // EDITAR EMPRESA
 // ========================================
 
@@ -400,6 +470,7 @@ async function carregarDocumentosEmpresa() {
 }
 
 async function uploadDocEmpresa(files) {
+    if (!exigirEmpresaVinculada()) return;
     const empresaId = dadosPerfil?.empresa_id || usuarioAtual?.empresa_id;
     if (!empresaId) { mostrarToast('Sem empresa vinculada.', 'erro'); return; }
     if (!files?.length) return;

@@ -406,6 +406,7 @@ function plFecharModal() {
 }
 
 async function plSalvar() {
+    if (!exigirEmpresaVinculada()) return;
     const titulo = document.getElementById('plTitulo').value.trim();
     if (!titulo) {
         document.getElementById('plTitulo').focus();

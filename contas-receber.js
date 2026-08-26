@@ -205,6 +205,7 @@ function crFecharModal() {
 }
 
 async function crSalvar() {
+    if (!exigirEmpresaVinculada()) return;
     const descricao = document.getElementById('crDescricao').value.trim();
     const valor     = document.getElementById('crValor').value;
     const venc      = document.getElementById('crVencimento').value;

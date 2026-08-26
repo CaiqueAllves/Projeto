@@ -451,6 +451,7 @@ function toggleNovaSenha(btn) {
 }
 
 async function salvarNovoUsuario() {
+    if (!exigirEmpresaVinculada()) return;
     const nome       = document.getElementById('novoNome').value.trim();
     const cpf        = document.getElementById('novoCpf').value.replace(/\D/g, '');
     const email      = document.getElementById('novoEmail').value.trim();
