@@ -49,31 +49,20 @@
                         <i class="fa-solid fa-ban"></i> Perdidos
                     </button>
                     <button class="btn-cadastrar" onclick="plAbrirModal()">
-                        <i class="fa-solid fa-plus"></i> Nova Oportunidade
+                        <i class="fa-solid fa-plus"></i> Nova Proposta
                     </button>
                 </div>
             </div>
 
             <!-- TABS MOBILE -->
             <div class="kanban-tabs" id="plKanbanTabs">
-                <button class="kanban-tab active" data-col="lead"        onclick="plSwitchTab(this)">Lead <span class="kanban-tab-count" id="tab-count-lead">0</span></button>
-                <button class="kanban-tab"         data-col="proposta"   onclick="plSwitchTab(this)">Proposta <span class="kanban-tab-count" id="tab-count-proposta">0</span></button>
+                <button class="kanban-tab active" data-col="proposta"   onclick="plSwitchTab(this)">Proposta <span class="kanban-tab-count" id="tab-count-proposta">0</span></button>
                 <button class="kanban-tab"         data-col="negociacao" onclick="plSwitchTab(this)">Negociação <span class="kanban-tab-count" id="tab-count-negociacao">0</span></button>
                 <button class="kanban-tab"         data-col="fechado"    onclick="plSwitchTab(this)">Fechado <span class="kanban-tab-count" id="tab-count-fechado">0</span></button>
             </div>
 
             <!-- KANBAN -->
             <div class="pl-kanban" id="plKanban">
-
-                <div class="pl-col" data-etapa="lead">
-                    <div class="pl-col-header pl-header-lead">
-                        <span class="pl-col-titulo"><i class="fa-solid fa-seedling"></i> Lead</span>
-                        <span class="pl-col-count" id="count-lead">0</span>
-                    </div>
-                    <div class="pl-col-body" id="col-lead">
-                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
-                    </div>
-                </div>
 
                 <div class="pl-col" data-etapa="proposta">
                     <div class="pl-col-header pl-header-proposta">
@@ -125,7 +114,7 @@
 <div class="pl-modal-overlay" id="plModalOverlay" onclick="plFecharModal()">
     <div class="pl-modal" onclick="event.stopPropagation()">
         <div class="pl-modal-header">
-            <h3 id="plModalTitulo"><i class="fa-solid fa-filter"></i> Nova Oportunidade</h3>
+            <h3 id="plModalTitulo"><i class="fa-solid fa-filter"></i> Nova Proposta</h3>
             <button class="pl-modal-close" onclick="plFecharModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="pl-modal-body">
@@ -181,7 +170,6 @@
                 <div class="pl-form-group">
                     <label>Etapa</label>
                     <select id="plEtapa">
-                        <option value="lead">Lead</option>
                         <option value="proposta">Proposta</option>
                         <option value="negociacao">Negociação</option>
                         <option value="fechado">Fechado</option>

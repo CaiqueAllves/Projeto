@@ -115,7 +115,6 @@ function _rcRenderPipelineEtapas(ops) {
     const el = document.getElementById('rcPipelineEtapas');
 
     const etapas = [
-        { key: 'lead',        label: 'Lead',        cor: '#3b82f6' },
         { key: 'proposta',    label: 'Proposta',    cor: '#f97316' },
         { key: 'negociacao',  label: 'Negociação',  cor: '#8b5cf6' },
         { key: 'fechado',     label: 'Fechado',     cor: '#22c55e' },

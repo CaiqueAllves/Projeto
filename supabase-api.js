@@ -1779,8 +1779,10 @@ window.supabaseAPI = {
 //     cliente_id              INTEGER REFERENCES parceiros(id),
 //     valor                   NUMERIC,
 //     moeda                   TEXT DEFAULT 'USD',
-//     etapa                   TEXT DEFAULT 'lead'
+//     etapa                   TEXT DEFAULT 'proposta'
 //                                 CHECK (etapa IN ('lead','proposta','negociacao','fechado','perdido')),
+//                                 -- 'lead' não é mais usado pelo app (2026-08-27, ver pipeline.js) —
+//                                 -- mantido no CHECK só por compatibilidade com o schema já rodado no banco.
 //     probabilidade           INTEGER DEFAULT 50,
 //     responsavel             TEXT,
 //     data_prevista           DATE,
@@ -1847,7 +1849,7 @@ async function salvarOportunidade(dados, id = null) {
             titulo: dados.titulo, cliente_id: dados.cliente_id || null,
             remetente_parceiro_id: dados.remetente_parceiro_id || null,
             valor: dados.valor || null, moeda: dados.moeda || 'USD',
-            etapa: dados.etapa || 'lead', probabilidade: dados.probabilidade ?? 50,
+            etapa: dados.etapa || 'proposta', probabilidade: dados.probabilidade ?? 50,
             responsavel: dados.responsavel || null, data_prevista: dados.data_prevista || null,
             observacoes: dados.observacoes || null, proforma_id: dados.proforma_id || null,
             updated_at: new Date().toISOString(),

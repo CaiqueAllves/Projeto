@@ -157,7 +157,6 @@
 }
 
 /* Cores das colunas */
-.pl-header-lead       { background: #eff6ff; color: #1d4ed8; border-bottom-color: #bfdbfe; }
 .pl-header-proposta   { background: #fff7ed; color: #c2410c; border-bottom-color: #fed7aa; }
 .pl-header-negociacao { background: #f5f3ff; color: #6d28d9; border-bottom-color: #ddd6fe; }
 .pl-header-fechado    { background: #f0fdf4; color: #15803d; border-bottom-color: #bbf7d0; }

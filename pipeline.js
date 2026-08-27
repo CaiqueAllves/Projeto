@@ -5,13 +5,12 @@
 let _plTodas    = [];
 let _plFiltradas = [];
 let _plExcluirId = null;
-let _plTabAtiva  = 'lead';
+let _plTabAtiva  = 'proposta';
 let _plPedidosMap = {};
 
-const PL_ETAPAS = ['lead', 'proposta', 'negociacao', 'fechado'];
+const PL_ETAPAS = ['proposta', 'negociacao', 'fechado'];
 
 const PL_ETAPA_LABEL = {
-    lead:        'Lead',
     proposta:    'Proposta',
     negociacao:  'Negociação',
     fechado:     'Fechado',
@@ -139,7 +138,7 @@ function _plRenderCard(o) {
         : null;
 
     const podeAvancar = o.etapa !== 'fechado' && o.etapa !== 'perdido';
-    const proxEtapa   = { lead: 'proposta', proposta: 'negociacao', negociacao: 'fechado' };
+    const proxEtapa   = { proposta: 'negociacao', negociacao: 'fechado' };
 
     let botaoPedido = '';
     if (o.etapa === 'fechado') {
@@ -269,7 +268,7 @@ function plVerPedido(pedidoId) {
 async function plAvancarEtapa(id) {
     const op  = _plTodas.find(o => o.id === id);
     if (!op) return;
-    const prox = { lead: 'proposta', proposta: 'negociacao', negociacao: 'fechado' };
+    const prox = { proposta: 'negociacao', negociacao: 'fechado' };
     const nova  = prox[op.etapa];
     if (!nova) return;
 
@@ -359,7 +358,7 @@ function plAbrirModal(id = null) {
     document.getElementById('plEditId').value        = op?.id || '';
     document.getElementById('plModalTitulo').innerHTML = op
         ? '<i class="fa-solid fa-pen"></i> Editar Oportunidade'
-        : '<i class="fa-solid fa-filter"></i> Nova Oportunidade';
+        : '<i class="fa-solid fa-filter"></i> Nova Proposta';
 
     document.getElementById('plTitulo').value        = op?.titulo || '';
 
@@ -375,8 +374,8 @@ function plAbrirModal(id = null) {
     document.getElementById('plMoeda').value         = op?.moeda || 'USD';
 
     // Etapa só é editável numa oportunidade já existente — todo cadastro
-    // novo nasce automaticamente como "lead" (não é escolha do usuário).
-    document.getElementById('plEtapa').value            = op?.etapa || 'lead';
+    // novo nasce automaticamente como "proposta" (não é escolha do usuário).
+    document.getElementById('plEtapa').value            = op?.etapa || 'proposta';
     document.getElementById('plEtapaGroup').style.display = op ? '' : 'none';
 
     document.getElementById('plProbabilidade').value = op?.probabilidade ?? 50;
@@ -425,9 +424,9 @@ async function plSalvar() {
         remetente_parceiro_id: document.getElementById('plRemetenteId').value || null,
         valor:         _plValorMonetario(document.getElementById('plValor')) || null,
         moeda:         document.getElementById('plMoeda').value,
-        // Sem id (cadastro novo) = sempre "lead", independente do select
+        // Sem id (cadastro novo) = sempre "proposta", independente do select
         // (que fica escondido nesse caso).
-        etapa:         id ? document.getElementById('plEtapa').value : 'lead',
+        etapa:         id ? document.getElementById('plEtapa').value : 'proposta',
         probabilidade: parseInt(document.getElementById('plProbabilidade').value) || 50,
         responsavel:   document.getElementById('plResponsavel').value.trim() || null,
         data_prevista: document.getElementById('plDataPrevista').value || null,
