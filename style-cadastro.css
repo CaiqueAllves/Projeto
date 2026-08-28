@@ -1197,6 +1197,8 @@ form {
 .tag-fornecedor     { background: #dcfce7; color: #15803d; }
 .tag-transportadora { background: #fef3c7; color: #d97706; }
 .tag-remetente      { background: #f3e8ff; color: #7c3aed; }
+.tag-comprador      { background: #ffe4e6; color: #be123c; }
+.tag-importador     { background: #e0f2fe; color: #0369a1; }
 
 /* Modelo: badge pill */
 .tag-modelo {

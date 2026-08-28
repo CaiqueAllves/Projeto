@@ -192,7 +192,6 @@
 }
 
 /* Borda esquerda por etapa */
-.pl-card[data-etapa="lead"]        { border-left: 3px solid #3b82f6; }
 .pl-card[data-etapa="proposta"]    { border-left: 3px solid #f97316; }
 .pl-card[data-etapa="negociacao"]  { border-left: 3px solid #8b5cf6; }
 .pl-card[data-etapa="fechado"]     { border-left: 3px solid #22c55e; }
@@ -210,16 +209,6 @@
     color: #1e293b;
     line-height: 1.4;
     flex: 1;
-}
-
-.pl-prob-badge {
-    font-size: 11px;
-    font-weight: 700;
-    background: #f1f5f9;
-    color: #475569;
-    padding: 2px 8px;
-    border-radius: 999px;
-    flex-shrink: 0;
 }
 
 .pl-card-cliente {

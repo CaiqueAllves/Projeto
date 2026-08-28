@@ -154,7 +154,6 @@ function _plRenderCard(o) {
         <div class="pl-card" data-etapa="${o.etapa}" data-id="${o.id}">
             <div class="pl-card-header">
                 <span class="pl-card-titulo">${_plEscapar(o.titulo)}</span>
-                <span class="pl-prob-badge">${o.probabilidade ?? 50}%</span>
             </div>
 
             <div class="pl-card-cliente">
@@ -378,7 +377,6 @@ function plAbrirModal(id = null) {
     document.getElementById('plEtapa').value            = op?.etapa || 'proposta';
     document.getElementById('plEtapaGroup').style.display = op ? '' : 'none';
 
-    document.getElementById('plProbabilidade').value = op?.probabilidade ?? 50;
     document.getElementById('plResponsavel').value   = op?.responsavel || '';
 
     document.getElementById('plDataCriacao').value  = op?.created_at ? op.created_at.slice(0, 10) : _plHojeISO();
@@ -427,7 +425,6 @@ async function plSalvar() {
         // Sem id (cadastro novo) = sempre "proposta", independente do select
         // (que fica escondido nesse caso).
         etapa:         id ? document.getElementById('plEtapa').value : 'proposta',
-        probabilidade: parseInt(document.getElementById('plProbabilidade').value) || 50,
         responsavel:   document.getElementById('plResponsavel').value.trim() || null,
         data_prevista: document.getElementById('plDataPrevista').value || null,
         observacoes:   document.getElementById('plObservacoes').value.trim() || null,

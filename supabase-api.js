@@ -363,6 +363,8 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
                 is_fornecedor:        dadosEmpresa.tipos.includes('fornecedor'),
                 is_transportadora:    dadosEmpresa.tipos.includes('transportadora'),
                 is_remetente:         dadosEmpresa.tipos.includes('remetente'),
+                is_comprador:         dadosEmpresa.tipos.includes('comprador'),
+                is_importador:        dadosEmpresa.tipos.includes('importador'),
                 modelo:               dadosEmpresa.modelo || 'empresa',
                 tipo_cadastro:        dadosEmpresa.tipo_cadastro,
                 documento:            dadosEmpresa.documento.replace(/\D/g, ''),
@@ -492,6 +494,8 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
                 is_fornecedor:        dadosEmpresa.tipos.includes('fornecedor'),
                 is_transportadora:    dadosEmpresa.tipos.includes('transportadora'),
                 is_remetente:         dadosEmpresa.tipos.includes('remetente'),
+                is_comprador:         dadosEmpresa.tipos.includes('comprador'),
+                is_importador:        dadosEmpresa.tipos.includes('importador'),
                 modelo:               dadosEmpresa.modelo || 'empresa',
                 tipo_cadastro:        dadosEmpresa.tipo_cadastro,
                 documento:            dadosEmpresa.documento.replace(/\D/g, ''),
@@ -1784,6 +1788,9 @@ window.supabaseAPI = {
 //                                 -- 'lead' não é mais usado pelo app (2026-08-27, ver pipeline.js) —
 //                                 -- mantido no CHECK só por compatibilidade com o schema já rodado no banco.
 //     probabilidade           INTEGER DEFAULT 50,
+//                                 -- campo removido do formulário/card (2026-08-27) — a coluna
+//                                 -- e os registros antigos continuam intactos, só não é mais
+//                                 -- exibida nem enviada pelo app.
 //     responsavel             TEXT,
 //     data_prevista           DATE,
 //     observacoes             TEXT,
@@ -1849,7 +1856,7 @@ async function salvarOportunidade(dados, id = null) {
             titulo: dados.titulo, cliente_id: dados.cliente_id || null,
             remetente_parceiro_id: dados.remetente_parceiro_id || null,
             valor: dados.valor || null, moeda: dados.moeda || 'USD',
-            etapa: dados.etapa || 'proposta', probabilidade: dados.probabilidade ?? 50,
+            etapa: dados.etapa || 'proposta',
             responsavel: dados.responsavel || null, data_prevista: dados.data_prevista || null,
             observacoes: dados.observacoes || null, proforma_id: dados.proforma_id || null,
             updated_at: new Date().toISOString(),

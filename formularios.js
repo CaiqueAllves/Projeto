@@ -85,11 +85,11 @@ async function salvarEmpresa(e) {
     if (modelo === 'transportadora') {
         tipos.push('transportadora');
     } else {
-        ['fabricante','cliente','fornecedor','remetente'].forEach(t => {
+        ['fabricante','cliente','fornecedor','remetente','comprador','importador'].forEach(t => {
             if (document.querySelector(`[name="tipo_${t}"]`)?.checked) tipos.push(t);
         });
         if (tipos.length === 0) {
-            mostrarNotificacao('Selecione uma opção em "Tipo" de empresa: Fabricante ou Fornecedor.', 'warning');
+            mostrarNotificacao('Selecione uma opção em "Tipo" de empresa: Fabricante, Fornecedor, Comprador ou Importador.', 'warning');
             return;
         }
     }
@@ -5012,7 +5012,7 @@ function _empPreencherEdicao(dados) {
     if (modeloRadio) { modeloRadio.checked = true; onModeloChange(modelo); }
 
     // Tipos
-    ['fabricante', 'fornecedor'].forEach(t => {
+    ['fabricante', 'fornecedor', 'comprador', 'importador'].forEach(t => {
         const cb = document.querySelector(`[name="tipo_${t}"]`);
         if (cb) cb.checked = !!dados[`is_${t}`];
     });

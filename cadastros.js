@@ -171,7 +171,7 @@ async function carregarEmpresas() {
     renderizarEmpresas(todasEmpresas);
 }
 
-const _TIPO_LABELS = { fabricante: 'Fabricante', cliente: 'Cliente', fornecedor: 'Fornecedor', transportadora: 'Transportadora', remetente: 'Remetente' };
+const _TIPO_LABELS = { fabricante: 'Fabricante', cliente: 'Cliente', fornecedor: 'Fornecedor', transportadora: 'Transportadora', remetente: 'Remetente', comprador: 'Comprador', importador: 'Importador' };
 
 function _normalizarPais(pais) {
     if (!pais) return '';
@@ -200,6 +200,8 @@ function _tiposBadges(e) {
     if (e.is_fornecedor)     tipos.push('fornecedor');
     if (e.is_transportadora) tipos.push('transportadora');
     if (e.is_remetente)      tipos.push('remetente');
+    if (e.is_comprador)      tipos.push('comprador');
+    if (e.is_importador)     tipos.push('importador');
     return tipos.map(t => `<span class="tag-tipo tag-${t}">${_TIPO_LABELS[t]}</span>`).join('');
 }
 
@@ -335,6 +337,8 @@ async function _editarEmpresaModal(id) {
     document.getElementById('tipoFornecedor').checked    = empresa.is_fornecedor     || false;
     document.getElementById('tipoTransportadora').checked= empresa.is_transportadora || false;
     document.getElementById('tipoRemetente').checked     = empresa.is_remetente      || false;
+    document.getElementById('tipoComprador').checked     = empresa.is_comprador      || false;
+    document.getElementById('tipoImportador').checked    = empresa.is_importador     || false;
     _atualizarTipoCards();
 
     // Identificação
@@ -653,7 +657,7 @@ async function buscarCEP() {
 // ========================================
 
 function _atualizarTipoCards() {
-    ['tipoFabricante','tipoCliente','tipoFornecedor','tipoTransportadora','tipoRemetente'].forEach(id => {
+    ['tipoFabricante','tipoCliente','tipoFornecedor','tipoTransportadora','tipoRemetente','tipoComprador','tipoImportador'].forEach(id => {
         const cb = document.getElementById(id);
         if (!cb) return;
         cb.closest('.cad-tipo-card').classList.toggle('selected', cb.checked);
@@ -717,7 +721,7 @@ function limparFormulario() {
     document.getElementById('empresaForm').reset();
 
     // Tipos
-    ['tipoFabricante','tipoCliente','tipoFornecedor','tipoTransportadora','tipoRemetente']
+    ['tipoFabricante','tipoCliente','tipoFornecedor','tipoTransportadora','tipoRemetente','tipoComprador','tipoImportador']
         .forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
     _atualizarTipoCards();
 
@@ -782,7 +786,7 @@ function validarFormulario() {
     let valido = true;
 
     // Pelo menos 1 tipo
-    const algumTipo = ['tipoFabricante','tipoCliente','tipoFornecedor','tipoTransportadora','tipoRemetente']
+    const algumTipo = ['tipoFabricante','tipoCliente','tipoFornecedor','tipoTransportadora','tipoRemetente','tipoComprador','tipoImportador']
         .some(id => document.getElementById(id).checked);
     if (!algumTipo) {
         mostrarNotificacao('Selecione pelo menos um tipo de empresa!', 'error');
@@ -826,7 +830,7 @@ async function salvarCadastro() {
     btnSalvar.classList.add('loading');
     btnSalvar.disabled = true;
 
-    const tipos = ['fabricante','cliente','fornecedor','transportadora','remetente']
+    const tipos = ['fabricante','cliente','fornecedor','transportadora','remetente','comprador','importador']
         .filter(t => document.getElementById(`tipo${t.charAt(0).toUpperCase() + t.slice(1)}`).checked);
 
     const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
