@@ -262,8 +262,85 @@
     margin-bottom: 14px;
 }
 
-.fin-form-group { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.fin-form-group { flex: 1; display: flex; flex-direction: column; gap: 5px; position: relative; }
 .fin-form-group.fin-full { flex: 1 0 100%; }
+
+/* ── Autocomplete (Parceiro/Pedido/Processo/Plano de Contas) ───────────────
+   Faltava por completo — os campos de busca já existiam em JS, mas sem
+   isso a lista de sugestões saía sem estilo e mal-posicionada (o
+   position:absolute não tinha um pai com position:relative pra ancorar,
+   ver .fin-form-group acima). Mesmo padrão de style-pipeline.css, mas
+   aqui width fica sempre igual à do campo (left:0;right:0), nunca mais
+   largo — resolve o dropdown do Plano de Contas estourando a tela. */
+.pl-autocomplete {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    z-index: 1100;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.pl-autocomplete:empty { display: none; border: none; box-shadow: none; }
+
+.pl-auto-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+.pl-auto-item:last-child { border-bottom: none; }
+.pl-auto-item:hover { background: #f0f5ff; }
+.pl-auto-item.selecionado { background: #eff6ff; }
+.pl-auto-nome  { font-size: 13px; font-weight: 600; color: #1e293b; }
+.pl-auto-razao { font-size: 11px; color: #94a3b8; }
+.pl-auto-vazio { padding: 12px 14px; font-size: 13px; color: #94a3b8; text-align: center; }
+
+/* Cabeçalho de grupo dentro do dropdown (ex: "01.01 — EXPORTAÇÃO DE
+   SERVIÇOS" agrupando os Subfatores do Plano de Contas) — não clicável. */
+.pl-auto-group {
+    padding: 7px 14px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #3b82f6;
+    background: #eff6ff;
+    border-bottom: 1px solid #dbeafe;
+    position: sticky;
+    top: 0;
+}
+
+/* ── Observações retrátil (mesmo padrão de Pipeline/Proposta) ──────────── */
+.pl-obs-wrapper { margin-top: 0; }
+.pl-obs-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    user-select: none;
+    transition: background 0.15s, color 0.15s;
+}
+.pl-obs-toggle:hover { background: #eff6ff; color: #3b82f6; border-color: #bfdbfe; }
+.pl-obs-toggle.aberto { background: #eff6ff; color: #2563eb; border-color: #93c5fd; }
+.pl-obs-icon { font-size: 11px; transition: transform 0.2s ease; }
+.pl-obs-toggle.aberto .pl-obs-icon { transform: rotate(180deg); }
+.pl-obs-content { display: none; padding-top: 8px; }
+.pl-obs-content textarea { width: 100%; }
 
 .fin-form-group label {
     font-size: 12px;
@@ -291,6 +368,15 @@
 .fin-form-group textarea:focus { border-color: #4776ec; }
 
 .fin-form-group textarea { resize: vertical; min-height: 70px; }
+
+/* Campo derivado do Pedido (Cliente travado, Processo sem pedido ainda
+   escolhido) — mesmo cinza usado em campos automáticos no resto do app. */
+.fin-form-group input[readonly],
+.fin-form-group input:disabled {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+}
 
 .fin-modal-footer {
     padding: 16px 24px;

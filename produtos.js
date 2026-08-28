@@ -4,6 +4,91 @@
 
 let _produtos = [];
 
+// ── Modelo de importação (Excel/PDF) ────────────────────────────────
+// Fonte única dos campos aceitos no upload em lote — mesmo conjunto que
+// PROD_UPLOAD_ALIASES reconhece (ver processarUploadProdutos acima).
+// Cada coluna usada aqui já é uma chave literal desse mapa, garantindo
+// que o modelo baixado seja reconhecido de volta pelo próprio upload.
+// Fora daqui de propósito — não são input manual, o sistema já preenche
+// sozinho: margem/lucro_liquido (calculados a partir dos preços) e
+// hscode/ncm_utrib/ncm_descricao/ncm_descricao_completa (derivados do NCM
+// digitado, via prod-ncm). Também fora: nomes_idiomas/embalagens/documentos,
+// que são listas e não cabem numa única célula de planilha.
+const PROD_MODELO_CAMPOS = [
+    // ── Identificação ──
+    { secao: 'Identificação',  coluna: 'SKU',                    campo: 'sku',                  obrigatorio: true,  tipo: 'Texto',  exemplo: 'PROD001',                            obs: 'Código único do produto — não pode se repetir.' },
+    { secao: 'Identificação',  coluna: 'Nome',                   campo: 'nome',                 obrigatorio: true,  tipo: 'Texto',  exemplo: 'Camiseta Algodão Premium',            obs: 'Nome completo do produto.' },
+    { secao: 'Identificação',  coluna: 'Descrição',              campo: 'descricao',            obrigatorio: false, tipo: 'Texto',  exemplo: 'Camiseta 100% algodão, gola redonda', obs: 'Descrição detalhada (opcional).' },
+    { secao: 'Identificação',  coluna: 'Categoria',              campo: 'categoria',            obrigatorio: false, tipo: 'Texto',  exemplo: 'Vestuário',                           obs: 'Categoria livre, sem lista fixa.' },
+    { secao: 'Identificação',  coluna: 'Tipo',                   campo: 'tipo',                 obrigatorio: false, tipo: 'Texto',  exemplo: 'Produto acabado',                     obs: 'Ex: matéria-prima, produto acabado, insumo.' },
+    { secao: 'Identificação',  coluna: 'Marca',                  campo: 'marca',                obrigatorio: false, tipo: 'Texto',  exemplo: 'Minha Marca',                         obs: 'Marca ou fabricante.' },
+    { secao: 'Identificação',  coluna: 'Unidade',                campo: 'unidade_medida',       obrigatorio: false, tipo: 'Texto',  exemplo: 'UN',                                  obs: 'Unidade de medida: UN, KG, CX, L etc.' },
+    { secao: 'Identificação',  coluna: 'Status',                 campo: 'status',               obrigatorio: false, tipo: 'Texto',  exemplo: 'ativo',                               obs: 'Valores aceitos: ativo, pendente, pausado, inativo. Em branco = ativo.' },
+    { secao: 'Identificação',  coluna: 'Lote',                   campo: 'lote',                 obrigatorio: false, tipo: 'Texto',  exemplo: 'L2026-08',                            obs: 'Número do lote de fabricação.' },
+    { secao: 'Identificação',  coluna: 'Imagem URL',             campo: 'imagem_url',           obrigatorio: false, tipo: 'Texto',  exemplo: 'https://exemplo.com/foto.jpg',        obs: 'Link direto pra uma imagem do produto (opcional).' },
+
+    // ── Fiscal ──
+    { secao: 'Fiscal',         coluna: 'NCM',                    campo: 'ncm',                  obrigatorio: false, tipo: 'Texto',  exemplo: '6109.10.00',                          obs: 'Código NCM do produto.' },
+    { secao: 'Fiscal',         coluna: 'CEST',                   campo: 'cest',                 obrigatorio: false, tipo: 'Texto',  exemplo: '28.038.00',                           obs: 'Código Especificador da Substituição Tributária.' },
+    { secao: 'Fiscal',         coluna: 'GTIN',                   campo: 'gtin',                 obrigatorio: false, tipo: 'Texto',  exemplo: '7891000315507',                       obs: 'Código de barras do produto (GTIN/EAN).' },
+    { secao: 'Fiscal',         coluna: 'NALADI NESH',            campo: 'naladi_nesh',          obrigatorio: false, tipo: 'Texto',  exemplo: '3923.30.12',                          obs: 'Nomenclatura NALADI/NESH, quando aplicável.' },
+    { secao: 'Fiscal',         coluna: 'DUN14',                  campo: 'dun14',                obrigatorio: false, tipo: 'Texto',  exemplo: '17891000315504',                      obs: 'Código de barras da embalagem logística (caixa/pallet).' },
+
+    // ── Referências ──
+    { secao: 'Referências',    coluna: 'Referência Interna',     campo: 'referencia_interna',   obrigatorio: false, tipo: 'Texto',  exemplo: 'REF-INT-001',                         obs: 'Código de referência interno da empresa.' },
+    { secao: 'Referências',    coluna: 'Referência Fornecedor',  campo: 'referencia_fornecedor',obrigatorio: false, tipo: 'Texto',  exemplo: 'REF-FORN-9981',                       obs: 'Código de referência usado pelo fornecedor.' },
+    { secao: 'Referências',    coluna: 'Referência Outra',       campo: 'referencia_outra',     obrigatorio: false, tipo: 'Texto',  exemplo: 'REF-CLI-55',                          obs: 'Outra referência (ex: código do cliente).' },
+    { secao: 'Referências',    coluna: 'Empresa Parceira',       campo: 'empresa_parceira_ref', obrigatorio: false, tipo: 'Texto',  exemplo: 'Fornecedor ABC Ltda',                 obs: 'Razão Social, Nome Fantasia ou CNPJ/CPF de uma empresa já cadastrada em Empresas — o sistema localiza automaticamente.' },
+
+    // ── Preço ──
+    { secao: 'Preço',          coluna: 'Preço Custo',            campo: 'preco_custo',          obrigatorio: false, tipo: 'Número', exemplo: '15,00',                               obs: 'Use vírgula como separador decimal.' },
+    { secao: 'Preço',          coluna: 'Custos Fixos',           campo: 'custos_fixos',         obrigatorio: false, tipo: 'Número', exemplo: '2,50',                                obs: 'Custos fixos rateados por unidade.' },
+    { secao: 'Preço',          coluna: 'Imposto',                campo: 'imposto',              obrigatorio: false, tipo: 'Número', exemplo: '3,00',                                obs: 'Valor de imposto por unidade.' },
+    { secao: 'Preço',          coluna: 'Preço Venda',            campo: 'preco_venda',          obrigatorio: false, tipo: 'Número', exemplo: '35,00',                               obs: 'Use vírgula como separador decimal.' },
+    { secao: 'Preço',          coluna: 'Moeda',                  campo: 'moeda',                obrigatorio: false, tipo: 'Texto',  exemplo: 'BRL',                                 obs: 'Código da moeda: BRL, USD, EUR etc. Em branco = BRL.' },
+    { secao: 'Preço',          coluna: 'Observações de Preço',   campo: 'obs_preco',            obrigatorio: false, tipo: 'Texto',  exemplo: 'Preço válido para pedidos acima de 100un', obs: 'Condições especiais, tabelas, notas (opcional).' },
+
+    // ── Estoque ──
+    { secao: 'Estoque',        coluna: 'Estoque Atual',          campo: 'estoque_atual',        obrigatorio: false, tipo: 'Número', exemplo: '100',                                 obs: 'Quantidade em estoque no momento do cadastro.' },
+    { secao: 'Estoque',        coluna: 'Estoque Mínimo',         campo: 'estoque_minimo',       obrigatorio: false, tipo: 'Número', exemplo: '10',                                  obs: 'Nível mínimo antes do alerta de reposição.' },
+    { secao: 'Estoque',        coluna: 'Estoque Máximo',         campo: 'estoque_maximo',       obrigatorio: false, tipo: 'Número', exemplo: '500',                                 obs: 'Capacidade máxima de estoque planejada.' },
+    { secao: 'Estoque',        coluna: 'Controla Estoque',       campo: 'controla_estoque',     obrigatorio: false, tipo: 'Sim/Não',exemplo: 'Sim',                                 obs: 'Em branco = Sim.' },
+    { secao: 'Estoque',        coluna: 'Venda sem Estoque',      campo: 'venda_sem_estoque',    obrigatorio: false, tipo: 'Sim/Não',exemplo: 'Não',                                 obs: 'Permite vender mesmo com estoque zerado. Em branco = Não.' },
+    { secao: 'Estoque',        coluna: 'Data Fabricação',        campo: 'data_fabricacao',      obrigatorio: false, tipo: 'Data',   exemplo: '01/08/2026',                          obs: 'Formato DD/MM/AAAA.' },
+    { secao: 'Estoque',        coluna: 'Data Validade',          campo: 'data_validade',        obrigatorio: false, tipo: 'Data',   exemplo: '01/08/2027',                          obs: 'Formato DD/MM/AAAA.' },
+    { secao: 'Estoque',        coluna: 'Observações de Estoque', campo: 'obs_estoque',          obrigatorio: false, tipo: 'Texto',  exemplo: 'Armazenado no galpão B',              obs: 'Localização, controle, observações (opcional).' },
+
+    // ── Logística ──
+    { secao: 'Logística',      coluna: 'Observações de Logística', campo: 'obs_logistica',      obrigatorio: false, tipo: 'Texto',  exemplo: 'Frágil — manusear com cuidado',       obs: 'Embalagem, transporte, manuseio (opcional).' },
+];
+
+function abrirModalModeloProduto() {
+    document.getElementById('modalModeloProduto').classList.add('active');
+}
+
+function fecharModalModeloProduto() {
+    document.getElementById('modalModeloProduto').classList.remove('active');
+}
+
+// Gera um .xlsx de verdade (não .csv) — o upload de produtos só aceita
+// .xlsx/.xls/.pdf (ver accept="" no input#uploadProdutos e a checagem de
+// extensão em processarUploadProdutos), então um .csv baixado aqui não
+// poderia ser reenviado pela mesma tela. SheetJS já está carregado nesta
+// página (usado pelo upload), então gerar .xlsx tem custo zero a mais.
+function baixarModeloProdutoExcel() {
+    if (typeof XLSX === 'undefined') { notify('Não foi possível gerar a planilha (SheetJS não carregado).', 'error'); return; }
+
+    const header = PROD_MODELO_CAMPOS.map(c => c.coluna);
+    const exemplo = PROD_MODELO_CAMPOS.map(c => c.exemplo);
+    const ws = XLSX.utils.aoa_to_sheet([header, exemplo]);
+    ws['!cols'] = header.map(h => ({ wch: Math.max(h.length, 14) }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Modelo Produtos');
+    XLSX.writeFile(wb, 'modelo-importacao-produtos.xlsx');
+    fecharModalModeloProduto();
+}
+
 // --------------------------------------------------
 // UTILITÁRIOS
 // --------------------------------------------------
@@ -202,7 +287,43 @@ const PROD_UPLOAD_ALIASES = {
     'moeda': 'moeda',
     'estoque': 'estoque_atual', 'estoque atual': 'estoque_atual', 'quantidade': 'estoque_atual', 'qtd': 'estoque_atual',
     'estoque minimo': 'estoque_minimo',
+
+    // Expansão (2026-08-28) — cobre o restante dos campos de input livre do
+    // formulário de Produto. Ficam de fora: campos calculados/derivados
+    // automaticamente (margem, lucro liquido, hscode, ncm utrib/descrição —
+    // esses vêm do NCM ou dos preços, não são digitados) e os campos de
+    // lista (nomes em outros idiomas, embalagens, documentos), que não cabem
+    // numa única célula de planilha.
+    'cest': 'cest',
+    'gtin': 'gtin', 'ean': 'gtin', 'codigo de barras': 'gtin',
+    'naladi nesh': 'naladi_nesh', 'naladi': 'naladi_nesh', 'nesh': 'naladi_nesh',
+    'dun14': 'dun14', 'dun 14': 'dun14',
+    'imagem url': 'imagem_url', 'imagem': 'imagem_url', 'url da imagem': 'imagem_url', 'foto': 'imagem_url',
+    'lote': 'lote',
+    'data fabricacao': 'data_fabricacao', 'fabricacao': 'data_fabricacao',
+    'data validade': 'data_validade', 'validade': 'data_validade',
+    'referencia interna': 'referencia_interna', 'ref interna': 'referencia_interna',
+    'referencia fornecedor': 'referencia_fornecedor', 'ref fornecedor': 'referencia_fornecedor',
+    'referencia outra': 'referencia_outra', 'outra referencia': 'referencia_outra',
+    'empresa parceira': 'empresa_parceira_ref', 'parceiro': 'empresa_parceira_ref', 'fornecedor parceiro': 'empresa_parceira_ref',
+    'custos fixos': 'custos_fixos', 'custo fixo': 'custos_fixos',
+    'imposto': 'imposto', 'impostos': 'imposto',
+    'obs preco': 'obs_preco', 'observacoes de preco': 'obs_preco', 'observacao de preco': 'obs_preco',
+    'controla estoque': 'controla_estoque',
+    'venda sem estoque': 'venda_sem_estoque',
+    'estoque maximo': 'estoque_maximo',
+    'obs estoque': 'obs_estoque', 'observacoes de estoque': 'obs_estoque',
+    'obs logistica': 'obs_logistica', 'observacoes de logistica': 'obs_logistica',
 };
+
+// Campos que aceitam Sim/Não em vez de texto/número.
+const PROD_UPLOAD_CAMPOS_BOOLEANOS = { controla_estoque: true, venda_sem_estoque: false };
+
+// Campos com formato de data (aceita DD/MM/AAAA ou AAAA-MM-DD).
+const PROD_UPLOAD_CAMPOS_DATA = ['data_fabricacao', 'data_validade'];
+
+// Campos numéricos além dos já tratados (preco_custo/preco_venda/estoque_atual/estoque_minimo).
+const PROD_UPLOAD_CAMPOS_NUMERO_EXTRA = ['custos_fixos', 'imposto', 'estoque_maximo'];
 
 function _prodUploadNorm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
@@ -212,6 +333,29 @@ function _prodUploadParaNumero(v) {
     if (v === '' || v == null) return null;
     const n = Number(String(v).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.'));
     return Number.isFinite(n) ? n : null;
+}
+
+// Aceita "sim"/"não"/"nao"/"true"/"false"/"1"/"0" (com ou sem acento/caixa) —
+// em branco cai no padrão de cada campo (ver PROD_UPLOAD_CAMPOS_BOOLEANOS).
+function _prodUploadParaBooleano(v, padrao) {
+    if (v === '' || v == null) return padrao;
+    const n = _prodUploadNorm(v);
+    if (['sim', 's', 'true', '1', 'verdadeiro'].includes(n)) return true;
+    if (['nao', 'n', 'false', '0', 'falso'].includes(n)) return false;
+    return padrao;
+}
+
+// Aceita DD/MM/AAAA (formato mais comum no Excel pt-BR) ou AAAA-MM-DD (ISO,
+// caso o Excel já formate a célula como data) — devolve sempre AAAA-MM-DD,
+// formato que o banco espera. Retorna null se não conseguir reconhecer.
+function _prodUploadParaData(v) {
+    if (v === '' || v == null) return null;
+    const s = String(v).trim();
+    const br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (br) return `${br[3]}-${br[2].padStart(2,'0')}-${br[1].padStart(2,'0')}`;
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (iso) return `${iso[1]}-${iso[2].padStart(2,'0')}-${iso[3].padStart(2,'0')}`;
+    return null;
 }
 
 function _prodUploadParsearExcelLote(rows) {
@@ -245,12 +389,44 @@ function _prodUploadParsearExcelLote(rows) {
         if (p.preco_venda != null) p.preco_venda = _prodUploadParaNumero(p.preco_venda);
         if (p.estoque_atual != null) p.estoque_atual = _prodUploadParaNumero(p.estoque_atual);
         if (p.estoque_minimo != null) p.estoque_minimo = _prodUploadParaNumero(p.estoque_minimo);
+        PROD_UPLOAD_CAMPOS_NUMERO_EXTRA.forEach(campo => {
+            if (p[campo] != null) p[campo] = _prodUploadParaNumero(p[campo]);
+        });
+        PROD_UPLOAD_CAMPOS_DATA.forEach(campo => {
+            if (p[campo] != null) p[campo] = _prodUploadParaData(p[campo]);
+        });
+        Object.entries(PROD_UPLOAD_CAMPOS_BOOLEANOS).forEach(([campo, padrao]) => {
+            p[campo] = _prodUploadParaBooleano(p[campo], padrao);
+        });
         p.status = p.status || 'ativo';
         p.moeda  = p.moeda  || 'BRL';
 
         produtos.push(p);
     }
     return produtos;
+}
+
+// "Empresa Parceira" vem como texto livre (Razão Social ou CNPJ/CPF) na
+// planilha, já que ninguém digita um UUID de cabeça — resolve contra
+// `parceiros` da própria empresa antes de salvar. Não encontrando, segue o
+// produto sem vínculo (não bloqueia a linha inteira por isso).
+async function _prodUploadResolverEmpresaParceira(p) {
+    if (!p.empresa_parceira_ref) return;
+    const ref = p.empresa_parceira_ref;
+    delete p.empresa_parceira_ref;
+
+    try {
+        const usuario = obterUsuarioLogado();
+        const digitos = ref.replace(/\D/g, '');
+        let query = supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento').limit(1);
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        query = digitos.length >= 11
+            ? query.eq('documento', digitos)
+            : query.or(`razao_social.ilike."%${ref}%",nome_fantasia.ilike."%${ref}%"`);
+
+        const { data } = await query;
+        if (data?.[0]?.id) p.empresa_parceira_id = data[0].id;
+    } catch (e) { console.warn('[Produtos] Falha ao resolver Empresa Parceira:', ref, e); }
 }
 
 async function _prodUploadImportarLote(produtos) {
@@ -261,6 +437,7 @@ async function _prodUploadImportarLote(produtos) {
 
     let sucesso = 0, falha = 0;
     for (const p of produtos) {
+        await _prodUploadResolverEmpresaParceira(p);
         const res = await window.supabaseAPI.salvarProduto(p);
         if (res.sucesso) sucesso++; else { falha++; console.warn('Falha ao importar produto', p.sku, res.mensagem); }
     }

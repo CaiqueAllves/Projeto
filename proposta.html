@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex | Proposta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-pipeline.css">
+    <link rel="stylesheet" href="style-proposta.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+<body>
+
+<div class="main-layout" style="display:flex;">
+    <aside></aside>
+
+    <main>
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2><i class="fa-solid fa-file-lines"></i> Proposta</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="user-info-card">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <div class="user-name" id="displayUsername">User...</div>
+                        <div class="user-email" id="userEmail">usuario@email.com</div>
+                    </div>
+                </div>
+                <div class="logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- FILTRO + AÇÕES -->
+            <div class="page-header">
+                <div class="header-left">
+                    <div class="filter-wrapper">
+                        <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+                        <input type="text" id="filtroProposta" placeholder="Filtrar por número, cliente ou responsável..." oninput="propFiltrar()">
+                    </div>
+                    <select id="filtroEtapaProposta" class="filter-select" onchange="propFiltrar()">
+                        <option value="">Todas as etapas</option>
+                        <option value="proposta">Proposta</option>
+                        <option value="negociacao">Negociação</option>
+                        <option value="fechado">Fechado</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="propBtnViewKanban" onclick="propSwitchView('kanban')" title="Kanban">
+                            <i class="fa-solid fa-table-columns"></i>
+                        </button>
+                        <button class="view-btn" id="propBtnViewLista" onclick="propSwitchView('lista')" title="Lista">
+                            <i class="fa-solid fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div id="propExcluidosWrapper">
+                        <button class="btn-excluidos" onclick="propToggleExcluidos()">
+                            <i class="fa-solid fa-trash-can"></i> Excluídos
+                        </button>
+                        <div class="prof-excluidos-panel" id="propExcluidosPanel">
+                            <div class="prof-excluidos-titulo">
+                                <i class="fa-solid fa-trash-can"></i> Propostas Excluídas
+                            </div>
+                            <div class="prof-excluidos-aviso">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                Propostas excluídas após 7 dias serão removidas sem chances de restaurar.
+                            </div>
+                            <div id="propExcluidosContainer"></div>
+                        </div>
+                    </div>
+                    <button class="btn-cadastrar" onclick="propAbrirModal()">
+                        <i class="fa-solid fa-plus"></i> Nova Proposta
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABS MOBILE -->
+            <div class="kanban-tabs" id="propKanbanTabs">
+                <button class="kanban-tab active" data-col="proposta"   onclick="propKanbanSwitchTab(this)">Proposta <span class="kanban-tab-count" id="prop-tabcount-proposta">0</span></button>
+                <button class="kanban-tab"         data-col="negociacao" onclick="propKanbanSwitchTab(this)">Negociação <span class="kanban-tab-count" id="prop-tabcount-negociacao">0</span></button>
+                <button class="kanban-tab"         data-col="fechado"    onclick="propKanbanSwitchTab(this)">Fechado <span class="kanban-tab-count" id="prop-tabcount-fechado">0</span></button>
+                <button class="kanban-tab"         data-col="perdido"    onclick="propKanbanSwitchTab(this)">Perdido <span class="kanban-tab-count" id="prop-tabcount-perdido">0</span></button>
+            </div>
+
+            <!-- KANBAN -->
+            <div class="pl-kanban" id="propKanban">
+
+                <div class="pl-col" data-etapa="proposta">
+                    <div class="pl-col-header pl-header-proposta">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-file-lines"></i> Proposta</span>
+                        <span class="pl-col-count" id="prop-count-proposta">0</span>
+                    </div>
+                    <div class="pl-col-body" id="prop-col-proposta">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="negociacao">
+                    <div class="pl-col-header pl-header-negociacao">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-comments-dollar"></i> Negociação</span>
+                        <span class="pl-col-count" id="prop-count-negociacao">0</span>
+                    </div>
+                    <div class="pl-col-body" id="prop-col-negociacao">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="fechado">
+                    <div class="pl-col-header pl-header-fechado">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-circle-check"></i> Fechado</span>
+                        <span class="pl-col-count" id="prop-count-fechado">0</span>
+                    </div>
+                    <div class="pl-col-body" id="prop-col-fechado">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <div class="pl-col" data-etapa="perdido">
+                    <div class="pl-col-header pl-header-perdido">
+                        <span class="pl-col-titulo"><i class="fa-solid fa-ban"></i> Perdido</span>
+                        <span class="pl-col-count" id="prop-count-perdido">0</span>
+                    </div>
+                    <div class="pl-col-body" id="prop-col-perdido">
+                        <div class="pl-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TABELA -->
+            <div class="prop-table-wrap" style="display:none;">
+                <table class="prop-table" id="propTabela">
+                    <thead>
+                        <tr>
+                            <th>Nº Proposta</th>
+                            <th>Remetente</th>
+                            <th>Destinatário</th>
+                            <th>Valor</th>
+                            <th>Etapa</th>
+                            <th>Responsável</th>
+                            <th>Previsão</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="propTbody">
+                        <tr><td colspan="8" class="prop-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- MODAL CRIAR/EDITAR -->
+<div class="pl-modal-overlay" id="propModalOverlay" onclick="propFecharModal()">
+    <div class="pl-modal" onclick="event.stopPropagation()">
+        <div class="pl-modal-header">
+            <h3 id="propModalTitulo"><i class="fa-solid fa-filter"></i> Nova Proposta</h3>
+            <button class="pl-modal-close" onclick="propFecharModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pl-modal-body" id="prop-form-body">
+            <input type="hidden" id="propEditId">
+
+            <div class="pl-form-row">
+                <div class="pl-form-group pl-full">
+                    <label>Número da Proposta <span class="pl-req">*</span></label>
+                    <input type="text" id="propTitulo" placeholder="Gerado automaticamente..." readonly>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Remetente</label>
+                    <input type="text" id="propRemetenteNome" placeholder="Buscar empresa..." autocomplete="off" oninput="propBuscarEmpresa('remetente', this.value)" onfocus="propMostrarEmpresas('remetente', this.value)">
+                    <input type="hidden" id="propRemetenteId">
+                    <div class="pl-autocomplete" id="propAutoRemetente"></div>
+                </div>
+                <div class="pl-form-group">
+                    <label>Identificação Fiscal</label>
+                    <input type="text" id="propRemetenteDocumento" placeholder="—" readonly>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Destinatário</label>
+                    <input type="text" id="propDestinatarioNome" placeholder="Buscar empresa..." autocomplete="off" oninput="propBuscarEmpresa('destinatario', this.value)" onfocus="propMostrarEmpresas('destinatario', this.value)">
+                    <input type="hidden" id="propDestinatarioId">
+                    <div class="pl-autocomplete" id="propAutoDestinatario"></div>
+                </div>
+                <div class="pl-form-group">
+                    <label>Identificação Fiscal</label>
+                    <input type="text" id="propDestinatarioDocumento" placeholder="—" readonly>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Valor</label>
+                    <input type="text" id="propValor" placeholder="0,00" inputmode="decimal" oninput="propMascaraMonetaria(this)">
+                </div>
+                <div class="pl-form-group">
+                    <label>Moeda</label>
+                    <select id="propMoeda">
+                        <option value="USD">USD</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pl-form-row" id="propEtapaGroup" style="display:none;">
+                <div class="pl-form-group">
+                    <label>Etapa</label>
+                    <select id="propEtapa">
+                        <option value="proposta">Proposta</option>
+                        <option value="negociacao">Negociação</option>
+                        <option value="fechado">Fechado</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group pl-full">
+                    <label>Responsável</label>
+                    <input type="text" id="propResponsavel" placeholder="Nome do responsável">
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group">
+                    <label>Data de Criação</label>
+                    <input type="date" id="propDataCriacao" readonly>
+                </div>
+                <div class="pl-form-group">
+                    <label>Prazo Hábil</label>
+                    <select id="propPrazoDias" onchange="propAtualizarPrazo()">
+                        <option value="">Selecione...</option>
+                        <option value="2">2 dias</option>
+                        <option value="5">5 dias</option>
+                        <option value="7">7 dias</option>
+                        <option value="15">15 dias</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                <div class="pl-form-group">
+                    <label>Previsão de Fechamento</label>
+                    <input type="date" id="propDataPrevista" readonly>
+                </div>
+            </div>
+
+            <div class="pl-form-row" id="propPrazoCustomGroup" style="display:none;">
+                <div class="pl-form-group">
+                    <label>Quantos dias de prazo?</label>
+                    <input type="number" id="propPrazoCustom" min="1" placeholder="Ex: 30" oninput="propAtualizarPrazoCustom()">
+                </div>
+            </div>
+
+            <div class="pl-form-row">
+                <div class="pl-form-group pl-full pl-obs-wrapper">
+                    <div class="pl-obs-toggle" onclick="propToggleObs(this)">
+                        <span>Observações</span>
+                        <i class="fa-solid fa-chevron-down pl-obs-icon"></i>
+                    </div>
+                    <div class="pl-obs-content">
+                        <textarea id="propObservacoes" rows="3" placeholder="Detalhes da proposta..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="pl-modal-footer" id="prop-form-footer">
+            <button class="pl-btn-cancelar" onclick="propFecharModal()">Cancelar</button>
+            <button class="pl-btn-salvar" id="propBtnSalvar" onclick="propSalvar()">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR EXCLUIR -->
+<div class="pl-modal-overlay" id="propModalExcluirOverlay" onclick="propFecharModalExcluir()">
+    <div class="pl-modal pl-modal-sm" onclick="event.stopPropagation()">
+        <div class="pl-modal-header">
+            <h3><i class="fa-solid fa-trash"></i> Excluir Proposta</h3>
+            <button class="pl-modal-close" onclick="propFecharModalExcluir()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pl-modal-body">
+            <p>Tem certeza que deseja excluir a proposta <strong id="propExcluirNome"></strong>? Ela ficará em "Excluídos" por 7 dias, com opção de restaurar.</p>
+        </div>
+        <div class="pl-modal-footer">
+            <button class="pl-btn-cancelar" onclick="propFecharModalExcluir()">Cancelar</button>
+            <button class="pl-btn-excluir" id="propBtnConfirmarExcluir" onclick="propConfirmarExcluir()">
+                <i class="fa-solid fa-trash"></i> Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-footer">
+    <span>© 2025 Marpex · Todos os direitos reservados</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="proposta.js"></script>
+<script src="suporte.js"></script>
+</body>
+</html>

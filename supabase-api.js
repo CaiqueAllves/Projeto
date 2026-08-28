@@ -1621,7 +1621,7 @@ async function buscarContasReceber() {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         const { data, error } = await query;
@@ -1636,7 +1636,7 @@ async function buscarContasReceberPeriodo(inicio, fim) {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
             .gte('data_vencimento', inicio)
             .lte('data_vencimento', fim)
             .order('data_vencimento', { ascending: true });
@@ -1662,6 +1662,7 @@ async function salvarContaReceber(dados, id = null) {
             data_recebimento: dados.data_recebimento || null,
             status:           dados.status || 'pendente',
             categoria:        dados.categoria || null,
+            plano_conta_id:   dados.plano_conta_id || null,
             observacoes:      dados.observacoes || null,
             atualizado_em:    new Date().toISOString(),
         };
@@ -1676,6 +1677,23 @@ async function salvarContaReceber(dados, id = null) {
         if (result.error) return { sucesso: false, mensagem: result.error.message };
         return { sucesso: true, data: result.data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// Plano de Contas — tabela de referência hierárquica (Bloco > Conta >
+// Subfator), ver database/database-plano-contas-receitas.sql. Por
+// enquanto só o Bloco 1 (Receitas) está populado; `bloco` deixa pronto
+// pra filtrar os próximos blocos conforme forem sendo integrados.
+async function buscarPlanoContas(bloco = 1) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('plano_contas')
+            .select('id, bloco, bloco_nome, conta_codigo, conta_nome, codigo, subfator_nome, descricao, base, ordem')
+            .eq('bloco', bloco)
+            .eq('ativo', true)
+            .order('ordem', { ascending: true });
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
 }
 
 async function atualizarContaReceber(id, dados) {
@@ -1745,8 +1763,10 @@ window.supabaseAPI = {
     // Comercial
     buscarOportunidades,
     salvarOportunidade,
+    gerarNumeroSequencial,
     atualizarEtapaOportunidade,
     excluirOportunidade,
+    restaurarOportunidade,
     buscarPedidos,
     salvarPedido,
     atualizarStatusPedido,
@@ -1766,6 +1786,7 @@ window.supabaseAPI = {
     buscarContasReceber,
     buscarContasReceberPeriodo,
     salvarContaReceber,
+    buscarPlanoContas,
     atualizarContaReceber,
     excluirContaReceber,
 };
@@ -1795,6 +1816,11 @@ window.supabaseAPI = {
 //     data_prevista           DATE,
 //     observacoes             TEXT,
 //     proforma_id             UUID,
+//     excluido_em             TIMESTAMPTZ,
+//                                 -- exclusão suave (2026-08-28, ver proposta.html/js e
+//                                 -- database/database-oportunidades-soft-delete.sql) — sinal
+//                                 -- independente da etapa, pra restaurar não perder o progresso.
+//     excluido_por            TEXT,
 //     created_at              TIMESTAMPTZ DEFAULT NOW(),
 //     updated_at              TIMESTAMPTZ DEFAULT NOW()
 // );
@@ -1827,6 +1853,7 @@ async function buscarOportunidades() {
             .select(`*,
                 parceiros!oportunidades_cliente_id_fkey(razao_social, nome_fantasia, documento),
                 remetente:parceiros!oportunidades_remetente_parceiro_id_fkey(razao_social, nome_fantasia, documento)`)
+            .is('excluido_em', null)
             .order('updated_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
         let { data, error } = await query;
@@ -1838,6 +1865,7 @@ async function buscarOportunidades() {
             let queryFallback = supabaseClient
                 .from('oportunidades')
                 .select('*, parceiros!oportunidades_cliente_id_fkey(razao_social, nome_fantasia, documento)')
+                .is('excluido_em', null)
                 .order('updated_at', { ascending: false });
             if (usuario.empresa_id) queryFallback = queryFallback.eq('empresa_proprietaria_id', usuario.empresa_id);
             ({ data, error } = await queryFallback);
@@ -1882,9 +1910,29 @@ async function atualizarEtapaOportunidade(id, etapa) {
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
+// Exclusão suave — ver database/database-oportunidades-soft-delete.sql.
+// Só marca excluido_em/excluido_por, nunca toca em `etapa` (diferente de
+// excluirPedido, que reaproveita `status`): assim restaurarOportunidade()
+// devolve a proposta pra etapa exata em que estava, sem perder progresso.
 async function excluirOportunidade(id) {
     try {
-        const { error } = await supabaseClient.from('oportunidades').delete().eq('id', id);
+        const usuario = obterUsuarioLogado();
+        const { error } = await supabaseClient.from('oportunidades')
+            .update({
+                excluido_em:  new Date().toISOString(),
+                excluido_por: usuario?.nome || usuario?.email || 'Desconhecido',
+            })
+            .eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function restaurarOportunidade(id) {
+    try {
+        const { error } = await supabaseClient.from('oportunidades')
+            .update({ excluido_em: null, excluido_por: null })
+            .eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
@@ -1907,6 +1955,27 @@ async function buscarPedidos() {
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+// Numeração sequencial que nunca repete, mesmo se o registro for excluído
+// de verdade depois (diferente do MAX+1 usado em Pedido/Processo abaixo,
+// que só funciona porque aqueles nunca são excluídos fisicamente — ver
+// database/database-oportunidades-numero-proposta.sql). Usa a RPC
+// proximo_numero_sequencial (INSERT...ON CONFLICT...RETURNING atômico),
+// então também não tem a brecha de corrida que o MAX+1 local tem.
+async function gerarNumeroSequencial(tipo, prefixo) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada' };
+
+        const { data, error } = await supabaseClient.rpc('proximo_numero_sequencial', {
+            p_empresa_id: usuario.empresa_id,
+            p_tipo: tipo,
+            p_prefixo: prefixo,
+        });
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, numero: data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
 // Gera o número do pedido no mesmo padrão de Proforma (PRO...) e Processo
