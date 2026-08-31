@@ -13,60 +13,67 @@ try {
 }
 
 // ========================================
+// HASH DE SENHA (bcrypt, client-side)
+// ========================================
+// Antes desta migração, senha_hash guardava a senha em texto puro (nome
+// enganoso). Como a policy de RLS de `usuarios` libera leitura pra `anon`
+// (chave pública, embutida no próprio JS), qualquer um conseguia ler a
+// senha de qualquer usuário direto pela API REST — daí a urgência de
+// nunca mais gravar/comparar em texto puro. Isso não resolve o problema de
+// fundo (RLS/autenticação real ainda dependem de uma migração maior pra
+// Supabase Auth), mas fecha o vazamento mais grave sem quebrar ninguém.
+
+function _hashSenha(senha) {
+    return dcodeIO.bcrypt.hashSync(senha, 10);
+}
+
+// Compatibilidade com contas que ainda têm a senha em texto puro (de antes
+// desta migração): se o valor salvo não tem cara de hash bcrypt, compara
+// direto. loginSupabase() re-hasheia automaticamente assim que reconhece
+// esse caso, então cada conta migra sozinha no próximo login bem-sucedido.
+function _senhaCorreta(senha, hashSalvo) {
+    if (!hashSalvo) return false;
+    if (!/^\$2[aby]\$/.test(hashSalvo)) return hashSalvo === senha;
+    return dcodeIO.bcrypt.compareSync(senha, hashSalvo);
+}
+
+// ========================================
 // LOGIN
 // ========================================
+// Estágio 2.2 da migração de autenticação (ver auditoria de segurança).
+// Antes, esta função buscava o usuário por CPF direto com a chave `anon` —
+// e essa consulta é exatamente o que travava a RLS real: pra remover o
+// `anon` de `usuarios` (pré-requisito de auth.uid()), o login não pode mais
+// depender dele. Agora todo o trabalho (achar por CPF, checar ativo/
+// bloqueio, comparar senha, contar tentativas, linkar no Supabase Auth) foi
+// pra dentro da Edge Function `login-usuario`, que roda com service_role
+// (ignora RLS). De quebra, fecha outra falha da auditoria: o bloqueio por
+// tentativas antes era só client-side (dava pra ignorar batendo direto na
+// API REST) — agora é aplicado no servidor, sem como pular.
+const LOGIN_ENDPOINT = `${SUPABASE_URL}/functions/v1/login-usuario`;
 
 async function loginSupabase(cpf, senha) {
     try {
-        const { data: usuario, error } = await supabaseClient
-            .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, bloqueado_ate, tentativas_login, senha_hash, empresa_id, avatar_url, empresas(razao_social, status, expira_em)')
-            .eq('cpf', cpf)
-            .single();
+        const res = await fetch(LOGIN_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cpf, senha }),
+        });
+        const resultado = await res.json();
+        if (!resultado.sucesso) return resultado;
 
-        if (error || !usuario) {
-            return { sucesso: false, mensagem: 'CPF ou senha incorretos' };
+        // A função já garantiu que a conta está criada/atualizada no
+        // Supabase Auth — aqui só estabelece a sessão real (JWT) neste
+        // navegador, via endpoint público (não precisa de service_role).
+        if (resultado.usuario?.email) {
+            const { error } = await supabaseClient.auth.signInWithPassword({
+                email: resultado.usuario.email,
+                password: senha,
+            });
+            if (error) console.warn('[Auth real] signInWithPassword falhou:', error.message);
         }
 
-        if (!usuario.ativo) {
-            return { sucesso: false, mensagem: 'Usuário inativo. Contate o administrador.' };
-        }
-
-        if (usuario.bloqueado_ate && new Date() < new Date(usuario.bloqueado_ate)) {
-            const minutos = Math.ceil((new Date(usuario.bloqueado_ate) - new Date()) / 60000);
-            return { sucesso: false, mensagem: `Usuário bloqueado. Tente novamente em ${minutos} minutos.` };
-        }
-
-        if (usuario.senha_hash !== senha) {
-            await supabaseClient
-                .from('usuarios')
-                .update({ tentativas_login: (usuario.tentativas_login || 0) + 1 })
-                .eq('cpf', cpf);
-            return { sucesso: false, mensagem: 'CPF ou senha incorretos' };
-        }
-
-        await supabaseClient
-            .from('usuarios')
-            .update({ tentativas_login: 0, bloqueado_ate: null, ultimo_login: new Date().toISOString() })
-            .eq('id', usuario.id);
-
-        return {
-            sucesso: true,
-            mensagem: 'Login realizado com sucesso!',
-            usuario: {
-                id: usuario.id,
-                cpf: usuario.cpf,
-                nome: usuario.nome_completo,
-                email: usuario.email,
-                perfil: usuario.perfil,
-                empresa: usuario.empresas?.razao_social || '',
-                empresa_id: usuario.empresa_id,
-                empresa_status: usuario.empresas?.status || null,
-                empresa_expira_em: usuario.empresas?.expira_em || null,
-                avatar_url: usuario.avatar_url || null
-            }
-        };
-
+        return resultado;
     } catch (err) {
         console.error('Erro no login:', err);
         return { sucesso: false, mensagem: 'Erro ao processar login. Tente novamente.' };
@@ -181,7 +188,7 @@ async function cadastrarContaSupabase(dados) {
         // Criar usuário sem empresa_id primeiro (evita FK timing issue)
         const { data: novoUsuario, error: erroUsuario } = await supabaseClient
             .from('usuarios')
-            .insert({ nome_completo: nome, cpf, email, senha_hash: senha, perfil, ativo: true })
+            .insert({ nome_completo: nome, cpf, email, senha_hash: _hashSenha(senha), perfil, ativo: true })
             .select()
             .single();
 
@@ -721,7 +728,7 @@ async function redefinirSenha(id, novaSenha) {
 
         const { error } = await supabaseClient
             .from('usuarios')
-            .update({ senha_hash: novaSenha })
+            .update({ senha_hash: _hashSenha(novaSenha) })
             .eq('id', id)
             .eq('empresa_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
@@ -740,11 +747,11 @@ async function atualizarSenha(id, senhaAtual, novaSenha) {
             .single();
 
         if (error || !usuario) return { sucesso: false, mensagem: 'Usuário não encontrado.' };
-        if (usuario.senha_hash !== senhaAtual) return { sucesso: false, mensagem: 'Senha atual incorreta.' };
+        if (!_senhaCorreta(senhaAtual, usuario.senha_hash)) return { sucesso: false, mensagem: 'Senha atual incorreta.' };
 
         const { error: errUpdate } = await supabaseClient
             .from('usuarios')
-            .update({ senha_hash: novaSenha })
+            .update({ senha_hash: _hashSenha(novaSenha) })
             .eq('id', id);
 
         if (errUpdate) return { sucesso: false, mensagem: errUpdate.message };
@@ -870,7 +877,7 @@ async function criarSubUsuario(dados) {
             nome_completo: dados.nome,
             cpf: dados.cpf,
             email: dados.email,
-            senha_hash: dados.senha,
+            senha_hash: _hashSenha(dados.senha),
             perfil: dados.perfil || 'usuario',
             ativo: true,
             empresa_id: usuario.empresa_id
