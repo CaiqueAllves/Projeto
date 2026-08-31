@@ -134,40 +134,28 @@ async function buscarSolicitacoesPendentes() {
     }
 }
 
+// Estágio 2.2 (ver auditoria de segurança): aprovar uma solicitação exige
+// mudar usuarios.empresa_id de OUTRA pessoa pra uma empresa que ainda não
+// é a dela — a RLS normal de `usuarios` não permite essa transição (só
+// deixa um admin atualizar quem já é da empresa dele). Movido pra Edge
+// Function `responder-solicitacao`, que roda com service_role mas exige
+// JWT válido (deploy sem --no-verify-jwt) e confere admin por dentro.
+const RESPONDER_SOLICITACAO_ENDPOINT = `${SUPABASE_URL}/functions/v1/responder-solicitacao`;
+
 async function responderSolicitacao(solicitacaoId, aprovado) {
     try {
-        const usuario = obterUsuarioLogado();
-        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        const { data: sol, error: errSol } = await supabaseClient
-            .from('solicitacoes_empresa')
-            .select('usuario_id, empresa_id')
-            .eq('id', solicitacaoId)
-            .single();
-
-        if (errSol || !sol) return { sucesso: false, mensagem: 'Solicitação não encontrada' };
-
-        const { error: errUpd } = await supabaseClient
-            .from('solicitacoes_empresa')
-            .update({
-                status: aprovado ? 'aprovado' : 'rejeitado',
-                respondido_em: new Date().toISOString(),
-                respondido_por: usuario.id
-            })
-            .eq('id', solicitacaoId);
-
-        if (errUpd) return { sucesso: false, mensagem: 'Erro ao responder solicitação' };
-
-        if (aprovado) {
-            const { error: errUser } = await supabaseClient
-                .from('usuarios')
-                .update({ empresa_id: sol.empresa_id })
-                .eq('id', sol.usuario_id);
-
-            if (errUser) return { sucesso: false, mensagem: 'Erro ao vincular usuário à empresa' };
-        }
-
-        return { sucesso: true };
+        const res = await fetch(RESPONDER_SOLICITACAO_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ solicitacao_id: solicitacaoId, aprovado }),
+        });
+        return await res.json();
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
     }
