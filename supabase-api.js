@@ -13,6 +13,31 @@ try {
 }
 
 // ========================================
+// HASH DE SENHA (bcrypt, client-side)
+// ========================================
+// Antes desta migração, senha_hash guardava a senha em texto puro (nome
+// enganoso). Como a policy de RLS de `usuarios` libera leitura pra `anon`
+// (chave pública, embutida no próprio JS), qualquer um conseguia ler a
+// senha de qualquer usuário direto pela API REST — daí a urgência de
+// nunca mais gravar/comparar em texto puro. Isso não resolve o problema de
+// fundo (RLS/autenticação real ainda dependem de uma migração maior pra
+// Supabase Auth), mas fecha o vazamento mais grave sem quebrar ninguém.
+
+function _hashSenha(senha) {
+    return dcodeIO.bcrypt.hashSync(senha, 10);
+}
+
+// Compatibilidade com contas que ainda têm a senha em texto puro (de antes
+// desta migração): se o valor salvo não tem cara de hash bcrypt, compara
+// direto. loginSupabase() re-hasheia automaticamente assim que reconhece
+// esse caso, então cada conta migra sozinha no próximo login bem-sucedido.
+function _senhaCorreta(senha, hashSalvo) {
+    if (!hashSalvo) return false;
+    if (!/^\$2[aby]\$/.test(hashSalvo)) return hashSalvo === senha;
+    return dcodeIO.bcrypt.compareSync(senha, hashSalvo);
+}
+
+// ========================================
 // LOGIN
 // ========================================
 
@@ -37,7 +62,7 @@ async function loginSupabase(cpf, senha) {
             return { sucesso: false, mensagem: `Usuário bloqueado. Tente novamente em ${minutos} minutos.` };
         }
 
-        if (usuario.senha_hash !== senha) {
+        if (!_senhaCorreta(senha, usuario.senha_hash)) {
             await supabaseClient
                 .from('usuarios')
                 .update({ tentativas_login: (usuario.tentativas_login || 0) + 1 })
@@ -45,9 +70,13 @@ async function loginSupabase(cpf, senha) {
             return { sucesso: false, mensagem: 'CPF ou senha incorretos' };
         }
 
+        const eraTextoPuro = !/^\$2[aby]\$/.test(usuario.senha_hash || '');
+        const atualizacao = { tentativas_login: 0, bloqueado_ate: null, ultimo_login: new Date().toISOString() };
+        if (eraTextoPuro) atualizacao.senha_hash = _hashSenha(senha); // upgrade transparente pra bcrypt
+
         await supabaseClient
             .from('usuarios')
-            .update({ tentativas_login: 0, bloqueado_ate: null, ultimo_login: new Date().toISOString() })
+            .update(atualizacao)
             .eq('id', usuario.id);
 
         return {
@@ -181,7 +210,7 @@ async function cadastrarContaSupabase(dados) {
         // Criar usuário sem empresa_id primeiro (evita FK timing issue)
         const { data: novoUsuario, error: erroUsuario } = await supabaseClient
             .from('usuarios')
-            .insert({ nome_completo: nome, cpf, email, senha_hash: senha, perfil, ativo: true })
+            .insert({ nome_completo: nome, cpf, email, senha_hash: _hashSenha(senha), perfil, ativo: true })
             .select()
             .single();
 
@@ -721,7 +750,7 @@ async function redefinirSenha(id, novaSenha) {
 
         const { error } = await supabaseClient
             .from('usuarios')
-            .update({ senha_hash: novaSenha })
+            .update({ senha_hash: _hashSenha(novaSenha) })
             .eq('id', id)
             .eq('empresa_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
@@ -740,11 +769,11 @@ async function atualizarSenha(id, senhaAtual, novaSenha) {
             .single();
 
         if (error || !usuario) return { sucesso: false, mensagem: 'Usuário não encontrado.' };
-        if (usuario.senha_hash !== senhaAtual) return { sucesso: false, mensagem: 'Senha atual incorreta.' };
+        if (!_senhaCorreta(senhaAtual, usuario.senha_hash)) return { sucesso: false, mensagem: 'Senha atual incorreta.' };
 
         const { error: errUpdate } = await supabaseClient
             .from('usuarios')
-            .update({ senha_hash: novaSenha })
+            .update({ senha_hash: _hashSenha(novaSenha) })
             .eq('id', id);
 
         if (errUpdate) return { sucesso: false, mensagem: errUpdate.message };
@@ -870,7 +899,7 @@ async function criarSubUsuario(dados) {
             nome_completo: dados.nome,
             cpf: dados.cpf,
             email: dados.email,
-            senha_hash: dados.senha,
+            senha_hash: _hashSenha(dados.senha),
             perfil: dados.perfil || 'usuario',
             ativo: true,
             empresa_id: usuario.empresa_id
