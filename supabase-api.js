@@ -38,6 +38,51 @@ function _senhaCorreta(senha, hashSalvo) {
 }
 
 // ========================================
+// ESTÁGIO 2.1 — LINK COM O SUPABASE AUTH REAL
+// ========================================
+// Ver auditoria de segurança / plano de migração: enquanto a RLS não é
+// reescrita pra usar auth.uid() (Estágio 2.2), a autorização real ainda
+// depende só do filtro client-side por empresa_id. Este passo prepara o
+// terreno sem mudar nada visível: a cada login bem-sucedido (senha já
+// confirmada acima), linka a conta ao Supabase Auth de verdade via a Edge
+// Function `vincular-auth-usuario` e estabelece uma sessão real (JWT) neste
+// navegador, silenciosamente. Nunca deve derrubar o login se falhar —
+// é best-effort até o Estágio 2.2 passar a depender disso de verdade.
+const VINCULAR_AUTH_ENDPOINT = `${SUPABASE_URL}/functions/v1/vincular-auth-usuario`;
+
+async function _vincularAuthReal(usuario, senha) {
+    // Só roda uma vez por conta (loginSupabase só chama isso quando auth_id
+    // ainda é null), mas mesmo assim tem uma chamada de Edge Function + uma
+    // ao Auth de verdade — nunca deixa isso travar o login inteiro se a
+    // função estiver lenta ou fora do ar.
+    const comLimite = (promessa, ms) => Promise.race([
+        promessa,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+    ]);
+
+    try {
+        const res = await comLimite(fetch(VINCULAR_AUTH_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuarios_id: usuario.id, senha }),
+        }), 6000);
+        if (!res.ok) {
+            console.warn('[Auth real] Falha ao vincular (não bloqueia o login):', await res.text());
+            return;
+        }
+        if (usuario.email) {
+            const { error } = await comLimite(
+                supabaseClient.auth.signInWithPassword({ email: usuario.email, password: senha }),
+                6000
+            );
+            if (error) console.warn('[Auth real] Vinculado, mas signInWithPassword falhou:', error.message);
+        }
+    } catch (err) {
+        console.warn('[Auth real] Erro ao vincular (não bloqueia o login):', err.message);
+    }
+}
+
+// ========================================
 // LOGIN
 // ========================================
 
@@ -45,7 +90,7 @@ async function loginSupabase(cpf, senha) {
     try {
         const { data: usuario, error } = await supabaseClient
             .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, bloqueado_ate, tentativas_login, senha_hash, empresa_id, avatar_url, empresas(razao_social, status, expira_em)')
+            .select('id, cpf, nome_completo, email, perfil, ativo, bloqueado_ate, tentativas_login, senha_hash, empresa_id, avatar_url, auth_id, empresas(razao_social, status, expira_em)')
             .eq('cpf', cpf)
             .single();
 
@@ -78,6 +123,15 @@ async function loginSupabase(cpf, senha) {
             .from('usuarios')
             .update(atualizacao)
             .eq('id', usuario.id);
+
+        // Só linka na primeira vez (custa uma chamada de rede a mais nesse
+        // login específico) — nos seguintes, auth_id já existe e pula direto.
+        // É aguardado (não fire-and-forget): o redirect do login.js acontece
+        // ~1s depois daqui, cedo o bastante pra cancelar um fetch em segundo
+        // plano no meio do caminho.
+        if (!usuario.auth_id) {
+            await _vincularAuthReal(usuario, senha);
+        }
 
         return {
             sucesso: true,
