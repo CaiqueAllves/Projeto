@@ -90,144 +90,21 @@ function gerarChaveEmpresa() {
     return `${seg()}-${seg()}-${seg()}`;
 }
 
+// Estágio 2.2 da migração de autenticação (ver auditoria de segurança).
+// Mesmo motivo do login: essa função criava empresa/usuário/solicitação
+// direto com a chave `anon` (sem sessão ainda, é a própria conta sendo
+// criada). Movida pra dentro da Edge Function `cadastro-usuario`, que roda
+// com service_role — réplica fiel da lógica que estava aqui.
+const CADASTRO_ENDPOINT = `${SUPABASE_URL}/functions/v1/cadastro-usuario`;
+
 async function cadastrarContaSupabase(dados) {
     try {
-        const { nome, cpf, email, senha, empresa, cnpjEmpresa, chaveEmpresa, aceitouTermos } = dados;
-
-        if (!aceitouTermos) {
-            return { sucesso: false, mensagem: 'Você deve aceitar os termos de uso!' };
-        }
-
-        // Verificar se CPF já existe
-        const { data: cpfExistente, error: erroCpf } = await supabaseClient
-            .from('usuarios')
-            .select('cpf')
-            .eq('cpf', cpf)
-            .maybeSingle();
-
-        if (erroCpf) {
-            console.error('[Supabase] Erro ao verificar CPF:', erroCpf);
-            return { sucesso: false, mensagem: 'Erro ao verificar CPF: ' + erroCpf.message };
-        }
-
-        if (cpfExistente) {
-            return { sucesso: false, mensagem: 'Este CPF já está cadastrado!' };
-        }
-
-        let empresaId = null;
-        let chaveGerada = null;
-        let perfil = 'admin';
-        let empresaSolicitadaId = null;
-        let aviso = null;
-        let sandboxInfo = null;
-
-        if (chaveEmpresa) {
-            // Tentar entrar em empresa existente via chave
-            const { data: empresaEncontrada } = await supabaseClient
-                .from('empresas')
-                .select('id, razao_social')
-                .eq('chave_empresa', chaveEmpresa.toUpperCase())
-                .maybeSingle();
-
-            if (empresaEncontrada) {
-                // Chave válida: conta criada sem vínculo, solicitação fica pendente até admin aprovar
-                empresaSolicitadaId = empresaEncontrada.id;
-                aviso = `Solicitação enviada para "${empresaEncontrada.razao_social}". Aguarde a aprovação do responsável.`;
-            } else {
-                // Chave inválida: conta criada normalmente sem empresa, sem bloquear o cadastro
-                aviso = 'Chave não encontrada. Conta criada sem vínculo com empresa.';
-            }
-
-        } else if (empresa) {
-            // Criar nova empresa e gerar chave
-            chaveGerada = gerarChaveEmpresa();
-
-            const { data: empresaCriada, error: erroEmpresa } = await supabaseClient
-                .from('empresas')
-                .insert({ razao_social: empresa, nome_fantasia: empresa, cnpj: cnpjEmpresa || null, email, status: 'trial', plano: 'free', chave_empresa: chaveGerada })
-                .select()
-                .single();
-
-            if (erroEmpresa) {
-                console.error('[Supabase] Erro ao criar empresa:', erroEmpresa);
-                return { sucesso: false, mensagem: 'Erro ao criar empresa: ' + erroEmpresa.message };
-            }
-
-            empresaId = empresaCriada.id;
-
-        } else {
-            // Nem chave nem razão social: cria conta sandbox de 24h — o
-            // usuário pode navegar o sistema, mas não criar/enviar nada
-            // (ver exigirEmpresaVinculada() em auth.js) até se vincular a
-            // uma empresa de verdade via Perfil.
-            const expiraEm = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-            const { data: empresaCriada, error: erroEmpresa } = await supabaseClient
-                .from('empresas')
-                .insert({
-                    razao_social: `Conta Sandbox — ${nome}`,
-                    nome_fantasia: `Conta Sandbox — ${nome}`,
-                    email,
-                    status: 'sandbox',
-                    plano: 'free',
-                    chave_empresa: gerarChaveEmpresa(), // preenche a coluna UNIQUE, mesmo não sendo divulgada
-                    expira_em: expiraEm,
-                })
-                .select()
-                .single();
-
-            if (erroEmpresa) {
-                console.error('[Supabase] Erro ao criar conta sandbox:', erroEmpresa);
-                return { sucesso: false, mensagem: 'Erro ao criar conta: ' + erroEmpresa.message };
-            }
-
-            empresaId = empresaCriada.id;
-            sandboxInfo = { expira_em: expiraEm };
-        }
-
-        // Criar usuário sem empresa_id primeiro (evita FK timing issue)
-        const { data: novoUsuario, error: erroUsuario } = await supabaseClient
-            .from('usuarios')
-            .insert({ nome_completo: nome, cpf, email, senha_hash: _hashSenha(senha), perfil, ativo: true })
-            .select()
-            .single();
-
-        if (erroUsuario) {
-            console.error('[Supabase] Erro ao criar usuário:', erroUsuario);
-            return { sucesso: false, mensagem: 'Erro ao criar conta: ' + erroUsuario.message };
-        }
-
-        // Vincular empresa se criou uma nova
-        if (empresaId) {
-            await supabaseClient
-                .from('usuarios')
-                .update({ empresa_id: empresaId })
-                .eq('id', novoUsuario.id);
-        }
-
-        // Criar solicitação de entrada na empresa (chave válida)
-        if (empresaSolicitadaId) {
-            const { error: erroSol } = await supabaseClient
-                .from('solicitacoes_empresa')
-                .insert({
-                    usuario_id: novoUsuario.id,
-                    empresa_id: empresaSolicitadaId,
-                    nome_usuario: nome,
-                    email_usuario: email
-                });
-
-            if (!erroSol) {
-                // Tenta notificar admin por email (silencia se função não estiver configurada)
-                await supabaseClient.rpc('notificar_admin_email', {
-                    p_empresa_id: empresaSolicitadaId,
-                    p_nome_usuario: nome,
-                    p_email_usuario: email
-                }).catch(() => {});
-            }
-        }
-
-        return { sucesso: true, mensagem: 'Conta criada com sucesso!', usuario: novoUsuario, chave_gerada: chaveGerada, aviso, sandbox: sandboxInfo };
-
+        const res = await fetch(CADASTRO_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados),
+        });
+        return await res.json();
     } catch (err) {
         console.error('[Supabase] Erro ao cadastrar:', err);
         return { sucesso: false, mensagem: 'Erro ao processar cadastro: ' + err.message };
