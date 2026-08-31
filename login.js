@@ -417,6 +417,13 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarNotificacao('Seu período de avaliação de 24h expirou. Insira uma chave de empresa ou cadastre sua empresa para continuar.', 'error');
     }
 
+    // Sessão customizada sem uma sessão real do Supabase Auth por trás (ver
+    // verificarAutenticacao() em auth.js) — pede pra logar de novo em vez
+    // de deixar a tela anterior quebrada sem explicação.
+    if (new URLSearchParams(window.location.search).get('sessao_expirada') === '1') {
+        mostrarNotificacao('Sua sessão expirou por segurança. Faça login novamente.', 'info');
+    }
+
     const cpfInput = document.getElementById('cpf');
     const password = document.getElementById('password');
     const cpfCadastro = document.getElementById('cpfCadastro');

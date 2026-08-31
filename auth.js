@@ -79,6 +79,22 @@ function verificarAutenticacao(opcoes = {}) {
         _authAtualizarInterface(usuarioAtual);
         _authNotificarSolicitacoesPendentes(usuarioAtual);
 
+        // Migração de autenticação (ver auditoria de segurança): a sessão
+        // customizada acima não basta mais sozinha — as consultas de verdade
+        // agora exigem uma sessão real do Supabase Auth por trás (criada no
+        // login, guardada em localStorage por conta do próprio supabase-js).
+        // Sem isso a tela ficaria "quebrada" (sem dado nenhum, sem aviso
+        // nenhum) pra quem tem uma sessão customizada de antes da migração
+        // — então checa e força um re-login limpo em vez de deixar quebrado.
+        if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+            supabaseClient.auth.getSession().then(({ data }) => {
+                if (!data.session) {
+                    _authEncerrarSessaoExpirada();
+                    window.location.href = 'login.html?sessao_expirada=1';
+                }
+            });
+        }
+
         // O snapshot acima (sessionStorage/localStorage) pode estar desatualizado
         // — nome, avatar, empresa ou cargo podem ter mudado desde o último login
         // manual, e o auto-login via "Lembrar-me" nunca reconsultava o banco pra
