@@ -4,6 +4,35 @@
 
 let _produtos = [];
 
+// ── Bibliotecas pesadas sob demanda (revisão de performance) ────────────────
+// xlsx (~600KB), pdf.js (~350KB) e jspdf (~340KB) só servem pro upload/
+// modelo de Excel-PDF — antes carregavam sempre que a tela abria, mesmo
+// pra quem só veio olhar a lista de produtos. Passam a carregar só na
+// hora que o usuário realmente clica em importar/gerar modelo.
+const LIBS_SOB_DEMANDA = {
+    xlsx:  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+    jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+};
+const _libsCarregadas = {};
+
+function carregarLibSobDemanda(nome) {
+    if (_libsCarregadas[nome]) return _libsCarregadas[nome];
+    _libsCarregadas[nome] = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = LIBS_SOB_DEMANDA[nome];
+        script.onload = () => {
+            if (nome === 'pdfjs') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
+            resolve();
+        };
+        script.onerror = () => { delete _libsCarregadas[nome]; reject(new Error(`Falha ao carregar biblioteca (${nome})`)); };
+        document.head.appendChild(script);
+    });
+    return _libsCarregadas[nome];
+}
+
 // ── Modelo de importação (Excel/PDF) ────────────────────────────────
 // Fonte única dos campos aceitos no upload em lote — mesmo conjunto que
 // PROD_UPLOAD_ALIASES reconhece (ver processarUploadProdutos acima).
@@ -75,8 +104,10 @@ function fecharModalModeloProduto() {
 // extensão em processarUploadProdutos), então um .csv baixado aqui não
 // poderia ser reenviado pela mesma tela. SheetJS já está carregado nesta
 // página (usado pelo upload), então gerar .xlsx tem custo zero a mais.
-function baixarModeloProdutoExcel() {
-    if (typeof XLSX === 'undefined') { notify('Não foi possível gerar a planilha (SheetJS não carregado).', 'error'); return; }
+async function baixarModeloProdutoExcel() {
+    try {
+        await carregarLibSobDemanda('xlsx');
+    } catch (e) { notify('Não foi possível carregar o gerador de planilha. Tente novamente.', 'error'); return; }
 
     const header = PROD_MODELO_CAMPOS.map(c => c.coluna);
     const exemplo = PROD_MODELO_CAMPOS.map(c => c.exemplo);
@@ -234,9 +265,11 @@ async function processarUploadProdutos(input) {
 
     try {
         if (ext === 'xlsx' || ext === 'xls') {
+            await carregarLibSobDemanda('xlsx');
             const linhas = await _prodUploadLerExcel(file);
             await _prodUploadImportarLote(linhas);
         } else {
+            await carregarLibSobDemanda('pdfjs');
             const dados = await _prodUploadLerPDF(file);
             if (!dados || !Object.keys(dados).length) {
                 notify('Não foi possível extrair dados do PDF. Ele pode ser uma imagem escaneada (sem texto selecionável).', 'aviso');

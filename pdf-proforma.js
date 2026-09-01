@@ -3,7 +3,28 @@
 // Usado por proforma.js (lista) e pedidos.js (botão "Ver Proforma gerada")
 // ========================================
 
+// jsPDF sob demanda (revisão de performance) — ~340KB que só servem pra
+// gerar PDF; este arquivo é carregado tanto em proforma.html quanto em
+// pedidos.html, então o helper mora aqui em vez de duplicado nos dois
+// (pdf-pedido.js, que só existe em pedidos.html, reaproveita esta função).
+let _jspdfCarregado = null;
+function carregarJsPDFSobDemanda() {
+    if (_jspdfCarregado) return _jspdfCarregado;
+    _jspdfCarregado = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = resolve;
+        script.onerror = () => { _jspdfCarregado = null; reject(new Error('Falha ao carregar jsPDF')); };
+        document.head.appendChild(script);
+    });
+    return _jspdfCarregado;
+}
+
 async function gerarPDFProformaDados(d) {
+    try {
+        await carregarJsPDFSobDemanda();
+    } catch (e) { alert('Não foi possível carregar o gerador de PDF. Tente novamente.'); return; }
+
     const jsPDFLib = window.jspdf;
     if (!jsPDFLib) { alert('jsPDF não carregado. Recarregue a página.'); return; }
     const { jsPDF } = jsPDFLib;

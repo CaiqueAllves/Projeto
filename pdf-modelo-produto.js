@@ -4,7 +4,11 @@
 //  Mesma paleta de cores usada em pdf-pedido.js/pdf-proforma.js/pdf-processo.js.
 // ========================================
 
-function gerarPDFModeloProduto() {
+async function gerarPDFModeloProduto() {
+    try {
+        await carregarLibSobDemanda('jspdf');
+    } catch (e) { notify('Não foi possível carregar o gerador de PDF. Tente novamente.', 'error'); return; }
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
