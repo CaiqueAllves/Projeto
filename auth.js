@@ -153,11 +153,22 @@ function _authAtualizarInterface(usuarioAtual) {
 // re-renderizada depois com os dados atualizados do banco (evita notificação
 // duplicada quando o refresh em segundo plano chama _authAtualizarInterface de novo).
 let _authSolicitacoesNotificadas = false;
+// Throttle de ~5min entre checagens (revisão de performance): sem isso,
+// um admin navegando entre telas disparava essa consulta de novo em toda
+// página — o timestamp em sessionStorage sobrevive à navegação (só não
+// sobrevive a fechar a aba), diferente de _authSolicitacoesNotificadas
+// abaixo, que é só pra não checar 2x na MESMA página.
+const _AUTH_SOLICITACOES_INTERVALO_MS = 5 * 60 * 1000;
+
 function _authNotificarSolicitacoesPendentes(usuarioAtual) {
     if (_authSolicitacoesNotificadas) return;
     if (usuarioAtual.perfil === 'admin' && usuarioAtual.empresa_id && window.supabaseAPI) {
+        const ultimaChecagem = Number(sessionStorage.getItem('solicitacoesUltimaChecagem') || 0);
+        if (Date.now() - ultimaChecagem < _AUTH_SOLICITACOES_INTERVALO_MS) return;
+
         _authSolicitacoesNotificadas = true;
         setTimeout(async () => {
+            sessionStorage.setItem('solicitacoesUltimaChecagem', String(Date.now()));
             const resultado = await window.supabaseAPI.buscarSolicitacoes();
             if (resultado.sucesso && resultado.data && resultado.data.length > 0) {
                 const qtd = resultado.data.length;
