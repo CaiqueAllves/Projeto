@@ -419,35 +419,40 @@ async function profAlterarStatus(id, selectEl) {
 }
 
 // ── Filtro ────────────────────────────────
+// Debounce (revisão de performance) — ver mesmo comentário em contas-receber.js
+let _profFiltrarTimer = null;
 function profFiltrar() {
-    const q = (document.getElementById('filtroProformas')?.value.trim().toLowerCase()) || '';
-    const s = document.getElementById('filtroStatus')?.value || '';
+    clearTimeout(_profFiltrarTimer);
+    _profFiltrarTimer = setTimeout(() => {
+        const q = (document.getElementById('filtroProformas')?.value.trim().toLowerCase()) || '';
+        const s = document.getElementById('filtroStatus')?.value || '';
 
-    let lista = _profTodos;
-    // Vindo de "Ver Proformas (N)" no Pedido — mostra só as proformas daquele pedido
-    const pedidoIdParam = new URLSearchParams(window.location.search).get('pedido_id');
-    if (pedidoIdParam) lista = lista.filter(p => p.pedido_id === pedidoIdParam);
-    if (s) lista = lista.filter(p => _profGetColuna(p.status || 'enviado') === s);
-    if (q) lista = lista.filter(p =>
-        (p.codigo        || '').toLowerCase().includes(q) ||
-        (p.origem_pais   || '').toLowerCase().includes(q) ||
-        (p.destino_pais  || '').toLowerCase().includes(q) ||
-        (p.tipo          || '').toLowerCase().includes(q) ||
-        (p.incoterm      || '').toLowerCase().includes(q) ||
-        (_profEmissorNome(p)    ).toLowerCase().includes(q) ||
-        (_profDestinatarioNome(p)).toLowerCase().includes(q)
-    );
+        let lista = _profTodos;
+        // Vindo de "Ver Proformas (N)" no Pedido — mostra só as proformas daquele pedido
+        const pedidoIdParam = new URLSearchParams(window.location.search).get('pedido_id');
+        if (pedidoIdParam) lista = lista.filter(p => p.pedido_id === pedidoIdParam);
+        if (s) lista = lista.filter(p => _profGetColuna(p.status || 'enviado') === s);
+        if (q) lista = lista.filter(p =>
+            (p.codigo        || '').toLowerCase().includes(q) ||
+            (p.origem_pais   || '').toLowerCase().includes(q) ||
+            (p.destino_pais  || '').toLowerCase().includes(q) ||
+            (p.tipo          || '').toLowerCase().includes(q) ||
+            (p.incoterm      || '').toLowerCase().includes(q) ||
+            (_profEmissorNome(p)    ).toLowerCase().includes(q) ||
+            (_profDestinatarioNome(p)).toLowerCase().includes(q)
+        );
 
-    profRenderConteudo(lista);
+        profRenderConteudo(lista);
 
-    // Sincroniza a aba mobile (Kanban) com o status escolhido no filtro —
-    // sem isso, a coluna visível podia ficar "presa" numa aba diferente da
-    // que o usuário acabou de filtrar, dando a impressão de que o filtro
-    // não fez nada.
-    if (s) {
-        const tab = document.querySelector(`.kanban-tab[data-col="${s}"]`);
-        if (tab) kanbanSwitchTab(tab);
-    }
+        // Sincroniza a aba mobile (Kanban) com o status escolhido no filtro —
+        // sem isso, a coluna visível podia ficar "presa" numa aba diferente da
+        // que o usuário acabou de filtrar, dando a impressão de que o filtro
+        // não fez nada.
+        if (s) {
+            const tab = document.querySelector(`.kanban-tab[data-col="${s}"]`);
+            if (tab) kanbanSwitchTab(tab);
+        }
+    }, 200);
 }
 
 // ── Editar ────────────────────────────────

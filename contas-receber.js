@@ -237,15 +237,22 @@ function _crAtualizarResumo() {
     document.getElementById('totalRecebido').textContent = _crFmtValor(recebido, 'BRL');
 }
 
+// Debounce (revisão de performance): filtra um array em memória, sem ir
+// ao banco, mas a cada tecla reconstruía a tabela inteira via innerHTML —
+// imperceptível com dezenas de linhas, mas engasga conforme a lista cresce.
+let _crFiltrarTimer = null;
 function crFiltrar() {
-    const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
-    const status = document.getElementById('filtroStatus')?.value || '';
-    _crFiltradas = _crTodas.filter(c => {
-        const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
-            .filter(Boolean).join(' ').toLowerCase();
-        return (!termo || txt.includes(termo)) && (!status || c.status === status);
-    });
-    crRenderizar();
+    clearTimeout(_crFiltrarTimer);
+    _crFiltrarTimer = setTimeout(() => {
+        const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
+        const status = document.getElementById('filtroStatus')?.value || '';
+        _crFiltradas = _crTodas.filter(c => {
+            const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
+                .filter(Boolean).join(' ').toLowerCase();
+            return (!termo || txt.includes(termo)) && (!status || c.status === status);
+        });
+        crRenderizar();
+    }, 200);
 }
 
 async function crMarcarRecebido(id) {

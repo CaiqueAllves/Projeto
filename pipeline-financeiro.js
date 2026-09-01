@@ -201,24 +201,29 @@ function pfGerarContaReceber(id) {
 
 const PF_ESTAGIOS_FILTRO = ['sem_cobranca', 'aguardando', 'vencido', 'recebido'];
 
+// Debounce (revisão de performance) — ver mesmo comentário em contas-receber.js
+let _pfFiltrarTimer = null;
 function pfFiltrar() {
-    const termo = document.getElementById('filtroPipelineFinanceiro')?.value.toLowerCase().trim() || '';
-    const campo = document.getElementById('filtroCampoPipelineFinanceiro')?.value || 'todos';
+    clearTimeout(_pfFiltrarTimer);
+    _pfFiltrarTimer = setTimeout(() => {
+        const termo = document.getElementById('filtroPipelineFinanceiro')?.value.toLowerCase().trim() || '';
+        const campo = document.getElementById('filtroCampoPipelineFinanceiro')?.value || 'todos';
 
-    _pfFiltrados = _pfPedidos.filter(p => {
-        if (PF_ESTAGIOS_FILTRO.includes(campo) && _pfEstagio(p.id) !== campo) return false;
-        if (!termo) return true;
+        _pfFiltrados = _pfPedidos.filter(p => {
+            if (PF_ESTAGIOS_FILTRO.includes(campo) && _pfEstagio(p.id) !== campo) return false;
+            if (!termo) return true;
 
-        if (campo === 'numero')  return (p.numero || '').toLowerCase().includes(termo);
-        if (campo === 'cliente') return (p.parceiros?.razao_social || '').toLowerCase().includes(termo);
-        if (campo === 'cnpj' || campo === 'cpf') return (p.parceiros?.documento || '').toLowerCase().includes(termo);
+            if (campo === 'numero')  return (p.numero || '').toLowerCase().includes(termo);
+            if (campo === 'cliente') return (p.parceiros?.razao_social || '').toLowerCase().includes(termo);
+            if (campo === 'cnpj' || campo === 'cpf') return (p.parceiros?.documento || '').toLowerCase().includes(termo);
 
-        // 'todos' e filtros de estágio: busca em todos os campos
-        const txt = [p.numero, p.parceiros?.razao_social, p.parceiros?.nome_fantasia, p.parceiros?.documento]
-            .filter(Boolean).join(' ').toLowerCase();
-        return txt.includes(termo);
-    });
-    pfRenderizar();
+            // 'todos' e filtros de estágio: busca em todos os campos
+            const txt = [p.numero, p.parceiros?.razao_social, p.parceiros?.nome_fantasia, p.parceiros?.documento]
+                .filter(Boolean).join(' ').toLowerCase();
+            return txt.includes(termo);
+        });
+        pfRenderizar();
+    }, 200);
 }
 
 // ── Mobile tabs ────────────────────────────────────────────────────────────

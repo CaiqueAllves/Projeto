@@ -122,17 +122,22 @@ async function propCarregar() {
 
 // ── Filtro ─────────────────────────────────────────────────────────────────
 
+// Debounce (revisão de performance) — ver mesmo comentário em contas-receber.js
+let _propFiltrarTimer = null;
 function propFiltrar() {
-    const termo = document.getElementById('filtroProposta')?.value.toLowerCase().trim() || '';
-    const etapaFiltro = document.getElementById('filtroEtapaProposta')?.value || '';
-    _propFiltradas = _propTodas.filter(o => {
-        const txt = [o.titulo, o.responsavel, o.parceiros?.razao_social, o.parceiros?.nome_fantasia]
-            .filter(Boolean).join(' ').toLowerCase();
-        if (!txt.includes(termo)) return false;
-        if (etapaFiltro && o.etapa !== etapaFiltro) return false;
-        return true;
-    });
-    propRenderizar();
+    clearTimeout(_propFiltrarTimer);
+    _propFiltrarTimer = setTimeout(() => {
+        const termo = document.getElementById('filtroProposta')?.value.toLowerCase().trim() || '';
+        const etapaFiltro = document.getElementById('filtroEtapaProposta')?.value || '';
+        _propFiltradas = _propTodas.filter(o => {
+            const txt = [o.titulo, o.responsavel, o.parceiros?.razao_social, o.parceiros?.nome_fantasia]
+                .filter(Boolean).join(' ').toLowerCase();
+            if (!txt.includes(termo)) return false;
+            if (etapaFiltro && o.etapa !== etapaFiltro) return false;
+            return true;
+        });
+        propRenderizar();
+    }, 200);
 }
 
 // ── Dispatcher Kanban/Lista ──────────────────────────────────────────────────

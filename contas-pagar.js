@@ -176,18 +176,23 @@ function _cpAtualizarResumo() {
 
 // ── Filtro ─────────────────────────────────────────────────────────────────
 
+// Debounce (revisão de performance) — ver mesmo comentário em contas-receber.js
+let _cpFiltrarTimer = null;
 function cpFiltrar() {
-    const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
-    const status = document.getElementById('filtroStatus')?.value || '';
+    clearTimeout(_cpFiltrarTimer);
+    _cpFiltrarTimer = setTimeout(() => {
+        const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
+        const status = document.getElementById('filtroStatus')?.value || '';
 
-    _cpFiltradas = _cpTodas.filter(c => {
-        const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
-            .filter(Boolean).join(' ').toLowerCase();
-        const okTermo  = !termo  || txt.includes(termo);
-        const okStatus = !status || c.status === status;
-        return okTermo && okStatus;
-    });
-    cpRenderizar();
+        _cpFiltradas = _cpTodas.filter(c => {
+            const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
+                .filter(Boolean).join(' ').toLowerCase();
+            const okTermo  = !termo  || txt.includes(termo);
+            const okStatus = !status || c.status === status;
+            return okTermo && okStatus;
+        });
+        cpRenderizar();
+    }, 200);
 }
 
 // ── Marcar como pago rapidamente ───────────────────────────────────────────

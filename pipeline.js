@@ -218,14 +218,19 @@ function _plRenderCard(o) {
 
 // ── Filtro ─────────────────────────────────────────────────────────────────
 
+// Debounce (revisão de performance) — ver mesmo comentário em contas-receber.js
+let _plFiltrarTimer = null;
 function plFiltrar() {
-    const termo = document.getElementById('filtroPipeline')?.value.toLowerCase().trim() || '';
-    _plFiltradas = _plTodas.filter(o => {
-        const txt = [o.titulo, o.responsavel, o.parceiros?.razao_social, o.parceiros?.nome_fantasia]
-            .filter(Boolean).join(' ').toLowerCase();
-        return txt.includes(termo);
-    }).filter(o => o.etapa !== 'perdido');
-    plRenderizar();
+    clearTimeout(_plFiltrarTimer);
+    _plFiltrarTimer = setTimeout(() => {
+        const termo = document.getElementById('filtroPipeline')?.value.toLowerCase().trim() || '';
+        _plFiltradas = _plTodas.filter(o => {
+            const txt = [o.titulo, o.responsavel, o.parceiros?.razao_social, o.parceiros?.nome_fantasia]
+                .filter(Boolean).join(' ').toLowerCase();
+            return txt.includes(termo);
+        }).filter(o => o.etapa !== 'perdido');
+        plRenderizar();
+    }, 200);
 }
 
 // ── Mobile tabs ────────────────────────────────────────────────────────────

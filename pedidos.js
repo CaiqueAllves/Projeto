@@ -240,28 +240,33 @@ async function pedCarregar() {
 
 // ── Filtrar ────────────────────────────────────────────────────────────────
 
+// Debounce (revisão de performance) — ver mesmo comentário em contas-receber.js
+let _pedFiltrarTimer = null;
 function pedFiltrar() {
-    const termo  = document.getElementById('filtroPedidos')?.value.toLowerCase().trim() || '';
-    const status = document.getElementById('filtroStatusPedido')?.value || '';
+    clearTimeout(_pedFiltrarTimer);
+    _pedFiltrarTimer = setTimeout(() => {
+        const termo  = document.getElementById('filtroPedidos')?.value.toLowerCase().trim() || '';
+        const status = document.getElementById('filtroStatusPedido')?.value || '';
 
-    _pedFiltrados = _pedTodos.filter(p => {
-        const txt = [p.numero, p.parceiros?.razao_social, p.parceiros?.nome_fantasia, p.remetente?.razao_social, p.remetente?.nome_fantasia]
-            .filter(Boolean).join(' ').toLowerCase();
-        const okTermo  = !termo  || txt.includes(termo);
-        const okStatus = !status || p.status === status;
-        return okTermo && okStatus;
-    });
+        _pedFiltrados = _pedTodos.filter(p => {
+            const txt = [p.numero, p.parceiros?.razao_social, p.parceiros?.nome_fantasia, p.remetente?.razao_social, p.remetente?.nome_fantasia]
+                .filter(Boolean).join(' ').toLowerCase();
+            const okTermo  = !termo  || txt.includes(termo);
+            const okStatus = !status || p.status === status;
+            return okTermo && okStatus;
+        });
 
-    pedRenderizar();
+        pedRenderizar();
 
-    // Sincroniza a aba mobile (Kanban) com o status escolhido no filtro —
-    // sem isso, a coluna visível podia ficar "presa" numa aba diferente da
-    // que o usuário acabou de filtrar, dando a impressão de que o filtro
-    // não fez nada.
-    if (status) {
-        const tab = document.querySelector(`#pedKanbanTabs .kanban-tab[data-col="${status}"]`);
-        if (tab) pedKanbanSwitchTab(tab);
-    }
+        // Sincroniza a aba mobile (Kanban) com o status escolhido no filtro —
+        // sem isso, a coluna visível podia ficar "presa" numa aba diferente da
+        // que o usuário acabou de filtrar, dando a impressão de que o filtro
+        // não fez nada.
+        if (status) {
+            const tab = document.querySelector(`#pedKanbanTabs .kanban-tab[data-col="${status}"]`);
+            if (tab) pedKanbanSwitchTab(tab);
+        }
+    }, 200);
 }
 
 // ── Renderizar tabela ──────────────────────────────────────────────────────
