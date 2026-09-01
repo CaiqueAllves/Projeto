@@ -1040,6 +1040,7 @@ function _prodMontarPayload(dados) {
         obs_estoque:             dados.obs_estoque || null,
         obs_logistica:           dados.obs_logistica || null,
         nomes_idiomas:           dados.nomes_idiomas || [],
+        precos_alternativos:     dados.precos_alternativos || [],
         embalagens:              dados.embalagens || [],
         documentos:              dados.documentos || [],
     };
