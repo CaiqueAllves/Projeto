@@ -410,23 +410,36 @@ function _prodUploadParsearExcelLote(rows) {
 // planilha, já que ninguém digita um UUID de cabeça — resolve contra
 // `parceiros` da própria empresa antes de salvar. Não encontrando, segue o
 // produto sem vínculo (não bloqueia a linha inteira por isso).
-async function _prodUploadResolverEmpresaParceira(p) {
-    if (!p.empresa_parceira_ref) return;
-    const ref = p.empresa_parceira_ref;
-    delete p.empresa_parceira_ref;
+//
+// Versão em lote (revisão de performance): antes fazia 1 consulta por
+// produto (uma planilha de 200 linhas = 200 round-trips só pra isso).
+// Busca os parceiros da empresa UMA vez só e resolve cada linha contra essa
+// lista em memória.
+async function _prodUploadResolverEmpresasParceiras(produtos) {
+    const comRef = produtos.filter(p => p.empresa_parceira_ref);
+    if (!comRef.length) return;
 
     try {
         const usuario = obterUsuarioLogado();
-        const digitos = ref.replace(/\D/g, '');
-        let query = supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento').limit(1);
+        let query = supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento');
         if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-        query = digitos.length >= 11
-            ? query.eq('documento', digitos)
-            : query.or(`razao_social.ilike."%${ref}%",nome_fantasia.ilike."%${ref}%"`);
+        const { data: parceiros } = await query;
+        const lista = parceiros || [];
 
-        const { data } = await query;
-        if (data?.[0]?.id) p.empresa_parceira_id = data[0].id;
-    } catch (e) { console.warn('[Produtos] Falha ao resolver Empresa Parceira:', ref, e); }
+        for (const p of comRef) {
+            const ref = p.empresa_parceira_ref;
+            delete p.empresa_parceira_ref;
+            const digitos = ref.replace(/\D/g, '');
+            const match = digitos.length >= 11
+                ? lista.find(pc => (pc.documento || '').replace(/\D/g, '') === digitos)
+                : lista.find(pc =>
+                    (pc.razao_social || '').toLowerCase().includes(ref.toLowerCase()) ||
+                    (pc.nome_fantasia || '').toLowerCase().includes(ref.toLowerCase()));
+            if (match) p.empresa_parceira_id = match.id;
+        }
+    } catch (e) {
+        console.warn('[Produtos] Falha ao resolver Empresas Parceiras em lote:', e);
+    }
 }
 
 async function _prodUploadImportarLote(produtos) {
@@ -435,17 +448,19 @@ async function _prodUploadImportarLote(produtos) {
         return;
     }
 
-    let sucesso = 0, falha = 0;
-    for (const p of produtos) {
-        await _prodUploadResolverEmpresaParceira(p);
-        const res = await window.supabaseAPI.salvarProduto(p);
-        if (res.sucesso) sucesso++; else { falha++; console.warn('Falha ao importar produto', p.sku, res.mensagem); }
+    await _prodUploadResolverEmpresasParceiras(produtos);
+    const res = await window.supabaseAPI.salvarProdutosEmLote(produtos);
+
+    if (res.totalSucesso) {
+        notify(`${res.totalSucesso} produto${res.totalSucesso !== 1 ? 's' : ''} importado${res.totalSucesso !== 1 ? 's' : ''} com sucesso.${res.totalFalha ? ` ${res.totalFalha} falharam.` : ''}`, res.totalFalha ? 'aviso' : 'success');
+    } else {
+        notify('Não foi possível importar os produtos da planilha.', 'error');
+    }
+    if (res.falhas?.length) {
+        res.falhas.forEach(f => console.warn('[Produtos] Bloco falhou:', f.skus, f.mensagem));
     }
 
-    if (sucesso) notify(`${sucesso} produto${sucesso !== 1 ? 's' : ''} importado${sucesso !== 1 ? 's' : ''} com sucesso.${falha ? ` ${falha} falharam.` : ''}`, falha ? 'aviso' : 'success');
-    else notify('Não foi possível importar os produtos da planilha.', 'error');
-
-    if (sucesso) carregarProdutos();
+    if (res.totalSucesso) carregarProdutos();
 }
 
 // ── PDF — ficha técnica de 1 produto (preenche o formulário) ──────

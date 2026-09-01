@@ -1060,6 +1060,40 @@ async function salvarProduto(dados) {
     }
 }
 
+// Upload de Excel/PDF (produtos.js, _prodUploadImportarLote): insere em
+// blocos em vez de 1 produto por vez — planilha de 200 linhas virava ~200
+// round-trips sequenciais (achado na revisão de performance). Em blocos
+// (não tudo de uma vez): se uma linha violar uma constraint (SKU
+// duplicado, por ex.), só o bloco dela falha — as outras linhas continuam
+// indo normalmente, mais perto do comportamento "linha por linha" de antes
+// do que um insert único all-or-nothing pra planilha inteira.
+async function salvarProdutosEmLote(produtosArray, tamanhoBloco = 40) {
+    const usuario = obterUsuarioLogado();
+    if (!usuario) return { sucesso: false, mensagem: 'Não autenticado', totalSucesso: 0, totalFalha: produtosArray.length, falhas: [] };
+
+    let totalSucesso = 0;
+    const falhas = [];
+
+    for (let i = 0; i < produtosArray.length; i += tamanhoBloco) {
+        const bloco = produtosArray.slice(i, i + tamanhoBloco);
+        const rows = bloco.map(p => ({
+            ..._prodMontarPayload(p),
+            empresa_id: usuario.empresa_id,
+            criado_por: usuario.id,
+        }));
+
+        const { data, error } = await supabaseClient.from('produtos').insert(rows).select('id, sku');
+        if (error) {
+            falhas.push({ skus: bloco.map(p => p.sku), mensagem: error.message });
+        } else {
+            totalSucesso += data?.length || rows.length;
+        }
+    }
+
+    const totalFalha = produtosArray.length - totalSucesso;
+    return { sucesso: totalSucesso > 0, totalSucesso, totalFalha, falhas };
+}
+
 async function editarProduto(id, dados) {
     try {
         const usuario = obterUsuarioLogado();
@@ -1622,6 +1656,7 @@ window.supabaseAPI = {
     buscarProdutos,
     buscarProdutoPorId,
     salvarProduto,
+    salvarProdutosEmLote,
     editarProduto,
     excluirProduto,
     atualizarTenantEmpresa,
