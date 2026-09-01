@@ -61,7 +61,10 @@ async function carregarProcessos() {
 
     try {
         const u   = (() => { try { return JSON.parse(sessionStorage.getItem('usuarioLogado') || '{}'); } catch { return {}; } })();
-        const res = await window.supabaseAPI.buscarProcessos();
+        // Filtro de período (revisão de performance) — só reduz o que vem
+        // do banco pra processos já encerrados; em andamento sempre vem.
+        const diasAtras = Number(document.getElementById('filtroPeriodoProcessos')?.value) || null;
+        const res = await window.supabaseAPI.buscarProcessos({ diasAtras });
         if (!res.sucesso) throw new Error(res.mensagem || 'Erro ao buscar processos');
 
         const processos = res.data || [];

@@ -99,7 +99,10 @@ function propAplicarModoVisualizacao() {
 // ── Carregar dados ─────────────────────────────────────────────────────────
 
 async function propCarregar() {
-    const res = await buscarOportunidades();
+    // Filtro de período (revisão de performance) — só reduz o que vem do
+    // banco pra propostas já fechadas/perdidas; em aberto sempre vem.
+    const diasAtras = Number(document.getElementById('filtroPeriodoProposta')?.value) || null;
+    const res = await buscarOportunidades({ diasAtras });
     if (!res.sucesso) return;
     _propTodas = res.data || [];
     _propFiltradas = [..._propTodas];

@@ -75,6 +75,12 @@
                         <option value="recebido">Recebido</option>
                         <option value="cancelado">Cancelado</option>
                     </select>
+                    <select class="filter-select" id="filtroPeriodoContas" onchange="crCarregar()" style="margin-left:10px;" title="Contas pendentes/vencidas continuam sempre visíveis, mesmo fora do período">
+                        <option value="30">Últimos 30 dias</option>
+                        <option value="90" selected>Últimos 90 dias</option>
+                        <option value="365">Último ano</option>
+                        <option value="">Todos os períodos</option>
+                    </select>
                 </div>
                 <div class="header-right">
                     <button class="btn-cadastrar" onclick="crAbrirModal()">

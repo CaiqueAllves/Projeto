@@ -154,7 +154,10 @@ async function crCarregar() {
     document.getElementById('crTbody').innerHTML =
         '<tr><td colspan="6" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
 
-    const res = await buscarContasReceber();
+    // Filtro de período (revisão de performance) — só reduz o que vem do
+    // banco pra contas já recebidas/canceladas; pendente/vencida sempre vem.
+    const diasAtras = Number(document.getElementById('filtroPeriodoContas')?.value) || null;
+    const res = await buscarContasReceber({ diasAtras });
     if (!res.sucesso) {
         document.getElementById('crTbody').innerHTML =
             '<tr><td colspan="6"><div class="fin-vazio"><i class="fa-solid fa-triangle-exclamation"></i><p>Erro ao carregar contas</p></div></td></tr>';

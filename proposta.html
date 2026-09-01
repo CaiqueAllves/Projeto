@@ -51,6 +51,12 @@
                         <option value="fechado">Fechado</option>
                         <option value="perdido">Perdido</option>
                     </select>
+                    <select id="filtroPeriodoProposta" class="filter-select" onchange="propCarregar()" title="Propostas em aberto continuam sempre visíveis, mesmo fora do período">
+                        <option value="30">Últimos 30 dias</option>
+                        <option value="90" selected>Últimos 90 dias</option>
+                        <option value="365">Último ano</option>
+                        <option value="">Todos os períodos</option>
+                    </select>
                     <div class="view-toggle">
                         <button class="view-btn active" id="propBtnViewKanban" onclick="propSwitchView('kanban')" title="Kanban">
                             <i class="fa-solid fa-table-columns"></i>

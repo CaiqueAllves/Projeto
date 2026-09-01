@@ -81,7 +81,10 @@ async function cpCarregar() {
     document.getElementById('cpTbody').innerHTML =
         '<tr><td colspan="6" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
 
-    const res = await buscarContasPagar();
+    // Filtro de período (revisão de performance) — só reduz o que vem do
+    // banco pra contas já pagas/canceladas; pendente/vencida sempre vem.
+    const diasAtras = Number(document.getElementById('filtroPeriodoContas')?.value) || null;
+    const res = await buscarContasPagar({ diasAtras });
     if (!res.sucesso) {
         document.getElementById('cpTbody').innerHTML =
             '<tr><td colspan="6" class="fin-vazio"><i class="fa-solid fa-triangle-exclamation"></i><p>Erro ao carregar contas</p></td></tr>';

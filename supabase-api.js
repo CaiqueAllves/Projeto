@@ -796,6 +796,13 @@ async function buscarProcessos(filtros = {}) {
 
         if (filtros.tipo)   query = query.eq('tipo', filtros.tipo);
         if (filtros.status) query = query.eq('status', filtros.status);
+        // Filtro de período (revisão de performance) — só se aplica a
+        // processos já encerrados; um em andamento continua sempre visível,
+        // não importa a data, senão sumiria algo que ainda precisa de ação.
+        if (filtros.diasAtras) {
+            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString();
+            query = query.or(`status.not.in.(concluido,encerrada,cancelado),criado_em.gte.${desde}`);
+        }
 
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
@@ -1435,7 +1442,7 @@ async function atualizarProformaDB(id, dados) {
 //     atualizado_em    TIMESTAMPTZ DEFAULT NOW()
 // );
 
-async function buscarContasPagar() {
+async function buscarContasPagar(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
@@ -1444,6 +1451,13 @@ async function buscarContasPagar() {
             .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        // Filtro de período (revisão de performance) — só se aplica a contas
+        // já pagas/canceladas; pendente ou vencida continua sempre visível,
+        // mesmo com vencimento antigo (é justamente o que precisa de ação).
+        if (filtros.diasAtras) {
+            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
+            query = query.or(`status.not.in.(pago,cancelado),data_vencimento.gte.${desde}`);
+        }
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
@@ -1521,7 +1535,7 @@ async function excluirContaPagar(id) {
 // MÓDULO FINANCEIRO — CONTAS A RECEBER
 // ========================================
 
-async function buscarContasReceber() {
+async function buscarContasReceber(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
@@ -1530,6 +1544,12 @@ async function buscarContasReceber() {
             .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        // Filtro de período (revisão de performance) — mesma lógica de
+        // buscarContasPagar: só afeta contas já recebidas/canceladas.
+        if (filtros.diasAtras) {
+            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
+            query = query.or(`status.not.in.(recebido,cancelado),data_vencimento.gte.${desde}`);
+        }
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
@@ -1751,10 +1771,15 @@ window.supabaseAPI = {
 //     updated_at              TIMESTAMPTZ DEFAULT NOW()
 // );
 
-async function buscarOportunidades() {
+async function buscarOportunidades(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
+
+        // Filtro de período (revisão de performance) — só se aplica a
+        // propostas já fechadas/perdidas; em proposta/negociação continua
+        // sempre visível, mesmo com updated_at antigo.
+        const desde = filtros.diasAtras ? new Date(Date.now() - filtros.diasAtras * 86400000).toISOString() : null;
 
         let query = supabaseClient
             .from('oportunidades')
@@ -1764,6 +1789,7 @@ async function buscarOportunidades() {
             .is('excluido_em', null)
             .order('updated_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        if (desde) query = query.or(`etapa.not.in.(fechado,perdido),updated_at.gte.${desde}`);
         let { data, error } = await query;
 
         // Fallback pra antes de database-oportunidades-remetente.sql rodar:
@@ -1776,6 +1802,7 @@ async function buscarOportunidades() {
                 .is('excluido_em', null)
                 .order('updated_at', { ascending: false });
             if (usuario.empresa_id) queryFallback = queryFallback.eq('empresa_proprietaria_id', usuario.empresa_id);
+            if (desde) queryFallback = queryFallback.or(`etapa.not.in.(fechado,perdido),updated_at.gte.${desde}`);
             ({ data, error } = await queryFallback);
         }
 
@@ -1899,7 +1926,7 @@ async function restaurarOportunidade(id) {
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-async function buscarPedidos() {
+async function buscarPedidos(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
@@ -1912,6 +1939,12 @@ async function buscarPedidos() {
             .neq('status', 'excluido')
             .order('created_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        // Filtro de período (revisão de performance) — só se aplica a pedidos
+        // já finalizados; um em andamento continua sempre visível.
+        if (filtros.diasAtras) {
+            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString();
+            query = query.or(`status.not.in.(entregue,cancelado),created_at.gte.${desde}`);
+        }
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };

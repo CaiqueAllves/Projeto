@@ -201,7 +201,11 @@ async function pedCarregar() {
     const tbody = document.getElementById('pedTbody');
     tbody.innerHTML = '<tr><td colspan="8" class="ped-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
 
-    const res = await buscarPedidos();
+    // Filtro de período (revisão de performance) — só reduz o que vem do
+    // banco pra pedidos já finalizados; em andamento sempre vem, não
+    // importa a data (ver mesma lógica em buscarPedidos, supabase-api.js).
+    const diasAtras = Number(document.getElementById('filtroPeriodoPedidos')?.value) || null;
+    const res = await buscarPedidos({ diasAtras });
     if (!res.sucesso) {
         tbody.innerHTML = '<tr><td colspan="8" class="ped-vazio">Erro ao carregar pedidos.</td></tr>';
         return;
