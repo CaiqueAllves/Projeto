@@ -464,16 +464,17 @@ async function _prodPreencherEdicao(dados) {
     set('prod-ref-outra', dados.referencia_outra);
 
     // Empresa parceira ("Identificação da Empresa") — busca à parte só pra exibir
-    // nome/CNPJ, já que buscarProdutoPorId não traz esse join. `empresas` não
-    // tem coluna `documento` (isso é de `parceiros`) — é `cnpj`.
+    // nome/documento, já que buscarProdutoPorId não traz esse join. Busca em
+    // `parceiros` (próprios parceiros do usuário, id bigint), não em `empresas`
+    // (diretório global de outros tenants) — ver database-produtos-empresa-parceira-fix.sql.
     if (dados.empresa_parceira_id) {
         set('prod-empresa-id', dados.empresa_parceira_id);
         try {
-            const { data: emp } = await supabaseClient.from('empresas')
-                .select('razao_social, nome_fantasia, cnpj').eq('id', dados.empresa_parceira_id).single();
+            const { data: emp } = await supabaseClient.from('parceiros')
+                .select('razao_social, nome_fantasia, documento').eq('id', dados.empresa_parceira_id).single();
             if (emp) {
                 set('prod-empresa-busca', emp.nome_fantasia || emp.razao_social);
-                set('prod-empresa-doc', emp.cnpj);
+                set('prod-empresa-doc', emp.documento);
             }
         } catch (_) {}
     }
@@ -1379,25 +1380,6 @@ async function _acCarregarEmpresas() {
         const res = await window.supabaseAPI.buscarEmpresas();
         if (res.sucesso) _acEmpresas = res.data || [];
     } catch { _acEmpresas = []; }
-}
-
-// Diferente de _acCarregarEmpresas acima (que, apesar do nome, busca em
-// `parceiros` — usado em Cliente/Destinatário de Processo/Proposta, onde
-// isso é o certo): esta busca de verdade na tabela `empresas`, usada só
-// pelo campo "Identificação da Empresa" de Produto, cuja coluna
-// (empresa_parceira_id) é UUID referenciando empresas(id) — parceiros tem
-// id numérico (bigint), então usar a busca errada gerava
-// "invalid input syntax for type uuid" ao salvar.
-let _acEmpresasReais = [];
-async function _acCarregarEmpresasReais() {
-    if (_acEmpresasReais.length > 0) return;
-    try {
-        const { data, error } = await supabaseClient
-            .from('empresas')
-            .select('id, razao_social, nome_fantasia, cnpj')
-            .order('razao_social', { ascending: true });
-        if (!error) _acEmpresasReais = data || [];
-    } catch { _acEmpresasReais = []; }
 }
 
 async function _acCarregarContainers() {
@@ -4195,18 +4177,18 @@ function iniciarAutocompleteEmpresaProduto() {
     if (!input || !lista || !idOculto) return;
 
     async function mostrar() {
-        await _acCarregarEmpresasReais();
+        await _acCarregarEmpresas();
         const q = input.value.trim().toLowerCase();
         const filtradas = q
-            ? _acEmpresasReais.filter(e =>
+            ? _acEmpresas.filter(e =>
                 (e.razao_social || '').toLowerCase().includes(q) ||
                 (e.nome_fantasia || '').toLowerCase().includes(q) ||
-                (e.cnpj || '').replace(/\D/g,'').includes(q.replace(/\D/g,''))
+                (e.documento || '').replace(/\D/g,'').includes(q.replace(/\D/g,''))
               )
-            : _acEmpresasReais;
+            : _acEmpresas;
         lista.innerHTML = filtradas.length
-            ? filtradas.map(e => `<div class="autocomplete-item" data-id="${e.id}" data-nome="${e.nome_fantasia || e.razao_social}" data-doc="${e.cnpj || ''}">${e.nome_fantasia || e.razao_social}${e.cnpj ? `<span class="autocomplete-sub">${e.cnpj}</span>` : ''}</div>`).join('')
-            : '<div class="autocomplete-vazio">Nenhuma empresa encontrada</div>';
+            ? filtradas.map(e => `<div class="autocomplete-item" data-id="${e.id}" data-nome="${e.nome_fantasia || e.razao_social}" data-doc="${e.documento || ''}">${e.nome_fantasia || e.razao_social}${e.documento ? `<span class="autocomplete-sub">${e.documento}</span>` : ''}</div>`).join('')
+            : '<div class="autocomplete-vazio">Nenhum parceiro encontrado</div>';
         lista.style.display = 'block';
     }
 
