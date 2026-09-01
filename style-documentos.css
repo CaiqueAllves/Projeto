@@ -73,6 +73,26 @@
 .doc-col-seta { width: 36px; text-align: center; }
 .doc-tabela thead th.doc-col-status,
 .doc-tabela tbody td.doc-col-status { text-align: center; }
+.doc-col-progresso { width: 120px; }
+
+/* ── Progresso de documentos assinados (visível sem expandir a linha) ── */
+.doc-progresso { display: flex; align-items: center; gap: 8px; }
+.doc-progresso-barra {
+    flex: 1;
+    height: 6px;
+    background: #eef2f7;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.doc-progresso-fill { height: 100%; border-radius: 999px; transition: width .2s ease; }
+.doc-progresso-fill.doc-progresso-completo { background: #22c55e; }
+.doc-progresso-fill.doc-progresso-parcial  { background: #f97316; }
+.doc-progresso-fill.doc-progresso-vazio    { background: #cbd5e1; }
+.doc-progresso-texto { font-size: 11.5px; font-weight: 700; white-space: nowrap; min-width: 32px; text-align: right; }
+.doc-progresso-texto-completo { color: #15803d; }
+.doc-progresso-texto-parcial  { color: #c2410c; }
+.doc-progresso-texto-vazio    { color: #94a3b8; }
+.doc-progresso-vazio { color: #cbd5e1; font-size: 12px; }
 
 .doc-toggle {
     background: none;

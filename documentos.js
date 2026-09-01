@@ -85,6 +85,21 @@ function _docColunaProcesso(p) {
     };
 }
 
+// Contador simples de documentos assinados em %, visível na linha resumo
+// sem precisar expandir — pedido pedido pelo usuário depois de ver o
+// layout atual (cada linha só mostrava status de Pedido/Proforma/Processo,
+// nada sobre os documentos em si).
+function _docRenderProgresso(total, assinados) {
+    if (!total) return '<span class="doc-progresso-vazio">—</span>';
+    const pct = Math.round((assinados / total) * 100);
+    const nivel = pct === 100 ? 'completo' : pct === 0 ? 'vazio' : 'parcial';
+    return `
+        <div class="doc-progresso" title="${assinados} de ${total} documentos assinados">
+            <div class="doc-progresso-barra"><div class="doc-progresso-fill doc-progresso-${nivel}" style="width:${pct}%"></div></div>
+            <span class="doc-progresso-texto doc-progresso-texto-${nivel}">${pct}%</span>
+        </div>`;
+}
+
 function docRenderizar() {
     const container = document.getElementById('documentosContainer');
     const termo = (document.getElementById('buscaDoc')?.value || '').toLowerCase().trim();
@@ -116,7 +131,13 @@ function docRenderizar() {
         if (_docFiltroAtual === 'pendentes') docRowsFiltradas = docRows.filter(r => !r.assinado);
         if (_docFiltroAtual === 'assinados') docRowsFiltradas = docRows.filter(r => r.assinado);
 
-        return { pedido: p, remetente, destinatario, docRowsFiltradas };
+        // Progresso sempre calculado em cima de TODOS os documentos do
+        // pedido (não só os filtrados) — senão o % mudaria sozinho ao
+        // trocar de aba de filtro, o que ia confundir mais que ajudar.
+        const totalDocs     = docRows.length;
+        const assinadosDocs = docRows.filter(r => r.assinado).length;
+
+        return { pedido: p, remetente, destinatario, docRowsFiltradas, totalDocs, assinadosDocs };
     }).filter(({ pedido, remetente, destinatario, docRowsFiltradas }) => {
         if (docRowsFiltradas.length === 0) return false;
         if (!termo) return true;
@@ -138,6 +159,7 @@ function docRenderizar() {
                     <th class="doc-col-seta"></th>
                     <th>Pedido</th>
                     <th class="doc-col-status">Status do Pedido</th>
+                    <th class="doc-col-progresso">Documentos</th>
                     <th>Proforma</th>
                     <th class="doc-col-status">Status da Proforma</th>
                     <th>Processo</th>
@@ -151,7 +173,7 @@ function docRenderizar() {
         </table>`;
 }
 
-function _docRenderLinhaPedido({ pedido, remetente, destinatario, docRowsFiltradas }, forcarExpandir) {
+function _docRenderLinhaPedido({ pedido, remetente, destinatario, docRowsFiltradas, totalDocs, assinadosDocs }, forcarExpandir) {
     const expandido = _docExpandidos.has(pedido.id) || (forcarExpandir && !_docRecolhidos.has(pedido.id));
     const prof = _docColunaProforma(pedido);
     const proc = _docColunaProcesso(pedido);
@@ -169,6 +191,7 @@ function _docRenderLinhaPedido({ pedido, remetente, destinatario, docRowsFiltrad
                 <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Destinatário:</span> <span class="doc-parceiro-valor">${destinatario}</span></div>
             </td>
             <td class="doc-col-status"><span class="doc-badge doc-badge-ped-${pedido.status || ''}">${DOC_LABELS_PEDIDO[pedido.status] || pedido.status || '—'}</span></td>
+            <td class="doc-col-progresso">${_docRenderProgresso(totalDocs, assinadosDocs)}</td>
             <td class="doc-referencia">${prof.texto}</td>
             <td class="doc-col-status">${prof.statusTexto !== '—' ? `<span class="doc-badge doc-badge-neutro">${prof.statusTexto}</span>` : '—'}</td>
             <td class="doc-referencia">${proc.texto}</td>
@@ -180,7 +203,7 @@ function _docRenderLinhaPedido({ pedido, remetente, destinatario, docRowsFiltrad
 
     const linhaDetalhe = `
         <tr class="doc-linha-detalhe">
-            <td colspan="8">
+            <td colspan="9">
                 <div class="doc-detalhe-wrap">
                     <div class="doc-detalhe-header">
                         <button class="doc-pedido-add" onclick="docAbrirNovoPersonalizado('${pedido.id}')">
