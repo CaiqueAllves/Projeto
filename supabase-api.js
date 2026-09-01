@@ -1634,6 +1634,7 @@ window.supabaseAPI = {
     contarPropostas,
     // Comercial
     buscarOportunidades,
+    buscarHistoricoOportunidade,
     salvarOportunidade,
     gerarNumeroSequencial,
     atualizarEtapaOportunidade,
@@ -1748,6 +1749,43 @@ async function buscarOportunidades() {
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
 }
 
+// ========================================
+// HISTÓRICO DA OPORTUNIDADE (linha do tempo — criada → etapa → Pedido → status)
+// ========================================
+// Guarda cada transição relevante de uma Proposta, mesmo quando ela não
+// avança (Perdido) ou é excluída — pedido do usuário de ter rastreabilidade
+// completa, não só o estado atual. Nunca deixa uma falha aqui quebrar a
+// ação principal que a disparou (por isso não usa await nos call sites).
+async function _registrarHistoricoOportunidade(oportunidadeId, evento, deValor = null, paraValor = null, pedidoId = null) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id || !oportunidadeId) return;
+        await supabaseClient.from('oportunidade_historico').insert({
+            oportunidade_id: oportunidadeId,
+            pedido_id: pedidoId,
+            evento,
+            de_valor: deValor,
+            para_valor: paraValor,
+            usuario_nome: usuario.nome || usuario.email || 'Desconhecido',
+            empresa_proprietaria_id: usuario.empresa_id,
+        });
+    } catch (e) {
+        console.warn('[Histórico] Falha ao registrar evento:', evento, e);
+    }
+}
+
+async function buscarHistoricoOportunidade(oportunidadeId) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('oportunidade_historico')
+            .select('*, pedidos(numero)')
+            .eq('oportunidade_id', oportunidadeId)
+            .order('criado_em', { ascending: true });
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
 async function salvarOportunidade(dados, id = null) {
     try {
         const usuario = obterUsuarioLogado();
@@ -1762,22 +1800,36 @@ async function salvarOportunidade(dados, id = null) {
             updated_at: new Date().toISOString(),
         };
         let result;
+        let etapaAnterior = null;
         if (id) {
+            const { data: atual } = await supabaseClient.from('oportunidades').select('etapa').eq('id', id).single();
+            etapaAnterior = atual?.etapa || null;
             result = await supabaseClient.from('oportunidades').update(payload).eq('id', id).select().single();
         } else {
             payload.empresa_proprietaria_id = usuario.empresa_id;
             result = await supabaseClient.from('oportunidades').insert(payload).select().single();
         }
         if (result.error) return { sucesso: false, mensagem: result.error.message };
+
+        if (!id) {
+            _registrarHistoricoOportunidade(result.data.id, 'criada', null, payload.etapa);
+        } else if (etapaAnterior && etapaAnterior !== payload.etapa) {
+            _registrarHistoricoOportunidade(id, 'etapa_alterada', etapaAnterior, payload.etapa);
+        }
+
         return { sucesso: true, data: result.data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
 async function atualizarEtapaOportunidade(id, etapa) {
     try {
+        const { data: atual } = await supabaseClient.from('oportunidades').select('etapa').eq('id', id).single();
         const { error } = await supabaseClient.from('oportunidades')
             .update({ etapa, updated_at: new Date().toISOString() }).eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        if (atual?.etapa && atual.etapa !== etapa) {
+            _registrarHistoricoOportunidade(id, 'etapa_alterada', atual.etapa, etapa);
+        }
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
@@ -1796,6 +1848,7 @@ async function excluirOportunidade(id) {
             })
             .eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        _registrarHistoricoOportunidade(id, 'excluida');
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
@@ -1806,6 +1859,7 @@ async function restaurarOportunidade(id) {
             .update({ excluido_em: null, excluido_por: null })
             .eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        _registrarHistoricoOportunidade(id, 'restaurada');
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
@@ -1931,15 +1985,25 @@ async function salvarPedido(dados, id = null, itens = []) {
             if (delErr) return { sucesso: false, mensagem: delErr.message };
         }
 
+        // Marca no histórico da Proposta que ela virou Pedido — só na
+        // criação (edição de um pedido já existente não é um novo evento).
+        if (!id && dados.oportunidade_id) {
+            _registrarHistoricoOportunidade(dados.oportunidade_id, 'pedido_gerado', null, numero, pedidoId);
+        }
+
         return { sucesso: true, data: result.data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
 async function atualizarStatusPedido(id, status) {
     try {
+        const { data: atual } = await supabaseClient.from('pedidos').select('status, oportunidade_id').eq('id', id).single();
         const { error } = await supabaseClient.from('pedidos')
             .update({ status, updated_at: new Date().toISOString() }).eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        if (atual?.oportunidade_id && atual.status !== status) {
+            _registrarHistoricoOportunidade(atual.oportunidade_id, 'pedido_status_alterado', atual.status, status, id);
+        }
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
@@ -1997,6 +2061,7 @@ async function buscarPedidoIdPorProforma(proformaId) {
 async function excluirPedido(id) {
     try {
         const usuario = obterUsuarioLogado();
+        const { data: atual } = await supabaseClient.from('pedidos').select('oportunidade_id').eq('id', id).single();
         const { error } = await supabaseClient
             .from('pedidos')
             .update({
@@ -2006,6 +2071,9 @@ async function excluirPedido(id) {
             })
             .eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        if (atual?.oportunidade_id) {
+            _registrarHistoricoOportunidade(atual.oportunidade_id, 'pedido_excluido', null, null, id);
+        }
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }

@@ -464,10 +464,89 @@ async function propAbrirModal(id = null) {
     document.getElementById('propDataPrevista').value = op?.data_prevista || '';
 
     document.getElementById('propObservacoes').value = op?.observacoes || '';
-    const obsToggle = document.querySelector('#propModalOverlay .pl-obs-toggle');
-    if (obsToggle) { obsToggle.classList.remove('aberto'); obsToggle.nextElementSibling.style.display = 'none'; }
+    document.querySelectorAll('#propModalOverlay .pl-obs-toggle').forEach(toggle => {
+        toggle.classList.remove('aberto');
+        toggle.nextElementSibling.style.display = 'none';
+    });
+
+    // Histórico só existe (e só faz sentido mostrar) numa proposta já
+    // salva — uma nova ainda não teve nenhum evento registrado.
+    document.getElementById('propHistoricoWrapper').style.display = op ? '' : 'none';
+    if (op) _propCarregarHistorico(op.id);
 
     document.getElementById('propModalOverlay').classList.add('ativo');
+}
+
+// ── Histórico — linha do tempo da proposta ──────────────────────────────────
+
+const PROP_HIST_EVENTO_LABEL = {
+    criada:                  'Proposta criada',
+    etapa_alterada:          'Etapa alterada',
+    pedido_gerado:           'Pedido gerado',
+    pedido_status_alterado:  'Status do Pedido alterado',
+    pedido_excluido:         'Pedido excluído',
+    excluida:                'Proposta excluída',
+    restaurada:              'Proposta restaurada',
+};
+
+const PROP_HIST_EVENTO_ICONE = {
+    criada:                 'fa-solid fa-plus',
+    etapa_alterada:         'fa-solid fa-arrow-right',
+    pedido_gerado:          'fa-solid fa-bag-shopping',
+    pedido_status_alterado: 'fa-solid fa-truck-fast',
+    pedido_excluido:        'fa-solid fa-trash',
+    excluida:               'fa-solid fa-trash',
+    restaurada:             'fa-solid fa-rotate-left',
+};
+
+// Mesmo rótulo usado no resto da tela pra etapa e status do Pedido, senão
+// o histórico mostraria os valores crus salvos no banco (ex: "em_producao").
+const PED_STATUS_LABEL_HIST = {
+    aguardando: 'Aguardando', confirmado: 'Confirmado', em_producao: 'Em produção',
+    embarcado: 'Embarcado', entregue: 'Entregue', cancelado: 'Cancelado', excluido: 'Excluído',
+};
+
+function _propHistLabelValor(evento, valor) {
+    if (!valor) return null;
+    if (evento === 'etapa_alterada') return PROP_ETAPA_LABEL[valor] || valor;
+    if (evento === 'pedido_status_alterado') return PED_STATUS_LABEL_HIST[valor] || valor;
+    return valor;
+}
+
+async function _propCarregarHistorico(oportunidadeId) {
+    const container = document.getElementById('propHistoricoLista');
+    container.innerHTML = '<div class="prop-historico-vazio"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+    const res = await window.supabaseAPI.buscarHistoricoOportunidade(oportunidadeId);
+    if (!res.sucesso || !res.data?.length) {
+        container.innerHTML = '<div class="prop-historico-vazio">Nenhum evento registrado ainda.</div>';
+        return;
+    }
+
+    container.innerHTML = `<div class="prop-historico-timeline">
+        ${res.data.map(ev => {
+            const de  = _propHistLabelValor(ev.evento, ev.de_valor);
+            const para = _propHistLabelValor(ev.evento, ev.para_valor);
+            let detalhe = '';
+            if (ev.evento === 'etapa_alterada' || ev.evento === 'pedido_status_alterado') {
+                detalhe = de ? `${_propEscapar(de)} → ${_propEscapar(para)}` : _propEscapar(para);
+            } else if (ev.evento === 'pedido_gerado') {
+                detalhe = `Pedido ${_propEscapar(ev.pedidos?.numero || para || '')}`;
+            } else if (ev.evento === 'criada') {
+                detalhe = `Etapa inicial: ${_propEscapar(para)}`;
+            }
+            const dataFmt = new Date(ev.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return `
+                <div class="prop-historico-item">
+                    <div class="prop-historico-icone"><i class="${PROP_HIST_EVENTO_ICONE[ev.evento] || 'fa-solid fa-circle'}"></i></div>
+                    <div class="prop-historico-corpo">
+                        <div class="prop-historico-titulo">${PROP_HIST_EVENTO_LABEL[ev.evento] || ev.evento}</div>
+                        ${detalhe ? `<div class="prop-historico-detalhe">${detalhe}</div>` : ''}
+                        <div class="prop-historico-meta">${dataFmt}${ev.usuario_nome ? ` · ${_propEscapar(ev.usuario_nome)}` : ''}</div>
+                    </div>
+                </div>`;
+        }).join('')}
+    </div>`;
 }
 
 function _propHojeISO() {

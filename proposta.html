@@ -275,6 +275,22 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Só aparece editando uma proposta já existente (uma nova
+                 ainda não tem histórico nenhum) -->
+            <div class="pl-form-row" id="propHistoricoWrapper" style="display:none;">
+                <div class="pl-form-group pl-full pl-obs-wrapper">
+                    <div class="pl-obs-toggle" onclick="propToggleObs(this)">
+                        <span><i class="fa-solid fa-clock-rotate-left"></i> Histórico</span>
+                        <i class="fa-solid fa-chevron-down pl-obs-icon"></i>
+                    </div>
+                    <div class="pl-obs-content">
+                        <div id="propHistoricoLista" class="prop-historico-lista">
+                            <div class="prop-historico-vazio"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="pl-modal-footer" id="prop-form-footer">
             <button class="pl-btn-cancelar" onclick="propFecharModal()">Cancelar</button>
