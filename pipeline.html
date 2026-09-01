@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style-base.css">
     <link rel="stylesheet" href="style-navegador.css">
     <link rel="stylesheet" href="style-pipeline.css">
+    <link rel="stylesheet" href="style-proposta.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style-mobile.css">
 </head>
@@ -42,6 +43,14 @@
                     <div class="filter-wrapper">
                         <i class="fa-solid fa-magnifying-glass filter-icon"></i>
                         <input type="text" id="filtroPipeline" placeholder="Filtrar por número da proposta, cliente ou responsável..." oninput="plFiltrar()">
+                    </div>
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="plBtnViewKanban" onclick="plSwitchView('kanban')" title="Kanban">
+                            <i class="fa-solid fa-table-columns"></i>
+                        </button>
+                        <button class="view-btn" id="plBtnViewLista" onclick="plSwitchView('lista')" title="Lista">
+                            <i class="fa-solid fa-list"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -86,6 +95,27 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- TABELA -->
+            <div class="prop-table-wrap" style="display:none;">
+                <table class="prop-table" id="plTabela">
+                    <thead>
+                        <tr>
+                            <th>Nº Proposta</th>
+                            <th>Remetente</th>
+                            <th>Destinatário</th>
+                            <th>Valor</th>
+                            <th>Etapa</th>
+                            <th>Responsável</th>
+                            <th>Previsão</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="plTbody">
+                        <tr><td colspan="8" class="prop-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>
+                    </tbody>
+                </table>
             </div>
 
         </div>

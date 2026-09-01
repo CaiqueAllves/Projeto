@@ -11,6 +11,7 @@ let _plTodas     = [];
 let _plFiltradas = [];
 let _plTabAtiva  = 'proposta';
 let _plPedidosMap = {};
+let _plViewMode  = 'kanban';
 
 const PL_ETAPAS = ['proposta', 'negociacao', 'fechado'];
 
@@ -19,6 +20,13 @@ const PL_ETAPA_LABEL = {
     negociacao:  'Negociação',
     fechado:     'Fechado',
     perdido:     'Perdido',
+};
+
+const PL_ETAPA_BADGE_CLASS = {
+    proposta:    'prop-badge-proposta',
+    negociacao:  'prop-badge-negociacao',
+    fechado:     'prop-badge-fechado',
+    perdido:     'prop-badge-perdido',
 };
 
 // ── Inicialização ──────────────────────────────────────────────────────────
@@ -47,7 +55,11 @@ async function plCarregar() {
         _plSetLoading(false);
         return;
     }
-    _plTodas = res.data || [];
+    // Perdido não tem coluna no Kanban daqui (só na tela Proposta) — filtra
+    // já na origem, senão a visualização em lista mostraria esses itens
+    // antes de qualquer busca ser digitada (plFiltrar já filtra, mas só
+    // roda depois que o usuário digita algo).
+    _plTodas = (res.data || []).filter(o => o.etapa !== 'perdido');
     _plFiltradas = [..._plTodas];
 
     // Link reverso: quais propostas já geraram um Pedido (pro botão "Ver Pedido")
@@ -94,6 +106,68 @@ function plRenderizar() {
     });
 
     plAtualizarMobileTab();
+    _plRenderizarTabela();
+}
+
+// ── Alternar Kanban / Lista ──────────────────────────────────────────────
+
+function plSwitchView(mode) {
+    _plViewMode = mode;
+    document.getElementById('plBtnViewKanban').classList.toggle('active', mode === 'kanban');
+    document.getElementById('plBtnViewLista').classList.toggle('active',  mode === 'lista');
+    document.getElementById('plKanban').style.display     = mode === 'kanban' ? '' : 'none';
+    document.getElementById('plKanbanTabs').style.display = mode === 'kanban' ? '' : 'none';
+    document.querySelector('.prop-table-wrap').style.display = mode === 'lista' ? '' : 'none';
+}
+
+// ── Renderizar lista — mesmas colunas da tela Proposta, só sem ações de
+// escrita (só "ver detalhes", igual ao card do Kanban) ─────────────────────
+
+function _plRenderizarTabela() {
+    const tbody = document.getElementById('plTbody');
+    if (!tbody) return;
+
+    if (!_plFiltradas.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="prop-vazio"><i class="fa-regular fa-folder-open"></i> Nenhuma oportunidade encontrada.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = _plFiltradas.map(o => {
+        const cliente   = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '—';
+        const remetente = o.remetente?.nome_fantasia || o.remetente?.razao_social || '';
+        const valor     = o.valor
+            ? `${o.moeda || 'USD'} ${Number(o.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+            : '—';
+        const previsao  = o.data_prevista
+            ? new Date(o.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR')
+            : '—';
+        const etapa      = o.etapa || 'proposta';
+        const badgeClass = PL_ETAPA_BADGE_CLASS[etapa] || '';
+        const badgeLabel = PL_ETAPA_LABEL[etapa] || etapa;
+
+        const pedidoLinkado = _plPedidosMap[o.id];
+        const botaoPedido = (etapa === 'fechado' && pedidoLinkado)
+            ? `<button class="pl-btn-acao pl-btn-editar" onclick="plVerPedido('${pedidoLinkado.id}')" title="Ver Pedido ${_plEscapar(pedidoLinkado.numero || '')}"><i class="fa-solid fa-bag-shopping"></i></button>`
+            : '';
+
+        return `<tr class="prop-row prop-row-${etapa}">
+            <td class="prop-num">${_plEscapar(o.titulo)}</td>
+            <td>${remetente
+                ? `<span class="ped-remetente-tag"><i class="fa-solid fa-building"></i> ${_plEscapar(remetente)}</span>`
+                : `<span class="ped-remetente-tag ped-remetente-propria"><i class="fa-solid fa-house-flag"></i> Própria empresa</span>`}</td>
+            <td>${_plEscapar(cliente)}</td>
+            <td class="prop-valor">${valor}</td>
+            <td><span class="prop-badge ${badgeClass}">${badgeLabel}</span></td>
+            <td>${_plEscapar(o.responsavel || '—')}</td>
+            <td>${previsao}</td>
+            <td>
+                <div class="ped-acoes">
+                    ${botaoPedido}
+                    <button class="pl-btn-acao pl-btn-editar" onclick="plVerDetalhes('${o.id}')" title="Ver detalhes"><i class="fa-solid fa-eye"></i></button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
 }
 
 function _plRenderCard(o) {
