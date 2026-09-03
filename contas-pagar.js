@@ -200,6 +200,17 @@ function cpFiltrar() {
 
 // ── Marcar como pago rapidamente ───────────────────────────────────────────
 
+// Marcar "Pago" no select do modal sem preencher a Data de Pagamento
+// deixava a conta fora do card "Pago este mês" pra sempre (garantia
+// equivalente também existe em salvarContaPagar, supabase-api.js — essa
+// aqui só evita o usuário nem perceber que devia preencher a data).
+function cpAoMudarStatus() {
+    const dataEl = document.getElementById('cpDataPagamento');
+    if (document.getElementById('cpStatus').value === 'pago' && !dataEl.value) {
+        dataEl.value = new Date().toISOString().slice(0, 10);
+    }
+}
+
 async function cpMarcarPago(id) {
     const c = _cpTodas.find(x => x.id === id);
     if (!c) return;

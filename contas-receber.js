@@ -258,6 +258,17 @@ function crFiltrar() {
     }, 200);
 }
 
+// Marcar "Recebido" no select do modal sem preencher a Data de Recebimento
+// deixava a conta fora do card "Recebido este mês" pra sempre (garantia
+// equivalente também existe em salvarContaReceber, supabase-api.js — essa
+// aqui só evita o usuário nem perceber que devia preencher a data).
+function crAoMudarStatus() {
+    const dataEl = document.getElementById('crDataRecebimento');
+    if (document.getElementById('crStatus').value === 'recebido' && !dataEl.value) {
+        dataEl.value = new Date().toISOString().slice(0, 10);
+    }
+}
+
 async function crMarcarRecebido(id) {
     const c = _crTodas.find(x => x.id === id);
     if (!c) return;

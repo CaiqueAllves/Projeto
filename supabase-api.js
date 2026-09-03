@@ -1494,7 +1494,13 @@ async function salvarContaPagar(dados, id = null) {
             valor:           dados.valor,
             moeda:           dados.moeda || 'BRL',
             data_vencimento: dados.data_vencimento,
-            data_pagamento:  dados.data_pagamento || null,
+            // Marcar como "pago" sem preencher a Data de Pagamento deixava
+            // essa conta fora do card "Pago este mês" pra sempre (o resumo
+            // filtra por mês/ano de data_pagamento — null nunca bate com
+            // nada). Garantia aqui, além do auto-preenchimento na UI
+            // (contas-pagar.js/cpAoMudarStatus): status "pago" sem data
+            // explícita usa hoje.
+            data_pagamento:  dados.status === 'pago' ? (dados.data_pagamento || new Date().toISOString().slice(0, 10)) : (dados.data_pagamento || null),
             status:          dados.status || 'pendente',
             categoria:       dados.categoria || null,
             observacoes:     dados.observacoes || null,
@@ -1586,7 +1592,10 @@ async function salvarContaReceber(dados, id = null) {
             valor:            dados.valor,
             moeda:            dados.moeda || 'BRL',
             data_vencimento:  dados.data_vencimento,
-            data_recebimento: dados.data_recebimento || null,
+            // Mesma garantia de contas_pagar/data_pagamento acima: status
+            // "recebido" sem Data de Recebimento explícita usa hoje, senão
+            // a conta nunca aparece em "Recebido este mês".
+            data_recebimento: dados.status === 'recebido' ? (dados.data_recebimento || new Date().toISOString().slice(0, 10)) : (dados.data_recebimento || null),
             status:           dados.status || 'pendente',
             categoria:        dados.categoria || null,
             plano_conta_id:   dados.plano_conta_id || null,
