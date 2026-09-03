@@ -145,6 +145,26 @@ textarea:focus {
   color: #1e293b;
 }
 
+/* Coluna Valor de Venda — 1 tag por preço (produto pode ter vários,
+   ver produtos precos_alternativos), cada um bem separado do outro */
+.prod-valores-venda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  white-space: normal;
+}
+.prod-valor-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* BADGES DE STATUS */
 .prod-badge {
   display: inline-flex;

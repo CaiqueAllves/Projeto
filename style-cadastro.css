@@ -1103,6 +1103,11 @@ form {
 .lista-scroll {
   flex: 1;
   overflow-y: auto;
+  /* auto (não deixar sem valor) — sem isso, uma tabela mais larga que o
+     container (ex: Produtos ganhando a coluna Valor de Venda) fica
+     cortada sem dar pra rolar até o fim; não muda nada nas tabelas que
+     já cabem. */
+  overflow-x: auto;
   min-height: 0;
 }
 

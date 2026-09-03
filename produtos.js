@@ -220,6 +220,7 @@ function renderTabela(filtro) {
                     <th>Categoria</th>
                     <th>Marca</th>
                     <th>NCM</th>
+                    <th>Valor de Venda</th>
                     <th>Status</th>
                     <th>Ações</th>
                 </tr>
@@ -232,6 +233,7 @@ function renderTabela(filtro) {
                     <td>${escapeHtml(p.categoria || '—')}</td>
                     <td>${escapeHtml(p.marca || '—')}</td>
                     <td>${escapeHtml(p.ncm || '—')}</td>
+                    <td>${_prodListaValoresVenda(p)}</td>
                     <td>${statusProdBadge(p.status)}</td>
                     <td>
                         <button class="btn-acao btn-editar" data-action="editar" data-id="${escapeHtml(p.id)}" title="Editar">
@@ -244,6 +246,23 @@ function renderTabela(filtro) {
                 </tr>`).join('')}
             </tbody>
         </table>`;
+}
+
+// Preço de Venda principal + preços em outras moedas (precos_alternativos,
+// ver formularios.js), cada um numa tag separada, sempre com separador de
+// milhar — um produto pode ter vários preços cadastrados hoje em dia.
+function _prodListaValoresVenda(p) {
+    const precos = [];
+    if (p.preco_venda) precos.push({ moeda: p.moeda || 'USD', valor: p.preco_venda });
+    (p.precos_alternativos || []).forEach(item => {
+        if (item?.preco_venda) precos.push({ moeda: item.moeda || 'USD', valor: item.preco_venda });
+    });
+
+    if (!precos.length) return '—';
+
+    return `<div class="prod-valores-venda">${precos.map(pr => `
+        <span class="prod-valor-tag">${escapeHtml(pr.moeda)} ${Number(pr.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+    `).join('')}</div>`;
 }
 
 // --------------------------------------------------
