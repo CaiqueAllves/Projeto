@@ -209,12 +209,16 @@ function propToggleCard(id) {
 }
 
 function _propRenderCard(o) {
-    const cliente = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '—';
+    const remetenteRazao = o.remetente?.nome_fantasia || o.remetente?.razao_social || '';
+    const destinoRazao   = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '—';
     const valor   = o.valor
         ? `${o.moeda || 'USD'} ${Number(o.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
         : '—';
-    const dataFmt = o.data_prevista
-        ? new Date(o.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const dataCriacao = o.created_at
+        ? new Date(o.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+        : '—';
+    const dataValidade = o.data_prevista
+        ? new Date(o.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
         : '—';
 
     const etapa     = o.etapa || 'proposta';
@@ -238,15 +242,25 @@ function _propRenderCard(o) {
                 <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
             </button>
         </div>
-        <div class="prop-kcard-cliente">
-            <i class="fa-solid fa-building"></i> <span>${_propEscapar(cliente)}</span>
+        <div class="prop-kcard-empresa-linha">
+            <span class="prop-kcard-label">Remetente:</span>
+            <span class="prop-kcard-empresa-valor">${remetenteRazao ? _propEscapar(remetenteRazao) : 'Própria empresa'}</span>
+        </div>
+        <div class="prop-kcard-empresa-linha">
+            <span class="prop-kcard-label">Destino:</span>
+            <span class="prop-kcard-empresa-valor">${_propEscapar(destinoRazao)}</span>
         </div>
         <div class="prop-kcard-valor"><i class="fa-solid fa-coins"></i> <span>${valor}</span></div>
         ${botaoPedido}
         ${expandido ? `
         <div class="prop-kcard-meta">
-            <span class="prop-kcard-resp"><i class="fa-solid fa-user-tie"></i> ${o.responsavel ? _propEscapar(o.responsavel) : '—'}</span>
-            <span class="prop-kcard-data"><i class="fa-regular fa-calendar"></i> ${dataFmt}</span>
+            <span class="prop-kcard-label">Responsável:</span> <span>${o.responsavel ? _propEscapar(o.responsavel) : '—'}</span>
+        </div>
+        <div class="prop-kcard-meta">
+            <span class="prop-kcard-label">Criação:</span> <span>${dataCriacao}</span>
+        </div>
+        <div class="prop-kcard-meta">
+            <span class="prop-kcard-label">Validade:</span> <span>${dataValidade}</span>
         </div>
         <div class="prop-kcard-footer">
             <select class="prop-etapa-select prop-etapa-${etapa}" onchange="propAlterarEtapa('${o.id}', this)">

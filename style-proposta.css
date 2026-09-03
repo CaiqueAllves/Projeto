@@ -326,7 +326,7 @@
 .prop-kcard[data-etapa="perdido"]    { border-left-color: #ef4444; }
 
 /* Recolhido não leva min-height (fica curto, só título/cliente/valor) */
-.prop-kcard-expandido { min-height: 220px; }
+.prop-kcard-expandido { min-height: 300px; }
 
 .prop-kcard-top {
     display: flex;
@@ -366,18 +366,24 @@
 }
 .prop-kcard-toggle:hover { background: #e2e8f0; color: #334155; }
 
-.prop-kcard-cliente {
+/* Remetente / Destino — mesmo padrão de Pedidos (ped-kcard-empresa-linha),
+   sempre visíveis mesmo com o card recolhido */
+.prop-kcard-empresa-linha {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: #64748b;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 11.5px;
+    min-width: 0;
+}
+.prop-kcard-label { color: #94a3b8; font-weight: 600; flex-shrink: 0; }
+.prop-kcard-empresa-valor {
+    color: #334155;
+    font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
 }
-.prop-kcard-cliente i { flex-shrink: 0; color: #94a3b8; font-size: 11px; }
 
 .prop-kcard-valor {
     font-weight: 700;
@@ -391,23 +397,18 @@
 .prop-kcard-valor i { flex-shrink: 0; }
 .prop-kcard-valor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 
+/* Responsável / Criação / Validade — só no card expandido, 1 linha cada
+   (mesmo padrão de ped-kcard-datas) */
 .prop-kcard-meta {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 11.5px;
-    color: #94a3b8;
-}
-.prop-kcard-resp, .prop-kcard-data {
-    display: flex;
-    align-items: center;
     gap: 5px;
+    font-size: 11.5px;
+    color: #64748b;
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
-    min-width: 0;
 }
+.prop-kcard-meta .prop-kcard-label { font-size: 11.5px; }
 
 .prop-kcard-footer {
     display: flex;
