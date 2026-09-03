@@ -304,3 +304,149 @@
 .prop-historico-titulo { font-size: 13px; font-weight: 700; color: #1e293b; }
 .prop-historico-detalhe { font-size: 12.5px; color: #475569; margin-top: 1px; }
 .prop-historico-meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+
+/* ── Card do Kanban — expande/recolhe (mesmo esquema de Pedidos, ver
+   ped-kcard em style-pedidos.css) — classes próprias, não reaproveita
+   .pl-card porque o Pipeline (visualização só-leitura) continua usando
+   essa classe original em style-pipeline.css. ─────────────────────── */
+.prop-kcard {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    box-sizing: border-box;
+}
+.prop-kcard[data-etapa="proposta"]   { border-left-color: #f97316; }
+.prop-kcard[data-etapa="negociacao"] { border-left-color: #8b5cf6; }
+.prop-kcard[data-etapa="fechado"]    { border-left-color: #22c55e; }
+.prop-kcard[data-etapa="perdido"]    { border-left-color: #ef4444; }
+
+/* Recolhido não leva min-height (fica curto, só título/cliente/valor) */
+.prop-kcard-expandido { min-height: 220px; }
+
+.prop-kcard-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+.prop-kcard-titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.prop-kcard-titulo i { color: #94a3b8; font-size: 11px; }
+
+.prop-kcard-toggle {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: background .15s, color .15s;
+}
+.prop-kcard-toggle:hover { background: #e2e8f0; color: #334155; }
+
+.prop-kcard-cliente {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.prop-kcard-cliente i { flex-shrink: 0; color: #94a3b8; font-size: 11px; }
+
+.prop-kcard-valor {
+    font-weight: 700;
+    color: var(--azul);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.prop-kcard-valor i { flex-shrink: 0; }
+.prop-kcard-valor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+.prop-kcard-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11.5px;
+    color: #94a3b8;
+}
+.prop-kcard-resp, .prop-kcard-data {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.prop-kcard-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    margin-top: auto;
+}
+.prop-kcard-btns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* Select de Etapa — mesmo padrão visual do select de Status de Pedidos
+   (.ped-status-select em style-pedidos.css), cores batendo com .prop-badge-* */
+.prop-etapa-select {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 22px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+    align-self: flex-start;
+}
+.prop-etapa-proposta   { background-color: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.prop-etapa-negociacao { background-color: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.prop-etapa-fechado    { background-color: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.prop-etapa-perdido    { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; }

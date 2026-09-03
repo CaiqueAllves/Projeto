@@ -196,20 +196,32 @@ function _propRenderizarKanban() {
     });
 }
 
+// Cards do Kanban começam recolhidos (só título/cliente/valor) — mesmo
+// esquema de interação da tela de Pedidos (_pedCardsExpandidos/pedToggleCard):
+// expandir revela responsável/previsão + o select de Etapa, sem precisar
+// abrir o modal de editar só pra mudar a etapa.
+let _propCardsExpandidos = new Set();
+
+function propToggleCard(id) {
+    if (_propCardsExpandidos.has(id)) _propCardsExpandidos.delete(id);
+    else _propCardsExpandidos.add(id);
+    propRenderizar();
+}
+
 function _propRenderCard(o) {
     const cliente = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '—';
     const valor   = o.valor
         ? `${o.moeda || 'USD'} ${Number(o.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-        : null;
+        : '—';
     const dataFmt = o.data_prevista
         ? new Date(o.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        : null;
+        : '—';
 
-    const podeAvancar = o.etapa !== 'fechado' && o.etapa !== 'perdido';
-    const proxEtapa   = { proposta: 'negociacao', negociacao: 'fechado' };
+    const etapa     = o.etapa || 'proposta';
+    const expandido = _propCardsExpandidos.has(o.id);
 
     let botaoPedido = '';
-    if (o.etapa === 'fechado') {
+    if (etapa === 'fechado') {
         const pedidoLinkado = _propPedidosMap[o.id];
         if (pedidoLinkado) {
             botaoPedido = `<button class="btn-ver-processo" onclick="propVerPedido('${pedidoLinkado.id}')"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido ${_propEscapar(pedidoLinkado.numero || '')}</button>`;
@@ -219,37 +231,56 @@ function _propRenderCard(o) {
     }
 
     return `
-        <div class="pl-card" data-etapa="${o.etapa}" data-id="${o.id}">
-            <div class="pl-card-header">
-                <span class="pl-card-titulo">${_propEscapar(o.titulo)}</span>
+    <div class="prop-kcard ${expandido ? 'prop-kcard-expandido' : ''}" data-etapa="${etapa}" data-id="${o.id}">
+        <div class="prop-kcard-top">
+            <span class="prop-kcard-titulo"><i class="fa-solid fa-file-lines"></i> ${_propEscapar(o.titulo)}</span>
+            <button class="prop-kcard-toggle" onclick="propToggleCard('${o.id}')" title="${expandido ? 'Recolher' : 'Expandir'}">
+                <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
+            </button>
+        </div>
+        <div class="prop-kcard-cliente">
+            <i class="fa-solid fa-building"></i> <span>${_propEscapar(cliente)}</span>
+        </div>
+        <div class="prop-kcard-valor"><i class="fa-solid fa-coins"></i> <span>${valor}</span></div>
+        ${botaoPedido}
+        ${expandido ? `
+        <div class="prop-kcard-meta">
+            <span class="prop-kcard-resp"><i class="fa-solid fa-user-tie"></i> ${o.responsavel ? _propEscapar(o.responsavel) : '—'}</span>
+            <span class="prop-kcard-data"><i class="fa-regular fa-calendar"></i> ${dataFmt}</span>
+        </div>
+        <div class="prop-kcard-footer">
+            <select class="prop-etapa-select prop-etapa-${etapa}" onchange="propAlterarEtapa('${o.id}', this)">
+                ${PROP_ETAPAS.map(e => `<option value="${e}" ${e === etapa ? 'selected' : ''}>${PROP_ETAPA_LABEL[e]}</option>`).join('')}
+            </select>
+            <div class="prop-kcard-btns">
+                <button class="pl-btn-acao pl-btn-editar" onclick="propAbrirModal('${o.id}')" title="Editar">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="pl-btn-acao pl-btn-excluir" onclick="propAbrirModalExcluir('${o.id}')" title="Excluir">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
             </div>
+        </div>` : ''}
+    </div>`;
+}
 
-            <div class="pl-card-cliente">
-                <i class="fa-solid fa-building"></i> ${_propEscapar(cliente)}
-            </div>
+// Troca a Etapa direto pelo select do card — livre entre as 4 (mesma
+// liberdade que já existia no modal de editar, só mais rápido).
+async function propAlterarEtapa(id, selectEl) {
+    const op   = _propTodas.find(o => o.id === id);
+    const atual = op?.etapa || 'proposta';
+    const nova  = selectEl.value;
+    if (nova === atual) return;
 
-            ${valor ? `<div class="pl-card-valor"><i class="fa-solid fa-coins"></i> ${valor}</div>` : ''}
+    op.etapa = nova;
+    propRenderizar();
 
-            <div class="pl-card-footer">
-                <div class="pl-card-meta">
-                    ${o.responsavel ? `<span class="pl-card-resp"><i class="fa-solid fa-user-tie"></i> ${_propEscapar(o.responsavel)}</span>` : '<span></span>'}
-                    ${dataFmt ? `<span class="pl-card-data"><i class="fa-regular fa-calendar"></i> ${dataFmt}</span>` : '<span></span>'}
-                </div>
-                ${botaoPedido}
-                <div class="pl-card-btns">
-                    <button class="pl-btn-acao pl-btn-editar" onclick="propAbrirModal('${o.id}')" title="Editar">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                    ${podeAvancar ? `
-                    <button class="pl-btn-acao pl-btn-avancar" onclick="propAvancarEtapa('${o.id}')" title="Avançar para ${PROP_ETAPA_LABEL[proxEtapa[o.etapa]]}">
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>` : ''}
-                    <button class="pl-btn-acao pl-btn-excluir" onclick="propAbrirModalExcluir('${o.id}')" title="Excluir">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        </div>`;
+    const res = await atualizarEtapaOportunidade(id, nova);
+    if (!res.sucesso) {
+        op.etapa = atual;
+        propRenderizar();
+        mostrarNotificacao('Erro ao atualizar etapa.', 'error');
+    }
 }
 
 // ── Renderizar tabela ──────────────────────────────────────────────────────
