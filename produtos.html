@@ -60,7 +60,12 @@
                     <button class="btn-modelo" onclick="abrirModalModeloProduto()">
                         <i class="fa-solid fa-download"></i> Modelo
                     </button>
+                    <button class="btn-modelo" onclick="abrirModalAtualizarPrecos()">
+                        <i class="fa-solid fa-tags"></i> Atualizar Preços
+                    </button>
                     <input type="file" id="uploadProdutos" accept=".xlsx,.xls,.pdf" style="display:none;" onchange="processarUploadProdutos(this)" />
+                    <input type="file" id="uploadPrecoVenda"  accept=".xlsx,.xls" style="display:none;" onchange="processarUploadPreco(this, 'venda')" />
+                    <input type="file" id="uploadPrecoCompra" accept=".xlsx,.xls" style="display:none;" onchange="processarUploadPreco(this, 'compra')" />
                 </div>
             </div>
 
@@ -131,9 +136,55 @@
                     <span>Explica cada campo, obrigatoriedade e exemplo</span>
                 </div>
             </div>
+            <p style="color:#64748b; margin:20px 0 12px; font-size:13.5px;">
+                Pra atualizar só o preço de produtos já cadastrados (sem reenviar tudo de novo), use um modelo à parte — a referência é o SKU, que já é único por produto.
+            </p>
+            <div class="modelo-opcoes">
+                <div class="modelo-opcao modelo-excel" onclick="baixarModeloPrecoExcel('venda')">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <strong>Preço de Venda (.xlsx)</strong>
+                    <span>Reenvie em "Atualizar Preços"</span>
+                </div>
+                <div class="modelo-opcao modelo-excel" onclick="baixarModeloPrecoExcel('compra')">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <strong>Preço de Compra (.xlsx)</strong>
+                    <span>Reenvie em "Atualizar Preços"</span>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn-cancel" onclick="fecharModalModeloProduto()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================
+     MODAL: ATUALIZAR PREÇOS EM LOTE (Venda / Compra)
+============================================== -->
+<div class="modal-overlay" id="modalAtualizarPrecos" onclick="fecharModalAtualizarPrecos()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-tags"></i> Atualizar Preços em Lote</h3>
+        </div>
+        <div class="modal-body">
+            <p style="color:#64748b; margin-bottom:16px; font-size:13.5px;">
+                Envie a planilha preenchida (baixe o modelo em "Modelo" se ainda não tiver) — atualiza só o preço dos produtos já cadastrados, localizados pelo SKU. SKU não encontrado é ignorado, sem afetar os outros.
+            </p>
+            <div class="modelo-opcoes">
+                <div class="modelo-opcao modelo-excel" onclick="document.getElementById('uploadPrecoVenda').click()">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <strong>Preço de Venda</strong>
+                    <span>Enviar planilha preenchida</span>
+                </div>
+                <div class="modelo-opcao modelo-excel" onclick="document.getElementById('uploadPrecoCompra').click()">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <strong>Preço de Compra</strong>
+                    <span>Enviar planilha preenchida</span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="fecharModalAtualizarPrecos()">Fechar</button>
         </div>
     </div>
 </div>

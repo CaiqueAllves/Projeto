@@ -121,6 +121,107 @@ async function baixarModeloProdutoExcel() {
 }
 
 // --------------------------------------------------
+// ATUALIZAR PREÇOS EM LOTE (Venda / Compra) — planilha à parte da de
+// cadastro completo, só pra atualizar produtos já existentes. Referência é
+// o SKU (já único por empresa) — HS Code entra só como coluna de exibição/
+// conferência, igual já foi decidido pros preços múltiplos por moeda
+// (não é chave: HS Code pode se repetir entre produtos diferentes).
+// --------------------------------------------------
+
+const PROD_MODELO_PRECO = {
+    venda:  { titulo: 'Preço de Venda',  coluna: 'Preço de Venda',  campo: 'preco_venda', arquivo: 'modelo-preco-venda-produtos.xlsx' },
+    compra: { titulo: 'Preço de Compra', coluna: 'Preço de Compra', campo: 'preco_custo', arquivo: 'modelo-preco-compra-produtos.xlsx' },
+};
+
+function abrirModalAtualizarPrecos() {
+    document.getElementById('modalAtualizarPrecos').classList.add('active');
+}
+
+function fecharModalAtualizarPrecos() {
+    document.getElementById('modalAtualizarPrecos').classList.remove('active');
+}
+
+async function baixarModeloPrecoExcel(tipo) {
+    const cfg = PROD_MODELO_PRECO[tipo];
+    if (!cfg) return;
+    try {
+        await carregarLibSobDemanda('xlsx');
+    } catch (e) { notify('Não foi possível carregar o gerador de planilha. Tente novamente.', 'error'); return; }
+
+    const header  = ['SKU', 'HS Code', cfg.coluna, 'Moeda'];
+    const exemplo = ['PROD001', '6109.10.00 (só conferência — não usado pra localizar o produto)', '35,00', 'BRL'];
+    const ws = XLSX.utils.aoa_to_sheet([header, exemplo]);
+    ws['!cols'] = header.map(h => ({ wch: Math.max(h.length, 14) }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, cfg.titulo);
+    XLSX.writeFile(wb, cfg.arquivo);
+    fecharModalModeloProduto();
+}
+
+async function processarUploadPreco(input, tipo) {
+    if (!exigirEmpresaVinculada()) return;
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const cfg  = PROD_MODELO_PRECO[tipo];
+
+    notify(`Lendo "${file.name}"...`, 'info');
+    try {
+        await carregarLibSobDemanda('xlsx');
+        const linhas = await _prodUploadLerExcelPreco(file, cfg);
+        if (!linhas.length) {
+            notify('Nenhuma linha com SKU e preço reconhecidos na planilha.', 'aviso');
+            return;
+        }
+        const res = await window.supabaseAPI.atualizarPrecosEmLote(cfg.campo, linhas);
+        if (res.totalSucesso) {
+            notify(`${res.totalSucesso} produto${res.totalSucesso !== 1 ? 's' : ''} atualizado${res.totalSucesso !== 1 ? 's' : ''}.${res.totalFalha ? ` ${res.totalFalha} SKU(s) não encontrado(s): ${res.skusNaoEncontrados.join(', ')}.` : ''}`, res.totalFalha ? 'aviso' : 'success');
+            carregarProdutos();
+        } else {
+            notify(`Nenhum produto atualizado — SKU(s) não encontrado(s): ${res.skusNaoEncontrados.join(', ') || '—'}.`, 'error');
+        }
+    } catch (e) {
+        console.error('[Atualizar Preços] erro:', e);
+        notify('Não foi possível processar a planilha.', 'error');
+    } finally {
+        input.value = '';
+        fecharModalAtualizarPrecos();
+    }
+}
+
+function _prodUploadLerExcelPreco(arquivo, cfg) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                if (!rows.length) return resolve([]);
+
+                const header = rows[0].map(h => _prodUploadNorm(h));
+                const idxSku   = header.findIndex(h => h === 'sku' || h === 'codigo sku' || h === 'codigo');
+                const idxPreco = header.findIndex(h => h.includes('preco'));
+                const idxMoeda = header.findIndex(h => h === 'moeda');
+                if (idxSku === -1 || idxPreco === -1) return resolve([]);
+
+                const linhas = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const sku   = String(rows[i][idxSku] || '').trim();
+                    const preco = _prodUploadParaNumero(rows[i][idxPreco]);
+                    if (!sku || preco == null) continue;
+                    const moeda = idxMoeda !== -1 ? String(rows[i][idxMoeda] || '').trim().toUpperCase() : '';
+                    linhas.push({ sku, preco, moeda: moeda || null });
+                }
+                resolve(linhas);
+            } catch (err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(arquivo);
+    });
+}
+
+// --------------------------------------------------
 // UTILITÁRIOS
 // --------------------------------------------------
 function escapeHtml(value) {
