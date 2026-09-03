@@ -170,14 +170,28 @@ function _plRenderizarTabela() {
     }).join('');
 }
 
+// Cards do Kanban começam recolhidos — mesmo esquema de Pedidos/Proposta/
+// Pipeline Financeiro (_pedCardsExpandidos, _propCardsExpandidos,
+// _pfCardsExpandidos): recolhido só o essencial (Remetente/Destino/Valor),
+// expandir revela Responsável/Previsão. Continua só-leitura — nenhum botão
+// de escrita aqui, só o de "ver detalhes" (navegação pra proposta.html).
+let _plCardsExpandidos = new Set();
+
+function plToggleCard(id) {
+    if (_plCardsExpandidos.has(id)) _plCardsExpandidos.delete(id);
+    else _plCardsExpandidos.add(id);
+    plRenderizar();
+}
+
 function _plRenderCard(o) {
-    const cliente = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '—';
+    const remetenteRazao = o.remetente?.nome_fantasia || o.remetente?.razao_social || '';
+    const destinoRazao   = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '—';
     const valor   = o.valor
         ? `${o.moeda || 'USD'} ${Number(o.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-        : null;
+        : '—';
     const dataFmt = o.data_prevista
-        ? new Date(o.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        : null;
+        ? new Date(o.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+        : '—';
 
     // Único botão mutável que sobra aqui: "Ver Pedido" é navegação, não
     // escrita — abre pedidos.html, não altera nada em oportunidades.
@@ -189,31 +203,42 @@ function _plRenderCard(o) {
         }
     }
 
+    const expandido = _plCardsExpandidos.has(o.id);
+
     return `
-        <div class="pl-card" data-etapa="${o.etapa}" data-id="${o.id}" onclick="plVerDetalhes('${o.id}')">
-            <div class="pl-card-header">
-                <span class="pl-card-titulo">${_plEscapar(o.titulo)}</span>
-            </div>
+    <div class="pl-kcard ${expandido ? 'pl-kcard-expandido' : ''}" data-etapa="${o.etapa}" data-id="${o.id}">
+        <div class="pl-kcard-top">
+            <span class="pl-kcard-titulo"><i class="fa-solid fa-file-lines"></i> ${_plEscapar(o.titulo)}</span>
+            <button class="pl-kcard-toggle" onclick="plToggleCard('${o.id}')" title="${expandido ? 'Recolher' : 'Expandir'}">
+                <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
+            </button>
+        </div>
 
-            <div class="pl-card-cliente">
-                <i class="fa-solid fa-building"></i> ${_plEscapar(cliente)}
-            </div>
+        <div class="pl-kcard-empresa-linha">
+            <span class="pl-kcard-label">Remetente:</span>
+            <span class="pl-kcard-empresa-valor">${remetenteRazao ? _plEscapar(remetenteRazao) : 'Própria empresa'}</span>
+        </div>
+        <div class="pl-kcard-empresa-linha">
+            <span class="pl-kcard-label">Destino:</span>
+            <span class="pl-kcard-empresa-valor">${_plEscapar(destinoRazao)}</span>
+        </div>
 
-            ${valor ? `<div class="pl-card-valor"><i class="fa-solid fa-coins"></i> ${valor}</div>` : ''}
+        <div class="pl-kcard-valor"><i class="fa-solid fa-coins"></i> <span>${valor}</span></div>
+        ${botaoPedido}
 
-            <div class="pl-card-footer">
-                <div class="pl-card-meta">
-                    ${o.responsavel ? `<span class="pl-card-resp"><i class="fa-solid fa-user-tie"></i> ${_plEscapar(o.responsavel)}</span>` : '<span></span>'}
-                    ${dataFmt ? `<span class="pl-card-data"><i class="fa-regular fa-calendar"></i> ${dataFmt}</span>` : '<span></span>'}
-                </div>
-                ${botaoPedido ? `<span onclick="event.stopPropagation()">${botaoPedido}</span>` : ''}
-                <div class="pl-card-btns">
-                    <button class="pl-btn-acao pl-btn-editar" onclick="event.stopPropagation(); plVerDetalhes('${o.id}')" title="Ver detalhes">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                </div>
-            </div>
-        </div>`;
+        ${expandido ? `
+        <div class="pl-kcard-meta">
+            <span class="pl-kcard-label">Responsável:</span> <span>${o.responsavel ? _plEscapar(o.responsavel) : '—'}</span>
+        </div>
+        <div class="pl-kcard-meta">
+            <span class="pl-kcard-label">Previsão:</span> <span>${dataFmt}</span>
+        </div>
+        <div class="pl-kcard-footer">
+            <button class="pl-btn-acao pl-btn-editar" onclick="plVerDetalhes('${o.id}')" title="Ver detalhes">
+                <i class="fa-solid fa-eye"></i> Ver detalhes
+            </button>
+        </div>` : ''}
+    </div>`;
 }
 
 // ── Filtro ─────────────────────────────────────────────────────────────────
