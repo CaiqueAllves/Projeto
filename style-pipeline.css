@@ -111,7 +111,12 @@
 /* ── Kanban board ──────────────────────────────────────────────── */
 .pl-kanban {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    /* auto-flow + auto-columns em vez de um número fixo de colunas: se
+       adapta sozinho a quantas .pl-col existirem (3 no Pipeline, 4 na
+       Proposta, que soma a coluna "Perdido") sem precisar de uma regra
+       por página — cada coluna sempre ocupa a mesma fatia do espaço. */
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
     gap: 16px;
     align-items: start;
     margin-top: 16px;
@@ -327,87 +332,6 @@
     color: #94a3b8;
     font-size: 18px;
 }
-
-/* ── Painel de perdidos ────────────────────────────────────────── */
-.pl-perdidos-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.3);
-    z-index: 900;
-}
-.pl-perdidos-overlay.ativo { display: block; }
-
-.pl-perdidos-panel {
-    position: fixed;
-    top: 0;
-    right: -420px;
-    width: 400px;
-    height: 100vh;
-    background: white;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-    z-index: 901;
-    display: flex;
-    flex-direction: column;
-    transition: right 0.25s ease;
-    overflow: hidden;
-}
-.pl-perdidos-panel.ativo { right: 0; }
-
-.pl-perdidos-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 20px;
-    background: #fef2f2;
-    border-bottom: 1px solid #fecaca;
-    color: #dc2626;
-    font-size: 14px;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-.pl-perdidos-header button {
-    background: none;
-    border: none;
-    color: #dc2626;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-.pl-perdido-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 20px;
-    border-bottom: 1px solid #f1f5f9;
-}
-.pl-perdido-item:last-child { border-bottom: none; }
-
-.pl-perdido-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.pl-perdido-titulo {
-    font-size: 13px;
-    font-weight: 600;
-    color: #1e293b;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.pl-perdido-cliente { font-size: 11px; color: #94a3b8; }
-
-.pl-perdido-acoes { display: flex; gap: 6px; }
-
-.pl-perdidos-vazio {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 48px 20px;
-    color: #cbd5e1;
-    font-size: 13px;
-    text-align: center;
-}
-.pl-perdidos-vazio i { font-size: 28px; }
 
 /* ── Modal ─────────────────────────────────────────────────────── */
 .pl-modal-overlay {
@@ -671,11 +595,6 @@
         grid-template-columns: 1fr;
         gap: 0;
     }
-    .pl-perdidos-panel {
-        width: 100%;
-        right: -100%;
-    }
-    .pl-perdidos-panel.ativo { right: 0; }
     .pl-modal {
         margin: 12px;
         max-height: calc(100vh - 24px);

@@ -57,6 +57,9 @@
                     <button class="btn-upload" onclick="document.getElementById('uploadProdutos').click()">
                         <i class="fa-solid fa-upload"></i> Upload
                     </button>
+                    <button class="btn-modelo" onclick="abrirModalModeloProduto()">
+                        <i class="fa-solid fa-download"></i> Modelo
+                    </button>
                     <input type="file" id="uploadProdutos" accept=".xlsx,.xls,.pdf" style="display:none;" onchange="processarUploadProdutos(this)" />
                 </div>
             </div>
@@ -104,13 +107,42 @@
     </div>
 </div>
 
+<!-- =============================================
+     MODAL: BAIXAR MODELO DE IMPORTAÇÃO (Excel / PDF)
+============================================== -->
+<div class="modal-overlay" id="modalModeloProduto" onclick="fecharModalModeloProduto()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-download"></i> Modelo de Importação</h3>
+        </div>
+        <div class="modal-body">
+            <p style="color:#64748b; margin-bottom:16px; font-size:13.5px;">
+                Escolha o formato do modelo com os campos aceitos no upload em lote de Produtos.
+            </p>
+            <div class="modelo-opcoes">
+                <div class="modelo-opcao modelo-excel" onclick="baixarModeloProdutoExcel()">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <strong>Planilha (.xlsx)</strong>
+                    <span>Pronta pra preencher e reenviar em "Upload"</span>
+                </div>
+                <div class="modelo-opcao modelo-pdf" onclick="gerarPDFModeloProduto(); fecharModalModeloProduto();">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <strong>Guia (.pdf)</strong>
+                    <span>Explica cada campo, obrigatoriedade e exemplo</span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="fecharModalModeloProduto()">Fechar</button>
+        </div>
+    </div>
+</div>
+
 <script src="supabase.min.js"></script>
 <script src="supabase-api.js"></script>
 <script src="auth.js"></script>
 <script src="navegador.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="pdf-modelo-produto.js"></script>
 <script src="produtos.js"></script>
 <script src="suporte.js"></script>
 

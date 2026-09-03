@@ -328,6 +328,22 @@ function _prodColetarIdiomas() {
     return idiomas;
 }
 
+// Preços em outras moedas — lista solta de (Moeda, Preço), sem relação com
+// a quantidade de idiomas cadastrados: o mesmo produto pode ter preços em
+// vários mercados/moedas de exportação, o que é uma decisão comercial
+// independente do idioma do texto (nome/descrição).
+function _prodColetarPrecos() {
+    const precos = [];
+    document.querySelectorAll('#prod-precos-extra-container > div[id^="prod-preco-row-"]').forEach(row => {
+        const moeda   = row.querySelector('select[name^="preco_moeda_"]')?.value || '';
+        const valorEl = row.querySelector('input[name^="preco_valor_"]');
+        const valor   = _prodValorMonetario(valorEl);
+        if (!moeda || !valor) return; // linha incompleta, ignora
+        precos.push({ moeda, preco_venda: valor });
+    });
+    return precos;
+}
+
 // Documentos — só os do tipo "Link externo" são persistidos: o tipo "Arquivo
 // local" ainda não tem bucket de Storage configurado nesta app (o arquivo só
 // existe como object URL temporário no navegador, se perde ao recarregar).
@@ -394,6 +410,7 @@ function _coletarDadosProduto() {
         obs_estoque:            g('prod-obs-estoque'),
         obs_logistica:          g('prod-obs-logistica'),
         nomes_idiomas:          _prodColetarIdiomas(),
+        precos_alternativos:    _prodColetarPrecos(),
         embalagens:             _prodEmbalagens,
         documentos:             _prodColetarDocumentos(),
     };
@@ -464,11 +481,13 @@ async function _prodPreencherEdicao(dados) {
     set('prod-ref-outra', dados.referencia_outra);
 
     // Empresa parceira ("Identificação da Empresa") — busca à parte só pra exibir
-    // nome/documento, já que buscarProdutoPorId não traz esse join.
+    // nome/documento, já que buscarProdutoPorId não traz esse join. Busca em
+    // `parceiros` (próprios parceiros do usuário, id bigint), não em `empresas`
+    // (diretório global de outros tenants) — ver database-produtos-empresa-parceira-fix.sql.
     if (dados.empresa_parceira_id) {
         set('prod-empresa-id', dados.empresa_parceira_id);
         try {
-            const { data: emp } = await supabaseClient.from('empresas')
+            const { data: emp } = await supabaseClient.from('parceiros')
                 .select('razao_social, nome_fantasia, documento').eq('id', dados.empresa_parceira_id).single();
             if (emp) {
                 set('prod-empresa-busca', emp.nome_fantasia || emp.razao_social);
@@ -531,6 +550,19 @@ async function _prodPreencherEdicao(dados) {
         if (nomeEl) nomeEl.value = item.nome || '';
         if (descEl) descEl.value = item.descricao || '';
     });
+
+    // Preços em outras moedas — recria as linhas já salvas (sem limite fixo)
+    const precos = dados.precos_alternativos || [];
+    for (const item of precos) {
+        await prodAdicionarPrecoExtra();
+        const rows = document.querySelectorAll('#prod-precos-extra-container > div[id^="prod-preco-row-"]');
+        const row  = rows[rows.length - 1];
+        if (!row) continue;
+        const selectEl = row.querySelector('select[name^="preco_moeda_"]');
+        const valorEl  = row.querySelector('input[name^="preco_valor_"]');
+        if (selectEl) selectEl.value = item.moeda || '';
+        if (valorEl)  valorEl.value  = _prodFormatarMonetario(item.preco_venda);
+    }
 
     // Embalagens — array pronto, só re-renderiza a tabela
     _prodEmbalagens = dados.embalagens || [];
@@ -4186,7 +4218,7 @@ function iniciarAutocompleteEmpresaProduto() {
             : _acEmpresas;
         lista.innerHTML = filtradas.length
             ? filtradas.map(e => `<div class="autocomplete-item" data-id="${e.id}" data-nome="${e.nome_fantasia || e.razao_social}" data-doc="${e.documento || ''}">${e.nome_fantasia || e.razao_social}${e.documento ? `<span class="autocomplete-sub">${e.documento}</span>` : ''}</div>`).join('')
-            : '<div class="autocomplete-vazio">Nenhuma empresa encontrada</div>';
+            : '<div class="autocomplete-vazio">Nenhum parceiro encontrado</div>';
         lista.style.display = 'block';
     }
 
@@ -4453,6 +4485,47 @@ function prodRemoverIdiomaExtra(id) {
 function _prodIdiomaExtraAtualizarBotao() {
     const btn = document.getElementById('btn-add-idioma-prod');
     if (btn) btn.style.display = _prodIdiomaExtraCount >= 3 ? 'none' : '';
+}
+
+// ========================================
+// PRODUTO — PREÇOS EM OUTRAS MOEDAS (lista solta, sem limite fixo — ver
+// _prodColetarPrecos acima e project_produto_precos_multiplos na memória)
+// ========================================
+
+async function prodAdicionarPrecoExtra() {
+    const container = document.getElementById('prod-precos-extra-container');
+    if (!container) return;
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+
+    const moedas  = await _carregarMoedas();
+    const opcoes  = moedas.map(m => `<option value="${m.sigla}">${m.sigla} — ${m.descricao}</option>`).join('');
+
+    const row = document.createElement('div');
+    row.id = `prod-preco-row-${id}`;
+    row.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr auto; gap:16px; align-items:end;';
+    row.innerHTML = `
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Moeda</label>
+            <select name="preco_moeda_${id}">
+                <option value="">Selecione...</option>
+                ${opcoes}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Preço de Venda</label>
+            <input type="text" inputmode="decimal" name="preco_valor_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this)">
+        </div>
+        <button type="button" onclick="prodRemoverPrecoExtra('${id}')"
+            style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:15px;padding:2px 6px;margin-bottom:10px;"
+            title="Remover preço">
+            <i class="fa-solid fa-xmark"></i>
+        </button>`;
+    container.appendChild(row);
+}
+
+function prodRemoverPrecoExtra(id) {
+    const row = document.getElementById(`prod-preco-row-${id}`);
+    if (row) row.remove();
 }
 
 // ========================================

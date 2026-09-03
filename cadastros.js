@@ -6,6 +6,33 @@ let tagsArray = [];
 let empresaExcluindoId = null;
 let todasEmpresas = [];
 
+// ── Bibliotecas pesadas sob demanda (revisão de performance) ────────────────
+// xlsx (~600KB) e pdf.js (~350KB) só servem pro upload de Excel/PDF — antes
+// carregavam sempre que a tela abria, mesmo pra quem só veio cadastrar uma
+// empresa manualmente. Passam a carregar só na hora do upload de verdade.
+const LIBS_SOB_DEMANDA = {
+    xlsx:  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+};
+const _libsCarregadas = {};
+
+function carregarLibSobDemanda(nome) {
+    if (_libsCarregadas[nome]) return _libsCarregadas[nome];
+    _libsCarregadas[nome] = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = LIBS_SOB_DEMANDA[nome];
+        script.onload = () => {
+            if (nome === 'pdfjs') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
+            resolve();
+        };
+        script.onerror = () => { delete _libsCarregadas[nome]; reject(new Error(`Falha ao carregar biblioteca (${nome})`)); };
+        document.head.appendChild(script);
+    });
+    return _libsCarregadas[nome];
+}
+
 let _cadContatoCount = 0;
 const CAD_CONTATO_MAX = 3;
 
@@ -916,9 +943,13 @@ async function processarUpload(input) {
 
     let dados = {};
     try {
-        dados = ['xlsx', 'xls'].includes(ext)
-            ? await _uploadLerExcel(arquivo)
-            : await _uploadLerPDF(arquivo);
+        if (['xlsx', 'xls'].includes(ext)) {
+            await carregarLibSobDemanda('xlsx');
+            dados = await _uploadLerExcel(arquivo);
+        } else {
+            await carregarLibSobDemanda('pdfjs');
+            dados = await _uploadLerPDF(arquivo);
+        }
     } catch (err) {
         console.error('Erro ao processar upload:', err);
         mostrarNotificacao('Não foi possível ler o arquivo. Verifique o formato.', 'error');

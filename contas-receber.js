@@ -8,9 +8,93 @@ let _crExcluirId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     _crCarregarUsuario();
+    await _crCarregarMoedas();
+    await _crCarregarPlanoContas();
     await crCarregar();
     await _crVerificarGeracaoViaUrl();
 });
+
+// ── Moedas (tabela apoio_moedas) ─────────────────────────────────────────────
+
+async function _crCarregarMoedas() {
+    const sel = document.getElementById('crMoeda');
+    if (!sel) return;
+    try {
+        const { data } = await supabaseClient
+            .from('apoio_moedas')
+            .select('codigo, descricao, sigla')
+            .order('descricao', { ascending: true });
+        if (data?.length) {
+            sel.innerHTML = data.map(m => `<option value="${m.sigla || m.codigo}">${_crEsc(m.descricao || '')}</option>`).join('');
+        }
+    } catch (e) {
+        console.warn('[Contas a Receber] Falha ao carregar moedas:', e);
+    }
+}
+
+// ── Observações retrátil ─────────────────────────────────────────────────────
+
+function crToggleObs(toggle) {
+    const content = toggle.nextElementSibling;
+    const aberto  = toggle.classList.contains('aberto');
+    toggle.classList.toggle('aberto', !aberto);
+    content.style.display = aberto ? 'none' : 'block';
+}
+
+// ── Plano de Contas (Bloco 1 — Receitas) ──────────────────────────
+// Ver database/database-plano-contas-receitas.sql. Dropdown de busca
+// customizado (não <select>, pra não estourar a largura do modal com
+// os rótulos longos de Conta) — agrupa visualmente por Conta (ex:
+// "01.01 — Exportação de Serviços") com os Subfatores dentro de cada
+// grupo, mesmo padrão dos outros campos de busca (Parceiro/Pedido).
+let _crPlanoContasTodas = [];
+
+async function _crCarregarPlanoContas() {
+    try {
+        const res = await buscarPlanoContas(1);
+        if (res.sucesso) _crPlanoContasTodas = res.data || [];
+    } catch (e) {
+        console.warn('[Contas a Receber] Falha ao carregar plano de contas:', e);
+    }
+}
+
+function _crRenderPlanoContaLista(termo) {
+    const box = document.getElementById('crAutoPlanoConta');
+    const t = (termo || '').toLowerCase().trim();
+    const filtradas = !t
+        ? _crPlanoContasTodas
+        : _crPlanoContasTodas.filter(c =>
+            c.subfator_nome.toLowerCase().includes(t) ||
+            c.codigo.toLowerCase().includes(t) ||
+            c.conta_nome.toLowerCase().includes(t));
+
+    if (!filtradas.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma conta encontrada</div>'; return; }
+
+    let grupoAtual = null;
+    box.innerHTML = filtradas.map(c => {
+        const chave = `${c.conta_codigo} — ${c.conta_nome}`;
+        const header = chave !== grupoAtual ? `<div class="pl-auto-group">${_crEsc(chave)}</div>` : '';
+        grupoAtual = chave;
+        return `${header}<div class="pl-auto-item" onclick="crSelecionarPlanoConta('${c.id}', '${_crEscAttr(c.codigo)} — ${_crEscAttr(c.subfator_nome)}')">
+            <span class="pl-auto-nome">${_crEsc(c.codigo)} — ${_crEsc(c.subfator_nome)}</span>
+        </div>`;
+    }).join('');
+}
+
+function crBuscarPlanoConta(termo) {
+    document.getElementById('crPlanoContaId').value = '';
+    _crRenderPlanoContaLista(termo);
+}
+
+function crMostrarPlanoConta(termo) {
+    _crRenderPlanoContaLista(termo);
+}
+
+function crSelecionarPlanoConta(id, label) {
+    document.getElementById('crPlanoContaId').value   = id;
+    document.getElementById('crPlanoContaNome').value = label;
+    document.getElementById('crAutoPlanoConta').innerHTML = '';
+}
 
 // ── Abertura pré-preenchida a partir de Pedido/Processo (módulos Comercial/Operacional) ──
 
@@ -70,7 +154,10 @@ async function crCarregar() {
     document.getElementById('crTbody').innerHTML =
         '<tr><td colspan="6" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
 
-    const res = await buscarContasReceber();
+    // Filtro de período (revisão de performance) — só reduz o que vem do
+    // banco pra contas já recebidas/canceladas; pendente/vencida sempre vem.
+    const diasAtras = Number(document.getElementById('filtroPeriodoContas')?.value) || null;
+    const res = await buscarContasReceber({ diasAtras });
     if (!res.sucesso) {
         document.getElementById('crTbody').innerHTML =
             '<tr><td colspan="6"><div class="fin-vazio"><i class="fa-solid fa-triangle-exclamation"></i><p>Erro ao carregar contas</p></div></td></tr>';
@@ -117,7 +204,7 @@ function crRenderizar() {
         const podeReceber = c.status === 'pendente' || c.status === 'vencido';
 
         return `<tr>
-            <td><strong>${_crEsc(c.descricao)}</strong>${c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.categoria)}</span>` : ''}${c.pedidos?.numero ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-bag-shopping"></i> Pedido ${_crEsc(c.pedidos.numero)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_crEsc(c.processos.numero_processo)}</span>` : ''}</td>
+            <td><strong>${_crEsc(c.descricao)}</strong>${c.plano_contas?.subfator_nome ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.plano_contas.conta_codigo)} — ${_crEsc(c.plano_contas.subfator_nome)}</span>` : (c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.categoria)}</span>` : '')}${c.pedidos?.numero ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-bag-shopping"></i> Pedido ${_crEsc(c.pedidos.numero)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_crEsc(c.processos.numero_processo)}</span>` : ''}</td>
             <td>${_crEsc(cliente)}</td>
             <td class="td-valor entrada">${valor}</td>
             <td>${venc}</td>
@@ -153,15 +240,22 @@ function _crAtualizarResumo() {
     document.getElementById('totalRecebido').textContent = _crFmtValor(recebido, 'BRL');
 }
 
+// Debounce (revisão de performance): filtra um array em memória, sem ir
+// ao banco, mas a cada tecla reconstruía a tabela inteira via innerHTML —
+// imperceptível com dezenas de linhas, mas engasga conforme a lista cresce.
+let _crFiltrarTimer = null;
 function crFiltrar() {
-    const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
-    const status = document.getElementById('filtroStatus')?.value || '';
-    _crFiltradas = _crTodas.filter(c => {
-        const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
-            .filter(Boolean).join(' ').toLowerCase();
-        return (!termo || txt.includes(termo)) && (!status || c.status === status);
-    });
-    crRenderizar();
+    clearTimeout(_crFiltrarTimer);
+    _crFiltrarTimer = setTimeout(() => {
+        const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
+        const status = document.getElementById('filtroStatus')?.value || '';
+        _crFiltradas = _crTodas.filter(c => {
+            const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
+                .filter(Boolean).join(' ').toLowerCase();
+            return (!termo || txt.includes(termo)) && (!status || c.status === status);
+        });
+        crRenderizar();
+    }, 200);
 }
 
 async function crMarcarRecebido(id) {
@@ -180,20 +274,47 @@ function crAbrirModal(id = null, prefill = null) {
     document.getElementById('crModalTitulo').innerHTML = c
         ? '<i class="fa-solid fa-pen"></i> Editar Conta a Receber'
         : '<i class="fa-solid fa-arrow-down"></i> Nova Conta a Receber';
-    document.getElementById('crDescricao').value       = c?.descricao || prefill?.descricao || '';
-    document.getElementById('crClienteNome').value     = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || prefill?.clienteNome || '';
-    document.getElementById('crClienteId').value       = c?.parceiro_id || prefill?.clienteId || '';
-    document.getElementById('crPedidoNome').value      = c?.pedidos?.numero || prefill?.pedidoNome || '';
-    document.getElementById('crPedidoId').value         = c?.pedido_id || prefill?.pedidoId || '';
-    document.getElementById('crProcessoNome').value    = c?.processos?.numero_processo || prefill?.processoNome || '';
-    document.getElementById('crProcessoId').value      = c?.processo_id || prefill?.processoId || '';
-    document.getElementById('crValor').value           = c?.valor || prefill?.valor || '';
+    document.getElementById('crDescricao').value = c?.descricao || prefill?.descricao || '';
+
+    // Reseta o estado derivado antes de recalcular pra este registro — evita
+    // herdar o travamento de Cliente/Processo de uma abertura anterior do modal.
+    _crResetCamposDerivados();
+    const pedidoId = c?.pedido_id || prefill?.pedidoId || '';
+    document.getElementById('crPedidoNome').value = c?.pedidos?.numero || prefill?.pedidoNome || '';
+    document.getElementById('crPedidoId').value   = pedidoId;
+
+    if (pedidoId) {
+        const processoSalvoId   = c?.processo_id || prefill?.processoId || '';
+        const processoSalvoNome = c?.processos?.numero_processo || prefill?.processoNome || '';
+        _crDerivarDoPedido(pedidoId).then(() => {
+            // Garante que o processo já salvo apareça mesmo se não estiver mais
+            // entre os processos atuais do pedido (ex: processo trocado depois).
+            if (processoSalvoId) {
+                document.getElementById('crProcessoId').value   = processoSalvoId;
+                document.getElementById('crProcessoNome').value = processoSalvoNome || document.getElementById('crProcessoNome').value;
+            }
+        });
+    } else {
+        document.getElementById('crClienteNome').value = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || prefill?.clienteNome || '';
+        document.getElementById('crClienteId').value    = c?.parceiro_id || prefill?.clienteId || '';
+    }
+
+    document.getElementById('crValor').value           = (c?.valor ?? prefill?.valor) ? _crFormatarMonetario(c?.valor ?? prefill?.valor) : '';
     document.getElementById('crMoeda').value           = c?.moeda || prefill?.moeda || 'BRL';
     document.getElementById('crVencimento').value      = c?.data_vencimento || '';
     document.getElementById('crDataRecebimento').value = c?.data_recebimento || '';
     document.getElementById('crStatus').value          = c?.status || 'pendente';
-    document.getElementById('crCategoria').value       = c?.categoria || '';
+
+    const planoConta = c?.plano_conta_id
+        ? _crPlanoContasTodas.find(p => p.id === c.plano_conta_id)
+        : null;
+    document.getElementById('crPlanoContaId').value   = c?.plano_conta_id || '';
+    document.getElementById('crPlanoContaNome').value = planoConta ? `${planoConta.codigo} — ${planoConta.subfator_nome}` : '';
+
     document.getElementById('crObservacoes').value     = c?.observacoes || '';
+    const obsToggle = document.querySelector('#crModalOverlay .pl-obs-toggle');
+    if (obsToggle) { obsToggle.classList.remove('aberto'); obsToggle.nextElementSibling.style.display = 'none'; }
+
     document.getElementById('crModalOverlay').classList.add('ativo');
 }
 
@@ -202,12 +323,37 @@ function crFecharModal() {
     document.getElementById('crAutoParceiro').innerHTML = '';
     document.getElementById('crAutoPedido').innerHTML   = '';
     document.getElementById('crAutoProcesso').innerHTML = '';
+    document.getElementById('crAutoPlanoConta').innerHTML = '';
+}
+
+// ── Máscara monetária (Valor) — mesmo padrão de propMascaraMonetaria (proposta.js) ──
+
+function crMascaraMonetaria(el) {
+    const cursor = el.selectionStart;
+    const oldLen = el.value.length;
+    let raw = el.value.replace(/[^\d,]/g, '');
+    const partes = raw.split(',');
+    if (partes.length > 2) raw = partes[0] + ',' + partes.slice(1).join('');
+    const p = raw.split(',');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    el.value = p.join(',');
+    const diff = el.value.length - oldLen;
+    el.setSelectionRange(cursor + diff, cursor + diff);
+}
+
+function _crValorMonetario(el) {
+    if (!el) return 0;
+    return parseFloat((el.value || '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function _crFormatarMonetario(num) {
+    return Number(num || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 async function crSalvar() {
     if (!exigirEmpresaVinculada()) return;
     const descricao = document.getElementById('crDescricao').value.trim();
-    const valor     = document.getElementById('crValor').value;
+    const valor     = _crValorMonetario(document.getElementById('crValor'));
     const venc      = document.getElementById('crVencimento').value;
     if (!descricao || !valor || !venc) { alert('Preencha Descrição, Valor e Vencimento.'); return; }
 
@@ -220,12 +366,12 @@ async function crSalvar() {
         parceiro_id:      document.getElementById('crClienteId').value || null,
         pedido_id:        document.getElementById('crPedidoId').value || null,
         processo_id:      document.getElementById('crProcessoId').value || null,
-        valor:            parseFloat(valor),
+        valor,
         moeda:            document.getElementById('crMoeda').value,
         data_vencimento:  venc,
         data_recebimento: document.getElementById('crDataRecebimento').value || null,
         status:           document.getElementById('crStatus').value,
-        categoria:        document.getElementById('crCategoria').value || null,
+        plano_conta_id:   document.getElementById('crPlanoContaId').value || null,
         observacoes:      document.getElementById('crObservacoes').value.trim() || null,
     };
 
@@ -238,27 +384,48 @@ async function crSalvar() {
     await crCarregar();
 }
 
+// Busca (oninput, digitando) e Mostra (onfocus, ao clicar no campo) — mesmo
+// padrão de Remetente/Destinatário no Pipeline/Proposta: clicar no campo já
+// lista até 15 clientes, sem precisar digitar nada primeiro.
 let _crBuscaTimer = null;
-async function crBuscarParceiro(termo) {
+
+// Guarda de corrida: o fetch do "mostrar tudo" (onfocus) e o fetch filtrado
+// (oninput, debounced) podem responder fora de ordem — sem isso, a resposta
+// mais lenta sobrescreve a caixa por último, mesmo sendo a mais antiga, e o
+// usuário pode acabar clicando num item da lista errada (sem filtro nenhum).
+let _crParceiroReqToken = 0;
+
+async function _crListarParceiros(termo) {
     const box = document.getElementById('crAutoParceiro');
+    const meuToken = ++_crParceiroReqToken;
+    try {
+        const usuario = obterUsuarioLogado();
+        let query = supabaseClient
+            .from('parceiros')
+            .select('id, razao_social, nome_fantasia')
+            .limit(termo ? 8 : 15);
+        if (termo) query = query.or(`razao_social.ilike.%${termo}%,nome_fantasia.ilike.%${termo}%`);
+        else query = query.order('razao_social', { ascending: true });
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        const { data } = await query;
+        if (meuToken !== _crParceiroReqToken) return; // resposta antiga, descarta
+        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum cliente encontrado — cadastre em Empresas primeiro</div>'; return; }
+        box.innerHTML = data.map(p => `
+            <div class="pl-auto-item" onclick="crSelecionarParceiro(${p.id}, '${_crEsc(p.nome_fantasia || p.razao_social)}')">
+                <span class="pl-auto-nome">${_crEsc(p.nome_fantasia || p.razao_social)}</span>
+                ${p.nome_fantasia ? `<span class="pl-auto-razao">${_crEsc(p.razao_social)}</span>` : ''}
+            </div>`).join('');
+    } catch (e) {}
+}
+
+function crBuscarParceiro(termo) {
     document.getElementById('crClienteId').value = '';
-    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
     clearTimeout(_crBuscaTimer);
-    _crBuscaTimer = setTimeout(async () => {
-        try {
-            const { data } = await supabaseClient
-                .from('parceiros')
-                .select('id, razao_social, nome_fantasia')
-                .or(`razao_social.ilike.%${termo}%,nome_fantasia.ilike.%${termo}%`)
-                .limit(8);
-            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum cliente encontrado</div>'; return; }
-            box.innerHTML = data.map(p => `
-                <div class="pl-auto-item" onclick="crSelecionarParceiro(${p.id}, '${_crEsc(p.nome_fantasia || p.razao_social)}')">
-                    <span class="pl-auto-nome">${_crEsc(p.nome_fantasia || p.razao_social)}</span>
-                    ${p.nome_fantasia ? `<span class="pl-auto-razao">${_crEsc(p.razao_social)}</span>` : ''}
-                </div>`).join('');
-        } catch (e) {}
-    }, 300);
+    _crBuscaTimer = setTimeout(() => _crListarParceiros(termo?.length >= 2 ? termo : ''), 300);
+}
+
+function crMostrarParceiro(termo) {
+    _crListarParceiros(termo?.length >= 2 ? termo : '');
 }
 
 function crSelecionarParceiro(id, nome) {
@@ -270,55 +437,148 @@ function crSelecionarParceiro(id, nome) {
 // ── Autocomplete vínculo — Pedido ────────────────────────────────────────────
 
 let _crBuscaPedidoTimer = null;
-async function crBuscarPedido(termo) {
+let _crPedidoReqToken = 0; // mesma guarda de corrida do _crListarParceiros acima
+
+async function _crListarPedidos(termo) {
     const box = document.getElementById('crAutoPedido');
-    document.getElementById('crPedidoId').value = '';
-    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
-    clearTimeout(_crBuscaPedidoTimer);
-    _crBuscaPedidoTimer = setTimeout(async () => {
-        try {
-            const { data } = await supabaseClient
-                .from('pedidos')
-                .select('id, numero')
-                .ilike('numero', `%${termo}%`)
-                .limit(8);
-            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum pedido encontrado</div>'; return; }
-            box.innerHTML = data.map(p => `
-                <div class="pl-auto-item" onclick="crSelecionarPedido('${p.id}', '${_crEsc(p.numero || '')}')">
-                    <span class="pl-auto-nome">${_crEsc(p.numero || '')}</span>
-                </div>`).join('');
-        } catch (e) {}
-    }, 300);
+    const meuToken = ++_crPedidoReqToken;
+    try {
+        const usuario = obterUsuarioLogado();
+        let query = supabaseClient
+            .from('pedidos')
+            .select('id, numero')
+            .limit(termo ? 8 : 15);
+        if (termo) query = query.ilike('numero', `%${termo}%`);
+        else query = query.order('numero', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        const { data } = await query;
+        if (meuToken !== _crPedidoReqToken) return; // resposta antiga, descarta
+        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum pedido encontrado</div>'; return; }
+        box.innerHTML = data.map(p => `
+            <div class="pl-auto-item" onclick="crSelecionarPedido('${p.id}', '${_crEsc(p.numero || '')}')">
+                <span class="pl-auto-nome">${_crEsc(p.numero || '')}</span>
+            </div>`).join('');
+    } catch (e) {}
 }
 
-function crSelecionarPedido(id, numero) {
+function crBuscarPedido(termo) {
+    document.getElementById('crPedidoId').value = '';
+    if (!termo) _crResetCamposDerivados();
+    clearTimeout(_crBuscaPedidoTimer);
+    _crBuscaPedidoTimer = setTimeout(() => _crListarPedidos(termo?.length >= 2 ? termo : ''), 300);
+}
+
+function crMostrarPedido(termo) {
+    _crListarPedidos(termo?.length >= 2 ? termo : '');
+}
+
+async function crSelecionarPedido(id, numero) {
     document.getElementById('crPedidoId').value   = id;
     document.getElementById('crPedidoNome').value = numero;
     document.getElementById('crAutoPedido').innerHTML = '';
+    await _crDerivarDoPedido(id);
 }
 
-// ── Autocomplete vínculo — Processo ─────────────────────────────────────────
+// ── Derivação Cliente/Valor/Processo a partir do Pedido escolhido ──────────
+// Pedido é o campo-âncora (opcional): sem ele, Cliente fica livre pra buscar
+// e Processo fica desabilitado. Ao escolher um Pedido, o Cliente é travado
+// (nome/razão social vem do próprio pedido — evita vincular a um parceiro
+// que não bate com o pedido). Valor/Moeda vêm do valor_total do pedido só
+// como sugestão (editável — uma conta pode ser só uma parcela/taxa dele, não
+// o valor cheio). Já o Processo é restrito só aos processos deste pedido:
+// 0 → trava vazio, 1 → preenche sozinho e trava, >1 → usuário escolhe entre
+// eles. Mesmo padrão 0/1/vários usado em pedGerarProcesso (pedidos.js).
+let _crPedidoProcessos = [];
 
-let _crBuscaProcessoTimer = null;
-async function crBuscarProcesso(termo) {
-    const box = document.getElementById('crAutoProcesso');
+function _crResetCamposDerivados() {
+    const clienteInput  = document.getElementById('crClienteNome');
+    const processoInput = document.getElementById('crProcessoNome');
+    clienteInput.readOnly = false;
+    document.getElementById('crClienteId').value = '';
+    clienteInput.value = '';
+    processoInput.disabled = true;
+    processoInput.placeholder = 'Escolha um Pedido primeiro';
+    processoInput.value = '';
     document.getElementById('crProcessoId').value = '';
-    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
-    clearTimeout(_crBuscaProcessoTimer);
-    _crBuscaProcessoTimer = setTimeout(async () => {
-        try {
-            const { data } = await supabaseClient
-                .from('processos')
-                .select('id, numero_processo')
-                .ilike('numero_processo', `%${termo}%`)
-                .limit(8);
-            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo encontrado</div>'; return; }
-            box.innerHTML = data.map(p => `
-                <div class="pl-auto-item" onclick="crSelecionarProcesso('${p.id}', '${_crEsc(p.numero_processo || '')}')">
-                    <span class="pl-auto-nome">${_crEsc(p.numero_processo || '')}</span>
-                </div>`).join('');
-        } catch (e) {}
-    }, 300);
+    document.getElementById('crAutoProcesso').innerHTML = '';
+    _crPedidoProcessos = [];
+}
+
+async function _crDerivarDoPedido(pedidoId) {
+    const clienteInput  = document.getElementById('crClienteNome');
+    const processoInput = document.getElementById('crProcessoNome');
+
+    document.getElementById('crAutoParceiro').innerHTML = '';
+    document.getElementById('crProcessoId').value = '';
+    processoInput.value = '';
+    _crPedidoProcessos = [];
+
+    try {
+        const usuario = obterUsuarioLogado();
+
+        const { data: pedido } = await supabaseClient
+            .from('pedidos')
+            .select('cliente_id, valor_total, moeda, parceiros!pedidos_cliente_id_fkey(razao_social, nome_fantasia)')
+            .eq('id', pedidoId)
+            .single();
+
+        document.getElementById('crClienteId').value = pedido?.cliente_id || '';
+        clienteInput.value = pedido?.parceiros?.nome_fantasia || pedido?.parceiros?.razao_social || '';
+        clienteInput.readOnly = true;
+
+        // Sugere Valor/Moeda do pedido — só se o campo ainda estiver vazio, pra
+        // não sobrescrever um valor já digitado ou o de uma conta já salva
+        // (crAbrirModal preenche o valor salvo antes de chamar esta função).
+        const valorInput = document.getElementById('crValor');
+        if (!valorInput.value.trim() && pedido?.valor_total) {
+            valorInput.value = _crFormatarMonetario(pedido.valor_total);
+            if (pedido.moeda) document.getElementById('crMoeda').value = pedido.moeda;
+        }
+
+        let query = supabaseClient
+            .from('processos')
+            .select('id, numero_processo')
+            .eq('pedido_id', pedidoId)
+            .order('numero_processo', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        const { data: processos } = await query;
+        _crPedidoProcessos = processos || [];
+
+        if (_crPedidoProcessos.length === 0) {
+            processoInput.disabled = true;
+            processoInput.placeholder = 'Nenhum processo vinculado a este pedido';
+        } else if (_crPedidoProcessos.length === 1) {
+            document.getElementById('crProcessoId').value = _crPedidoProcessos[0].id;
+            processoInput.value = _crPedidoProcessos[0].numero_processo || '';
+            processoInput.disabled = true;
+        } else {
+            processoInput.disabled = false;
+            processoInput.placeholder = 'Selecione um dos processos deste pedido...';
+        }
+    } catch (e) {}
+}
+
+// ── Autocomplete vínculo — Processo (restrito ao Pedido escolhido) ─────────
+
+function _crRenderizarProcessos(termo) {
+    const box = document.getElementById('crAutoProcesso');
+    const lista = termo
+        ? _crPedidoProcessos.filter(p => (p.numero_processo || '').toLowerCase().includes(termo.toLowerCase()))
+        : _crPedidoProcessos;
+    if (!lista.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo vinculado a este pedido</div>'; return; }
+    box.innerHTML = lista.map(p => `
+        <div class="pl-auto-item" onclick="crSelecionarProcesso('${p.id}', '${_crEsc(p.numero_processo || '')}')">
+            <span class="pl-auto-nome">${_crEsc(p.numero_processo || '')}</span>
+        </div>`).join('');
+}
+
+function crBuscarProcesso(termo) {
+    document.getElementById('crProcessoId').value = '';
+    _crRenderizarProcessos(termo);
+}
+
+function crMostrarProcesso(termo) {
+    _crRenderizarProcessos(termo);
 }
 
 function crSelecionarProcesso(id, numero) {
@@ -338,6 +598,10 @@ document.addEventListener('click', e => {
     }
     if (!e.target.closest('#crAutoProcesso') && !e.target.closest('#crProcessoNome')) {
         const box = document.getElementById('crAutoProcesso');
+        if (box) box.innerHTML = '';
+    }
+    if (!e.target.closest('#crAutoPlanoConta') && !e.target.closest('#crPlanoContaNome')) {
+        const box = document.getElementById('crAutoPlanoConta');
         if (box) box.innerHTML = '';
     }
 });
@@ -373,6 +637,13 @@ function _crFmtValor(v, moeda = 'BRL') {
 
 function _crEsc(str) {
     return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Pra uso como argumento de string dentro de onclick="fn('...')" — além do
+// escape de HTML acima, escapa barra invertida e aspas simples pra não
+// quebrar o literal JS de aspas simples embutido no atributo.
+function _crEscAttr(str) {
+    return _crEsc(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 // Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login

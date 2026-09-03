@@ -48,6 +48,17 @@ main {
     min-height: 100vh;
 }
 
+/* Espaço entre o topbar (fixo em toda página) e o conteúdo — padronizado
+   em ~20px. Antes cada página tinha seu próprio padding-top em .content
+   (de 0 a 32px, inconsistente) — como style-navegador.css carrega em toda
+   tela, uma regra aqui cobre todas de uma vez. Só o padding-top é forçado
+   (via !important, já que cada página redefine .content com sua própria
+   especificidade) — largura/padding-bottom de cada página continuam como
+   estavam, isso mexe só na distância até o topbar. */
+.content {
+    padding-top: 20px !important;
+}
+
 /* ========================================
    NAVEGAÇÃO - MENU ATIVO E SUBMENUS
 ======================================== */

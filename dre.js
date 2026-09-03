@@ -51,6 +51,17 @@ async function dreCarregar() {
         .filter(c => c.status === 'pendente' || c.status === 'vencido')
         .reduce((s, c) => s + Number(c.valor || 0), 0);
 
+    // Receitas por Conta (Plano de Contas — Bloco 1, ver
+    // database/database-plano-contas-receitas.sql). Lançamentos antigos,
+    // sem plano_conta_id vinculado, caem em "Não classificado".
+    const receitasPorConta = {};
+    receber.filter(c => c.status === 'recebido').forEach(c => {
+        const chave = c.plano_contas
+            ? `${c.plano_contas.conta_codigo} — ${c.plano_contas.conta_nome}`
+            : 'Não classificado';
+        receitasPorConta[chave] = (receitasPorConta[chave] || 0) + Number(c.valor || 0);
+    });
+
     // Despesas por categoria
     const cats = {};
     pagar.filter(c => c.status === 'pago').forEach(c => {
@@ -82,6 +93,12 @@ async function dreCarregar() {
 
     // RECEITAS
     linhas.push(_dreSecao('RECEITAS'));
+    Object.entries(receitasPorConta).forEach(([conta, val]) => {
+        linhas.push(_dreLinhaIndent(conta, val, 'verde'));
+    });
+    if (!Object.keys(receitasPorConta).length) {
+        linhas.push(`<tr class="dre-indentado"><td style="color:#94a3b8;font-style:italic">Nenhuma receita recebida no período</td><td></td></tr>`);
+    }
     linhas.push(_dreLinha('Receita Bruta (recebida)', receitaBruta, 'verde'));
     linhas.push(_dreLinhaIndent('Contas a Receber (pendente)', receitaPendente));
     linhas.push(_dreTotal('(=) RECEITA LÍQUIDA', receitaBruta));
@@ -112,7 +129,7 @@ function _dreLinha(label, valor, cor = '') {
 }
 
 function _dreLinhaIndent(label, valor, cor = '') {
-    const corClass = cor === 'vermelho' ? 'style="color:#ef4444"' : '';
+    const corClass = cor === 'vermelho' ? 'style="color:#ef4444"' : cor === 'verde' ? 'style="color:#22c55e"' : '';
     return `<tr class="dre-indentado"><td>${label}</td><td ${corClass}>${_dreFmt(valor)}</td></tr>`;
 }
 

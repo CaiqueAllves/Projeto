@@ -75,6 +75,12 @@
                         <option value="recebido">Recebido</option>
                         <option value="cancelado">Cancelado</option>
                     </select>
+                    <select class="filter-select" id="filtroPeriodoContas" onchange="crCarregar()" style="margin-left:10px;" title="Contas pendentes/vencidas continuam sempre visíveis, mesmo fora do período">
+                        <option value="30">Últimos 30 dias</option>
+                        <option value="90" selected>Últimos 90 dias</option>
+                        <option value="365">Último ano</option>
+                        <option value="">Todos os períodos</option>
+                    </select>
                 </div>
                 <div class="header-right">
                     <button class="btn-cadastrar" onclick="crAbrirModal()">
@@ -124,22 +130,22 @@
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label>Cliente / Parceiro</label>
-                    <input type="text" id="crClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="crBuscarParceiro(this.value)">
-                    <input type="hidden" id="crClienteId">
-                    <div class="pl-autocomplete" id="crAutoParceiro"></div>
+                    <label>Vincular a Pedido</label>
+                    <input type="text" id="crPedidoNome" placeholder="Buscar pedido por número..." autocomplete="off" oninput="crBuscarPedido(this.value)" onfocus="crMostrarPedido(this.value)">
+                    <input type="hidden" id="crPedidoId">
+                    <div class="pl-autocomplete" id="crAutoPedido"></div>
                 </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
-                    <label>Vincular a Pedido</label>
-                    <input type="text" id="crPedidoNome" placeholder="Buscar pedido por número..." autocomplete="off" oninput="crBuscarPedido(this.value)">
-                    <input type="hidden" id="crPedidoId">
-                    <div class="pl-autocomplete" id="crAutoPedido"></div>
+                    <label>Cliente / Parceiro</label>
+                    <input type="text" id="crClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="crBuscarParceiro(this.value)" onfocus="crMostrarParceiro(this.value)">
+                    <input type="hidden" id="crClienteId">
+                    <div class="pl-autocomplete" id="crAutoParceiro"></div>
                 </div>
                 <div class="fin-form-group">
                     <label>Vincular a Processo</label>
-                    <input type="text" id="crProcessoNome" placeholder="Buscar processo por número..." autocomplete="off" oninput="crBuscarProcesso(this.value)">
+                    <input type="text" id="crProcessoNome" placeholder="Escolha um Pedido primeiro" autocomplete="off" disabled oninput="crBuscarProcesso(this.value)" onfocus="crMostrarProcesso(this.value)">
                     <input type="hidden" id="crProcessoId">
                     <div class="pl-autocomplete" id="crAutoProcesso"></div>
                 </div>
@@ -147,14 +153,12 @@
             <div class="fin-form-row">
                 <div class="fin-form-group">
                     <label>Valor <span style="color:#ef4444">*</span></label>
-                    <input type="number" id="crValor" placeholder="0,00" min="0" step="0.01">
+                    <input type="text" id="crValor" placeholder="0,00" inputmode="decimal" oninput="crMascaraMonetaria(this)">
                 </div>
                 <div class="fin-form-group">
                     <label>Moeda</label>
                     <select id="crMoeda">
                         <option value="BRL">BRL</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
                     </select>
                 </div>
             </div>
@@ -179,20 +183,21 @@
                     </select>
                 </div>
                 <div class="fin-form-group">
-                    <label>Categoria</label>
-                    <select id="crCategoria">
-                        <option value="">Selecione...</option>
-                        <option value="exportacao">Exportação</option>
-                        <option value="importacao">Importação</option>
-                        <option value="servico">Serviço</option>
-                        <option value="outro">Outro</option>
-                    </select>
+                    <label>Conta (Plano de Contas)</label>
+                    <input type="text" id="crPlanoContaNome" placeholder="Buscar conta..." autocomplete="off" oninput="crBuscarPlanoConta(this.value)" onfocus="crMostrarPlanoConta(this.value)">
+                    <input type="hidden" id="crPlanoContaId">
+                    <div class="pl-autocomplete" id="crAutoPlanoConta"></div>
                 </div>
             </div>
             <div class="fin-form-row">
-                <div class="fin-form-group fin-full">
-                    <label>Observações</label>
-                    <textarea id="crObservacoes" placeholder="Detalhes adicionais..."></textarea>
+                <div class="fin-form-group fin-full pl-obs-wrapper">
+                    <div class="pl-obs-toggle" onclick="crToggleObs(this)">
+                        <span>Observações</span>
+                        <i class="fa-solid fa-chevron-down pl-obs-icon"></i>
+                    </div>
+                    <div class="pl-obs-content">
+                        <textarea id="crObservacoes" placeholder="Detalhes adicionais..."></textarea>
+                    </div>
                 </div>
             </div>
         </div>
@@ -228,7 +233,7 @@
     <span>© 2025 Marpex · Todos os direitos reservados</span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.min.js"></script>
 <script src="supabase-api.js"></script>
 <script src="auth.js"></script>
 <script src="navegador.js"></script>

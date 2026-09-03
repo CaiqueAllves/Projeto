@@ -17,7 +17,7 @@ const PLANOS = {
         nome: 'Básico', icone: 'fa-seedling', cor: '#64748b', corFundo: '#f1f5f9',
         total: 1, admins: 1, subs: 0,
         descricao: '1 usuário responsável, sem sub-usuários.',
-        recursos: ['Processos de exportação/importação', 'Cadastro de empresas', 'Cadastro de produtos', 'Propostas comerciais', 'Relatórios básicos'],
+        recursos: ['Processos de exportação', 'Cadastro de empresas', 'Cadastro de produtos', 'Propostas comerciais', 'Relatórios básicos'],
     },
     regular: {
         nome: 'Regular', icone: 'fa-star', cor: '#3b82f6', corFundo: '#dbeafe',

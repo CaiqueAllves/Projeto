@@ -13,60 +13,67 @@ try {
 }
 
 // ========================================
+// HASH DE SENHA (bcrypt, client-side)
+// ========================================
+// Antes desta migração, senha_hash guardava a senha em texto puro (nome
+// enganoso). Como a policy de RLS de `usuarios` libera leitura pra `anon`
+// (chave pública, embutida no próprio JS), qualquer um conseguia ler a
+// senha de qualquer usuário direto pela API REST — daí a urgência de
+// nunca mais gravar/comparar em texto puro. Isso não resolve o problema de
+// fundo (RLS/autenticação real ainda dependem de uma migração maior pra
+// Supabase Auth), mas fecha o vazamento mais grave sem quebrar ninguém.
+
+function _hashSenha(senha) {
+    return dcodeIO.bcrypt.hashSync(senha, 10);
+}
+
+// Compatibilidade com contas que ainda têm a senha em texto puro (de antes
+// desta migração): se o valor salvo não tem cara de hash bcrypt, compara
+// direto. loginSupabase() re-hasheia automaticamente assim que reconhece
+// esse caso, então cada conta migra sozinha no próximo login bem-sucedido.
+function _senhaCorreta(senha, hashSalvo) {
+    if (!hashSalvo) return false;
+    if (!/^\$2[aby]\$/.test(hashSalvo)) return hashSalvo === senha;
+    return dcodeIO.bcrypt.compareSync(senha, hashSalvo);
+}
+
+// ========================================
 // LOGIN
 // ========================================
+// Estágio 2.2 da migração de autenticação (ver auditoria de segurança).
+// Antes, esta função buscava o usuário por CPF direto com a chave `anon` —
+// e essa consulta é exatamente o que travava a RLS real: pra remover o
+// `anon` de `usuarios` (pré-requisito de auth.uid()), o login não pode mais
+// depender dele. Agora todo o trabalho (achar por CPF, checar ativo/
+// bloqueio, comparar senha, contar tentativas, linkar no Supabase Auth) foi
+// pra dentro da Edge Function `login-usuario`, que roda com service_role
+// (ignora RLS). De quebra, fecha outra falha da auditoria: o bloqueio por
+// tentativas antes era só client-side (dava pra ignorar batendo direto na
+// API REST) — agora é aplicado no servidor, sem como pular.
+const LOGIN_ENDPOINT = `${SUPABASE_URL}/functions/v1/login-usuario`;
 
 async function loginSupabase(cpf, senha) {
     try {
-        const { data: usuario, error } = await supabaseClient
-            .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, bloqueado_ate, tentativas_login, senha_hash, empresa_id, avatar_url, empresas(razao_social, status, expira_em)')
-            .eq('cpf', cpf)
-            .single();
+        const res = await fetch(LOGIN_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cpf, senha }),
+        });
+        const resultado = await res.json();
+        if (!resultado.sucesso) return resultado;
 
-        if (error || !usuario) {
-            return { sucesso: false, mensagem: 'CPF ou senha incorretos' };
+        // A função já garantiu que a conta está criada/atualizada no
+        // Supabase Auth — aqui só estabelece a sessão real (JWT) neste
+        // navegador, via endpoint público (não precisa de service_role).
+        if (resultado.usuario?.email) {
+            const { error } = await supabaseClient.auth.signInWithPassword({
+                email: resultado.usuario.email,
+                password: senha,
+            });
+            if (error) console.warn('[Auth real] signInWithPassword falhou:', error.message);
         }
 
-        if (!usuario.ativo) {
-            return { sucesso: false, mensagem: 'Usuário inativo. Contate o administrador.' };
-        }
-
-        if (usuario.bloqueado_ate && new Date() < new Date(usuario.bloqueado_ate)) {
-            const minutos = Math.ceil((new Date(usuario.bloqueado_ate) - new Date()) / 60000);
-            return { sucesso: false, mensagem: `Usuário bloqueado. Tente novamente em ${minutos} minutos.` };
-        }
-
-        if (usuario.senha_hash !== senha) {
-            await supabaseClient
-                .from('usuarios')
-                .update({ tentativas_login: (usuario.tentativas_login || 0) + 1 })
-                .eq('cpf', cpf);
-            return { sucesso: false, mensagem: 'CPF ou senha incorretos' };
-        }
-
-        await supabaseClient
-            .from('usuarios')
-            .update({ tentativas_login: 0, bloqueado_ate: null, ultimo_login: new Date().toISOString() })
-            .eq('id', usuario.id);
-
-        return {
-            sucesso: true,
-            mensagem: 'Login realizado com sucesso!',
-            usuario: {
-                id: usuario.id,
-                cpf: usuario.cpf,
-                nome: usuario.nome_completo,
-                email: usuario.email,
-                perfil: usuario.perfil,
-                empresa: usuario.empresas?.razao_social || '',
-                empresa_id: usuario.empresa_id,
-                empresa_status: usuario.empresas?.status || null,
-                empresa_expira_em: usuario.empresas?.expira_em || null,
-                avatar_url: usuario.avatar_url || null
-            }
-        };
-
+        return resultado;
     } catch (err) {
         console.error('Erro no login:', err);
         return { sucesso: false, mensagem: 'Erro ao processar login. Tente novamente.' };
@@ -83,144 +90,21 @@ function gerarChaveEmpresa() {
     return `${seg()}-${seg()}-${seg()}`;
 }
 
+// Estágio 2.2 da migração de autenticação (ver auditoria de segurança).
+// Mesmo motivo do login: essa função criava empresa/usuário/solicitação
+// direto com a chave `anon` (sem sessão ainda, é a própria conta sendo
+// criada). Movida pra dentro da Edge Function `cadastro-usuario`, que roda
+// com service_role — réplica fiel da lógica que estava aqui.
+const CADASTRO_ENDPOINT = `${SUPABASE_URL}/functions/v1/cadastro-usuario`;
+
 async function cadastrarContaSupabase(dados) {
     try {
-        const { nome, cpf, email, senha, empresa, cnpjEmpresa, chaveEmpresa, aceitouTermos } = dados;
-
-        if (!aceitouTermos) {
-            return { sucesso: false, mensagem: 'Você deve aceitar os termos de uso!' };
-        }
-
-        // Verificar se CPF já existe
-        const { data: cpfExistente, error: erroCpf } = await supabaseClient
-            .from('usuarios')
-            .select('cpf')
-            .eq('cpf', cpf)
-            .maybeSingle();
-
-        if (erroCpf) {
-            console.error('[Supabase] Erro ao verificar CPF:', erroCpf);
-            return { sucesso: false, mensagem: 'Erro ao verificar CPF: ' + erroCpf.message };
-        }
-
-        if (cpfExistente) {
-            return { sucesso: false, mensagem: 'Este CPF já está cadastrado!' };
-        }
-
-        let empresaId = null;
-        let chaveGerada = null;
-        let perfil = 'admin';
-        let empresaSolicitadaId = null;
-        let aviso = null;
-        let sandboxInfo = null;
-
-        if (chaveEmpresa) {
-            // Tentar entrar em empresa existente via chave
-            const { data: empresaEncontrada } = await supabaseClient
-                .from('empresas')
-                .select('id, razao_social')
-                .eq('chave_empresa', chaveEmpresa.toUpperCase())
-                .maybeSingle();
-
-            if (empresaEncontrada) {
-                // Chave válida: conta criada sem vínculo, solicitação fica pendente até admin aprovar
-                empresaSolicitadaId = empresaEncontrada.id;
-                aviso = `Solicitação enviada para "${empresaEncontrada.razao_social}". Aguarde a aprovação do responsável.`;
-            } else {
-                // Chave inválida: conta criada normalmente sem empresa, sem bloquear o cadastro
-                aviso = 'Chave não encontrada. Conta criada sem vínculo com empresa.';
-            }
-
-        } else if (empresa) {
-            // Criar nova empresa e gerar chave
-            chaveGerada = gerarChaveEmpresa();
-
-            const { data: empresaCriada, error: erroEmpresa } = await supabaseClient
-                .from('empresas')
-                .insert({ razao_social: empresa, nome_fantasia: empresa, cnpj: cnpjEmpresa || null, email, status: 'trial', plano: 'free', chave_empresa: chaveGerada })
-                .select()
-                .single();
-
-            if (erroEmpresa) {
-                console.error('[Supabase] Erro ao criar empresa:', erroEmpresa);
-                return { sucesso: false, mensagem: 'Erro ao criar empresa: ' + erroEmpresa.message };
-            }
-
-            empresaId = empresaCriada.id;
-
-        } else {
-            // Nem chave nem razão social: cria conta sandbox de 24h — o
-            // usuário pode navegar o sistema, mas não criar/enviar nada
-            // (ver exigirEmpresaVinculada() em auth.js) até se vincular a
-            // uma empresa de verdade via Perfil.
-            const expiraEm = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-            const { data: empresaCriada, error: erroEmpresa } = await supabaseClient
-                .from('empresas')
-                .insert({
-                    razao_social: `Conta Sandbox — ${nome}`,
-                    nome_fantasia: `Conta Sandbox — ${nome}`,
-                    email,
-                    status: 'sandbox',
-                    plano: 'free',
-                    chave_empresa: gerarChaveEmpresa(), // preenche a coluna UNIQUE, mesmo não sendo divulgada
-                    expira_em: expiraEm,
-                })
-                .select()
-                .single();
-
-            if (erroEmpresa) {
-                console.error('[Supabase] Erro ao criar conta sandbox:', erroEmpresa);
-                return { sucesso: false, mensagem: 'Erro ao criar conta: ' + erroEmpresa.message };
-            }
-
-            empresaId = empresaCriada.id;
-            sandboxInfo = { expira_em: expiraEm };
-        }
-
-        // Criar usuário sem empresa_id primeiro (evita FK timing issue)
-        const { data: novoUsuario, error: erroUsuario } = await supabaseClient
-            .from('usuarios')
-            .insert({ nome_completo: nome, cpf, email, senha_hash: senha, perfil, ativo: true })
-            .select()
-            .single();
-
-        if (erroUsuario) {
-            console.error('[Supabase] Erro ao criar usuário:', erroUsuario);
-            return { sucesso: false, mensagem: 'Erro ao criar conta: ' + erroUsuario.message };
-        }
-
-        // Vincular empresa se criou uma nova
-        if (empresaId) {
-            await supabaseClient
-                .from('usuarios')
-                .update({ empresa_id: empresaId })
-                .eq('id', novoUsuario.id);
-        }
-
-        // Criar solicitação de entrada na empresa (chave válida)
-        if (empresaSolicitadaId) {
-            const { error: erroSol } = await supabaseClient
-                .from('solicitacoes_empresa')
-                .insert({
-                    usuario_id: novoUsuario.id,
-                    empresa_id: empresaSolicitadaId,
-                    nome_usuario: nome,
-                    email_usuario: email
-                });
-
-            if (!erroSol) {
-                // Tenta notificar admin por email (silencia se função não estiver configurada)
-                await supabaseClient.rpc('notificar_admin_email', {
-                    p_empresa_id: empresaSolicitadaId,
-                    p_nome_usuario: nome,
-                    p_email_usuario: email
-                }).catch(() => {});
-            }
-        }
-
-        return { sucesso: true, mensagem: 'Conta criada com sucesso!', usuario: novoUsuario, chave_gerada: chaveGerada, aviso, sandbox: sandboxInfo };
-
+        const res = await fetch(CADASTRO_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados),
+        });
+        return await res.json();
     } catch (err) {
         console.error('[Supabase] Erro ao cadastrar:', err);
         return { sucesso: false, mensagem: 'Erro ao processar cadastro: ' + err.message };
@@ -250,40 +134,28 @@ async function buscarSolicitacoesPendentes() {
     }
 }
 
+// Estágio 2.2 (ver auditoria de segurança): aprovar uma solicitação exige
+// mudar usuarios.empresa_id de OUTRA pessoa pra uma empresa que ainda não
+// é a dela — a RLS normal de `usuarios` não permite essa transição (só
+// deixa um admin atualizar quem já é da empresa dele). Movido pra Edge
+// Function `responder-solicitacao`, que roda com service_role mas exige
+// JWT válido (deploy sem --no-verify-jwt) e confere admin por dentro.
+const RESPONDER_SOLICITACAO_ENDPOINT = `${SUPABASE_URL}/functions/v1/responder-solicitacao`;
+
 async function responderSolicitacao(solicitacaoId, aprovado) {
     try {
-        const usuario = obterUsuarioLogado();
-        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        const { data: sol, error: errSol } = await supabaseClient
-            .from('solicitacoes_empresa')
-            .select('usuario_id, empresa_id')
-            .eq('id', solicitacaoId)
-            .single();
-
-        if (errSol || !sol) return { sucesso: false, mensagem: 'Solicitação não encontrada' };
-
-        const { error: errUpd } = await supabaseClient
-            .from('solicitacoes_empresa')
-            .update({
-                status: aprovado ? 'aprovado' : 'rejeitado',
-                respondido_em: new Date().toISOString(),
-                respondido_por: usuario.id
-            })
-            .eq('id', solicitacaoId);
-
-        if (errUpd) return { sucesso: false, mensagem: 'Erro ao responder solicitação' };
-
-        if (aprovado) {
-            const { error: errUser } = await supabaseClient
-                .from('usuarios')
-                .update({ empresa_id: sol.empresa_id })
-                .eq('id', sol.usuario_id);
-
-            if (errUser) return { sucesso: false, mensagem: 'Erro ao vincular usuário à empresa' };
-        }
-
-        return { sucesso: true };
+        const res = await fetch(RESPONDER_SOLICITACAO_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ solicitacao_id: solicitacaoId, aprovado }),
+        });
+        return await res.json();
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
     }
@@ -721,7 +593,7 @@ async function redefinirSenha(id, novaSenha) {
 
         const { error } = await supabaseClient
             .from('usuarios')
-            .update({ senha_hash: novaSenha })
+            .update({ senha_hash: _hashSenha(novaSenha) })
             .eq('id', id)
             .eq('empresa_id', usuario.empresa_id);
         if (error) return { sucesso: false, mensagem: error.message };
@@ -740,11 +612,11 @@ async function atualizarSenha(id, senhaAtual, novaSenha) {
             .single();
 
         if (error || !usuario) return { sucesso: false, mensagem: 'Usuário não encontrado.' };
-        if (usuario.senha_hash !== senhaAtual) return { sucesso: false, mensagem: 'Senha atual incorreta.' };
+        if (!_senhaCorreta(senhaAtual, usuario.senha_hash)) return { sucesso: false, mensagem: 'Senha atual incorreta.' };
 
         const { error: errUpdate } = await supabaseClient
             .from('usuarios')
-            .update({ senha_hash: novaSenha })
+            .update({ senha_hash: _hashSenha(novaSenha) })
             .eq('id', id);
 
         if (errUpdate) return { sucesso: false, mensagem: errUpdate.message };
@@ -870,7 +742,7 @@ async function criarSubUsuario(dados) {
             nome_completo: dados.nome,
             cpf: dados.cpf,
             email: dados.email,
-            senha_hash: dados.senha,
+            senha_hash: _hashSenha(dados.senha),
             perfil: dados.perfil || 'usuario',
             ativo: true,
             empresa_id: usuario.empresa_id
@@ -924,6 +796,13 @@ async function buscarProcessos(filtros = {}) {
 
         if (filtros.tipo)   query = query.eq('tipo', filtros.tipo);
         if (filtros.status) query = query.eq('status', filtros.status);
+        // Filtro de período (revisão de performance) — só se aplica a
+        // processos já encerrados; um em andamento continua sempre visível,
+        // não importa a data, senão sumiria algo que ainda precisa de ação.
+        if (filtros.diasAtras) {
+            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString();
+            query = query.or(`status.not.in.(concluido,encerrada,cancelado),criado_em.gte.${desde}`);
+        }
 
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
@@ -1161,6 +1040,7 @@ function _prodMontarPayload(dados) {
         obs_estoque:             dados.obs_estoque || null,
         obs_logistica:           dados.obs_logistica || null,
         nomes_idiomas:           dados.nomes_idiomas || [],
+        precos_alternativos:     dados.precos_alternativos || [],
         embalagens:              dados.embalagens || [],
         documentos:              dados.documentos || [],
     };
@@ -1186,6 +1066,40 @@ async function salvarProduto(dados) {
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
     }
+}
+
+// Upload de Excel/PDF (produtos.js, _prodUploadImportarLote): insere em
+// blocos em vez de 1 produto por vez — planilha de 200 linhas virava ~200
+// round-trips sequenciais (achado na revisão de performance). Em blocos
+// (não tudo de uma vez): se uma linha violar uma constraint (SKU
+// duplicado, por ex.), só o bloco dela falha — as outras linhas continuam
+// indo normalmente, mais perto do comportamento "linha por linha" de antes
+// do que um insert único all-or-nothing pra planilha inteira.
+async function salvarProdutosEmLote(produtosArray, tamanhoBloco = 40) {
+    const usuario = obterUsuarioLogado();
+    if (!usuario) return { sucesso: false, mensagem: 'Não autenticado', totalSucesso: 0, totalFalha: produtosArray.length, falhas: [] };
+
+    let totalSucesso = 0;
+    const falhas = [];
+
+    for (let i = 0; i < produtosArray.length; i += tamanhoBloco) {
+        const bloco = produtosArray.slice(i, i + tamanhoBloco);
+        const rows = bloco.map(p => ({
+            ..._prodMontarPayload(p),
+            empresa_id: usuario.empresa_id,
+            criado_por: usuario.id,
+        }));
+
+        const { data, error } = await supabaseClient.from('produtos').insert(rows).select('id, sku');
+        if (error) {
+            falhas.push({ skus: bloco.map(p => p.sku), mensagem: error.message });
+        } else {
+            totalSucesso += data?.length || rows.length;
+        }
+    }
+
+    const totalFalha = produtosArray.length - totalSucesso;
+    return { sucesso: totalSucesso > 0, totalSucesso, totalFalha, falhas };
 }
 
 async function editarProduto(id, dados) {
@@ -1529,7 +1443,7 @@ async function atualizarProformaDB(id, dados) {
 //     atualizado_em    TIMESTAMPTZ DEFAULT NOW()
 // );
 
-async function buscarContasPagar() {
+async function buscarContasPagar(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
@@ -1538,6 +1452,13 @@ async function buscarContasPagar() {
             .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        // Filtro de período (revisão de performance) — só se aplica a contas
+        // já pagas/canceladas; pendente ou vencida continua sempre visível,
+        // mesmo com vencimento antigo (é justamente o que precisa de ação).
+        if (filtros.diasAtras) {
+            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
+            query = query.or(`status.not.in.(pago,cancelado),data_vencimento.gte.${desde}`);
+        }
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
@@ -1615,15 +1536,21 @@ async function excluirContaPagar(id) {
 // MÓDULO FINANCEIRO — CONTAS A RECEBER
 // ========================================
 
-async function buscarContasReceber() {
+async function buscarContasReceber(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        // Filtro de período (revisão de performance) — mesma lógica de
+        // buscarContasPagar: só afeta contas já recebidas/canceladas.
+        if (filtros.diasAtras) {
+            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
+            query = query.or(`status.not.in.(recebido,cancelado),data_vencimento.gte.${desde}`);
+        }
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
@@ -1636,7 +1563,7 @@ async function buscarContasReceberPeriodo(inicio, fim) {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
+            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
             .gte('data_vencimento', inicio)
             .lte('data_vencimento', fim)
             .order('data_vencimento', { ascending: true });
@@ -1662,6 +1589,7 @@ async function salvarContaReceber(dados, id = null) {
             data_recebimento: dados.data_recebimento || null,
             status:           dados.status || 'pendente',
             categoria:        dados.categoria || null,
+            plano_conta_id:   dados.plano_conta_id || null,
             observacoes:      dados.observacoes || null,
             atualizado_em:    new Date().toISOString(),
         };
@@ -1676,6 +1604,23 @@ async function salvarContaReceber(dados, id = null) {
         if (result.error) return { sucesso: false, mensagem: result.error.message };
         return { sucesso: true, data: result.data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// Plano de Contas — tabela de referência hierárquica (Bloco > Conta >
+// Subfator), ver database/database-plano-contas-receitas.sql. Por
+// enquanto só o Bloco 1 (Receitas) está populado; `bloco` deixa pronto
+// pra filtrar os próximos blocos conforme forem sendo integrados.
+async function buscarPlanoContas(bloco = 1) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('plano_contas')
+            .select('id, bloco, bloco_nome, conta_codigo, conta_nome, codigo, subfator_nome, descricao, base, ordem')
+            .eq('bloco', bloco)
+            .eq('ativo', true)
+            .order('ordem', { ascending: true });
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
 }
 
 async function atualizarContaReceber(id, dados) {
@@ -1732,6 +1677,7 @@ window.supabaseAPI = {
     buscarProdutos,
     buscarProdutoPorId,
     salvarProduto,
+    salvarProdutosEmLote,
     editarProduto,
     excluirProduto,
     atualizarTenantEmpresa,
@@ -1744,9 +1690,12 @@ window.supabaseAPI = {
     contarPropostas,
     // Comercial
     buscarOportunidades,
+    buscarHistoricoOportunidade,
     salvarOportunidade,
+    gerarNumeroSequencial,
     atualizarEtapaOportunidade,
     excluirOportunidade,
+    restaurarOportunidade,
     buscarPedidos,
     salvarPedido,
     atualizarStatusPedido,
@@ -1766,6 +1715,7 @@ window.supabaseAPI = {
     buscarContasReceber,
     buscarContasReceberPeriodo,
     salvarContaReceber,
+    buscarPlanoContas,
     atualizarContaReceber,
     excluirContaReceber,
 };
@@ -1795,6 +1745,11 @@ window.supabaseAPI = {
 //     data_prevista           DATE,
 //     observacoes             TEXT,
 //     proforma_id             UUID,
+//     excluido_em             TIMESTAMPTZ,
+//                                 -- exclusão suave (2026-08-28, ver proposta.html/js e
+//                                 -- database/database-oportunidades-soft-delete.sql) — sinal
+//                                 -- independente da etapa, pra restaurar não perder o progresso.
+//     excluido_por            TEXT,
 //     created_at              TIMESTAMPTZ DEFAULT NOW(),
 //     updated_at              TIMESTAMPTZ DEFAULT NOW()
 // );
@@ -1817,18 +1772,25 @@ window.supabaseAPI = {
 //     updated_at              TIMESTAMPTZ DEFAULT NOW()
 // );
 
-async function buscarOportunidades() {
+async function buscarOportunidades(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
+
+        // Filtro de período (revisão de performance) — só se aplica a
+        // propostas já fechadas/perdidas; em proposta/negociação continua
+        // sempre visível, mesmo com updated_at antigo.
+        const desde = filtros.diasAtras ? new Date(Date.now() - filtros.diasAtras * 86400000).toISOString() : null;
 
         let query = supabaseClient
             .from('oportunidades')
             .select(`*,
                 parceiros!oportunidades_cliente_id_fkey(razao_social, nome_fantasia, documento),
                 remetente:parceiros!oportunidades_remetente_parceiro_id_fkey(razao_social, nome_fantasia, documento)`)
+            .is('excluido_em', null)
             .order('updated_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        if (desde) query = query.or(`etapa.not.in.(fechado,perdido),updated_at.gte.${desde}`);
         let { data, error } = await query;
 
         // Fallback pra antes de database-oportunidades-remetente.sql rodar:
@@ -1838,11 +1800,50 @@ async function buscarOportunidades() {
             let queryFallback = supabaseClient
                 .from('oportunidades')
                 .select('*, parceiros!oportunidades_cliente_id_fkey(razao_social, nome_fantasia, documento)')
+                .is('excluido_em', null)
                 .order('updated_at', { ascending: false });
             if (usuario.empresa_id) queryFallback = queryFallback.eq('empresa_proprietaria_id', usuario.empresa_id);
+            if (desde) queryFallback = queryFallback.or(`etapa.not.in.(fechado,perdido),updated_at.gte.${desde}`);
             ({ data, error } = await queryFallback);
         }
 
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+// ========================================
+// HISTÓRICO DA OPORTUNIDADE (linha do tempo — criada → etapa → Pedido → status)
+// ========================================
+// Guarda cada transição relevante de uma Proposta, mesmo quando ela não
+// avança (Perdido) ou é excluída — pedido do usuário de ter rastreabilidade
+// completa, não só o estado atual. Nunca deixa uma falha aqui quebrar a
+// ação principal que a disparou (por isso não usa await nos call sites).
+async function _registrarHistoricoOportunidade(oportunidadeId, evento, deValor = null, paraValor = null, pedidoId = null) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id || !oportunidadeId) return;
+        await supabaseClient.from('oportunidade_historico').insert({
+            oportunidade_id: oportunidadeId,
+            pedido_id: pedidoId,
+            evento,
+            de_valor: deValor,
+            para_valor: paraValor,
+            usuario_nome: usuario.nome || usuario.email || 'Desconhecido',
+            empresa_proprietaria_id: usuario.empresa_id,
+        });
+    } catch (e) {
+        console.warn('[Histórico] Falha ao registrar evento:', evento, e);
+    }
+}
+
+async function buscarHistoricoOportunidade(oportunidadeId) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('oportunidade_historico')
+            .select('*, pedidos(numero)')
+            .eq('oportunidade_id', oportunidadeId)
+            .order('criado_em', { ascending: true });
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
@@ -1862,35 +1863,71 @@ async function salvarOportunidade(dados, id = null) {
             updated_at: new Date().toISOString(),
         };
         let result;
+        let etapaAnterior = null;
         if (id) {
+            const { data: atual } = await supabaseClient.from('oportunidades').select('etapa').eq('id', id).single();
+            etapaAnterior = atual?.etapa || null;
             result = await supabaseClient.from('oportunidades').update(payload).eq('id', id).select().single();
         } else {
             payload.empresa_proprietaria_id = usuario.empresa_id;
             result = await supabaseClient.from('oportunidades').insert(payload).select().single();
         }
         if (result.error) return { sucesso: false, mensagem: result.error.message };
+
+        if (!id) {
+            _registrarHistoricoOportunidade(result.data.id, 'criada', null, payload.etapa);
+        } else if (etapaAnterior && etapaAnterior !== payload.etapa) {
+            _registrarHistoricoOportunidade(id, 'etapa_alterada', etapaAnterior, payload.etapa);
+        }
+
         return { sucesso: true, data: result.data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
 async function atualizarEtapaOportunidade(id, etapa) {
     try {
+        const { data: atual } = await supabaseClient.from('oportunidades').select('etapa').eq('id', id).single();
         const { error } = await supabaseClient.from('oportunidades')
             .update({ etapa, updated_at: new Date().toISOString() }).eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        if (atual?.etapa && atual.etapa !== etapa) {
+            _registrarHistoricoOportunidade(id, 'etapa_alterada', atual.etapa, etapa);
+        }
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
+// Exclusão suave — ver database/database-oportunidades-soft-delete.sql.
+// Só marca excluido_em/excluido_por, nunca toca em `etapa` (diferente de
+// excluirPedido, que reaproveita `status`): assim restaurarOportunidade()
+// devolve a proposta pra etapa exata em que estava, sem perder progresso.
 async function excluirOportunidade(id) {
     try {
-        const { error } = await supabaseClient.from('oportunidades').delete().eq('id', id);
+        const usuario = obterUsuarioLogado();
+        const { error } = await supabaseClient.from('oportunidades')
+            .update({
+                excluido_em:  new Date().toISOString(),
+                excluido_por: usuario?.nome || usuario?.email || 'Desconhecido',
+            })
+            .eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        _registrarHistoricoOportunidade(id, 'excluida');
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-async function buscarPedidos() {
+async function restaurarOportunidade(id) {
+    try {
+        const { error } = await supabaseClient.from('oportunidades')
+            .update({ excluido_em: null, excluido_por: null })
+            .eq('id', id);
+        if (error) return { sucesso: false, mensagem: error.message };
+        _registrarHistoricoOportunidade(id, 'restaurada');
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function buscarPedidos(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
@@ -1903,10 +1940,37 @@ async function buscarPedidos() {
             .neq('status', 'excluido')
             .order('created_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        // Filtro de período (revisão de performance) — só se aplica a pedidos
+        // já finalizados; um em andamento continua sempre visível.
+        if (filtros.diasAtras) {
+            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString();
+            query = query.or(`status.not.in.(entregue,cancelado),created_at.gte.${desde}`);
+        }
         const { data, error } = await query;
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+// Numeração sequencial que nunca repete, mesmo se o registro for excluído
+// de verdade depois (diferente do MAX+1 usado em Pedido/Processo abaixo,
+// que só funciona porque aqueles nunca são excluídos fisicamente — ver
+// database/database-oportunidades-numero-proposta.sql). Usa a RPC
+// proximo_numero_sequencial (INSERT...ON CONFLICT...RETURNING atômico),
+// então também não tem a brecha de corrida que o MAX+1 local tem.
+async function gerarNumeroSequencial(tipo, prefixo) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada' };
+
+        const { data, error } = await supabaseClient.rpc('proximo_numero_sequencial', {
+            p_empresa_id: usuario.empresa_id,
+            p_tipo: tipo,
+            p_prefixo: prefixo,
+        });
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, numero: data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
 // Gera o número do pedido no mesmo padrão de Proforma (PRO...) e Processo
@@ -1990,15 +2054,25 @@ async function salvarPedido(dados, id = null, itens = []) {
             if (delErr) return { sucesso: false, mensagem: delErr.message };
         }
 
+        // Marca no histórico da Proposta que ela virou Pedido — só na
+        // criação (edição de um pedido já existente não é um novo evento).
+        if (!id && dados.oportunidade_id) {
+            _registrarHistoricoOportunidade(dados.oportunidade_id, 'pedido_gerado', null, numero, pedidoId);
+        }
+
         return { sucesso: true, data: result.data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
 async function atualizarStatusPedido(id, status) {
     try {
+        const { data: atual } = await supabaseClient.from('pedidos').select('status, oportunidade_id').eq('id', id).single();
         const { error } = await supabaseClient.from('pedidos')
             .update({ status, updated_at: new Date().toISOString() }).eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        if (atual?.oportunidade_id && atual.status !== status) {
+            _registrarHistoricoOportunidade(atual.oportunidade_id, 'pedido_status_alterado', atual.status, status, id);
+        }
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
@@ -2056,6 +2130,7 @@ async function buscarPedidoIdPorProforma(proformaId) {
 async function excluirPedido(id) {
     try {
         const usuario = obterUsuarioLogado();
+        const { data: atual } = await supabaseClient.from('pedidos').select('oportunidade_id').eq('id', id).single();
         const { error } = await supabaseClient
             .from('pedidos')
             .update({
@@ -2065,6 +2140,9 @@ async function excluirPedido(id) {
             })
             .eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        if (atual?.oportunidade_id) {
+            _registrarHistoricoOportunidade(atual.oportunidade_id, 'pedido_excluido', null, null, id);
+        }
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }

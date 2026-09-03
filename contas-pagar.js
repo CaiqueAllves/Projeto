@@ -8,9 +8,37 @@ let _cpExcluirId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     _cpCarregarUsuario();
+    await _cpCarregarMoedas();
     await cpCarregar();
     await _cpVerificarGeracaoViaUrl();
 });
+
+// ── Moedas (tabela apoio_moedas) ─────────────────────────────────────────────
+
+async function _cpCarregarMoedas() {
+    const sel = document.getElementById('cpMoeda');
+    if (!sel) return;
+    try {
+        const { data } = await supabaseClient
+            .from('apoio_moedas')
+            .select('codigo, descricao, sigla')
+            .order('descricao', { ascending: true });
+        if (data?.length) {
+            sel.innerHTML = data.map(m => `<option value="${m.sigla || m.codigo}">${_cpEsc(m.descricao || '')}</option>`).join('');
+        }
+    } catch (e) {
+        console.warn('[Contas a Pagar] Falha ao carregar moedas:', e);
+    }
+}
+
+// ── Observações retrátil ─────────────────────────────────────────────────────
+
+function cpToggleObs(toggle) {
+    const content = toggle.nextElementSibling;
+    const aberto  = toggle.classList.contains('aberto');
+    toggle.classList.toggle('aberto', !aberto);
+    content.style.display = aberto ? 'none' : 'block';
+}
 
 // ── Abertura pré-preenchida a partir de Processo (módulo Operacional) ──────
 
@@ -53,7 +81,10 @@ async function cpCarregar() {
     document.getElementById('cpTbody').innerHTML =
         '<tr><td colspan="6" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
 
-    const res = await buscarContasPagar();
+    // Filtro de período (revisão de performance) — só reduz o que vem do
+    // banco pra contas já pagas/canceladas; pendente/vencida sempre vem.
+    const diasAtras = Number(document.getElementById('filtroPeriodoContas')?.value) || null;
+    const res = await buscarContasPagar({ diasAtras });
     if (!res.sucesso) {
         document.getElementById('cpTbody').innerHTML =
             '<tr><td colspan="6" class="fin-vazio"><i class="fa-solid fa-triangle-exclamation"></i><p>Erro ao carregar contas</p></td></tr>';
@@ -148,18 +179,23 @@ function _cpAtualizarResumo() {
 
 // ── Filtro ─────────────────────────────────────────────────────────────────
 
+// Debounce (revisão de performance) — ver mesmo comentário em contas-receber.js
+let _cpFiltrarTimer = null;
 function cpFiltrar() {
-    const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
-    const status = document.getElementById('filtroStatus')?.value || '';
+    clearTimeout(_cpFiltrarTimer);
+    _cpFiltrarTimer = setTimeout(() => {
+        const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
+        const status = document.getElementById('filtroStatus')?.value || '';
 
-    _cpFiltradas = _cpTodas.filter(c => {
-        const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
-            .filter(Boolean).join(' ').toLowerCase();
-        const okTermo  = !termo  || txt.includes(termo);
-        const okStatus = !status || c.status === status;
-        return okTermo && okStatus;
-    });
-    cpRenderizar();
+        _cpFiltradas = _cpTodas.filter(c => {
+            const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
+                .filter(Boolean).join(' ').toLowerCase();
+            const okTermo  = !termo  || txt.includes(termo);
+            const okStatus = !status || c.status === status;
+            return okTermo && okStatus;
+        });
+        cpRenderizar();
+    }, 200);
 }
 
 // ── Marcar como pago rapidamente ───────────────────────────────────────────
@@ -187,17 +223,39 @@ function cpAbrirModal(id = null, prefill = null) {
     document.getElementById('cpDescricao').value      = c?.descricao || prefill?.descricao || '';
     document.getElementById('cpFornecedorNome').value = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || prefill?.fornecedorNome || '';
     document.getElementById('cpFornecedorId').value   = c?.parceiro_id || prefill?.fornecedorId || '';
-    document.getElementById('cpPedidoNome').value     = c?.pedidos?.numero || prefill?.pedidoNome || '';
-    document.getElementById('cpPedidoId').value        = c?.pedido_id || prefill?.pedidoId || '';
-    document.getElementById('cpProcessoNome').value   = c?.processos?.numero_processo || prefill?.processoNome || '';
-    document.getElementById('cpProcessoId').value     = c?.processo_id || prefill?.processoId || '';
-    document.getElementById('cpValor').value          = c?.valor || prefill?.valor || '';
+
+    // Reseta o Processo antes de recalcular pra este registro — evita herdar
+    // o estado (habilitado/desabilitado) de uma abertura anterior do modal.
+    _cpResetProcesso();
+    const pedidoId = c?.pedido_id || prefill?.pedidoId || '';
+    document.getElementById('cpPedidoNome').value = c?.pedidos?.numero || prefill?.pedidoNome || '';
+    document.getElementById('cpPedidoId').value   = pedidoId;
+
+    if (pedidoId) {
+        const processoSalvoId   = c?.processo_id || prefill?.processoId || '';
+        const processoSalvoNome = c?.processos?.numero_processo || prefill?.processoNome || '';
+        // Fornecedor já foi preenchido acima (registro salvo ou prefill), então
+        // a derivação abaixo só sugere o Remetente do pedido se ainda estiver vazio.
+        _cpDerivarDoPedido(pedidoId).then(() => {
+            // Garante que o processo já salvo apareça mesmo se não estiver mais
+            // entre os processos atuais do pedido (ex: processo trocado depois).
+            if (processoSalvoId) {
+                document.getElementById('cpProcessoId').value   = processoSalvoId;
+                document.getElementById('cpProcessoNome').value = processoSalvoNome || document.getElementById('cpProcessoNome').value;
+            }
+        });
+    }
+
+    document.getElementById('cpValor').value          = (c?.valor ?? prefill?.valor) ? _cpFormatarMonetario(c?.valor ?? prefill?.valor) : '';
     document.getElementById('cpMoeda').value          = c?.moeda || prefill?.moeda || 'BRL';
     document.getElementById('cpVencimento').value     = c?.data_vencimento || '';
     document.getElementById('cpDataPagamento').value  = c?.data_pagamento  || '';
     document.getElementById('cpStatus').value         = c?.status || 'pendente';
     document.getElementById('cpCategoria').value      = c?.categoria || '';
     document.getElementById('cpObservacoes').value    = c?.observacoes || '';
+
+    const obsToggle = document.querySelector('#cpModalOverlay .pl-obs-toggle');
+    if (obsToggle) { obsToggle.classList.remove('aberto'); obsToggle.nextElementSibling.style.display = 'none'; }
 
     document.getElementById('cpModalOverlay').classList.add('ativo');
 }
@@ -209,10 +267,34 @@ function cpFecharModal() {
     document.getElementById('cpAutoProcesso').innerHTML = '';
 }
 
+// ── Máscara monetária (Valor) — mesmo padrão de propMascaraMonetaria (proposta.js) ──
+
+function cpMascaraMonetaria(el) {
+    const cursor = el.selectionStart;
+    const oldLen = el.value.length;
+    let raw = el.value.replace(/[^\d,]/g, '');
+    const partes = raw.split(',');
+    if (partes.length > 2) raw = partes[0] + ',' + partes.slice(1).join('');
+    const p = raw.split(',');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    el.value = p.join(',');
+    const diff = el.value.length - oldLen;
+    el.setSelectionRange(cursor + diff, cursor + diff);
+}
+
+function _cpValorMonetario(el) {
+    if (!el) return 0;
+    return parseFloat((el.value || '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function _cpFormatarMonetario(num) {
+    return Number(num || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 async function cpSalvar() {
     if (!exigirEmpresaVinculada()) return;
     const descricao = document.getElementById('cpDescricao').value.trim();
-    const valor     = document.getElementById('cpValor').value;
+    const valor     = _cpValorMonetario(document.getElementById('cpValor'));
     const venc      = document.getElementById('cpVencimento').value;
 
     if (!descricao || !valor || !venc) {
@@ -229,7 +311,7 @@ async function cpSalvar() {
         parceiro_id:    document.getElementById('cpFornecedorId').value || null,
         pedido_id:      document.getElementById('cpPedidoId').value || null,
         processo_id:    document.getElementById('cpProcessoId').value || null,
-        valor:          parseFloat(valor),
+        valor,
         moeda:          document.getElementById('cpMoeda').value,
         data_vencimento: venc,
         data_pagamento:  document.getElementById('cpDataPagamento').value || null,
@@ -250,30 +332,51 @@ async function cpSalvar() {
 }
 
 // ── Autocomplete parceiro ──────────────────────────────────────────────────
+// Busca (oninput, digitando) e Mostra (onfocus, ao clicar no campo) — mesmo
+// padrão de Remetente/Destinatário no Pipeline/Proposta: clicar no campo já
+// lista até 15 parceiros, sem precisar digitar nada primeiro.
 
 let _cpBuscaTimer = null;
-async function cpBuscarParceiro(termo) {
+
+// Guarda de corrida: o fetch do "mostrar tudo" (onfocus) e o fetch filtrado
+// (oninput, debounced) podem responder fora de ordem — sem isso, a resposta
+// mais lenta sobrescreve a caixa por último, mesmo sendo a mais antiga, e o
+// usuário pode acabar clicando num item da lista errada (sem filtro nenhum).
+let _cpParceiroReqToken = 0;
+
+async function _cpListarParceiros(termo) {
     const box = document.getElementById('cpAutoParceiro');
+    const meuToken = ++_cpParceiroReqToken;
+    try {
+        const usuario = obterUsuarioLogado();
+        let query = supabaseClient
+            .from('parceiros')
+            .select('id, razao_social, nome_fantasia')
+            .limit(termo ? 8 : 15);
+        if (termo) query = query.or(`razao_social.ilike.%${termo}%,nome_fantasia.ilike.%${termo}%`);
+        else query = query.order('razao_social', { ascending: true });
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        const { data } = await query;
+        if (meuToken !== _cpParceiroReqToken) return; // resposta antiga, descarta
+
+        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum parceiro encontrado — cadastre em Empresas primeiro</div>'; return; }
+        box.innerHTML = data.map(p => `
+            <div class="pl-auto-item" onclick="cpSelecionarParceiro(${p.id}, '${_cpEsc(p.nome_fantasia || p.razao_social)}')">
+                <span class="pl-auto-nome">${_cpEsc(p.nome_fantasia || p.razao_social)}</span>
+                ${p.nome_fantasia ? `<span class="pl-auto-razao">${_cpEsc(p.razao_social)}</span>` : ''}
+            </div>`).join('');
+    } catch (e) {}
+}
+
+function cpBuscarParceiro(termo) {
     document.getElementById('cpFornecedorId').value = '';
-    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
-
     clearTimeout(_cpBuscaTimer);
-    _cpBuscaTimer = setTimeout(async () => {
-        try {
-            const { data } = await supabaseClient
-                .from('parceiros')
-                .select('id, razao_social, nome_fantasia')
-                .or(`razao_social.ilike.%${termo}%,nome_fantasia.ilike.%${termo}%`)
-                .limit(8);
+    _cpBuscaTimer = setTimeout(() => _cpListarParceiros(termo?.length >= 2 ? termo : ''), 300);
+}
 
-            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum parceiro encontrado</div>'; return; }
-            box.innerHTML = data.map(p => `
-                <div class="pl-auto-item" onclick="cpSelecionarParceiro(${p.id}, '${_cpEsc(p.nome_fantasia || p.razao_social)}')">
-                    <span class="pl-auto-nome">${_cpEsc(p.nome_fantasia || p.razao_social)}</span>
-                    ${p.nome_fantasia ? `<span class="pl-auto-razao">${_cpEsc(p.razao_social)}</span>` : ''}
-                </div>`).join('');
-        } catch (e) {}
-    }, 300);
+// Foco no campo: mostra a lista sem apagar o parceiro já selecionado (editar conta)
+function cpMostrarParceiro(termo) {
+    _cpListarParceiros(termo?.length >= 2 ? termo : '');
 }
 
 function cpSelecionarParceiro(id, nome) {
@@ -285,55 +388,146 @@ function cpSelecionarParceiro(id, nome) {
 // ── Autocomplete vínculo — Pedido ────────────────────────────────────────────
 
 let _cpBuscaPedidoTimer = null;
-async function cpBuscarPedido(termo) {
+let _cpPedidoReqToken = 0; // mesma guarda de corrida do _cpListarParceiros acima
+
+async function _cpListarPedidos(termo) {
     const box = document.getElementById('cpAutoPedido');
-    document.getElementById('cpPedidoId').value = '';
-    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
-    clearTimeout(_cpBuscaPedidoTimer);
-    _cpBuscaPedidoTimer = setTimeout(async () => {
-        try {
-            const { data } = await supabaseClient
-                .from('pedidos')
-                .select('id, numero')
-                .ilike('numero', `%${termo}%`)
-                .limit(8);
-            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum pedido encontrado</div>'; return; }
-            box.innerHTML = data.map(p => `
-                <div class="pl-auto-item" onclick="cpSelecionarPedido('${p.id}', '${_cpEsc(p.numero || '')}')">
-                    <span class="pl-auto-nome">${_cpEsc(p.numero || '')}</span>
-                </div>`).join('');
-        } catch (e) {}
-    }, 300);
+    const meuToken = ++_cpPedidoReqToken;
+    try {
+        const usuario = obterUsuarioLogado();
+        let query = supabaseClient
+            .from('pedidos')
+            .select('id, numero')
+            .limit(termo ? 8 : 15);
+        if (termo) query = query.ilike('numero', `%${termo}%`);
+        else query = query.order('numero', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        const { data } = await query;
+        if (meuToken !== _cpPedidoReqToken) return; // resposta antiga, descarta
+        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum pedido encontrado</div>'; return; }
+        box.innerHTML = data.map(p => `
+            <div class="pl-auto-item" onclick="cpSelecionarPedido('${p.id}', '${_cpEsc(p.numero || '')}')">
+                <span class="pl-auto-nome">${_cpEsc(p.numero || '')}</span>
+            </div>`).join('');
+    } catch (e) {}
 }
 
-function cpSelecionarPedido(id, numero) {
+function cpBuscarPedido(termo) {
+    document.getElementById('cpPedidoId').value = '';
+    if (!termo) _cpResetProcesso();
+    clearTimeout(_cpBuscaPedidoTimer);
+    _cpBuscaPedidoTimer = setTimeout(() => _cpListarPedidos(termo?.length >= 2 ? termo : ''), 300);
+}
+
+function cpMostrarPedido(termo) {
+    _cpListarPedidos(termo?.length >= 2 ? termo : '');
+}
+
+async function cpSelecionarPedido(id, numero) {
     document.getElementById('cpPedidoId').value   = id;
     document.getElementById('cpPedidoNome').value = numero;
     document.getElementById('cpAutoPedido').innerHTML = '';
+    await _cpDerivarDoPedido(id);
 }
 
-// ── Autocomplete vínculo — Processo ─────────────────────────────────────────
+// ── Derivação Fornecedor/Valor/Processo a partir do Pedido escolhido ───────
+// Diferente do Cliente em Contas a Receber, o Fornecedor aqui NÃO é travado:
+// um Pedido pode gerar contas a pagar pra vários fornecedores diferentes
+// (frete, despachante, seguro...), não só quem remeteu a mercadoria. Então o
+// Remetente do pedido só é usado como sugestão (preenche se ainda tiver
+// vazio), o campo continua editável/buscável normalmente. Valor/Moeda também
+// são só sugestão (vêm do valor_total do pedido, mas uma conta pode ser só
+// uma parcela/taxa dele). Já o Processo é sempre restrito aos processos deste
+// pedido (mesmo padrão 0/1/vários usado em Contas a Receber e em
+// pedGerarProcesso, pedidos.js): 0 → trava vazio, 1 → preenche sozinho e
+// trava, >1 → usuário escolhe entre eles.
+let _cpPedidoProcessos = [];
 
-let _cpBuscaProcessoTimer = null;
-async function cpBuscarProcesso(termo) {
-    const box = document.getElementById('cpAutoProcesso');
+function _cpResetProcesso() {
+    const processoInput = document.getElementById('cpProcessoNome');
+    processoInput.disabled = true;
+    processoInput.placeholder = 'Escolha um Pedido primeiro';
+    processoInput.value = '';
     document.getElementById('cpProcessoId').value = '';
-    if (!termo || termo.length < 2) { box.innerHTML = ''; return; }
-    clearTimeout(_cpBuscaProcessoTimer);
-    _cpBuscaProcessoTimer = setTimeout(async () => {
-        try {
-            const { data } = await supabaseClient
-                .from('processos')
-                .select('id, numero_processo')
-                .ilike('numero_processo', `%${termo}%`)
-                .limit(8);
-            if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo encontrado</div>'; return; }
-            box.innerHTML = data.map(p => `
-                <div class="pl-auto-item" onclick="cpSelecionarProcesso('${p.id}', '${_cpEsc(p.numero_processo || '')}')">
-                    <span class="pl-auto-nome">${_cpEsc(p.numero_processo || '')}</span>
-                </div>`).join('');
-        } catch (e) {}
-    }, 300);
+    document.getElementById('cpAutoProcesso').innerHTML = '';
+    _cpPedidoProcessos = [];
+}
+
+async function _cpDerivarDoPedido(pedidoId) {
+    const fornecedorInput = document.getElementById('cpFornecedorNome');
+    const processoInput   = document.getElementById('cpProcessoNome');
+
+    document.getElementById('cpProcessoId').value = '';
+    processoInput.value = '';
+    _cpPedidoProcessos = [];
+
+    try {
+        const usuario = obterUsuarioLogado();
+
+        const { data: pedido } = await supabaseClient
+            .from('pedidos')
+            .select('remetente_parceiro_id, valor_total, moeda, remetente:parceiros!pedidos_remetente_parceiro_id_fkey(razao_social, nome_fantasia)')
+            .eq('id', pedidoId)
+            .single();
+
+        if (pedido?.remetente_parceiro_id && !document.getElementById('cpFornecedorId').value) {
+            document.getElementById('cpFornecedorId').value = pedido.remetente_parceiro_id;
+            fornecedorInput.value = pedido.remetente?.nome_fantasia || pedido.remetente?.razao_social || '';
+        }
+
+        // Sugere Valor/Moeda do pedido — só se o campo ainda estiver vazio, pra
+        // não sobrescrever um valor já digitado ou o de uma conta já salva
+        // (cpAbrirModal preenche o valor salvo antes de chamar esta função).
+        const valorInput = document.getElementById('cpValor');
+        if (!valorInput.value.trim() && pedido?.valor_total) {
+            valorInput.value = _cpFormatarMonetario(pedido.valor_total);
+            if (pedido.moeda) document.getElementById('cpMoeda').value = pedido.moeda;
+        }
+
+        let query = supabaseClient
+            .from('processos')
+            .select('id, numero_processo')
+            .eq('pedido_id', pedidoId)
+            .order('numero_processo', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        const { data: processos } = await query;
+        _cpPedidoProcessos = processos || [];
+
+        if (_cpPedidoProcessos.length === 0) {
+            processoInput.disabled = true;
+            processoInput.placeholder = 'Nenhum processo vinculado a este pedido';
+        } else if (_cpPedidoProcessos.length === 1) {
+            document.getElementById('cpProcessoId').value = _cpPedidoProcessos[0].id;
+            processoInput.value = _cpPedidoProcessos[0].numero_processo || '';
+            processoInput.disabled = true;
+        } else {
+            processoInput.disabled = false;
+            processoInput.placeholder = 'Selecione um dos processos deste pedido...';
+        }
+    } catch (e) {}
+}
+
+// ── Autocomplete vínculo — Processo (restrito ao Pedido escolhido) ─────────
+
+function _cpRenderizarProcessos(termo) {
+    const box = document.getElementById('cpAutoProcesso');
+    const lista = termo
+        ? _cpPedidoProcessos.filter(p => (p.numero_processo || '').toLowerCase().includes(termo.toLowerCase()))
+        : _cpPedidoProcessos;
+    if (!lista.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo vinculado a este pedido</div>'; return; }
+    box.innerHTML = lista.map(p => `
+        <div class="pl-auto-item" onclick="cpSelecionarProcesso('${p.id}', '${_cpEsc(p.numero_processo || '')}')">
+            <span class="pl-auto-nome">${_cpEsc(p.numero_processo || '')}</span>
+        </div>`).join('');
+}
+
+function cpBuscarProcesso(termo) {
+    document.getElementById('cpProcessoId').value = '';
+    _cpRenderizarProcessos(termo);
+}
+
+function cpMostrarProcesso(termo) {
+    _cpRenderizarProcessos(termo);
 }
 
 function cpSelecionarProcesso(id, numero) {

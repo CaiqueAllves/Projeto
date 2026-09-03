@@ -79,6 +79,22 @@ function verificarAutenticacao(opcoes = {}) {
         _authAtualizarInterface(usuarioAtual);
         _authNotificarSolicitacoesPendentes(usuarioAtual);
 
+        // Migração de autenticação (ver auditoria de segurança): a sessão
+        // customizada acima não basta mais sozinha — as consultas de verdade
+        // agora exigem uma sessão real do Supabase Auth por trás (criada no
+        // login, guardada em localStorage por conta do próprio supabase-js).
+        // Sem isso a tela ficaria "quebrada" (sem dado nenhum, sem aviso
+        // nenhum) pra quem tem uma sessão customizada de antes da migração
+        // — então checa e força um re-login limpo em vez de deixar quebrado.
+        if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+            supabaseClient.auth.getSession().then(({ data }) => {
+                if (!data.session) {
+                    _authEncerrarSessaoExpirada();
+                    window.location.href = 'login.html?sessao_expirada=1';
+                }
+            });
+        }
+
         // O snapshot acima (sessionStorage/localStorage) pode estar desatualizado
         // — nome, avatar, empresa ou cargo podem ter mudado desde o último login
         // manual, e o auto-login via "Lembrar-me" nunca reconsultava o banco pra
@@ -137,11 +153,22 @@ function _authAtualizarInterface(usuarioAtual) {
 // re-renderizada depois com os dados atualizados do banco (evita notificação
 // duplicada quando o refresh em segundo plano chama _authAtualizarInterface de novo).
 let _authSolicitacoesNotificadas = false;
+// Throttle de ~5min entre checagens (revisão de performance): sem isso,
+// um admin navegando entre telas disparava essa consulta de novo em toda
+// página — o timestamp em sessionStorage sobrevive à navegação (só não
+// sobrevive a fechar a aba), diferente de _authSolicitacoesNotificadas
+// abaixo, que é só pra não checar 2x na MESMA página.
+const _AUTH_SOLICITACOES_INTERVALO_MS = 5 * 60 * 1000;
+
 function _authNotificarSolicitacoesPendentes(usuarioAtual) {
     if (_authSolicitacoesNotificadas) return;
     if (usuarioAtual.perfil === 'admin' && usuarioAtual.empresa_id && window.supabaseAPI) {
+        const ultimaChecagem = Number(sessionStorage.getItem('solicitacoesUltimaChecagem') || 0);
+        if (Date.now() - ultimaChecagem < _AUTH_SOLICITACOES_INTERVALO_MS) return;
+
         _authSolicitacoesNotificadas = true;
         setTimeout(async () => {
+            sessionStorage.setItem('solicitacoesUltimaChecagem', String(Date.now()));
             const resultado = await window.supabaseAPI.buscarSolicitacoes();
             if (resultado.sucesso && resultado.data && resultado.data.length > 0) {
                 const qtd = resultado.data.length;

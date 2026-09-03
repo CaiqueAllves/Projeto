@@ -28,7 +28,7 @@ Operacional:
 - Empresas: cadastro de empresas parceiras (clientes, fornecedores etc.).
 - Produtos: cadastro de produtos.
 - Proformas: emissão e gestão de proformas.
-- Processos: quadro kanban para gestão de processos de exportação, exportação indireta e importação. Status disponíveis: Aberta, Pendente e Encerrada.
+- Processos: quadro kanban para gestão de processos de exportação e exportação indireta. Status disponíveis: Aberta, Pendente e Encerrada.
 - Relatórios: relatórios do módulo operacional (produtos, proformas, processos).
 - Termos: termos e condições.
 - Apoio: tabelas de apoio (países e regiões, portos e armadores, aeroportos e cias aéreas, moedas, embalagens e unidades de medida, termos de pagamento, acondicionamento, container, NCM).

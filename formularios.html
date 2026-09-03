@@ -2554,6 +2554,19 @@
                                         </div>
                                     </div>
 
+                                    <!-- Linha 2.5: Preços em outras moedas (opcional, sem limite fixo) -->
+                                    <div class="form-group full-width">
+                                        <label>Preços em outras Moedas
+                                            <span class="info-balao" data-tooltip="Preço de venda alternativo pra outro mercado/moeda de exportação. Não substitui o Preço de Venda principal acima — é um adicional opcional.">
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            </span>
+                                        </label>
+                                        <button type="button" id="btn-add-preco-prod" class="btn-add-idioma" onclick="prodAdicionarPrecoExtra()" style="margin-top:6px; width:fit-content;">
+                                            <i class="fa-solid fa-plus"></i> Adicionar Preço em outra Moeda
+                                        </button>
+                                        <div id="prod-precos-extra-container" style="display:flex; flex-direction:column; gap:16px; margin-top:16px;"></div>
+                                    </div>
+
                                     <!-- Linha 3: Observações (colapsável) -->
                                     <div class="form-group full-width prod-obs-wrapper">
                                         <div class="prod-obs-toggle" onclick="prodToggleObs(this)">

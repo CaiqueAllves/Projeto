@@ -61,7 +61,10 @@ async function carregarProcessos() {
 
     try {
         const u   = (() => { try { return JSON.parse(sessionStorage.getItem('usuarioLogado') || '{}'); } catch { return {}; } })();
-        const res = await window.supabaseAPI.buscarProcessos();
+        // Filtro de período (revisão de performance) — só reduz o que vem
+        // do banco pra processos já encerrados; em andamento sempre vem.
+        const diasAtras = Number(document.getElementById('filtroPeriodoProcessos')?.value) || null;
+        const res = await window.supabaseAPI.buscarProcessos({ diasAtras });
         if (!res.sucesso) throw new Error(res.mensagem || 'Erro ao buscar processos');
 
         const processos = res.data || [];
@@ -224,8 +227,8 @@ function _identProformaProcesso(p) {
 
 function _renderCard(p) {
     const coluna     = _getColuna(p.status || 'aberto');
-    const tipoLabel  = { importacao: 'Importação', exportacao: 'Exportação', exportacao_direta: 'Exp. Direta', exportacao_indireta: 'Exp. Indireta' }[p.tipo] || null;
-    const tipoClasse = { importacao: 'tipo-importacao', exportacao: 'tipo-exportacao', exportacao_direta: 'tipo-exportacao', exportacao_indireta: 'tipo-exp-indireta' }[p.tipo] || '';
+    const tipoLabel  = { exportacao: 'Exportação', exportacao_direta: 'Exp. Direta', exportacao_indireta: 'Exp. Indireta' }[p.tipo] || null;
+    const tipoClasse = { exportacao: 'tipo-exportacao', exportacao_direta: 'tipo-exportacao', exportacao_indireta: 'tipo-exp-indireta' }[p.tipo] || '';
     const imp        = p.empresaImportador && p.empresaImportador !== '—' ? p.empresaImportador : null;
     const exp        = _primeiroNome(p.empresaExportador);
     const status     = _getColuna(p.status || 'aberto');
@@ -358,7 +361,7 @@ function renderLista(filtro) {
         return;
     }
 
-    const tipoMap  = { importacao: 'Importação', exportacao: 'Exportação', exportacao_direta: 'Exp. Direta', exportacao_indireta: 'Exp. Indireta' };
+    const tipoMap  = { exportacao: 'Exportação', exportacao_direta: 'Exp. Direta', exportacao_indireta: 'Exp. Indireta' };
     const modalMap = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre', rodoviario: 'Rodoviário', ferroviario: 'Ferroviário' };
 
     tbody.innerHTML = list.map(p => {

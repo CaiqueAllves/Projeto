@@ -58,6 +58,12 @@
                         <option value="concluido">Concluído</option>
                         <option value="cancelado">Cancelado</option>
                     </select>
+                    <select id="filtroPeriodoProcessos" class="filter-select" onchange="carregarProcessos()" title="Processos em andamento continuam sempre visíveis, mesmo fora do período">
+                        <option value="30">Últimos 30 dias</option>
+                        <option value="90" selected>Últimos 90 dias</option>
+                        <option value="365">Último ano</option>
+                        <option value="">Todos os períodos</option>
+                    </select>
                     <div class="view-toggle">
                         <button class="view-btn active" id="btnViewKanban" onclick="switchView('kanban')" title="Kanban">
                             <i class="fa-solid fa-table-columns"></i>

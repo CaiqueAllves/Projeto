@@ -1,0 +1,306 @@
+/* ========================================
+   PROPOSTA — ESTILOS
+   ------------------------------------------
+   Modal/formulário/autocomplete/Kanban base (colunas Proposta/Negociação/
+   Fechado) já vêm de style-pipeline.css, carregado junto. Aqui só entra o
+   que o Pipeline nunca teve: 4ª coluna "Perdido" no Kanban, Lista/tabela,
+   painel Excluídos e o toggle Kanban/Lista — adaptado de style-pedidos.css.
+======================================== */
+
+/* ── 4ª coluna do Kanban: Perdido (Pipeline não tem essa etapa) ────── */
+.pl-header-perdido { background: #fef2f2; color: #b91c1c; border-bottom-color: #fecaca; }
+.pl-card[data-etapa="perdido"] { border-left: 3px solid #ef4444; }
+
+/* ── Nº da Proposta / Data de Criação: preenchidos automaticamente ── */
+#propTitulo[readonly],
+#propDataCriacao[readonly] {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+}
+#propDataCriacao[readonly] { pointer-events: none; }
+
+/* ── Lista/tabela ───────────────────────────────────────────────── */
+.prop-table-wrap {
+    margin-top: 16px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    overflow-x: auto;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.prop-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 860px;
+}
+
+.prop-table thead th {
+    background: #f8fafc;
+    padding: 13px 16px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.prop-table tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+.prop-table tbody tr:last-child { border-bottom: none; }
+.prop-table tbody tr:hover { background: #f8fafc; }
+
+.prop-row-proposta   { border-left-color: #f97316; }
+.prop-row-negociacao { border-left-color: #8b5cf6; }
+.prop-row-fechado    { border-left-color: #22c55e; }
+.prop-row-perdido    { border-left-color: #ef4444; }
+
+.prop-table tbody td {
+    padding: 13px 16px;
+    font-size: 13px;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.prop-num   { font-weight: 700; color: #1e293b; letter-spacing: 0.01em; }
+.prop-valor { font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums; }
+
+.prop-loading,
+.prop-vazio {
+    text-align: center;
+    padding: 40px;
+    color: #94a3b8;
+    font-size: 14px;
+}
+.prop-vazio i { margin-right: 6px; }
+
+/* ── Badges de etapa ────────────────────────────────────────────── */
+.prop-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.prop-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.prop-badge-proposta   { background: #fff7ed; color: #c2410c; }
+.prop-badge-negociacao { background: #f5f3ff; color: #6d28d9; }
+.prop-badge-fechado    { background: #f0fdf4; color: #15803d; }
+.prop-badge-perdido    { background: #fef2f2; color: #b91c1c; }
+
+/* ── Painel Excluídos ─────────────────────────────────────────────── */
+#propExcluidosWrapper { position: relative; }
+
+.prof-excluidos-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 360px;
+    max-height: 380px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    z-index: 200;
+    flex-direction: column;
+    overflow: hidden;
+}
+.prof-excluidos-panel.aberto { display: flex; }
+
+.prof-excluidos-titulo {
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.prof-excluidos-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    font-size: 11px;
+    color: #92400e;
+    line-height: 1.5;
+    flex-shrink: 0;
+}
+.prof-excluidos-aviso i { color: #f59e0b; flex-shrink: 0; margin-top: 1px; }
+
+#propExcluidosContainer {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.prof-excluido-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f8fafc;
+    gap: 12px;
+}
+.prof-excluido-item:last-child { border-bottom: none; }
+
+.prof-excluido-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.prof-excluido-codigo { font-size: 13px; font-weight: 600; color: #1e293b; }
+.prof-excluido-rota {
+    font-size: 11px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.prof-excluido-restaurar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+.prof-excluido-restaurar:hover { border-color: #3b82f6; background: #eff6ff; }
+
+/* ── View toggle (kanban/lista) ───────────────────────────────────── */
+.view-toggle {
+    display: flex;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.view-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: white;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.15s;
+}
+.view-btn + .view-btn { border-left: 1.5px solid #e2e8f0; }
+.view-btn.active       { background: var(--azul); color: white; }
+.view-btn:hover:not(.active) { background: #f8fafc; color: #475569; }
+
+/* ── Ações da tabela (remetente tag adaptada de Pedidos) ───────────── */
+.ped-remetente-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+}
+.ped-remetente-tag i { color: #94a3b8; font-size: 11px; }
+.ped-remetente-propria { color: #94a3b8; font-weight: 500; font-style: italic; }
+
+.ped-acoes {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .prop-table-wrap { margin-top: 12px; }
+}
+
+/* ── Histórico (linha do tempo da proposta) ──────────────────────────── */
+.prop-historico-vazio {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    padding: 16px 0;
+}
+
+.prop-historico-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.prop-historico-item {
+    display: flex;
+    gap: 12px;
+    position: relative;
+    padding-bottom: 16px;
+}
+.prop-historico-item:last-child { padding-bottom: 0; }
+
+/* Linha vertical conectando os eventos, atrás dos ícones */
+.prop-historico-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 13px;
+    top: 28px;
+    bottom: 0;
+    width: 2px;
+    background: #e2e8f0;
+}
+
+.prop-historico-icone {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #eef2ff;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    z-index: 1;
+}
+
+.prop-historico-corpo { flex: 1; min-width: 0; padding-top: 2px; }
+.prop-historico-titulo { font-size: 13px; font-weight: 700; color: #1e293b; }
+.prop-historico-detalhe { font-size: 12.5px; color: #475569; margin-top: 1px; }
+.prop-historico-meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }

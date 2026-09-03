@@ -53,6 +53,12 @@
                         <option value="entregue">Entregue</option>
                         <option value="cancelado">Cancelado</option>
                     </select>
+                    <select id="filtroPeriodoPedidos" class="filter-select" onchange="pedCarregar()" title="Pedidos em andamento continuam sempre visíveis, mesmo fora do período">
+                        <option value="30">Últimos 30 dias</option>
+                        <option value="90" selected>Últimos 90 dias</option>
+                        <option value="365">Último ano</option>
+                        <option value="">Todos os períodos</option>
+                    </select>
                     <div class="view-toggle">
                         <button class="view-btn active" id="pedBtnViewKanban" onclick="pedSwitchView('kanban')" title="Kanban">
                             <i class="fa-solid fa-table-columns"></i>
@@ -390,8 +396,7 @@
     <span>© 2025 Marpex · Todos os direitos reservados</span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="supabase.min.js"></script>
 <script src="supabase-api.js"></script>
 <script src="auth.js"></script>
 <script src="navegador.js"></script>

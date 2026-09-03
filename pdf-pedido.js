@@ -4,7 +4,11 @@
 //  Template inicial — layout será refinado depois.
 // ========================================
 
-function gerarPDFPedido(pedido) {
+async function gerarPDFPedido(pedido) {
+    try {
+        await carregarJsPDFSobDemanda();
+    } catch (e) { if (typeof pedAviso === 'function') pedAviso('Não foi possível carregar o gerador de PDF.', 'erro'); return; }
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
