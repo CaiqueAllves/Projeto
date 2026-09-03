@@ -225,12 +225,19 @@
             <div class="pl-form-row" id="propEtapaGroup" style="display:none;">
                 <div class="pl-form-group">
                     <label>Etapa</label>
-                    <select id="propEtapa">
+                    <select id="propEtapa" onchange="propToggleMotivoPerda()">
                         <option value="proposta">Proposta</option>
                         <option value="negociacao">Negociação</option>
                         <option value="fechado">Fechado</option>
                         <option value="perdido">Perdido</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="pl-form-row" id="propMotivoPerdaGroup" style="display:none;">
+                <div class="pl-form-group pl-full">
+                    <label>Motivo da Perda</label>
+                    <textarea id="propMotivoPerda" rows="2" placeholder="Por que essa proposta foi perdida?"></textarea>
                 </div>
             </div>
 

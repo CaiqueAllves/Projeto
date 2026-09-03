@@ -410,6 +410,16 @@
 }
 .prop-kcard-meta .prop-kcard-label { font-size: 11.5px; }
 
+.prop-kcard-motivo {
+    font-size: 11.5px;
+    color: #b91c1c;
+    background: #fef2f2;
+    border-radius: 6px;
+    padding: 6px 8px;
+    line-height: 1.4;
+}
+.prop-kcard-motivo .prop-kcard-label { color: #b91c1c; display: block; margin-bottom: 2px; }
+
 .prop-kcard-footer {
     display: flex;
     flex-direction: column;

@@ -274,6 +274,10 @@ function _propRenderCard(o) {
         <div class="prop-kcard-meta">
             <span class="prop-kcard-label">Validade:</span> <span>${dataValidade}</span>
         </div>
+        ${etapa === 'perdido' && o.motivo_perda ? `
+        <div class="prop-kcard-motivo">
+            <span class="prop-kcard-label">Motivo da Perda:</span> ${_propEscapar(o.motivo_perda)}
+        </div>` : ''}
         <div class="prop-kcard-footer">
             <select class="prop-etapa-select prop-etapa-${etapa}" onchange="propAlterarEtapa('${o.id}', this)">
                 ${PROP_ETAPAS.map(e => `<option value="${e}" ${e === etapa ? 'selected' : ''}>${PROP_ETAPA_LABEL[e]}</option>`).join('')}
@@ -297,6 +301,18 @@ async function propAlterarEtapa(id, selectEl) {
     const atual = op?.etapa || 'proposta';
     const nova  = selectEl.value;
     if (nova === atual) return;
+
+    // Marcar como Perdido pede um motivo — em vez de salvar direto, abre o
+    // modal de editar (já com Etapa em "Perdido" e o campo de motivo à
+    // mostra) e deixa o select do card do jeito que estava até confirmar lá.
+    if (nova === 'perdido') {
+        selectEl.value = atual;
+        await propAbrirModal(id);
+        document.getElementById('propEtapa').value = 'perdido';
+        propToggleMotivoPerda();
+        document.getElementById('propMotivoPerda').focus();
+        return;
+    }
 
     op.etapa = nova;
     propRenderizar();
@@ -519,6 +535,8 @@ async function propAbrirModal(id = null) {
     // novo nasce automaticamente como "proposta" (não é escolha do usuário).
     document.getElementById('propEtapa').value              = op?.etapa || 'proposta';
     document.getElementById('propEtapaGroup').style.display = op ? '' : 'none';
+    document.getElementById('propMotivoPerda').value = op?.motivo_perda || '';
+    propToggleMotivoPerda();
 
     document.getElementById('propResponsavel').value = op?.responsavel || '';
 
@@ -540,6 +558,11 @@ async function propAbrirModal(id = null) {
     if (op) _propCarregarHistorico(op.id);
 
     document.getElementById('propModalOverlay').classList.add('ativo');
+}
+
+function propToggleMotivoPerda() {
+    const perdido = document.getElementById('propEtapa').value === 'perdido';
+    document.getElementById('propMotivoPerdaGroup').style.display = perdido ? '' : 'none';
 }
 
 // ── Histórico — linha do tempo da proposta ──────────────────────────────────
@@ -650,6 +673,7 @@ async function propSalvar() {
         responsavel:   document.getElementById('propResponsavel').value.trim() || null,
         data_prevista: document.getElementById('propDataPrevista').value || null,
         observacoes:   document.getElementById('propObservacoes').value.trim() || null,
+        motivo_perda:  document.getElementById('propMotivoPerda').value.trim() || null,
     };
 
     const res = await salvarOportunidade(dados, id);

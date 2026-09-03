@@ -1860,6 +1860,10 @@ async function salvarOportunidade(dados, id = null) {
             etapa: dados.etapa || 'proposta',
             responsavel: dados.responsavel || null, data_prevista: dados.data_prevista || null,
             observacoes: dados.observacoes || null, proforma_id: dados.proforma_id || null,
+            // Só faz sentido quando etapa === 'perdido', mas gravar null nos
+            // outros casos também limpa um motivo antigo se a proposta for
+            // reaberta depois (etapa mudada de volta pra Proposta/Negociação).
+            motivo_perda: dados.etapa === 'perdido' ? (dados.motivo_perda || null) : null,
             updated_at: new Date().toISOString(),
         };
         let result;
