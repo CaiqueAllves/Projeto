@@ -4,7 +4,10 @@
 //  Template inicial — layout será refinado depois.
 // ========================================
 
-async function gerarPDFPedido(pedido) {
+// modoRetorno 'blob' devolve o PDF pronto (Blob) em vez de baixar — usado pelo
+// e-mail de confirmação (sobe o arquivo no Storage em vez de abrir o
+// download no navegador de quem está gerando o Pedido).
+async function gerarPDFPedido(pedido, modoRetorno) {
     try {
         await carregarJsPDFSobDemanda();
     } catch (e) { if (typeof pedAviso === 'function') pedAviso('Não foi possível carregar o gerador de PDF.', 'erro'); return; }
@@ -247,6 +250,8 @@ async function gerarPDFPedido(pedido) {
         doc.text(`Página ${p} de ${totalPags}`, W / 2, 289, { align: 'center' });
         doc.text(dataGeracao, W - ML, 289, { align: 'right' });
     }
+
+    if (modoRetorno === 'blob') return doc.output('blob');
 
     doc.save(`pedido_${pedido.numero || 'sem-numero'}_${new Date().toISOString().slice(0, 10)}.pdf`);
 }

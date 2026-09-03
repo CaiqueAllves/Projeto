@@ -1032,7 +1032,70 @@ async function pedSalvar() {
         itens:               linhasValidas,
     };
     pedMostrarPosSalvo(_pedUltimoSalvo);
+
+    // Pedido gerado a partir de uma Proposta fechada — dispara o e-mail de
+    // confirmação pro cliente assinar (fire-and-forget: nunca atrapalha o
+    // fluxo de salvar o Pedido, só de propósito silenciosa se falhar).
+    if (!id && dados.oportunidade_id) {
+        _pedEnviarConfirmacaoEmail(_pedUltimoSalvo, dados.cliente_id);
+    }
+
     await pedCarregar();
+}
+
+// ── E-mail de confirmação (Proposta fechada → Pedido gerado) ────────────────
+// PENDENTE DE CONFIGURAR: crie um template novo no mesmo painel do EmailJS já
+// usado pra Chamados (reaproveita PUBLIC_KEY/SERVICE_ID de lá — mesma conta,
+// só o template é diferente) com as variáveis: to_email, cliente_nome,
+// numero_pedido, valor_formatado, link_pdf. Depois só troca o valor abaixo.
+const PED_CONFIRMACAO_EMAILJS_TEMPLATE_ID = 'CONFIGURAR_TEMPLATE_ID_AQUI';
+
+async function _pedEnviarConfirmacaoEmail(pedido, clienteId) {
+    try {
+        if (!clienteId || PED_CONFIRMACAO_EMAILJS_TEMPLATE_ID === 'CONFIGURAR_TEMPLATE_ID_AQUI') return;
+
+        const { data: contato } = await supabaseClient
+            .from('parceiro_contatos')
+            .select('email')
+            .eq('parceiro_id', clienteId)
+            .not('email', 'is', null)
+            .order('ordem', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+        if (!contato?.email) return; // sem e-mail cadastrado, não tem pra quem mandar
+
+        const pdfBlob = await gerarPDFPedido(pedido, 'blob');
+        if (!pdfBlob) return;
+
+        const usuario = obterUsuarioLogado();
+        const caminho = `${usuario?.empresa_id || 'sem-empresa'}/${pedido.id}.pdf`;
+        const { error: erroUpload } = await supabaseClient.storage
+            .from('pedido-confirmacoes')
+            .upload(caminho, pdfBlob, { contentType: 'application/pdf', upsert: true });
+        if (erroUpload) { console.error('[Confirmação Pedido] erro no upload do PDF:', erroUpload); return; }
+
+        const { data: urlData } = supabaseClient.storage.from('pedido-confirmacoes').getPublicUrl(caminho);
+        const linkPdf = urlData?.publicUrl;
+        if (!linkPdf) return;
+
+        await new Promise((resolve, reject) => {
+            _suporteCarregarEmailJS(async (err) => {
+                if (err) return reject(err);
+                try {
+                    await emailjs.send(SUPORTE_EMAILJS_SERVICE_ID, PED_CONFIRMACAO_EMAILJS_TEMPLATE_ID, {
+                        to_email:        contato.email,
+                        cliente_nome:    pedido.clienteNome || '',
+                        numero_pedido:   pedido.numero || '',
+                        valor_formatado: `${pedido.moeda || 'USD'} ${Number(pedido.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                        link_pdf:        linkPdf,
+                    });
+                    resolve();
+                } catch (e) { reject(e); }
+            });
+        });
+    } catch (err) {
+        console.error('[Confirmação Pedido] falha ao enviar e-mail de confirmação:', err);
+    }
 }
 
 // ── Tela pós-salvo ───────────────────────────────────────────────────────────

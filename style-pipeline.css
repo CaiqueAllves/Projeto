@@ -341,9 +341,10 @@
     transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.pl-btn-editar:hover  { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
-.pl-btn-avancar:hover { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
-.pl-btn-excluir:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.pl-btn-editar:hover   { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.pl-btn-avancar:hover  { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+.pl-btn-excluir:hover  { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.pl-btn-whatsapp:hover { background: #f0fdf4; color: #25d366; border-color: #bbf7d0; }
 
 /* ── Vazia / loading ───────────────────────────────────────────── */
 .pl-col-vazia {

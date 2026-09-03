@@ -286,12 +286,58 @@ function _propRenderCard(o) {
                 <button class="pl-btn-acao pl-btn-editar" onclick="propAbrirModal('${o.id}')" title="Editar">
                     <i class="fa-solid fa-pen"></i>
                 </button>
+                <button class="pl-btn-acao pl-btn-whatsapp" onclick="propEnviarWhatsapp('${o.id}')" title="Enviar por WhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </button>
                 <button class="pl-btn-acao pl-btn-excluir" onclick="propAbrirModalExcluir('${o.id}')" title="Excluir">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
         </div>` : ''}
     </div>`;
+}
+
+// Abre o WhatsApp Web/App já com o número do Destinatário e uma mensagem
+// pronta sobre a proposta — o usuário confere e manda, não é envio
+// automático (não depende de nenhuma API/conta comercial pra funcionar).
+async function propEnviarWhatsapp(id) {
+    const o = _propTodas.find(x => x.id === id);
+    if (!o) return;
+    if (!o.cliente_id) { mostrarNotificacao('Essa proposta não tem um Destinatário definido.', 'aviso'); return; }
+
+    const { data: contato } = await supabaseClient
+        .from('parceiro_contatos')
+        .select('telefone')
+        .eq('parceiro_id', o.cliente_id)
+        .not('telefone', 'is', null)
+        .order('ordem', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+    const telefone = _propNormalizarTelefoneWhatsapp(contato?.telefone);
+    if (!telefone) { mostrarNotificacao('Nenhum telefone cadastrado para esse parceiro.', 'aviso'); return; }
+
+    const nome  = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '';
+    const valor = o.valor
+        ? `${o.moeda || 'USD'} ${Number(o.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        : null;
+    const mensagem = [
+        `Olá${nome ? ', ' + nome : ''}!`,
+        `Segue a proposta ${o.titulo || ''}${valor ? ` no valor de ${valor}` : ''}.`,
+        'Fico à disposição para negociar.',
+    ].join(' ');
+
+    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
+}
+
+// Aceita telefone com ou sem código do país/DDD só com dígitos — wa.me exige
+// só números, com código do país na frente (assume Brasil quando o número
+// tem cara de nacional: 10 ou 11 dígitos, sem o "55" already na frente).
+function _propNormalizarTelefoneWhatsapp(telefone) {
+    const digitos = String(telefone || '').replace(/\D/g, '');
+    if (!digitos) return null;
+    if (digitos.length === 10 || digitos.length === 11) return '55' + digitos;
+    return digitos;
 }
 
 // Troca a Etapa direto pelo select do card — livre entre as 4 (mesma
