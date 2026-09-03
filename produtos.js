@@ -220,6 +220,7 @@ function renderTabela(filtro) {
                     <th>Categoria</th>
                     <th>Marca</th>
                     <th>NCM</th>
+                    <th>Unidade Comercial</th>
                     <th>Valor de Venda</th>
                     <th>Status</th>
                     <th>Ações</th>
@@ -233,6 +234,7 @@ function renderTabela(filtro) {
                     <td>${escapeHtml(p.categoria || '—')}</td>
                     <td>${escapeHtml(p.marca || '—')}</td>
                     <td>${escapeHtml(p.ncm || '—')}</td>
+                    <td>${escapeHtml(p.unidade_medida || '—')}</td>
                     <td>${_prodListaValoresVenda(p)}</td>
                     <td>${statusProdBadge(p.status)}</td>
                     <td>
