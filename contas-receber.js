@@ -100,6 +100,12 @@ function crSelecionarPlanoConta(id, label) {
 
 async function _crVerificarGeracaoViaUrl() {
     const params      = new URLSearchParams(window.location.search);
+
+    // Vindo de outra tela (ex: Fluxo de Caixa) só pra abrir uma conta já
+    // existente direto no modo de edição.
+    const editarId = params.get('editar');
+    if (editarId) { crAbrirModal(editarId); return; }
+
     const pedidoId    = params.get('gerar_pedido_id');
     const processoId  = params.get('gerar_processo_id');
     if (!pedidoId && !processoId) return;

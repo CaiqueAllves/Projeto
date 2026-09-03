@@ -44,6 +44,12 @@ function cpToggleObs(toggle) {
 
 async function _cpVerificarGeracaoViaUrl() {
     const params     = new URLSearchParams(window.location.search);
+
+    // Vindo de outra tela (ex: Fluxo de Caixa) só pra abrir uma conta já
+    // existente direto no modo de edição.
+    const editarId = params.get('editar');
+    if (editarId) { cpAbrirModal(editarId); return; }
+
     const processoId = params.get('gerar_processo_id');
     if (!processoId) return;
 

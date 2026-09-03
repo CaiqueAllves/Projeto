@@ -68,7 +68,12 @@
     border-radius: 14px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     border: 1px solid #f0f2f5;
-    overflow: hidden;
+    /* auto (não "hidden" fixo) — o Fluxo de Caixa ganhou colunas demais
+       pra largura fixa e ficava cortado sem dar pra rolar até o fim; auto
+       não muda nada nas tabelas que já cabem (Contas a Pagar/Receber, DRE),
+       só entra em ação quando o conteúdo realmente excede a largura. */
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .fin-table {
@@ -700,6 +705,18 @@
     gap: 6px;
     flex-wrap: wrap;
 }
+
+/* ── Fluxo de Caixa: coluna Remetente/Destinatário ────────────────── */
+.fc-parceiro-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+}
+.fc-parceiro-tag i { color: #94a3b8; font-size: 11px; }
 
 /* ── Responsivo ────────────────────────────────────────────── */
 @media (max-width: 768px) {
