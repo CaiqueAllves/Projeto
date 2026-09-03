@@ -4139,11 +4139,15 @@ function iniciarAutocompleteEmpresaProduto() {
     async function mostrar() {
         await _acCarregarEmpresas();
         const q = input.value.trim().toLowerCase();
+        // "".includes('') é sempre true — sem essa guarda, digitar só letras
+        // (sem nenhum dígito) fazia esse pedaço bater com QUALQUER parceiro,
+        // mesmo sem CNPJ/CPF, e a lista mostrava tudo em vez de filtrar.
+        const qDigitos = q.replace(/\D/g, '');
         const filtradas = q
             ? _acEmpresas.filter(e =>
                 (e.razao_social || '').toLowerCase().includes(q) ||
                 (e.nome_fantasia || '').toLowerCase().includes(q) ||
-                (e.documento || '').replace(/\D/g,'').includes(q.replace(/\D/g,''))
+                (qDigitos && (e.documento || '').replace(/\D/g,'').includes(qDigitos))
               )
             : _acEmpresas;
         lista.innerHTML = filtradas.length
