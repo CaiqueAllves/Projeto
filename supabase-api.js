@@ -603,29 +603,6 @@ async function redefinirSenha(id, novaSenha) {
     }
 }
 
-async function atualizarSenha(id, senhaAtual, novaSenha) {
-    try {
-        const { data: usuario, error } = await supabaseClient
-            .from('usuarios')
-            .select('senha_hash')
-            .eq('id', id)
-            .single();
-
-        if (error || !usuario) return { sucesso: false, mensagem: 'Usuário não encontrado.' };
-        if (!_senhaCorreta(senhaAtual, usuario.senha_hash)) return { sucesso: false, mensagem: 'Senha atual incorreta.' };
-
-        const { error: errUpdate } = await supabaseClient
-            .from('usuarios')
-            .update({ senha_hash: _hashSenha(novaSenha) })
-            .eq('id', id);
-
-        if (errUpdate) return { sucesso: false, mensagem: errUpdate.message };
-        return { sucesso: true };
-    } catch (err) {
-        return { sucesso: false, mensagem: err.message };
-    }
-}
-
 async function atualizarPerfilUsuario(id, perfil) {
     try {
         const usuario = obterUsuarioLogado();
@@ -1674,7 +1651,6 @@ window.supabaseAPI = {
     buscarChaveEmpresa: buscarChaveEmpresa,
     criarSubUsuario,
     atualizarDadosPessoais,
-    atualizarSenha,
     buscarDadosPlano,
     buscarDadosPerfilCompleto,
     redefinirSenha,

@@ -166,14 +166,6 @@ function _preencherContatos(contatos) {
 // MODAL
 // ========================================
 
-function abrirModalCadastro() {
-    document.getElementById('modalFormTitulo').textContent = 'Cadastrar Empresa';
-    document.getElementById('empresaEditandoId').value = '';
-    limparFormulario();
-    document.getElementById('modalFormCadastro').classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
 function fecharModalCadastro() {
     document.getElementById('modalFormCadastro').classList.remove('active');
     document.body.style.overflow = '';
@@ -348,83 +340,6 @@ function visualizarEmpresa(id) {
 
 function editarEmpresa(id) {
     window.open(`formularios.html?tab=empresa&empresa_id=${id}`, '_blank');
-}
-
-async function _editarEmpresaModal(id) {
-    const empresa = todasEmpresas.find(e => e.id === id);
-    if (!empresa) return;
-
-    limparFormulario();
-    document.getElementById('empresaEditandoId').value = id;
-    document.getElementById('modalFormTitulo').textContent = 'Editar Empresa';
-
-    // Tipos
-    document.getElementById('tipoFabricante').checked    = empresa.is_fabricante     || false;
-    document.getElementById('tipoCliente').checked       = empresa.is_cliente        || false;
-    document.getElementById('tipoFornecedor').checked    = empresa.is_fornecedor     || false;
-    document.getElementById('tipoTransportadora').checked= empresa.is_transportadora || false;
-    document.getElementById('tipoRemetente').checked     = empresa.is_remetente      || false;
-    document.getElementById('tipoComprador').checked     = empresa.is_comprador      || false;
-    document.getElementById('tipoImportador').checked    = empresa.is_importador     || false;
-    _atualizarTipoCards();
-
-    // Identificação
-    document.getElementById('tipoCadastro').value = empresa.tipo_cadastro || '';
-    alterarTipoCadastro();
-    document.getElementById('documento').value = empresa.documento || '';
-
-    // Dados principais
-    document.getElementById('nomeEmpresa').value      = empresa.razao_social        || '';
-    document.getElementById('nomeFantasia').value     = empresa.nome_fantasia        || '';
-    document.getElementById('inscricaoEstadual').value= empresa.inscricao_estadual   || '';
-    document.getElementById('suframa').value          = empresa.suframa              || '';
-
-    // Endereço
-    document.getElementById('pais').value       = empresa.pais       || 'BR';
-    onPaisChange();
-    document.getElementById('cep').value        = empresa.cep        || '';
-    document.getElementById('estado').value     = empresa.estado     || '';
-    document.getElementById('cidade').value     = empresa.cidade     || '';
-    document.getElementById('bairro').value     = empresa.bairro     || '';
-    document.getElementById('endereco').value   = empresa.endereco   || '';
-    document.getElementById('complemento').value= empresa.complemento|| '';
-
-    if (empresa.numero === 'S/N') {
-        document.getElementById('semNumero').checked = true;
-        toggleNumero();
-    } else {
-        document.getElementById('numero').value = empresa.numero || '';
-    }
-
-    // Contatos (vêm da view como JSON array)
-    _preencherContatos(empresa.contatos || []);
-
-    // Financeiro
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-    set('cad-pag-forma',      empresa.pag_forma);
-    set('cad-pag-condicao',   empresa.pag_condicao);
-    set('cad-pag-banco',      empresa.pag_banco);
-    set('cad-pag-tipo-conta', empresa.pag_tipo_conta);
-    set('cad-pag-agencia',    empresa.pag_agencia);
-    set('cad-pag-conta',      empresa.pag_conta);
-    set('cad-rec-forma',      empresa.rec_forma);
-    set('cad-rec-moeda',      empresa.rec_moeda);
-    set('cad-rec-banco',      empresa.rec_banco);
-    set('cad-rec-tipo-conta', empresa.rec_tipo_conta);
-    set('cad-rec-agencia',    empresa.rec_agencia);
-    set('cad-rec-conta',      empresa.rec_conta);
-
-    // Extras
-    set('cadSite',    empresa.site);
-    set('cadHorario', empresa.horario_atendimento);
-
-    if (empresa.tags && empresa.tags.length > 0) {
-        tagsArray = [...empresa.tags];
-        renderizarTags();
-    }
-
-    document.getElementById('modalFormCadastro').classList.add('active');
-    document.body.style.overflow = 'hidden';
 }
 
 // ========================================
@@ -1181,67 +1096,6 @@ function _uploadNormalizar(raw) {
     }
 
     return d;
-}
-
-// ── Preencher formulário com os dados extraídos ───────────────
-
-function _uploadPreencherFormulario(dados) {
-    if (!dados || !Object.keys(dados).length) return;
-
-    const set = (id, val) => {
-        if (!val && val !== 0) return;
-        const el = document.getElementById(id);
-        if (el) el.value = String(val).trim();
-    };
-
-    // País (Brasil como padrão)
-    document.getElementById('pais').value = dados.pais || 'BR';
-    onPaisChange();
-
-    // Identificação (setar tipo antes, pois alterarTipoCadastro limpa o campo)
-    if (dados.tipo_cadastro) {
-        document.getElementById('tipoCadastro').value = dados.tipo_cadastro;
-        alterarTipoCadastro();
-        if (dados.documento) document.getElementById('documento').value = dados.documento;
-    }
-
-    set('nomeEmpresa',       dados.razao_social);
-    set('nomeFantasia',      dados.nome_fantasia);
-    set('inscricaoEstadual', dados.inscricao_estadual);
-    set('suframa',           dados.suframa);
-    set('cep',               dados.cep);
-    set('estado',            dados.estado);
-    set('cidade',            dados.cidade);
-    set('bairro',            dados.bairro);
-    set('endereco',          dados.endereco);
-    set('complemento',       dados.complemento);
-    set('cadSite',           dados.site);
-    set('cadHorario',        dados.horario_atendimento);
-
-    // Número
-    if (dados.numero) {
-        if (String(dados.numero).toUpperCase() === 'S/N') {
-            document.getElementById('semNumero').checked = true;
-            toggleNumero();
-        } else {
-            set('numero', dados.numero);
-        }
-    }
-
-    // Contato
-    if (dados.email_contato || dados.telefone_contato) {
-        _preencherContatos([{
-            tipo: 'Principal', nome: '',
-            email: dados.email_contato || '',
-            telefone: dados.telefone_contato || '',
-        }]);
-    }
-
-    // Se só tiver CEP mas não endereço, busca automática
-    const cepEl = document.getElementById('cep');
-    if (cepEl && cepEl.value.replace(/\D/g, '').length === 8 && !dados.estado) {
-        setTimeout(buscarCEP, 300);
-    }
 }
 
 // ========================================

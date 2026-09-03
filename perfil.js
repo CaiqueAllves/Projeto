@@ -692,25 +692,6 @@ function renderizarPlano(dados) {
     }
 }
 
-// ── Collapsible ───────────────────────────────────────────────
-let _planoAberto = true;
-
-function togglePlanoSection() {
-    _planoAberto = !_planoAberto;
-    const body = document.getElementById('planoBody');
-    const icon = document.getElementById('planoToggleIcon');
-    if (_planoAberto) {
-        body.style.maxHeight = body.scrollHeight + 'px';
-        icon.style.transform = 'rotate(0deg)';
-        setTimeout(() => { body.style.maxHeight = '2000px'; }, 310);
-    } else {
-        body.style.maxHeight = body.scrollHeight + 'px';
-        body.offsetHeight; // força reflow antes de animar para 0
-        body.style.maxHeight = '0';
-        icon.style.transform = 'rotate(-90deg)';
-    }
-}
-
 function solicitarUpgrade(planoDesejado) {
     mostrarToast(`Entre em contato para migrar para o plano ${PLANOS[planoDesejado].nome}.`, 'sucesso');
 }
@@ -944,37 +925,6 @@ async function salvarDados() {
 
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar Alterações';
-}
-
-// ========================================
-// ALTERAR SENHA
-// ========================================
-
-async function salvarSenha() {
-    const senhaAtual = document.getElementById('inputSenhaAtual').value;
-    const novaSenha  = document.getElementById('inputNovaSenha').value;
-    const confirmar  = document.getElementById('inputConfirmarSenha').value;
-
-    if (!senhaAtual || !novaSenha || !confirmar) {
-        mostrarToast('Preencha todos os campos de senha.', 'erro'); return;
-    }
-    if (novaSenha !== confirmar) {
-        mostrarToast('A nova senha e a confirmação não coincidem.', 'erro'); return;
-    }
-    if (novaSenha.length < 6) {
-        mostrarToast('A senha deve ter pelo menos 6 caracteres.', 'erro'); return;
-    }
-
-    const res = await atualizarSenha(usuarioAtual.id, senhaAtual, novaSenha);
-
-    if (res.sucesso) {
-        document.getElementById('inputSenhaAtual').value = '';
-        document.getElementById('inputNovaSenha').value = '';
-        document.getElementById('inputConfirmarSenha').value = '';
-        mostrarToast('Senha alterada com sucesso!', 'sucesso');
-    } else {
-        mostrarToast(res.mensagem || 'Erro ao alterar senha.', 'erro');
-    }
 }
 
 // ========================================

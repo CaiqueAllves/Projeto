@@ -16,10 +16,6 @@ function profIrParaPedidos() {
 }
 
 // ── Helpers ──────────────────────────────
-function _profFmt(n) {
-    return Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
 function _profEscapar(value) {
     const div = document.createElement('div');
     div.textContent = String(value ?? '');

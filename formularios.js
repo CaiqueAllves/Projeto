@@ -31,14 +31,6 @@ function toggleSection(titleEl) {
     content.style.display = isActive ? 'none' : 'block';
 }
 
-function toggleLogSub(headerEl) {
-    const section = headerEl.closest('.log-sub-section');
-    const body = section.querySelector('.log-sub-body');
-    const isActive = section.classList.contains('active');
-    section.classList.toggle('active');
-    body.style.display = isActive ? 'none' : 'block';
-}
-
 // Limpar formulário
 function limparForm(formId) {
     if (confirm('Deseja limpar todos os campos?')) {
@@ -257,34 +249,6 @@ function empRenderizarTags() {
     if (hidden) hidden.value = JSON.stringify(_empTagsArray);
 }
 
-function toggleTelWhats(num, ativo) {
-    const telInput   = document.getElementById(`emp-contato${num}-tel`);
-    const whatsGroup = document.getElementById(`emp-contato${num}-whats-group`);
-    const whatsInput = document.getElementById(`emp-contato${num}-whats`);
-    if (ativo) {
-        whatsGroup.style.display = 'none';
-        if (whatsInput) whatsInput.value = telInput?.value || '';
-    } else {
-        whatsGroup.style.display = 'block';
-        if (whatsInput) whatsInput.value = '';
-    }
-}
-
-function toggleTransportadoraVinculada(ativo) {
-    document.getElementById('emp-transportadora-campos').style.display = ativo ? 'block' : 'none';
-}
-
-function adicionarContato2() {
-    document.getElementById('emp-contato2-bloco').style.display = 'block';
-    document.getElementById('btn-add-contato').style.display    = 'none';
-}
-
-function removerContato2() {
-    document.getElementById('emp-contato2-bloco').style.display = 'none';
-    document.getElementById('btn-add-contato').style.display    = 'flex';
-    ['emp-contato2-nome','emp-contato2-cargo','emp-contato2-tel','emp-contato2-whats']
-        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-}
 let _prodEditandoId = null;
 
 // Recalcula margem/lucro líquido a partir dos valores brutos — os campos
@@ -1099,10 +1063,6 @@ function fecharGuia() {
     window.close();
     if (!window.closed) window.history.back();
 }
-
-// Aliases para compatibilidade com HTML existente
-function criarNovoProcesso() { criarNovo(); }
-function fecharGuiaProcesso() { fecharGuia(); }
 
 // ========================================
 // SALVAR — PROPOSTA
@@ -3707,36 +3667,6 @@ function iniciarDocs() {
 // ========================================
 // EMPRESA DE DESTINO
 // ========================================
-
-function toggleEmpresaDestino(modo) {
-    const buscaGroup   = document.getElementById('emp-dest-busca-group');
-    const razaoGroup   = document.getElementById('emp-dest-razao-group');
-    const fantasiaGroup= document.getElementById('emp-dest-fantasia-group');
-    const docGroup     = document.getElementById('emp-dest-doc-group');
-    const btnCad       = document.getElementById('btn-emp-dest-cadastrada');
-    const btnMan       = document.getElementById('btn-emp-dest-manual');
-
-    const manual = modo === 'manual';
-    buscaGroup.style.display    = manual ? 'none' : '';
-    razaoGroup.style.display    = manual ? '' : 'none';
-    fantasiaGroup.style.display = manual ? '' : 'none';
-    docGroup.style.display      = manual ? '' : 'none';
-    btnCad.classList.toggle('ativo', !manual);
-    btnMan.classList.toggle('ativo',  manual);
-
-    if (!manual) {
-        document.getElementById('proc-emp-dest-razao').value    = '';
-        document.getElementById('proc-emp-dest-fantasia').value = '';
-        document.getElementById('proc-emp-dest-doc').value      = '';
-    } else {
-        document.getElementById('proc-emp-dest-busca').value = '';
-        document.getElementById('proc-emp-dest-id').value    = '';
-        // limpa campos automáticos ao trocar para manual
-        ['proc-emp-dest-auto-doc','proc-emp-dest-auto-id'].forEach(id => {
-            const el = document.getElementById(id); if (el) el.value = '';
-        });
-    }
-}
 
 function iniciarAutocompleteEmpresaDestino() {
     const input  = document.getElementById('proc-emp-dest-busca');

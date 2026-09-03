@@ -123,23 +123,6 @@ function toggleChaveEmpresa() {
     icon.style.transform  = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 
-// Preencher credenciais de teste (agora com CPF)
-function preencherCredenciais(cpf, senha) {
-    document.getElementById('cpf').value = cpf;
-    document.getElementById('password').value = senha;
-    
-    // Adicionar efeito visual
-    const inputs = document.querySelectorAll('.input-group input');
-    inputs.forEach(input => {
-        input.style.borderColor = '#22C55E';
-        setTimeout(() => {
-            input.style.borderColor = '';
-        }, 1000);
-    });
-    
-    mostrarNotificacao('Credenciais preenchidas! Clique em "Entrar" para continuar.', 'success');
-}
-
 // Abrir modal de recuperar senha
 function abrirRecuperarSenha(event) {
     event.preventDefault();
