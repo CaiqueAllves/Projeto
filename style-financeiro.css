@@ -586,6 +586,121 @@
     white-space: nowrap;
 }
 
+/* ── Pipeline Financeiro: card do Kanban — expande/recolhe, mesmo esquema
+   de Pedidos/Proposta (ped-kcard/prop-kcard). Classes próprias, não
+   reaproveita .pl-card (Pipeline comercial, só-leitura, continua usando
+   essa classe original em style-pipeline.css). ───────────────────── */
+.pf-kcard {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    box-sizing: border-box;
+}
+.pf-kcard[data-etapa="sem_cobranca"] { border-left-color: #94a3b8; }
+.pf-kcard[data-etapa="aguardando"]   { border-left-color: #eab308; }
+.pf-kcard[data-etapa="vencido"]      { border-left-color: #ef4444; }
+.pf-kcard[data-etapa="recebido"]     { border-left-color: #22c55e; }
+
+.pf-kcard-expandido { min-height: 260px; }
+
+.pf-kcard-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+.pf-kcard-titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.pf-kcard-titulo i { color: #94a3b8; font-size: 11px; }
+
+.pf-kcard-toggle {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: background .15s, color .15s;
+}
+.pf-kcard-toggle:hover { background: #e2e8f0; color: #334155; }
+
+.pf-kcard-empresa-linha {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 11.5px;
+    min-width: 0;
+}
+.pf-kcard-label { color: #94a3b8; font-weight: 600; flex-shrink: 0; }
+.pf-kcard-empresa-valor {
+    color: #334155;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.pf-kcard-valor {
+    font-weight: 700;
+    color: var(--azul);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.pf-kcard-valor i { flex-shrink: 0; }
+.pf-kcard-valor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+.pf-kcard-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: #64748b;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.pf-kcard-meta .pf-kcard-label { font-size: 11.5px; }
+
+.pf-kcard-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    margin-top: auto;
+}
+.pf-kcard-btns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
 /* ── Responsivo ────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .fin-summary { grid-template-columns: 1fr 1fr; padding: 12px; gap: 10px; }

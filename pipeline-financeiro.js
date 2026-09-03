@@ -120,14 +120,27 @@ function pfRenderizar() {
     pfAtualizarMobileTab();
 }
 
+// Cards do Kanban começam recolhidos — mesmo esquema de Pedidos/Proposta
+// (_pedCardsExpandidos/pedToggleCard, _propCardsExpandidos/propToggleCard):
+// recolhido só o essencial (nº, valor, Remetente/Destino, Contas), expandir
+// revela Responsável/Data e as ações.
+let _pfCardsExpandidos = new Set();
+
+function pfToggleCard(id) {
+    if (_pfCardsExpandidos.has(id)) _pfCardsExpandidos.delete(id);
+    else _pfCardsExpandidos.add(id);
+    pfRenderizar();
+}
+
 function _pfRenderCard(p, etapa) {
-    const cliente = p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—';
+    const remetenteRazao = p.remetente?.nome_fantasia || p.remetente?.razao_social || '';
+    const destinoRazao   = p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—';
     const valor   = p.valor_total
         ? `${p.moeda || 'USD'} ${Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
         : null;
     const dataFmt = p.data_pedido
-        ? new Date(p.data_pedido + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        : null;
+        ? new Date(p.data_pedido + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+        : '—';
 
     const contas = (_pfContasPorPedido[p.id] || []).filter(c => c.status !== 'cancelado');
     const hoje   = new Date().toISOString().split('T')[0];
@@ -146,24 +159,39 @@ function _pfRenderCard(p, etapa) {
         }).join('')}</div>`
         : '';
 
+    const expandido = _pfCardsExpandidos.has(p.id);
+
     return `
-        <div class="pl-card" data-etapa="${etapa}" data-id="${p.id}">
-            <div class="pl-card-header">
-                <span class="pl-card-titulo">Pedido ${_pfEscapar(p.numero || '')}</span>
-                ${valor ? `<span class="pl-prob-badge">${valor}</span>` : ''}
+        <div class="pf-kcard ${expandido ? 'pf-kcard-expandido' : ''}" data-etapa="${etapa}" data-id="${p.id}">
+            <div class="pf-kcard-top">
+                <span class="pf-kcard-titulo"><i class="fa-solid fa-bag-shopping"></i> Pedido ${_pfEscapar(p.numero || '')}</span>
+                <button class="pf-kcard-toggle" onclick="pfToggleCard('${p.id}')" title="${expandido ? 'Recolher' : 'Expandir'}">
+                    <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
+                </button>
             </div>
 
-            <div class="pl-card-cliente">
-                <i class="fa-solid fa-building"></i> ${_pfEscapar(cliente)}
+            <div class="pf-kcard-empresa-linha">
+                <span class="pf-kcard-label">Remetente:</span>
+                <span class="pf-kcard-empresa-valor">${remetenteRazao ? _pfEscapar(remetenteRazao) : 'Própria empresa'}</span>
             </div>
+            <div class="pf-kcard-empresa-linha">
+                <span class="pf-kcard-label">Destino:</span>
+                <span class="pf-kcard-empresa-valor">${_pfEscapar(destinoRazao)}</span>
+            </div>
+
+            ${valor ? `<div class="pf-kcard-valor"><i class="fa-solid fa-coins"></i> <span>${valor}</span></div>` : ''}
 
             ${contasHtml}
 
-            <div class="pl-card-footer">
-                <div class="pl-card-meta">
-                    ${dataFmt ? `<span class="pl-card-data"><i class="fa-regular fa-calendar"></i> ${dataFmt}</span>` : '<span></span>'}
-                </div>
-                <div class="pl-card-btns">
+            ${expandido ? `
+            <div class="pf-kcard-meta">
+                <span class="pf-kcard-label">Responsável:</span> <span>${p.criado_por ? _pfEscapar(p.criado_por) : '—'}</span>
+            </div>
+            <div class="pf-kcard-meta">
+                <span class="pf-kcard-label">Data do Pedido:</span> <span>${dataFmt}</span>
+            </div>
+            <div class="pf-kcard-footer">
+                <div class="pf-kcard-btns">
                     ${etapa === 'sem_cobranca'
                         ? (_pfPodeGerarConta(p)
                             ? `<button class="btn-seguir-processo" onclick="pfGerarContaReceber('${p.id}')"><i class="fa-solid fa-sack-dollar"></i> Gerar Conta a Receber</button>`
@@ -173,7 +201,7 @@ function _pfRenderCard(p, etapa) {
                         <i class="fa-solid fa-eye"></i>
                     </button>
                 </div>
-            </div>
+            </div>` : ''}
         </div>`;
 }
 
