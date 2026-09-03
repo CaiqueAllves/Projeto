@@ -149,6 +149,7 @@ function propRenderizar() {
     _propAtualizarContadores();
     if (_propViewMode === 'kanban') _propRenderizarKanban();
     else _propRenderizarTabela();
+    _propAtualizarMobileTab();
 }
 
 function _propAtualizarContadores() {
@@ -171,12 +172,23 @@ function propSwitchView(mode) {
     propRenderizar();
 }
 
+// Aba mobile ativa do Kanban — só existe (visualmente) abaixo de 768px,
+// mesmo padrão de _plTabAtiva/plAtualizarMobileTab em pipeline.js. Sem
+// aplicar isso também no load inicial (não só no clique), as 4 colunas
+// ficavam todas visíveis, espremidas lado a lado, no celular.
+let _propTabAtiva = 'proposta';
+
 function propKanbanSwitchTab(btn) {
     document.querySelectorAll('#propKanbanTabs .kanban-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    const etapa = btn.getAttribute('data-col');
+    _propTabAtiva = btn.getAttribute('data-col');
+    _propAtualizarMobileTab();
+}
+
+function _propAtualizarMobileTab() {
+    if (window.innerWidth > 768) return;
     document.querySelectorAll('#propKanban .pl-col').forEach(c => {
-        c.style.display = c.dataset.etapa === etapa ? '' : 'none';
+        c.style.display = c.dataset.etapa === _propTabAtiva ? '' : 'none';
     });
 }
 
