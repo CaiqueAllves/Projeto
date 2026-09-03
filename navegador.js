@@ -454,9 +454,44 @@ function inicializarMenuColapsavel() {
 // Interceptar cliques em links do menu
 document.addEventListener('click', function(e) {
     const link = e.target.closest('aside a, aside li');
-    
+
     if (link && link.getAttribute('onclick')) {
         // Deixar o onclick padrão funcionar, o menu será atualizado no load da nova página
         console.log('Navegando para nova página...');
     }
+});
+
+// ========================================
+// FECHAR DROPDOWNS DE AUTOCOMPLETE AO CLICAR FORA
+// ========================================
+// Cada campo de busca com sugestões (Vincular a Pedido/Processo/Empresa,
+// NCM, Porto, etc. — espalhados por Contas a Pagar/Receber, Pedidos,
+// Proposta, formulários de Processo/Produto...) abre sua própria caixa de
+// resultados, mas nenhum tinha um fechamento genérico: clicar em outro
+// campo do formulário deixava a lista antiga aberta, sobrepondo o resto
+// da tela. Em vez de corrigir campo por campo (são dezenas, em vários
+// arquivos), um único listener aqui — carregado em toda página autenticada
+// — cobre todos de uma vez, porque o HTML sempre segue 1 de 3 padrões de
+// classe pra a caixa de resultados: .pl-autocomplete, .autocomplete-list
+// ou .autocomplete-dropdown.
+//
+// mousedown (não click) de propósito: dispara antes do foco mudar de campo
+// e antes do click num item da lista — clicar dentro da própria caixa (pra
+// selecionar um item) não fecha nada aqui, senão o clique no item nunca
+// teria efeito (a lista sumiria antes do próprio onclick do item rodar).
+document.addEventListener('mousedown', function(e) {
+    const SELETOR_CAIXA = '.pl-autocomplete, .autocomplete-list, .autocomplete-dropdown';
+    if (e.target.closest(SELETOR_CAIXA)) return;
+    document.querySelectorAll(SELETOR_CAIXA).forEach(caixa => {
+        caixa.innerHTML = '';
+        caixa.classList.remove('aberta');
+        // Remove (não "= 'none'"): cada widget usa um mecanismo de exibição
+        // diferente — .pl-autocomplete depende de :empty no CSS, outros usam
+        // a classe .aberta, outros põem style.display direto no JS. Fixar
+        // "none" aqui ficaria "grudado" (estilo inline sempre vence a classe)
+        // e quebraria widgets que só re-abrem via classList.add('aberta'),
+        // sem nunca tocar em style.display de novo. Remover a propriedade
+        // deixa o CSS decidir de novo, sem essa pegadinha.
+        caixa.style.removeProperty('display');
+    });
 });
