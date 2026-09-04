@@ -1079,34 +1079,50 @@ async function salvarProdutosEmLote(produtosArray, tamanhoBloco = 40) {
     return { sucesso: totalSucesso > 0, totalSucesso, totalFalha, falhas };
 }
 
-// Atualiza só preco_venda ou preco_custo (+ moeda, se informada) de produtos
-// JÁ CADASTRADOS, localizados pelo SKU — planilha à parte da de cadastro
-// completo (ver produtos.js: processarUploadPreco). SKU é a referência
-// porque já é único por empresa; HS Code nessa planilha é só exibição.
+// Atualiza preco_venda ou preco_custo (+ moeda) de produtos JÁ CADASTRADOS,
+// localizados pelo SKU — planilha à parte da de cadastro completo (ver
+// produtos.js: processarUploadPreco). SKU é a referência porque já é único
+// por empresa; HS Code nessa planilha é só exibição.
+//
+// Cada linha tem um preço PRINCIPAL (atualiza preco_venda/preco_custo +
+// moeda direto no produto) e até 3 EXTRAS (atualizam/criam uma entrada em
+// precos_alternativos, casando pela própria Moeda — não pela posição da
+// coluna, pra não depender de bater a ordem entre planilha e cadastro).
 async function atualizarPrecosEmLote(campoPreco, linhas) {
     const usuario = obterUsuarioLogado();
     if (!usuario) return { sucesso: false, totalSucesso: 0, totalFalha: linhas.length, skusNaoEncontrados: linhas.map(l => l.sku) };
 
     const { data: produtos } = await supabaseClient
         .from('produtos')
-        .select('id, sku')
+        .select('id, sku, precos_alternativos')
         .eq('empresa_id', usuario.empresa_id)
         .in('sku', linhas.map(l => l.sku));
 
-    const idPorSku = {};
-    (produtos || []).forEach(p => { idPorSku[p.sku] = p.id; });
+    const produtoPorSku = {};
+    (produtos || []).forEach(p => { produtoPorSku[p.sku] = p; });
 
     let totalSucesso = 0;
     const skusNaoEncontrados = [];
 
     for (const linha of linhas) {
-        const id = idPorSku[linha.sku];
-        if (!id) { skusNaoEncontrados.push(linha.sku); continue; }
+        const produto = produtoPorSku[linha.sku];
+        if (!produto) { skusNaoEncontrados.push(linha.sku); continue; }
 
-        const payload = { [campoPreco]: linha.preco, atualizado_em: new Date().toISOString() };
-        if (linha.moeda) payload.moeda = linha.moeda;
+        const payload = { [campoPreco]: linha.principal.preco, atualizado_em: new Date().toISOString() };
+        if (linha.principal.moeda) payload.moeda = linha.principal.moeda;
 
-        const { error } = await supabaseClient.from('produtos').update(payload).eq('id', id);
+        if (linha.extras?.length) {
+            const precosAlternativos = Array.isArray(produto.precos_alternativos) ? [...produto.precos_alternativos] : [];
+            linha.extras.forEach(extra => {
+                if (!extra.moeda) return; // sem moeda não dá pra casar nem criar a linha
+                const idx = precosAlternativos.findIndex(p => (p.moeda || '').toUpperCase() === extra.moeda);
+                if (idx >= 0) precosAlternativos[idx] = { ...precosAlternativos[idx], [campoPreco]: extra.preco };
+                else precosAlternativos.push({ moeda: extra.moeda, [campoPreco]: extra.preco });
+            });
+            payload.precos_alternativos = precosAlternativos;
+        }
+
+        const { error } = await supabaseClient.from('produtos').update(payload).eq('id', produto.id);
         if (error) skusNaoEncontrados.push(linha.sku);
         else totalSucesso++;
     }

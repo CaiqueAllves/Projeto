@@ -141,6 +141,9 @@ function fecharModalAtualizarPrecos() {
     document.getElementById('modalAtualizarPrecos').classList.remove('active');
 }
 
+// Colunas 1 (Moeda/Preço) atualizam o preço PRINCIPAL do produto; 2 a 4 são
+// opcionais e atualizam (ou criam) uma linha em "Preços em outras Moedas"
+// casando pela Moeda — mesmo teto de 4 já usado nessa seção do formulário.
 async function baixarModeloPrecoExcel(tipo) {
     const cfg = PROD_MODELO_PRECO[tipo];
     if (!cfg) return;
@@ -148,10 +151,10 @@ async function baixarModeloPrecoExcel(tipo) {
         await carregarLibSobDemanda('xlsx');
     } catch (e) { notify('Não foi possível carregar o gerador de planilha. Tente novamente.', 'error'); return; }
 
-    const header  = ['SKU', 'HS Code', cfg.coluna, 'Moeda'];
-    const exemplo = ['PROD001', '6109.10.00 (só conferência — não usado pra localizar o produto)', '35,00', 'BRL'];
+    const header  = ['SKU', 'HS Code', 'Moeda', 'Preço', 'Moeda 2', 'Preço 2', 'Moeda 3', 'Preço 3', 'Moeda 4', 'Preço 4'];
+    const exemplo = ['PROD001', '6109.10.00 (só conferência — não usado pra localizar o produto)', 'BRL', '35,00', 'USD', '7,00', '', '', '', ''];
     const ws = XLSX.utils.aoa_to_sheet([header, exemplo]);
-    ws['!cols'] = header.map(h => ({ wch: Math.max(h.length, 14) }));
+    ws['!cols'] = header.map(h => ({ wch: Math.max(h.length, 12) }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, cfg.titulo);
@@ -199,19 +202,31 @@ function _prodUploadLerExcelPreco(arquivo, cfg) {
                 const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
                 if (!rows.length) return resolve([]);
 
-                const header = rows[0].map(h => _prodUploadNorm(h));
-                const idxSku   = header.findIndex(h => h === 'sku' || h === 'codigo sku' || h === 'codigo');
-                const idxPreco = header.findIndex(h => h.includes('preco'));
-                const idxMoeda = header.findIndex(h => h === 'moeda');
-                if (idxSku === -1 || idxPreco === -1) return resolve([]);
+                const header  = rows[0].map(h => _prodUploadNorm(h));
+                const idxSku  = header.findIndex(h => h === 'sku' || h === 'codigo sku' || h === 'codigo');
+                if (idxSku === -1) return resolve([]);
+
+                // Par 1 = preço principal do produto; pares 2 a 4 = "Preços
+                // em outras Moedas" (casados pela Moeda, não pela posição).
+                const pares = [1, 2, 3, 4].map(n => ({
+                    idxMoeda: header.findIndex(h => h === (n === 1 ? 'moeda' : `moeda ${n}`)),
+                    idxPreco: header.findIndex(h => h === (n === 1 ? 'preco' : `preco ${n}`)),
+                }));
+                if (pares[0].idxPreco === -1) return resolve([]);
 
                 const linhas = [];
                 for (let i = 1; i < rows.length; i++) {
-                    const sku   = String(rows[i][idxSku] || '').trim();
-                    const preco = _prodUploadParaNumero(rows[i][idxPreco]);
-                    if (!sku || preco == null) continue;
-                    const moeda = idxMoeda !== -1 ? String(rows[i][idxMoeda] || '').trim().toUpperCase() : '';
-                    linhas.push({ sku, preco, moeda: moeda || null });
+                    const sku = String(rows[i][idxSku] || '').trim();
+                    if (!sku) continue;
+
+                    const precos = pares.map(p => {
+                        const preco = p.idxPreco !== -1 ? _prodUploadParaNumero(rows[i][p.idxPreco]) : null;
+                        const moeda = p.idxMoeda !== -1 ? String(rows[i][p.idxMoeda] || '').trim().toUpperCase() : '';
+                        return (preco != null) ? { moeda: moeda || null, preco } : null;
+                    });
+
+                    if (!precos[0]) continue; // preço principal é obrigatório, os outros 3 são opcionais
+                    linhas.push({ sku, principal: precos[0], extras: precos.slice(1).filter(Boolean) });
                 }
                 resolve(linhas);
             } catch (err) { reject(err); }

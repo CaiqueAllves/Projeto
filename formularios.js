@@ -292,18 +292,23 @@ function _prodColetarIdiomas() {
     return idiomas;
 }
 
-// Preços em outras moedas — lista solta de (Moeda, Preço), sem relação com
-// a quantidade de idiomas cadastrados: o mesmo produto pode ter preços em
-// vários mercados/moedas de exportação, o que é uma decisão comercial
-// independente do idioma do texto (nome/descrição).
+// Preços em outras moedas — lista de (Moeda, Preço de Venda, Preço de
+// Compra), limitada a 4 linhas (mesmo teto já usado pelos idiomas do
+// produto — ver prodAdicionarPrecoExtra) pra poder virar colunas fixas
+// na planilha de atualização em lote (Moeda 2/Preço 2 ... Moeda 4/Preço 4).
 function _prodColetarPrecos() {
     const precos = [];
     document.querySelectorAll('#prod-precos-extra-container > div[id^="prod-preco-row-"]').forEach(row => {
-        const moeda   = row.querySelector('select[name^="preco_moeda_"]')?.value || '';
-        const valorEl = row.querySelector('input[name^="preco_valor_"]');
-        const valor   = _prodValorMonetario(valorEl);
-        if (!moeda || !valor) return; // linha incompleta, ignora
-        precos.push({ moeda, preco_venda: valor });
+        const moeda      = row.querySelector('select[name^="preco_moeda_"]')?.value || '';
+        const valorEl    = row.querySelector('input[name^="preco_valor_"]');
+        const custoEl    = row.querySelector('input[name^="preco_custo_"]');
+        const valor      = _prodValorMonetario(valorEl);
+        const custo      = _prodValorMonetario(custoEl);
+        if (!moeda || (!valor && !custo)) return; // linha incompleta, ignora
+        const item = { moeda };
+        if (valor) item.preco_venda = valor;
+        if (custo) item.preco_custo = custo;
+        precos.push(item);
     });
     return precos;
 }
@@ -515,7 +520,7 @@ async function _prodPreencherEdicao(dados) {
         if (descEl) descEl.value = item.descricao || '';
     });
 
-    // Preços em outras moedas — recria as linhas já salvas (sem limite fixo)
+    // Preços em outras moedas — recria as linhas já salvas (até 4)
     const precos = dados.precos_alternativos || [];
     for (const item of precos) {
         await prodAdicionarPrecoExtra();
@@ -524,8 +529,10 @@ async function _prodPreencherEdicao(dados) {
         if (!row) continue;
         const selectEl = row.querySelector('select[name^="preco_moeda_"]');
         const valorEl  = row.querySelector('input[name^="preco_valor_"]');
+        const custoEl  = row.querySelector('input[name^="preco_custo_"]');
         if (selectEl) selectEl.value = item.moeda || '';
-        if (valorEl)  valorEl.value  = _prodFormatarMonetario(item.preco_venda);
+        if (valorEl)  valorEl.value  = item.preco_venda ? _prodFormatarMonetario(item.preco_venda) : '';
+        if (custoEl)  custoEl.value  = item.preco_custo ? _prodFormatarMonetario(item.preco_custo) : '';
     }
 
     // Embalagens — array pronto, só re-renderiza a tabela
@@ -4422,13 +4429,19 @@ function _prodIdiomaExtraAtualizarBotao() {
 }
 
 // ========================================
-// PRODUTO — PREÇOS EM OUTRAS MOEDAS (lista solta, sem limite fixo — ver
+// PRODUTO — PREÇOS EM OUTRAS MOEDAS (Moeda + Venda + Compra, limitado a 4
+// linhas — mesmo teto dos idiomas — pra virar colunas fixas "Moeda 2/
+// Preço 2"..."Moeda 4/Preço 4" na planilha de atualização em lote; ver
 // _prodColetarPrecos acima e project_produto_precos_multiplos na memória)
 // ========================================
 
+let _prodPrecoExtraCount = 0;
+
 async function prodAdicionarPrecoExtra() {
+    if (_prodPrecoExtraCount >= 4) return;
     const container = document.getElementById('prod-precos-extra-container');
     if (!container) return;
+    _prodPrecoExtraCount++;
     const id = Date.now() + Math.floor(Math.random() * 1000);
 
     const moedas  = await _carregarMoedas();
@@ -4436,7 +4449,7 @@ async function prodAdicionarPrecoExtra() {
 
     const row = document.createElement('div');
     row.id = `prod-preco-row-${id}`;
-    row.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr auto; gap:16px; align-items:end;';
+    row.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:16px; align-items:end;';
     row.innerHTML = `
         <div class="form-group" style="margin-bottom:0;">
             <label>Moeda</label>
@@ -4449,17 +4462,28 @@ async function prodAdicionarPrecoExtra() {
             <label>Preço de Venda</label>
             <input type="text" inputmode="decimal" name="preco_valor_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this)">
         </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Preço de Compra</label>
+            <input type="text" inputmode="decimal" name="preco_custo_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this)">
+        </div>
         <button type="button" onclick="prodRemoverPrecoExtra('${id}')"
             style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:15px;padding:2px 6px;margin-bottom:10px;"
             title="Remover preço">
             <i class="fa-solid fa-xmark"></i>
         </button>`;
     container.appendChild(row);
+    _prodPrecoExtraAtualizarBotao();
 }
 
 function prodRemoverPrecoExtra(id) {
     const row = document.getElementById(`prod-preco-row-${id}`);
-    if (row) row.remove();
+    if (row) { row.remove(); _prodPrecoExtraCount--; }
+    _prodPrecoExtraAtualizarBotao();
+}
+
+function _prodPrecoExtraAtualizarBotao() {
+    const btn = document.getElementById('btn-add-preco-prod');
+    if (btn) btn.style.display = _prodPrecoExtraCount >= 4 ? 'none' : '';
 }
 
 // ========================================
