@@ -140,15 +140,21 @@
                 Pra atualizar só o preço de produtos já cadastrados (sem reenviar tudo de novo), use um modelo à parte — a referência é o SKU, que já é único por produto.
             </p>
             <div class="modelo-opcoes">
-                <div class="modelo-opcao modelo-excel" onclick="baixarModeloPrecoExcel('venda')">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <strong>Preço de Venda (.xlsx)</strong>
-                    <span>Reenvie em "Atualizar Preços"</span>
+                <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+                    <div class="modelo-opcao modelo-excel" onclick="baixarModeloPrecoExcel('venda')">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <strong>Preço de Venda (.xlsx)</strong>
+                        <span>Reenvie em "Atualizar Preços"</span>
+                    </div>
+                    <a href="exemplos/exemplo-preco-venda.csv" download class="modelo-exemplo-link">Ver exemplo preenchido</a>
                 </div>
-                <div class="modelo-opcao modelo-excel" onclick="baixarModeloPrecoExcel('compra')">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <strong>Preço de Compra (.xlsx)</strong>
-                    <span>Reenvie em "Atualizar Preços"</span>
+                <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+                    <div class="modelo-opcao modelo-excel" onclick="baixarModeloPrecoExcel('compra')">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <strong>Preço de Compra (.xlsx)</strong>
+                        <span>Reenvie em "Atualizar Preços"</span>
+                    </div>
+                    <a href="exemplos/exemplo-preco-compra.csv" download class="modelo-exemplo-link">Ver exemplo preenchido</a>
                 </div>
             </div>
         </div>

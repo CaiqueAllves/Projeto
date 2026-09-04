@@ -177,11 +177,14 @@ async function processarUploadPreco(input, tipo) {
             return;
         }
         const res = await window.supabaseAPI.atualizarPrecosEmLote(cfg.campo, linhas);
+        const avisoMoedas = res.moedasNaoReconhecidas?.length
+            ? ` Moeda(s) não reconhecida(s), salva(s) do jeito que veio na planilha (confira se não é só um apelido — ex: use "Euro" ou "EUR", não "Moeda Europeia"): ${res.moedasNaoReconhecidas.join(', ')}.`
+            : '';
         if (res.totalSucesso) {
-            notify(`${res.totalSucesso} produto${res.totalSucesso !== 1 ? 's' : ''} atualizado${res.totalSucesso !== 1 ? 's' : ''}.${res.totalFalha ? ` ${res.totalFalha} SKU(s) não encontrado(s): ${res.skusNaoEncontrados.join(', ')}.` : ''}`, res.totalFalha ? 'aviso' : 'success');
+            notify(`${res.totalSucesso} produto${res.totalSucesso !== 1 ? 's' : ''} atualizado${res.totalSucesso !== 1 ? 's' : ''}.${res.totalFalha ? ` ${res.totalFalha} SKU(s) não encontrado(s): ${res.skusNaoEncontrados.join(', ')}.` : ''}${avisoMoedas}`, (res.totalFalha || avisoMoedas) ? 'aviso' : 'success');
             carregarProdutos();
         } else {
-            notify(`Nenhum produto atualizado — SKU(s) não encontrado(s): ${res.skusNaoEncontrados.join(', ') || '—'}.`, 'error');
+            notify(`Nenhum produto atualizado — SKU(s) não encontrado(s): ${res.skusNaoEncontrados.join(', ') || '—'}.${avisoMoedas}`, 'error');
         }
     } catch (e) {
         console.error('[Atualizar Preços] erro:', e);

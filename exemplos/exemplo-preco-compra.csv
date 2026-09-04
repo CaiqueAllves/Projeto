@@ -1,0 +1,5 @@
+,TABELA PRECO DE COMPRA MARPEX,,,,,,,,,,,,,,,
+,SKU,HS CODE,MOEDA,PRECO,MOEDA 2,PRECO 2,MOEDA 3,PRECO 3,MOEDA 4,PRECO 4,,SKU,código interno de identificação,,,igual cadastro
+EX:,PRODTEST,610910,EURO,15,REAL,20,PESO MEXICANO,25,DOLAR AUSTRALIANO,30,,HS CODE,codigo de classificacao fiscal do produto,,,sem pontuacao
+,,,,,,,,,,,,MOEDA,descricao da moeda de compra,,,descricao
+,,,,,,,,,,,,PRECO,preco de venda relacionado a moeda,,,sem pontuacao

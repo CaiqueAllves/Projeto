@@ -1088,36 +1088,66 @@ async function salvarProdutosEmLote(produtosArray, tamanhoBloco = 40) {
 // moeda direto no produto) e até 3 EXTRAS (atualizam/criam uma entrada em
 // precos_alternativos, casando pela própria Moeda — não pela posição da
 // coluna, pra não depender de bater a ordem entre planilha e cadastro).
+// Normaliza texto de moeda (maiúsculo, sem acento, pontuação vira espaço) —
+// usado tanto pro que a planilha trouxe quanto pra descrição de apoio_moedas.
+function _normalizarTextoMoeda(s) {
+    return String(s || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9]+/g, ' ').trim();
+}
+
+// A planilha aceita o código de 3 letras (USD, BRL...) OU o nome da moeda
+// por extenso (Euro, Real, Dólar Australiano...) — bate primeiro pela sigla
+// exata, depois pela descrição exata, depois por prefixo da descrição (ex:
+// "Euro" bate com "EURO/COM.EUROPEIA"). Sem bater em nada, mantém o texto
+// digitado do jeito que veio (maiúsculo) e marca como não reconhecida, pra
+// avisar o usuário em vez de falhar silenciosamente.
+function _resolverSiglaMoeda(moedaDigitada, moedas) {
+    if (!moedaDigitada) return null;
+    const alvo = _normalizarTextoMoeda(moedaDigitada);
+
+    let m = moedas.find(m => _normalizarTextoMoeda(m.sigla) === alvo);
+    if (!m) m = moedas.find(m => _normalizarTextoMoeda(m.descricao) === alvo);
+    if (!m) m = moedas.find(m => _normalizarTextoMoeda(m.descricao).startsWith(alvo));
+
+    return m ? { sigla: m.sigla, reconhecida: true } : { sigla: alvo, reconhecida: false };
+}
+
 async function atualizarPrecosEmLote(campoPreco, linhas) {
     const usuario = obterUsuarioLogado();
     if (!usuario) return { sucesso: false, totalSucesso: 0, totalFalha: linhas.length, skusNaoEncontrados: linhas.map(l => l.sku) };
 
-    const { data: produtos } = await supabaseClient
-        .from('produtos')
-        .select('id, sku, precos_alternativos')
-        .eq('empresa_id', usuario.empresa_id)
-        .in('sku', linhas.map(l => l.sku));
+    const [{ data: produtos }, { data: moedas }] = await Promise.all([
+        supabaseClient.from('produtos').select('id, sku, precos_alternativos')
+            .eq('empresa_id', usuario.empresa_id).in('sku', linhas.map(l => l.sku)),
+        supabaseClient.from('apoio_moedas').select('sigla, descricao'),
+    ]);
 
     const produtoPorSku = {};
     (produtos || []).forEach(p => { produtoPorSku[p.sku] = p; });
 
     let totalSucesso = 0;
     const skusNaoEncontrados = [];
+    const moedasNaoReconhecidas = new Set();
 
     for (const linha of linhas) {
         const produto = produtoPorSku[linha.sku];
         if (!produto) { skusNaoEncontrados.push(linha.sku); continue; }
 
         const payload = { [campoPreco]: linha.principal.preco, atualizado_em: new Date().toISOString() };
-        if (linha.principal.moeda) payload.moeda = linha.principal.moeda;
+        if (linha.principal.moeda) {
+            const resolvida = _resolverSiglaMoeda(linha.principal.moeda, moedas || []);
+            payload.moeda = resolvida.sigla;
+            if (!resolvida.reconhecida) moedasNaoReconhecidas.add(linha.principal.moeda);
+        }
 
         if (linha.extras?.length) {
             const precosAlternativos = Array.isArray(produto.precos_alternativos) ? [...produto.precos_alternativos] : [];
             linha.extras.forEach(extra => {
                 if (!extra.moeda) return; // sem moeda não dá pra casar nem criar a linha
-                const idx = precosAlternativos.findIndex(p => (p.moeda || '').toUpperCase() === extra.moeda);
+                const resolvida = _resolverSiglaMoeda(extra.moeda, moedas || []);
+                if (!resolvida.reconhecida) moedasNaoReconhecidas.add(extra.moeda);
+                const idx = precosAlternativos.findIndex(p => (p.moeda || '').toUpperCase() === resolvida.sigla);
                 if (idx >= 0) precosAlternativos[idx] = { ...precosAlternativos[idx], [campoPreco]: extra.preco };
-                else precosAlternativos.push({ moeda: extra.moeda, [campoPreco]: extra.preco });
+                else precosAlternativos.push({ moeda: resolvida.sigla, [campoPreco]: extra.preco });
             });
             payload.precos_alternativos = precosAlternativos;
         }
@@ -1127,7 +1157,10 @@ async function atualizarPrecosEmLote(campoPreco, linhas) {
         else totalSucesso++;
     }
 
-    return { sucesso: totalSucesso > 0, totalSucesso, totalFalha: linhas.length - totalSucesso, skusNaoEncontrados };
+    return {
+        sucesso: totalSucesso > 0, totalSucesso, totalFalha: linhas.length - totalSucesso,
+        skusNaoEncontrados, moedasNaoReconhecidas: [...moedasNaoReconhecidas],
+    };
 }
 
 async function editarProduto(id, dados) {
