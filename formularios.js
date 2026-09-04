@@ -520,7 +520,7 @@ async function _prodPreencherEdicao(dados) {
         if (descEl) descEl.value = item.descricao || '';
     });
 
-    // Preços em outras moedas — recria as linhas já salvas (até 4)
+    // Preços em outras moedas — recria as linhas já salvas (até 3 extras)
     const precos = dados.precos_alternativos || [];
     for (const item of precos) {
         await prodAdicionarPrecoExtra();
@@ -4429,16 +4429,18 @@ function _prodIdiomaExtraAtualizarBotao() {
 }
 
 // ========================================
-// PRODUTO — PREÇOS EM OUTRAS MOEDAS (Moeda + Venda + Compra, limitado a 4
-// linhas — mesmo teto dos idiomas — pra virar colunas fixas "Moeda 2/
-// Preço 2"..."Moeda 4/Preço 4" na planilha de atualização em lote; ver
-// _prodColetarPrecos acima e project_produto_precos_multiplos na memória)
+// PRODUTO — PREÇOS EM OUTRAS MOEDAS (Moeda + Venda + Compra, limitado a 3
+// linhas extras — o Preço de Venda/Moeda principal lá em cima já conta
+// como a 1ª moeda, então 1 principal + 3 extras = 4 moedas no total,
+// batendo com as 4 colunas de moeda da planilha de atualização em lote
+// (Moeda/Preço + Moeda 2/3/4); ver _prodColetarPrecos acima e
+// project_produto_precos_multiplos na memória)
 // ========================================
 
 let _prodPrecoExtraCount = 0;
 
 async function prodAdicionarPrecoExtra() {
-    if (_prodPrecoExtraCount >= 4) return;
+    if (_prodPrecoExtraCount >= 3) return;
     const container = document.getElementById('prod-precos-extra-container');
     if (!container) return;
     _prodPrecoExtraCount++;
@@ -4483,7 +4485,7 @@ function prodRemoverPrecoExtra(id) {
 
 function _prodPrecoExtraAtualizarBotao() {
     const btn = document.getElementById('btn-add-preco-prod');
-    if (btn) btn.style.display = _prodPrecoExtraCount >= 4 ? 'none' : '';
+    if (btn) btn.style.display = _prodPrecoExtraCount >= 3 ? 'none' : '';
 }
 
 // ========================================
