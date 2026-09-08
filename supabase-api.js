@@ -972,8 +972,10 @@ async function buscarProdutos(apenasAtivos = false) {
 }
 
 // Payload compartilhado entre criar/editar — mapeia 1:1 com as colunas reais
-// de produtos (ver database/database-produtos-completo.sql). idiomas/embalagens/
+// de produtos (ver database/database-produtos-completo.sql). idiomas/
 // documentos chegam prontos como array (montados em _coletarDadosProduto()).
+// Embalagens NÃO entra aqui — tem tabela própria, ver salvarEmbalagensProduto
+// (database-produto-embalagens.sql).
 function _prodMontarPayload(dados) {
     return {
         sku:                     dados.sku,
@@ -1018,9 +1020,73 @@ function _prodMontarPayload(dados) {
         obs_logistica:           dados.obs_logistica || null,
         nomes_idiomas:           dados.nomes_idiomas || [],
         precos_alternativos:     dados.precos_alternativos || [],
-        embalagens:              dados.embalagens || [],
         documentos:              dados.documentos || [],
     };
+}
+
+// ========================================
+// PRODUTO — EMBALAGENS (tabela própria produto_embalagens)
+// ========================================
+// Antes viviam soltas dentro de produtos.embalagens (JSONB) — sem produto_id
+// de verdade não dava pra filtrar/agrupar por relatório (ver
+// database-produto-embalagens.sql). CRUD é "substituir tudo": a tela sempre
+// manda a lista inteira de embalagens do produto de uma vez (mesmo
+// comportamento que já existia com o JSONB) — mais simples que fazer diff
+// de linha adicionada/editada/removida, e o volume por produto é pequeno.
+
+async function buscarEmbalagensProduto(produtoId) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('produto_embalagens')
+            .select('*')
+            .eq('produto_id', produtoId)
+            .order('criado_em');
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message, data: [] };
+    }
+}
+
+async function salvarEmbalagensProduto(produtoId, linhas) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+
+        const { error: errDel } = await supabaseClient
+            .from('produto_embalagens')
+            .delete()
+            .eq('produto_id', produtoId);
+        if (errDel) return { sucesso: false, mensagem: errDel.message };
+
+        if (!linhas?.length) return { sucesso: true };
+
+        const rows = linhas.map(l => ({
+            produto_id: produtoId,
+            empresa_id: usuario.empresa_id,
+            nome:                          l.nome || null,
+            tipo_embalagem:                l.tipo_embalagem || null,
+            tipo_embalagem_codigo:         l.tipo_embalagem_codigo || null,
+            tipo_acondicionamento:         l.tipo_acondicionamento || null,
+            tipo_acondicionamento_numero:  l.tipo_acondicionamento_numero || null,
+            acondicionamento_descricao:    l.acondicionamento_descricao || null,
+            modal_transporte:              l.modal_transporte || null,
+            comprimento:                   l.comprimento ?? null,
+            largura:                       l.largura ?? null,
+            altura:                        l.altura ?? null,
+            peso_bruto:                    l.peso_bruto ?? null,
+            peso_liquido:                  l.peso_liquido ?? null,
+            empilhamento_maximo:           l.empilhamento_maximo ?? null,
+            observacoes:                   l.observacoes || null,
+            medidas_caixa:                 l.medidas_caixa || [],
+        }));
+
+        const { error } = await supabaseClient.from('produto_embalagens').insert(rows);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
 }
 
 async function salvarProduto(dados) {
@@ -1748,6 +1814,8 @@ window.supabaseAPI = {
     salvarProduto,
     salvarProdutosEmLote,
     atualizarPrecosEmLote,
+    buscarEmbalagensProduto,
+    salvarEmbalagensProduto,
     editarProduto,
     excluirProduto,
     atualizarTenantEmpresa,

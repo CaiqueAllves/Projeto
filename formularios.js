@@ -380,7 +380,6 @@ function _coletarDadosProduto() {
         obs_logistica:          g('prod-obs-logistica'),
         nomes_idiomas:          _prodColetarIdiomas(),
         precos_alternativos:    _prodColetarPrecos(),
-        embalagens:             _prodEmbalagens,
         documentos:             _prodColetarDocumentos(),
     };
 }
@@ -410,6 +409,15 @@ async function salvarProduto(e) {
     }
 
     if (!jaExistia && res.data?.id) _prodEditandoId = res.data.id;
+
+    // Embalagens têm tabela própria — só dá pra gravar depois de ter o
+    // produto_id (na criação, só existe depois do insert acima).
+    const resEmb = await window.supabaseAPI.salvarEmbalagensProduto(_prodEditandoId, _prodEmbalagens.map(_prodEmbalagemParaLinhaDb));
+    if (!resEmb.sucesso) {
+        mostrarNotificacao('Produto salvo, mas houve erro ao salvar as embalagens: ' + (resEmb.mensagem || 'Tente novamente.'), 'warning');
+        return;
+    }
+
     mostrarNotificacao(jaExistia ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!', 'sucesso');
 }
 
@@ -535,8 +543,9 @@ async function _prodPreencherEdicao(dados) {
         if (custoEl)  custoEl.value  = item.preco_custo ? _prodFormatarMonetario(item.preco_custo) : '';
     }
 
-    // Embalagens — array pronto, só re-renderiza a tabela
-    _prodEmbalagens = dados.embalagens || [];
+    // Embalagens — tabela própria (produto_embalagens), busca à parte pelo produto_id
+    const resEmbalagens = await window.supabaseAPI.buscarEmbalagensProduto(dados.id);
+    _prodEmbalagens = (resEmbalagens.sucesso ? resEmbalagens.data : []).map(_prodEmbalagemDeLinhaDb);
     if (typeof _prodRenderTabelaEmbalagens === 'function') _prodRenderTabelaEmbalagens();
 
     // Documentos (só os do tipo link — arquivos locais nunca foram persistidos)
@@ -4569,6 +4578,59 @@ const _PROD_EMBALAGEM_TRANSPORTE_LABELS = {
     maritimo: 'Marítimo',
     rodoviario: 'Rodoviário'
 };
+
+// Embalagens têm tabela própria (produto_embalagens, ver
+// database-produto-embalagens.sql) com produto_id como chave — sem isso não
+// dá pra filtrar/agrupar por relatório. Só a fronteira de persistência muda;
+// a lista em memória (_prodEmbalagens) continua no formato interno de sempre
+// (chave = id do campo do formulário) pra não precisar reescrever toda a UI
+// de criar/editar/tabela — essas 2 funções fazem a conversão.
+
+function _prodEmbalagemParaLinhaDb(e) {
+    const num = v => { const n = parseFloat(String(v || '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+    return {
+        nome:                         e['prod-embalagem-nome'] || null,
+        tipo_embalagem:               e['prod-embalagem'] || null,
+        tipo_embalagem_codigo:        e['prod-embalagem-codigo'] || null,
+        tipo_acondicionamento:        e['prod-acondicionamento'] || null,
+        tipo_acondicionamento_numero: e['prod-acondicionamento-numero'] || null,
+        acondicionamento_descricao:   e['prod-acond-descricao'] || null,
+        modal_transporte:             e['prod-embalagem-transporte'] || null,
+        comprimento:                  num(e['prod-comprimento']),
+        largura:                      num(e['prod-largura']),
+        altura:                       num(e['prod-altura']),
+        peso_bruto:                   num(e['prod-peso-bruto']),
+        peso_liquido:                 num(e['prod-peso-liquido']),
+        empilhamento_maximo:          e['prod-empilhamento'] ? parseInt(e['prod-empilhamento'], 10) : null,
+        observacoes:                  e['prod-obs-logistica'] || null,
+        medidas_caixa:                e.medidas_caixa || [],
+    };
+}
+
+// "id" aqui é só uma chave local pra editar/excluir dentro da lista da tela
+// (mesma convenção que Date.now() já usava) — não é o UUID real da linha no
+// banco, que é regerado a cada salvamento (o CRUD é "substitui tudo").
+function _prodEmbalagemDeLinhaDb(row, indiceLocal) {
+    const fmt = v => (v === null || v === undefined) ? '' : String(v).replace('.', ',');
+    return {
+        id: Date.now() + indiceLocal,
+        'prod-embalagem-nome':          row.nome || '',
+        'prod-embalagem':               row.tipo_embalagem || '',
+        'prod-embalagem-codigo':        row.tipo_embalagem_codigo || '',
+        'prod-acondicionamento':        row.tipo_acondicionamento || '',
+        'prod-acondicionamento-numero': row.tipo_acondicionamento_numero || '',
+        'prod-acond-descricao':         row.acondicionamento_descricao || '',
+        'prod-embalagem-transporte':    row.modal_transporte || '',
+        'prod-comprimento':             fmt(row.comprimento),
+        'prod-largura':                 fmt(row.largura),
+        'prod-altura':                  fmt(row.altura),
+        'prod-peso-bruto':              fmt(row.peso_bruto),
+        'prod-peso-liquido':            fmt(row.peso_liquido),
+        'prod-empilhamento':            row.empilhamento_maximo ?? '',
+        'prod-obs-logistica':           row.observacoes || '',
+        medidas_caixa:                  row.medidas_caixa || [],
+    };
+}
 
 function _prodEscapeHtml(valor) {
     if (valor === null || valor === undefined) return '';
