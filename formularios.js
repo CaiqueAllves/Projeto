@@ -4232,7 +4232,7 @@ function iniciarAutocompleteNcmProduto() {
     if (!input || !lista) return;
 
     function limparCamposNcm() {
-        ['prod-ncm-descricao', 'prod-ncm-descricao-completa', 'prod-ncm-utrib', 'prod-hscode'].forEach(id => {
+        ['prod-ncm-descricao', 'prod-ncm-descricao-completa', 'prod-ncm-utrib', 'prod-hscode', 'prod-naladi-nesh'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -4248,15 +4248,25 @@ function iniciarAutocompleteNcmProduto() {
         return digitos.match(/.{1,2}/g).join('.');
     }
 
+    // NALADI/NESH usa só os 5 primeiros dígitos do NCM (posição + 1º dígito
+    // da subposição Mercosul), mesmo padrão de agrupamento em pares do HS Code.
+    function _derivarNaladiNeshDoNcm(ncmValor) {
+        const digitos = String(ncmValor || '').replace(/\D/g, '').slice(0, 5);
+        if (!digitos) return '';
+        return digitos.match(/.{1,2}/g).join('.');
+    }
+
     function preencherCamposNcm(item) {
         const desc    = document.getElementById('prod-ncm-descricao');
         const full    = document.getElementById('prod-ncm-descricao-completa');
         const utrib   = document.getElementById('prod-ncm-utrib');
         const hscode  = document.getElementById('prod-hscode');
+        const naladi  = document.getElementById('prod-naladi-nesh');
         if (desc)   desc.value   = item.dataset.descricao || '';
         if (full)   full.value   = item.dataset.descricaoCompleta || '';
         if (utrib)  utrib.value  = item.dataset.utrib || '';
         if (hscode) hscode.value = _derivarHsCodeDoNcm(item.dataset.ncm);
+        if (naladi) naladi.value = _derivarNaladiNeshDoNcm(item.dataset.ncm);
     }
 
     async function mostrar() {
@@ -4302,9 +4312,10 @@ function iniciarAutocompleteNcmProduto() {
 // ========================================
 // PRODUTO — PROTEÇÃO DO RADICAL (HS CODE / NALADI-NESH)
 // ========================================
-// HS Code (e futuramente NALADI/NESH) são derivados do NCM — mudar o "radical"
-// à mão pode gerar divergência no SISCOMEX. Usuário não-admin não pode editar
-// esses campos (fica readonly); admin pode, mas passa por uma confirmação.
+// HS Code (6 primeiros dígitos) e NALADI/NESH (5 primeiros dígitos) são
+// derivados do NCM — mudar o "radical" à mão pode gerar divergência no
+// SISCOMEX. Usuário não-admin não pode editar esses campos (fica readonly);
+// admin pode, mas passa por uma confirmação.
 
 let _prodRadicalPendente = null; // { el, valorAnterior }
 
