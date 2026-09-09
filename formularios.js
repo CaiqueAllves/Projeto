@@ -5081,7 +5081,10 @@ function iniciarAutocompleteEmbalagemProduto() {
         try {
             let query = supabaseClient.from('embalagens').select('codigo, descricao').order('descricao');
             if (q) query = query.or(`descricao.ilike.%${q}%,codigo.ilike.%${q}%`);
-            const { data } = await query.limit(30);
+            // Tabela de apoio tem 62 tipos cadastrados — limite de 30 cortava
+            // a lista pela metade (tudo de "ESTOJO" em diante, em ordem
+            // alfabética, nunca aparecia sem digitar um filtro específico).
+            const { data } = await query.limit(100);
             if (!data?.length) { lista.classList.remove('aberta'); return; }
             lista.innerHTML = data.map(e => `
                 <div class="autocomplete-item" data-codigo="${e.codigo || ''}" data-descricao="${(e.descricao || '').replace(/"/g, '&quot;')}">
