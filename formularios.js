@@ -357,6 +357,11 @@ function _coletarDadosProduto() {
         marca:                  g('prod-marca'),
         unidade_medida:         g('prod-unidade'),
         lote:                   g('prod-lote'),
+        comprimento:            gv('prod-comprimento-produto')  || null,
+        largura:                gv('prod-largura-produto')      || null,
+        altura:                 gv('prod-altura-produto')       || null,
+        peso_bruto:             gv('prod-peso-bruto-produto')   || null,
+        peso_liquido:           gv('prod-peso-liquido-produto') || null,
         data_fabricacao:        g('prod-data-fabricacao') || null,
         data_validade:          g('prod-data-validade') || null,
         referencia_interna:     g('prod-ref-interna'),
@@ -451,6 +456,15 @@ async function _prodPreencherEdicao(dados) {
     set('prod-marca', dados.marca);
     set('prod-unidade', dados.unidade_medida);
     set('prod-lote', dados.lote);
+    // Dimensões/pesos formatados com vírgula decimal, igual o que
+    // prodMascaraDecimal espera ao editar (senão o próximo caractere digitado
+    // apaga tudo depois do ponto — a máscara só aceita dígito e vírgula).
+    const fmtDecimal = v => (v === null || v === undefined) ? '' : String(v).replace('.', ',');
+    set('prod-comprimento-produto',  fmtDecimal(dados.comprimento));
+    set('prod-largura-produto',      fmtDecimal(dados.largura));
+    set('prod-altura-produto',       fmtDecimal(dados.altura));
+    set('prod-peso-bruto-produto',   fmtDecimal(dados.peso_bruto));
+    set('prod-peso-liquido-produto', fmtDecimal(dados.peso_liquido));
     set('prod-data-fabricacao', dados.data_fabricacao);
     set('prod-data-validade', dados.data_validade);
     set('prod-ref-interna', dados.referencia_interna);

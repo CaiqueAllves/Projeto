@@ -2369,6 +2369,38 @@
                                         </div>
                                     </div>
 
+                                    <!-- Linha 1b: Comprimento | Largura | Altura (dimensões do produto em si, não da embalagem) -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="prod-comprimento-produto">Comprimento (cm)</label>
+                                                <input type="text" inputmode="decimal" id="prod-comprimento-produto" name="comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-largura-produto">Largura (cm)</label>
+                                                <input type="text" inputmode="decimal" id="prod-largura-produto" name="largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-altura-produto">Altura (cm)</label>
+                                                <input type="text" inputmode="decimal" id="prod-altura-produto" name="altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 1c: Peso Bruto | Peso Líquido (do produto em si, não da embalagem) -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-2">
+                                            <div class="form-group">
+                                                <label for="prod-peso-bruto-produto">Peso Bruto (kg)</label>
+                                                <input type="text" inputmode="decimal" id="prod-peso-bruto-produto" name="peso_bruto" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-peso-liquido-produto">Peso Líquido (kg)</label>
+                                                <input type="text" inputmode="decimal" id="prod-peso-liquido-produto" name="peso_liquido" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Linha 2: HS CODE | NALADI/NESH | GTIN/EAN | DUN-14 -->
                                     <div class="form-group full-width">
                                         <div class="form-row-4">
