@@ -38,6 +38,69 @@ function limparForm(formId) {
     }
 }
 
+// ========================================
+// FECHAR ABA SOZINHA APÓS EDITAR (Empresa/Processo/Proforma/Produto)
+// ========================================
+// Editar sempre abre numa aba nova (a lista chama editarX() com window.open)
+// — depois de salvar a edição não faz sentido deixar a aba parada esperando
+// o usuário fechar na mão. Conta 10s (dá tempo de ler a confirmação, e dá
+// pra cancelar) e fecha sozinha, avisando a aba que abriu (a lista) pra
+// recarregar. Só se aplica a EDITAR um registro já existente — cadastrar um
+// novo continua como estava (permite cadastrar vários em seguida sem a aba
+// fechar no meio).
+
+let _fecharAbaTimeoutId  = null;
+let _fecharAbaIntervalId = null;
+
+function _fecharAbaAposSalvar() {
+    try {
+        if (window.opener && !window.opener.closed) {
+            if (typeof window.opener.profCarregarLista === 'function') window.opener.profCarregarLista();
+            if (typeof window.opener.carregarProcessos === 'function') window.opener.carregarProcessos();
+            if (typeof window.opener.carregarProdutos === 'function')  window.opener.carregarProdutos();
+            if (typeof window.opener.carregarEmpresas === 'function')  window.opener.carregarEmpresas();
+        }
+    } catch (e) {}
+    window.close();
+    if (!window.closed) window.history.back();
+}
+
+function _mostrarBadgeFechamento() {
+    let badge = document.getElementById('fechamento-automatico-aviso');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'fechamento-automatico-aviso';
+        badge.style.cssText = 'position:fixed; bottom:24px; right:24px; background:#1e293b; color:#fff; padding:12px 18px; border-radius:10px; font-size:13px; z-index:10000; display:flex; align-items:center; gap:12px; box-shadow:0 6px 20px rgba(0,0,0,.2);';
+        badge.innerHTML = `
+            <i class="fa-solid fa-clock"></i>
+            <span id="fechamento-automatico-texto">Fechando esta aba em 10s...</span>
+            <button type="button" onclick="_cancelarFechamentoAutomatico()" style="background:transparent;border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">Manter aberta</button>
+        `;
+        document.body.appendChild(badge);
+    }
+    badge.style.display = 'flex';
+    return document.getElementById('fechamento-automatico-texto');
+}
+
+function _agendarFechamentoAutomatico() {
+    _cancelarFechamentoAutomatico();
+    const textoEl = _mostrarBadgeFechamento();
+    let restante = 10;
+    _fecharAbaIntervalId = setInterval(() => {
+        restante--;
+        if (restante > 0) { textoEl.textContent = `Fechando esta aba em ${restante}s...`; }
+        else clearInterval(_fecharAbaIntervalId);
+    }, 1000);
+    _fecharAbaTimeoutId = setTimeout(_fecharAbaAposSalvar, 10000);
+}
+
+function _cancelarFechamentoAutomatico() {
+    if (_fecharAbaTimeoutId)  { clearTimeout(_fecharAbaTimeoutId);   _fecharAbaTimeoutId  = null; }
+    if (_fecharAbaIntervalId) { clearInterval(_fecharAbaIntervalId); _fecharAbaIntervalId = null; }
+    const badge = document.getElementById('fechamento-automatico-aviso');
+    if (badge) badge.style.display = 'none';
+}
+
 let _empEditandoId = null;
 
 async function salvarEmpresa(e) {
@@ -190,7 +253,7 @@ async function salvarEmpresa(e) {
             // Edição sempre abre numa aba nova (via editarEmpresa() em
             // cadastros.js) — fecha sozinha depois de dar tempo do usuário
             // ler a confirmação, em vez de deixar a aba parada sem próxima ação.
-            setTimeout(() => window.close(), 10000);
+            _agendarFechamentoAutomatico();
         }
     } else {
         mostrarNotificacao('Erro ao salvar: ' + (res.mensagem || 'Tente novamente.'), 'erro');
@@ -424,6 +487,11 @@ async function salvarProduto(e) {
     }
 
     mostrarNotificacao(jaExistia ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!', 'sucesso');
+
+    // Edição sempre abre numa aba nova (via editarProduto() em produtos.js) —
+    // fecha sozinha depois de dar tempo do usuário ler a confirmação.
+    // Cadastrar um novo continua aberto, pra dar pra cadastrar outro em seguida.
+    if (jaExistia) _agendarFechamentoAutomatico();
 }
 
 function _prodFormatarMonetario(num) {
@@ -685,6 +753,11 @@ async function confirmarSalvar() {
 
             posModal.style.display = 'flex';
 
+            // Editar fecha a aba sozinha depois de 10s (dá tempo de ler e
+            // ainda usar os botões do modal — "Criar outro" cancela).
+            // Cadastrar uma nova continua aberto por padrão.
+            if (editandoId) _agendarFechamentoAutomatico();
+
             // Proforma gerada a partir de um Pedido: vincula de volta ao pedido
             const pedidoOrigemId = document.getElementById('prop-pedido-id')?.value || '';
             if (!editandoId && pedidoOrigemId && res.data?.id) {
@@ -755,6 +828,11 @@ async function confirmarSalvar() {
         }
 
         posModal.style.display = 'flex';
+
+        // Editar fecha a aba sozinha depois de 10s (dá tempo de ler e ainda
+        // usar os botões do modal — "Criar outro" cancela). Cadastrar um
+        // novo continua aberto por padrão.
+        if (editandoIdProc) _agendarFechamentoAutomatico();
     } else {
         mostrarNotificacao('Erro ao salvar processo: ' + (resProc.mensagem || 'Tente novamente.'), 'erro');
     }
@@ -1058,6 +1136,9 @@ function _coletarDadosProcesso() {
 function confirmarSalvarProcesso() { confirmarSalvar(); }
 
 function criarNovo() {
+    // Usuário optou por continuar cadastrando nesta aba — cancela o
+    // fechamento automático agendado (só se aplica quando a ação era editar).
+    _cancelarFechamentoAutomatico();
     const origem = document.getElementById('modal-pos-salvo').dataset.origem || 'processo';
     document.getElementById('modal-pos-salvo').style.display = 'none';
     // Notificar a aba pai para recarregar a lista
@@ -1082,6 +1163,7 @@ function criarNovo() {
 }
 
 function fecharGuia() {
+    _cancelarFechamentoAutomatico();
     document.getElementById('modal-pos-salvo').style.display = 'none';
     // Notificar a aba pai para recarregar a lista
     try {
