@@ -136,27 +136,9 @@
                     <span>Explica cada campo, obrigatoriedade e exemplo</span>
                 </div>
             </div>
-            <p style="color:#64748b; margin:20px 0 12px; font-size:13.5px;">
-                Pra atualizar só o preço de produtos já cadastrados (sem reenviar tudo de novo), use um modelo à parte — a referência é o SKU, que já é único por produto.
+            <p style="color:#64748b; margin:20px 0 0; font-size:13.5px;">
+                Pra atualizar só o preço de produtos já cadastrados (sem reenviar tudo de novo), use o botão <strong>"Atualizar Preços"</strong> — o modelo daquela planilha (com exemplo preenchido) fica lá.
             </p>
-            <div class="modelo-opcoes">
-                <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
-                    <div class="modelo-opcao modelo-excel" onclick="baixarModeloPrecoExcel('venda')">
-                        <i class="fa-solid fa-file-excel"></i>
-                        <strong>Preço de Venda (.xlsx)</strong>
-                        <span>Reenvie em "Atualizar Preços"</span>
-                    </div>
-                    <a href="exemplos/exemplo-preco-venda.csv" download class="modelo-exemplo-link">Ver exemplo preenchido</a>
-                </div>
-                <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
-                    <div class="modelo-opcao modelo-excel" onclick="baixarModeloPrecoExcel('compra')">
-                        <i class="fa-solid fa-file-excel"></i>
-                        <strong>Preço de Compra (.xlsx)</strong>
-                        <span>Reenvie em "Atualizar Preços"</span>
-                    </div>
-                    <a href="exemplos/exemplo-preco-compra.csv" download class="modelo-exemplo-link">Ver exemplo preenchido</a>
-                </div>
-            </div>
         </div>
         <div class="modal-footer">
             <button class="btn-cancel" onclick="fecharModalModeloProduto()">Fechar</button>
@@ -174,18 +156,30 @@
         </div>
         <div class="modal-body">
             <p style="color:#64748b; margin-bottom:16px; font-size:13.5px;">
-                Envie a planilha preenchida (baixe o modelo em "Modelo" se ainda não tiver) — atualiza só o preço dos produtos já cadastrados, localizados pelo SKU. SKU não encontrado é ignorado, sem afetar os outros.
+                Baixe o modelo (se ainda não tiver) e envie a planilha preenchida — atualiza só o preço dos produtos já cadastrados, localizados pelo SKU. SKU não encontrado é ignorado, sem afetar os outros.
             </p>
             <div class="modelo-opcoes">
-                <div class="modelo-opcao modelo-excel" onclick="document.getElementById('uploadPrecoVenda').click()">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <strong>Preço de Venda</strong>
-                    <span>Enviar planilha preenchida</span>
+                <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+                    <div class="modelo-opcao modelo-excel" onclick="document.getElementById('uploadPrecoVenda').click()">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <strong>Preço de Venda</strong>
+                        <span>Enviar planilha preenchida</span>
+                    </div>
+                    <div style="display:flex; justify-content:center; gap:14px;">
+                        <a href="#" onclick="baixarModeloPrecoExcel('venda'); return false;" class="modelo-exemplo-link">Baixar modelo</a>
+                        <a href="exemplos/exemplo-preco-venda.csv" download class="modelo-exemplo-link">Ver exemplo</a>
+                    </div>
                 </div>
-                <div class="modelo-opcao modelo-excel" onclick="document.getElementById('uploadPrecoCompra').click()">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <strong>Preço de Compra</strong>
-                    <span>Enviar planilha preenchida</span>
+                <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+                    <div class="modelo-opcao modelo-excel" onclick="document.getElementById('uploadPrecoCompra').click()">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <strong>Preço de Compra</strong>
+                        <span>Enviar planilha preenchida</span>
+                    </div>
+                    <div style="display:flex; justify-content:center; gap:14px;">
+                        <a href="#" onclick="baixarModeloPrecoExcel('compra'); return false;" class="modelo-exemplo-link">Baixar modelo</a>
+                        <a href="exemplos/exemplo-preco-compra.csv" download class="modelo-exemplo-link">Ver exemplo</a>
+                    </div>
                 </div>
             </div>
         </div>
