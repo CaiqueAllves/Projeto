@@ -43,7 +43,7 @@ function limparForm(formId) {
 // ========================================
 // Editar sempre abre numa aba nova (a lista chama editarX() com window.open)
 // — depois de salvar a edição não faz sentido deixar a aba parada esperando
-// o usuário fechar na mão. Conta 10s (dá tempo de ler a confirmação, e dá
+// o usuário fechar na mão. Conta 5s (dá tempo de ler a confirmação, e dá
 // pra cancelar) e fecha sozinha, avisando a aba que abriu (a lista) pra
 // recarregar. Só se aplica a EDITAR um registro já existente — cadastrar um
 // novo continua como estava (permite cadastrar vários em seguida sem a aba
@@ -73,7 +73,7 @@ function _mostrarBadgeFechamento() {
         badge.style.cssText = 'position:fixed; bottom:24px; right:24px; background:#1e293b; color:#fff; padding:12px 18px; border-radius:10px; font-size:13px; z-index:10000; display:flex; align-items:center; gap:12px; box-shadow:0 6px 20px rgba(0,0,0,.2);';
         badge.innerHTML = `
             <i class="fa-solid fa-clock"></i>
-            <span id="fechamento-automatico-texto">Fechando esta aba em 10s...</span>
+            <span id="fechamento-automatico-texto">Fechando esta aba em 5s...</span>
             <button type="button" onclick="_cancelarFechamentoAutomatico()" style="background:transparent;border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">Manter aberta</button>
         `;
         document.body.appendChild(badge);
@@ -85,13 +85,13 @@ function _mostrarBadgeFechamento() {
 function _agendarFechamentoAutomatico() {
     _cancelarFechamentoAutomatico();
     const textoEl = _mostrarBadgeFechamento();
-    let restante = 10;
+    let restante = 5;
     _fecharAbaIntervalId = setInterval(() => {
         restante--;
         if (restante > 0) { textoEl.textContent = `Fechando esta aba em ${restante}s...`; }
         else clearInterval(_fecharAbaIntervalId);
     }, 1000);
-    _fecharAbaTimeoutId = setTimeout(_fecharAbaAposSalvar, 10000);
+    _fecharAbaTimeoutId = setTimeout(_fecharAbaAposSalvar, 5000);
 }
 
 function _cancelarFechamentoAutomatico() {
@@ -753,7 +753,7 @@ async function confirmarSalvar() {
 
             posModal.style.display = 'flex';
 
-            // Editar fecha a aba sozinha depois de 10s (dá tempo de ler e
+            // Editar fecha a aba sozinha depois de 5s (dá tempo de ler e
             // ainda usar os botões do modal — "Criar outro" cancela).
             // Cadastrar uma nova continua aberto por padrão.
             if (editandoId) _agendarFechamentoAutomatico();
@@ -829,7 +829,7 @@ async function confirmarSalvar() {
 
         posModal.style.display = 'flex';
 
-        // Editar fecha a aba sozinha depois de 10s (dá tempo de ler e ainda
+        // Editar fecha a aba sozinha depois de 5s (dá tempo de ler e ainda
         // usar os botões do modal — "Criar outro" cancela). Cadastrar um
         // novo continua aberto por padrão.
         if (editandoIdProc) _agendarFechamentoAutomatico();
