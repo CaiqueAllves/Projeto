@@ -5448,8 +5448,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     const _urlId        = _urlParams.get('id');
     const _urlModo      = _urlParams.get('modo');
 
-    // ?id= só é ID de proposta quando tab != processo
-    const _propIdEdicao = _urlTab !== 'processo' ? _urlId : null;
+    // ?id= só é ID de proforma quando a aba ativa é a de proforma (aqui
+    // chamada de "proposta" por legado) — não "qualquer aba que não seja
+    // processo", que também pegava a de produto por engano (mesmo nome de
+    // parâmetro ?id=, aba diferente) e tentava buscar o produto como se
+    // fosse proforma, sempre falhando com "Proforma não encontrada."
+    const _propIdEdicao = _urlTab === 'proposta' ? _urlId : null;
 
     if (!_propIdEdicao) {
         propGerarCodigo();
