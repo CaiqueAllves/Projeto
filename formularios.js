@@ -4758,8 +4758,23 @@ function _prodEmbalagemSetCamposDisabled(desabilitado) {
 // Mostra o lembrete de cubagem aérea (C x L x A / 6000) só quando o Modal de
 // Transporte escolhido for Aéreo.
 function prodAtualizarCubagemAviso(selectEl) {
-    const aviso = document.getElementById('prod-cubagem-aereo-aviso');
-    if (aviso) aviso.style.display = selectEl?.value === 'aereo' ? '' : 'none';
+    const info = document.getElementById('prod-cubagem-aereo-info');
+    if (info) info.style.display = selectEl?.value === 'aereo' ? '' : 'none';
+}
+
+// Cubagem real (m³) da embalagem — Comprimento/Largura/Altura são digitados
+// em cm, então divide por 100³ (1.000.000) pra converter pra m³. Não é a
+// mesma coisa que a "cubagem aérea" (C x L x A / 6000, que dá peso cubado em
+// kg pra frete aéreo, não volume) — por isso o aviso daquela fórmula fica
+// como um balão de informação à parte, só quando o modal é Aéreo.
+function prodCalcularCubagem() {
+    const campo = document.getElementById('prod-cubagem');
+    if (!campo) return;
+    const num = id => parseFloat((document.getElementById(id)?.value || '').replace(',', '.')) || 0;
+    const c = num('prod-comprimento'), l = num('prod-largura'), a = num('prod-altura');
+    if (!c || !l || !a) { campo.value = ''; return; }
+    const m3 = (c * l * a) / 1000000;
+    campo.value = m3.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 }
 
 function prodLimparFormEmbalagem() {
@@ -4769,6 +4784,7 @@ function prodLimparFormEmbalagem() {
     });
 
     prodAtualizarCubagemAviso(document.getElementById('prod-embalagem-transporte'));
+    prodCalcularCubagem();
 
     const outrosWrapper = document.getElementById('prod-acond-outros-wrapper');
     if (outrosWrapper) outrosWrapper.style.display = 'none';
@@ -4824,6 +4840,7 @@ function _prodEmbalagemPreencherForm(dados) {
     if (outrosWrapper) outrosWrapper.style.display = isOutros ? '' : 'none';
 
     prodAtualizarCubagemAviso(document.getElementById('prod-embalagem-transporte'));
+    prodCalcularCubagem();
 
     // Recria as linhas de medida de caixa extras salvas (prodLimparFormEmbalagem
     // já zerou o container antes desta função ser chamada em editar/visualizar)

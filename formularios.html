@@ -2709,7 +2709,7 @@
                                     <!-- Botão para abrir o formulário de uma nova embalagem -->
                                     <div class="form-group full-width">
                                         <button type="button" id="btn-add-embalagem" class="btn-add-idioma" onclick="prodAbrirFormEmbalagem()">
-                                            <i class="fa-solid fa-plus"></i> Adicionar Embalagem / Dimensões do Produto
+                                            <i class="fa-solid fa-plus"></i> Adicionar Embalagem / Dimensões da Caixa
                                         </button>
                                     </div>
 
@@ -2758,26 +2758,25 @@
                                                 <label for="prod-acond-descricao">Descrição <span style="color:#ef4444;">*</span></label>
                                                 <input type="text" id="prod-acond-descricao" name="acondicionamento_descricao" placeholder="Descreva o tipo de acondicionamento...">
                                             </div>
-                                            <!-- Comprimento | Largura | Altura -->
-                                            <div class="form-row-3 log-sub-row">
+                                            <!-- Comprimento | Largura | Altura | Cubagem -->
+                                            <div class="form-row-4 log-sub-row">
                                                 <div class="form-group">
                                                     <label for="prod-comprimento">Comprimento (cm)</label>
-                                                    <input type="text" inputmode="decimal" id="prod-comprimento" name="comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                    <input type="text" inputmode="decimal" id="prod-comprimento" name="comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this); prodCalcularCubagem();">
                                                 </div>
                                                 <div class="form-group">
                                                     <label for="prod-largura">Largura (cm)</label>
-                                                    <input type="text" inputmode="decimal" id="prod-largura" name="largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                    <input type="text" inputmode="decimal" id="prod-largura" name="largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this); prodCalcularCubagem();">
                                                 </div>
                                                 <div class="form-group">
                                                     <label for="prod-altura">Altura (cm)</label>
-                                                    <input type="text" inputmode="decimal" id="prod-altura" name="altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                    <input type="text" inputmode="decimal" id="prod-altura" name="altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this); prodCalcularCubagem();">
                                                 </div>
-                                            </div>
-                                            <!-- Aviso de Cubagem Aérea — só aparece quando Modal de Transporte = Aéreo -->
-                                            <div class="form-group full-width log-sub-row" id="prod-cubagem-aereo-aviso" style="display:none;">
-                                                <div style="background:#eff6ff;border-left:3px solid #4776ec;border-radius:8px;padding:10px 14px;font-size:13px;color:#3b82f6;display:flex;align-items:center;gap:8px;">
-                                                    <i class="fa-solid fa-circle-info"></i>
-                                                    <span>Cubagem Aéreo: C x L x A / 6000</span>
+                                                <div class="form-group">
+                                                    <label for="prod-cubagem">Cubagem (m³)
+                                                        <span class="info-balao" id="prod-cubagem-aereo-info" data-tooltip="Cubagem Aéreo: C x L x A / 6000" style="display:none;"><i class="fa-solid fa-circle-info"></i></span>
+                                                    </label>
+                                                    <input type="text" id="prod-cubagem" name="cubagem" readonly placeholder="0,0000" style="background:#f8faff;cursor:default;">
                                                 </div>
                                             </div>
                                             <!-- Peso Bruto | Peso Líquido | Empilhamento Máximo -->
