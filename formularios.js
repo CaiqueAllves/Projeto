@@ -4300,9 +4300,18 @@ function iniciarAutocompleteNcmProduto() {
                 .from('apoio_ncm')
                 .select('ncm, descricao, descricao_concat, utrib_abrev, utrib_descricao')
                 .ilike('ncm', `${q}%`)
-                .limit(40);
+                .limit(120);
             if (!data?.length) { lista.classList.remove('aberta'); return; }
-            lista.innerHTML = data.map(n => {
+            // apoio_ncm guarda TODOS os níveis da hierarquia fiscal (Capítulo=2,
+            // Posição=4, Subposição-1=5, Subposição-2/HS=6, Item=7, Subitem=8
+            // dígitos) — só é uma classificação de verdade, declarável, no nível
+            // completo de 8 dígitos; os demais existem só de apoio pra navegação
+            // (ver link "Consultar tabela NCM"). Sem filtrar, dava pra escolher
+            // um nível incompleto e HS Code/NALADI-NESH saíam truncados (ex: um
+            // Produto de 5 dígitos gerava HS Code de só 5, não 6).
+            const completos = data.filter(n => String(n.ncm || '').replace(/\D/g, '').length === 8).slice(0, 40);
+            if (!completos.length) { lista.classList.remove('aberta'); return; }
+            lista.innerHTML = completos.map(n => {
                 const utrib = n.utrib_abrev ? `${n.utrib_abrev}${n.utrib_descricao ? ' — ' + n.utrib_descricao : ''}` : '';
                 return `<div class="autocomplete-item"
                     data-ncm="${n.ncm}"
