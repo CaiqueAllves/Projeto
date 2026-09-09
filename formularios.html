@@ -2344,9 +2344,9 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 1: Unidade Comercial | SKU | CEST -->
+                                    <!-- Linha 1: Unidade Comercial | Comprimento | Largura | Altura -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-3">
+                                        <div class="form-row-4">
                                             <div class="form-group">
                                                 <label for="prod-unidade">Unidade Comercial</label>
                                                 <div class="autocomplete-wrapper">
@@ -2354,24 +2354,6 @@
                                                     <div class="autocomplete-list" id="prod-unidade-lista"></div>
                                                 </div>
                                             </div>
-                                            <div class="form-group">
-                                                <label for="prod-sku">Código SKU <span class="required">*</span>
-                                                    <span class="info-balao" data-tooltip="(Stock Keeping Unit, ou Unidade de Manutenção de Estoque) é o código de identificação interno usado para rastrear um produto específico em toda a cadeia logística."><i class="fa-solid fa-circle-info"></i></span>
-                                                </label>
-                                                <input type="text" id="prod-sku" name="sku" placeholder="Código único do produto">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-cest">Código CEST
-                                                    <span class="info-balao" data-tooltip="Código Especificador da Substituição Tributária, ele serve para padronizar e identificar mercadorias sujeitas ao regime de Substituição Tributária (ST) do ICMS."><i class="fa-solid fa-circle-info"></i></span>
-                                                </label>
-                                                <input type="text" id="prod-cest" name="cest" placeholder="Ex: 28.038.00">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Linha 1b: Comprimento | Largura | Altura (dimensões do produto em si, não da embalagem) -->
-                                    <div class="form-group full-width">
-                                        <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="prod-comprimento-produto">Comprimento (cm)</label>
                                                 <input type="text" inputmode="decimal" id="prod-comprimento-produto" name="comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
@@ -2387,7 +2369,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 1c: Peso Bruto | Peso Líquido (do produto em si, não da embalagem) -->
+                                    <!-- Linha 1b: Peso Bruto | Peso Líquido (do produto em si, não da embalagem) -->
                                     <div class="form-group full-width">
                                         <div class="form-row-2">
                                             <div class="form-group">
@@ -2401,9 +2383,33 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 2: HS CODE | NALADI/NESH | GTIN/EAN | DUN-14 -->
+                                    <!-- Linha 1c: SKU | CEST | DUN-14 -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-4">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="prod-sku">Código SKU <span class="required">*</span>
+                                                    <span class="info-balao" data-tooltip="(Stock Keeping Unit, ou Unidade de Manutenção de Estoque) é o código de identificação interno usado para rastrear um produto específico em toda a cadeia logística."><i class="fa-solid fa-circle-info"></i></span>
+                                                </label>
+                                                <input type="text" id="prod-sku" name="sku" placeholder="Código único do produto">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-cest">Código CEST
+                                                    <span class="info-balao" data-tooltip="Código Especificador da Substituição Tributária, ele serve para padronizar e identificar mercadorias sujeitas ao regime de Substituição Tributária (ST) do ICMS."><i class="fa-solid fa-circle-info"></i></span>
+                                                </label>
+                                                <input type="text" id="prod-cest" name="cest" placeholder="Ex: 28.038.00">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="prod-dun14">Código DUN-14
+                                                    <span class="info-balao" data-tooltip="DUN-14 (Distribution Unit Number) é um código de 14 dígitos usado para identificar unidades de embalagem de distribuição, como caixas ou paletes, no comércio internacional."><i class="fa-solid fa-circle-info"></i></span>
+                                                </label>
+                                                <input type="text" id="prod-dun14" name="dun14" placeholder="Ex: 17891000315504" maxlength="14" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 2: HS CODE | NALADI/NESH | GTIN/EAN -->
+                                    <div class="form-group full-width">
+                                        <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="prod-hscode">HS CODE
                                                     <span class="info-balao" data-tooltip="Harmonized System Code: código internacional de 6 dígitos (podendo ser estendido) utilizado para classificar mercadorias no comércio exterior, definindo tarifas aduaneiras e requisitos de importação/exportação."><i class="fa-solid fa-circle-info"></i></span>
@@ -2421,12 +2427,6 @@
                                                     <span class="info-balao" data-tooltip="O código EAN (European Article Number), atualmente chamado de GTIN (Global Trade Item Number), é o padrão global de código de barras utilizado para identificar produtos de forma única no varejo e em marketplaces"><i class="fa-solid fa-circle-info"></i></span>
                                                 </label>
                                                 <input type="text" id="prod-gtin" name="gtin" placeholder="Ex: 7891000315507" maxlength="14">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-dun14">Código DUN-14
-                                                    <span class="info-balao" data-tooltip="DUN-14 (Distribution Unit Number) é um código de 14 dígitos usado para identificar unidades de embalagem de distribuição, como caixas ou paletes, no comércio internacional."><i class="fa-solid fa-circle-info"></i></span>
-                                                </label>
-                                                <input type="text" id="prod-dun14" name="dun14" placeholder="Ex: 17891000315504" maxlength="14" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                             </div>
                                         </div>
                                     </div>
