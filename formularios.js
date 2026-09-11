@@ -312,6 +312,61 @@ function empRenderizarTags() {
     if (hidden) hidden.value = JSON.stringify(_empTagsArray);
 }
 
+// ========================================
+// TAGS — PRODUTO (substituiu o campo "Referência Interna")
+// ========================================
+// Mesma mecânica das tags de Empresa, ids próprios. Guarda em produtos.tags
+// (JSONB array — ver database-produtos-tags.sql). Cap de 10 (mais folgado que
+// as 4 de Empresa, porque tag de produto é classificação, tende a ser mais).
+
+let _prodTagsArray = [];
+
+function prodIniciarTags() {
+    const input = document.getElementById('prod-tags-input');
+    if (!input) return;
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); prodAdicionarTag(); }
+    });
+}
+
+function prodAdicionarTag() {
+    const input = document.getElementById('prod-tags-input');
+    const texto = input.value.trim().toLowerCase();
+    if (!texto) return;
+    if (_prodTagsArray.length >= 10) { mostrarNotificacao('Limite de 10 tags atingido.', 'warning'); input.value = ''; return; }
+    if (_prodTagsArray.includes(texto)) { input.value = ''; return; }
+    _prodTagsArray.push(texto);
+    prodRenderizarTags();
+    input.value = '';
+    input.focus();
+}
+
+function prodRemoverTag(i) {
+    _prodTagsArray.splice(i, 1);
+    prodRenderizarTags();
+}
+
+function prodRenderizarTags() {
+    const container = document.getElementById('prod-tags-container');
+    const hidden    = document.getElementById('prod-tags');
+    if (!container) return;
+
+    if (_prodTagsArray.length === 0) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+    } else {
+        container.style.display = 'flex';
+        container.innerHTML = _prodTagsArray.map((tag, i) => `
+            <div class="tag-item">
+                <i class="fa-solid fa-tag"></i>
+                <span>${tag}</span>
+                <i class="fa-solid fa-xmark tag-remove" onclick="prodRemoverTag(${i})"></i>
+            </div>`).join('');
+    }
+
+    if (hidden) hidden.value = JSON.stringify(_prodTagsArray);
+}
+
 let _prodEditandoId = null;
 
 // Recalcula margem/lucro líquido a partir dos valores brutos — os campos
@@ -427,7 +482,7 @@ function _coletarDadosProduto() {
         peso_liquido:           gv('prod-peso-liquido-produto') || null,
         data_fabricacao:        g('prod-data-fabricacao') || null,
         data_validade:          g('prod-data-validade') || null,
-        referencia_interna:     g('prod-ref-interna'),
+        tags:                   _prodTagsArray,
         referencia_fornecedor:  g('prod-ref-fornecedor'),
         referencia_outra:       g('prod-ref-outra'),
         empresa_parceira_id:    g('prod-empresa-id') || null,
@@ -535,9 +590,10 @@ async function _prodPreencherEdicao(dados) {
     set('prod-peso-liquido-produto', fmtDecimal(dados.peso_liquido));
     set('prod-data-fabricacao', dados.data_fabricacao);
     set('prod-data-validade', dados.data_validade);
-    set('prod-ref-interna', dados.referencia_interna);
     set('prod-ref-fornecedor', dados.referencia_fornecedor);
     set('prod-ref-outra', dados.referencia_outra);
+    _prodTagsArray = Array.isArray(dados.tags) ? [...dados.tags] : [];
+    prodRenderizarTags();
 
     // Empresa parceira ("Identificação da Empresa") — busca à parte só pra exibir
     // nome/documento, já que buscarProdutoPorId não traz esse join. Busca em
@@ -4343,20 +4399,18 @@ function iniciarAutocompleteNcmProduto() {
         });
     }
 
-    // HS Code são os (até) 6 primeiros dígitos do NCM (NCM = HS + 2 dígitos
-    // específicos do Mercosul), formatado em pares "XX.XX.XX". Alguns registros
-    // de apoio_ncm são níveis mais amplos da hierarquia (capítulo/posição, com
-    // só 2 ou 4 dígitos) — nesses casos deriva com o que tiver, sem exigir 6.
+    // HS Code e NALADI/NESH usam só os 4 primeiros dígitos do NCM (nível de
+    // Posição), formatado em par "XX.XX". Alguns registros de apoio_ncm são
+    // níveis mais amplos (capítulo com 2 dígitos) — nesses casos deriva com
+    // o que tiver, sem exigir 4.
     function _derivarHsCodeDoNcm(ncmValor) {
-        const digitos = String(ncmValor || '').replace(/\D/g, '').slice(0, 6);
+        const digitos = String(ncmValor || '').replace(/\D/g, '').slice(0, 4);
         if (!digitos) return '';
         return digitos.match(/.{1,2}/g).join('.');
     }
 
-    // NALADI/NESH usa só os 5 primeiros dígitos do NCM (posição + 1º dígito
-    // da subposição Mercosul), mesmo padrão de agrupamento em pares do HS Code.
     function _derivarNaladiNeshDoNcm(ncmValor) {
-        const digitos = String(ncmValor || '').replace(/\D/g, '').slice(0, 5);
+        const digitos = String(ncmValor || '').replace(/\D/g, '').slice(0, 4);
         if (!digitos) return '';
         return digitos.match(/.{1,2}/g).join('.');
     }
@@ -4426,7 +4480,7 @@ function iniciarAutocompleteNcmProduto() {
 // ========================================
 // PRODUTO — PROTEÇÃO DO RADICAL (HS CODE / NALADI-NESH)
 // ========================================
-// HS Code (6 primeiros dígitos) e NALADI/NESH (5 primeiros dígitos) são
+// HS Code e NALADI/NESH (ambos os 4 primeiros dígitos do NCM) são
 // derivados do NCM — mudar o "radical" à mão pode gerar divergência no
 // SISCOMEX. Usuário não-admin não pode editar esses campos (fica readonly);
 // admin pode, mas passa por uma confirmação.
@@ -5543,6 +5597,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarAutocompleteEmbalagemProduto();
     iniciarAutocompleteAcondicionamentoProduto();
     prodAplicarBloqueioRadical();
+    prodIniciarTags();
 
     // Proposta
     const _urlParams    = new URLSearchParams(window.location.search);

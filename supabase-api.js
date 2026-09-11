@@ -1004,7 +1004,7 @@ function _prodMontarPayload(dados) {
         peso_liquido:            dados.peso_liquido || null,
         data_fabricacao:         dados.data_fabricacao || null,
         data_validade:           dados.data_validade || null,
-        referencia_interna:      dados.referencia_interna || null,
+        tags:                    Array.isArray(dados.tags) ? dados.tags : [],
         referencia_fornecedor:   dados.referencia_fornecedor || null,
         referencia_outra:        dados.referencia_outra || null,
         empresa_parceira_id:     dados.empresa_parceira_id || null,
@@ -1231,6 +1231,80 @@ async function atualizarPrecosEmLote(campoPreco, linhas) {
     return {
         sucesso: totalSucesso > 0, totalSucesso, totalFalha: linhas.length - totalSucesso,
         skusNaoEncontrados, moedasNaoReconhecidas: [...moedasNaoReconhecidas],
+    };
+}
+
+// Atualiza traduções (nome/descrição por idioma) de produtos já cadastrados,
+// em lote, via planilha (SKU como chave). Cada `linha` = { sku, idioma
+// (código ou 'outro'), idioma_outro, idioma_texto, nome, descricao }. Faz
+// merge dentro de produtos.nomes_idiomas: casa pelo código do idioma (ou,
+// pra 'outro', pelo texto), atualiza se já existe, adiciona se não —
+// respeitando o teto de 4 idiomas (base + 3) que o formulário usa. Se a
+// linha bater com o idioma-base (índice 0), sincroniza também as colunas
+// produtos.nome / produtos.descricao.
+async function atualizarIdiomasEmLote(linhas) {
+    const usuario = obterUsuarioLogado();
+    if (!usuario) return { sucesso: false, totalSucesso: 0, totalFalha: linhas.length, skusNaoEncontrados: [...new Set(linhas.map(l => l.sku))], limiteAtingido: [], idiomasComoOutro: [] };
+
+    const norm = s => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+    const skus = [...new Set(linhas.map(l => l.sku))];
+    const { data: produtos } = await supabaseClient
+        .from('produtos').select('id, sku, nome, descricao, nomes_idiomas')
+        .eq('empresa_id', usuario.empresa_id).in('sku', skus);
+
+    const produtoPorSku = {};
+    (produtos || []).forEach(p => { produtoPorSku[p.sku] = p; });
+
+    // agrupa as linhas por SKU (um produto pode ter várias linhas, uma por idioma)
+    const linhasPorSku = {};
+    linhas.forEach(l => { (linhasPorSku[l.sku] = linhasPorSku[l.sku] || []).push(l); });
+
+    let totalSucesso = 0;
+    const skusNaoEncontrados = [];
+    const limiteAtingido = [];
+    const idiomasComoOutro = new Set();
+
+    for (const sku of Object.keys(linhasPorSku)) {
+        const produto = produtoPorSku[sku];
+        if (!produto) { skusNaoEncontrados.push(sku); continue; }
+
+        let arr = Array.isArray(produto.nomes_idiomas) && produto.nomes_idiomas.length
+            ? produto.nomes_idiomas.map(x => ({ ...x }))
+            : [{ idioma: 'pt', idioma_outro: null, nome: produto.nome, descricao: produto.descricao || '' }];
+
+        let baseMudou = false;
+
+        for (const l of linhasPorSku[sku]) {
+            if (l.idioma === 'outro' && l.idioma_texto && norm(l.idioma_texto) !== 'outro') {
+                idiomasComoOutro.add(`${sku} (${l.idioma_texto})`);
+            }
+            const idx = l.idioma === 'outro'
+                ? arr.findIndex(x => x.idioma === 'outro' && norm(x.idioma_outro) === norm(l.idioma_outro))
+                : arr.findIndex(x => x.idioma === l.idioma);
+
+            if (idx >= 0) {
+                if (l.nome) arr[idx].nome = l.nome;
+                arr[idx].descricao = l.descricao || '';
+                if (idx === 0) baseMudou = true;
+            } else {
+                if (arr.length >= 4) { limiteAtingido.push(`${sku} (${l.idioma_texto || l.idioma})`); continue; }
+                arr.push({ idioma: l.idioma, idioma_outro: l.idioma === 'outro' ? (l.idioma_outro || '') : null, nome: l.nome || produto.nome, descricao: l.descricao || '' });
+            }
+        }
+
+        const payload = { nomes_idiomas: arr, atualizado_em: new Date().toISOString() };
+        if (baseMudou) { payload.nome = arr[0].nome; payload.descricao = arr[0].descricao || null; }
+
+        const { error } = await supabaseClient.from('produtos').update(payload).eq('id', produto.id);
+        if (error) skusNaoEncontrados.push(sku);
+        else totalSucesso++;
+    }
+
+    return {
+        sucesso: totalSucesso > 0, totalSucesso,
+        totalFalha: Object.keys(linhasPorSku).length - totalSucesso,
+        skusNaoEncontrados, limiteAtingido, idiomasComoOutro: [...idiomasComoOutro],
     };
 }
 
@@ -1819,6 +1893,7 @@ window.supabaseAPI = {
     salvarProduto,
     salvarProdutosEmLote,
     atualizarPrecosEmLote,
+    atualizarIdiomasEmLote,
     buscarEmbalagensProduto,
     salvarEmbalagensProduto,
     editarProduto,

@@ -942,6 +942,23 @@ main {
     border-bottom-color: #1e293b;
 }
 
+/* Variante: tooltip abre para a direita (seta apontando pra esquerda) */
+.info-balao.direita::after {
+    bottom: auto;
+    top: 50%;
+    left: calc(100% + 10px);
+    transform: translateY(-50%);
+}
+
+.info-balao.direita::before {
+    bottom: auto;
+    top: 50%;
+    left: 100%;
+    transform: translateY(-50%);
+    border-top-color: transparent;
+    border-right-color: #1e293b;
+}
+
 /* DESTINATÁRIO — MENSAGEM DE REDIRECIONAMENTO */
 .emp-dest-redirect-msg {
     grid-column: 1 / -1;

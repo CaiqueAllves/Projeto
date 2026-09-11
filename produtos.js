@@ -41,13 +41,15 @@ function carregarLibSobDemanda(nome) {
 // Fora daqui de propósito — não são input manual, o sistema já preenche
 // sozinho: margem/lucro_liquido (calculados a partir dos preços) e
 // hscode/ncm_utrib/ncm_descricao/ncm_descricao_completa (derivados do NCM
-// digitado, via prod-ncm). Também fora: nomes_idiomas/embalagens/documentos,
-// que são listas e não cabem numa única célula de planilha.
+// digitado, via prod-ncm). embalagens/documentos e os idiomas EXTRAS ficam
+// de fora (são listas). O idioma do nome/descrição principal entra sim, como
+// uma coluna de texto livre (ver _prodUploadResolverIdioma).
 const PROD_MODELO_CAMPOS = [
     // ── Identificação ──
     { secao: 'Identificação',  coluna: 'SKU',                    campo: 'sku',                  obrigatorio: true,  tipo: 'Texto',  exemplo: 'PROD001',                            obs: 'Código único do produto — não pode se repetir.' },
     { secao: 'Identificação',  coluna: 'Nome',                   campo: 'nome',                 obrigatorio: true,  tipo: 'Texto',  exemplo: 'Camiseta Algodão Premium',            obs: 'Nome completo do produto.' },
     { secao: 'Identificação',  coluna: 'Descrição',              campo: 'descricao',            obrigatorio: false, tipo: 'Texto',  exemplo: 'Camiseta 100% algodão, gola redonda', obs: 'Descrição detalhada (opcional).' },
+    { secao: 'Identificação',  coluna: 'Idioma',                 campo: 'idioma_nome',          obrigatorio: false, tipo: 'Texto',  exemplo: 'Português',                           obs: 'Idioma do Nome/Descrição. Alemão, Chinês, Espanhol, Francês, Inglês ou Português caem na seleção; qualquer outro (ex: Italiano) vai pro campo "Outro". Em branco = Português.' },
     { secao: 'Identificação',  coluna: 'Categoria',              campo: 'categoria',            obrigatorio: false, tipo: 'Texto',  exemplo: 'Vestuário',                           obs: 'Categoria livre, sem lista fixa.' },
     { secao: 'Identificação',  coluna: 'Tipo',                   campo: 'tipo',                 obrigatorio: false, tipo: 'Texto',  exemplo: 'Produto acabado',                     obs: 'Ex: matéria-prima, produto acabado, insumo.' },
     { secao: 'Identificação',  coluna: 'Marca',                  campo: 'marca',                obrigatorio: false, tipo: 'Texto',  exemplo: 'Minha Marca',                         obs: 'Marca ou fabricante.' },
@@ -64,7 +66,7 @@ const PROD_MODELO_CAMPOS = [
     { secao: 'Fiscal',         coluna: 'DUN14',                  campo: 'dun14',                obrigatorio: false, tipo: 'Texto',  exemplo: '17891000315504',                      obs: 'Código de barras da embalagem logística (caixa/pallet).' },
 
     // ── Referências ──
-    { secao: 'Referências',    coluna: 'Referência Interna',     campo: 'referencia_interna',   obrigatorio: false, tipo: 'Texto',  exemplo: 'REF-INT-001',                         obs: 'Código de referência interno da empresa.' },
+    { secao: 'Referências',    coluna: 'Tags',                   campo: 'tags',                obrigatorio: false, tipo: 'Texto',  exemplo: 'sapato; camiseta',                    obs: 'Palavras-chave de classificação, separadas por ; ou vírgula.' },
     { secao: 'Referências',    coluna: 'Referência Fornecedor',  campo: 'referencia_fornecedor',obrigatorio: false, tipo: 'Texto',  exemplo: 'REF-FORN-9981',                       obs: 'Código de referência usado pelo fornecedor.' },
     { secao: 'Referências',    coluna: 'Referência Outra',       campo: 'referencia_outra',     obrigatorio: false, tipo: 'Texto',  exemplo: 'REF-CLI-55',                          obs: 'Outra referência (ex: código do cliente).' },
     { secao: 'Referências',    coluna: 'Empresa Parceira',       campo: 'empresa_parceira_ref', obrigatorio: false, tipo: 'Texto',  exemplo: 'Fornecedor ABC Ltda',                 obs: 'Razão Social, Nome Fantasia ou CNPJ/CPF de uma empresa já cadastrada em Empresas — o sistema localiza automaticamente.' },
@@ -240,6 +242,126 @@ function _prodUploadLerExcelPreco(arquivo, cfg) {
 }
 
 // --------------------------------------------------
+// ATUALIZAR IDIOMAS EM LOTE — planilha à parte só pra adicionar/atualizar
+// traduções (Nome + Descrição por idioma) de produtos já cadastrados.
+// Chave é o SKU. Idioma é texto livre: cai na seleção se for um dos 6 da
+// lista, senão vira "Outro" (mesma regra da planilha de cadastro).
+// --------------------------------------------------
+
+const PROD_IDIOMA_LABEL = { pt: 'Português', en: 'Inglês', de: 'Alemão', zh: 'Chinês', es: 'Espanhol', fr: 'Francês' };
+
+async function baixarModeloIdiomasExcel() {
+    try {
+        await carregarLibSobDemanda('xlsx');
+    } catch (e) { notify('Não foi possível carregar o gerador de planilha. Tente novamente.', 'error'); return; }
+
+    let produtos = [];
+    try {
+        const res = await window.supabaseAPI.buscarProdutos();
+        produtos = res.sucesso ? (res.data || []) : [];
+    } catch (e) { /* segue com planilha só de cabeçalho */ }
+
+    const header = ['SKU', 'Idioma', 'Nome do Produto', 'Descrição Técnica / Composição do Produto / Descrição Complementar do Produto'];
+    const linhas = [];
+    produtos.forEach(p => {
+        const idiomas = Array.isArray(p.nomes_idiomas) && p.nomes_idiomas.length
+            ? p.nomes_idiomas
+            : [{ idioma: 'pt', idioma_outro: null, nome: p.nome, descricao: p.descricao || '' }];
+        idiomas.forEach(idi => {
+            const label = idi.idioma === 'outro'
+                ? (idi.idioma_outro || 'Outro')
+                : (PROD_IDIOMA_LABEL[idi.idioma] || 'Português');
+            linhas.push([p.sku || '', label, idi.nome || p.nome || '', idi.descricao || '']);
+        });
+    });
+    if (!linhas.length) {
+        linhas.push(['PROD001', 'PORTUGUES', 'CAMISETA ALGODAO PREMIUM', 'CAMISETA 100% ALGODAO, GOLA REDONDA.']);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...linhas]);
+    ws['!cols'] = [{ wch: 16 }, { wch: 14 }, { wch: 40 }, { wch: 60 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Idiomas');
+    XLSX.writeFile(wb, 'modelo-idiomas-produtos.xlsx');
+    fecharModalAtualizarPrecos();
+}
+
+async function processarUploadIdiomas(input) {
+    if (!exigirEmpresaVinculada()) return;
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    notify(`Lendo "${file.name}"...`, 'info');
+    try {
+        await carregarLibSobDemanda('xlsx');
+        const linhas = await _prodUploadLerExcelIdiomas(file);
+        if (!linhas.length) {
+            notify('Nenhuma linha com SKU e Idioma reconhecidos na planilha.', 'aviso');
+            return;
+        }
+        const res = await window.supabaseAPI.atualizarIdiomasEmLote(linhas);
+        const avisos = [];
+        if (res.totalFalha) avisos.push(`${res.totalFalha} SKU(s) não encontrado(s): ${res.skusNaoEncontrados.join(', ')}.`);
+        if (res.limiteAtingido?.length) avisos.push(`Limite de 4 idiomas por produto atingido, ignorado(s): ${res.limiteAtingido.join(', ')}.`);
+        if (res.idiomasComoOutro?.length) avisos.push(`Idioma(s) fora da lista, salvo(s) como "Outro": ${res.idiomasComoOutro.join(', ')}.`);
+        const aviso = avisos.join(' ');
+
+        if (res.totalSucesso) {
+            notify(`${res.totalSucesso} produto${res.totalSucesso !== 1 ? 's' : ''} atualizado${res.totalSucesso !== 1 ? 's' : ''}.${aviso ? ' ' + aviso : ''}`, aviso ? 'aviso' : 'success');
+            carregarProdutos();
+        } else {
+            notify(`Nenhum produto atualizado.${aviso ? ' ' + aviso : ''}`, 'error');
+        }
+    } catch (e) {
+        console.error('[Atualizar Idiomas] erro:', e);
+        notify('Não foi possível processar a planilha.', 'error');
+    } finally {
+        input.value = '';
+        fecharModalAtualizarPrecos();
+    }
+}
+
+function _prodUploadLerExcelIdiomas(arquivo) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                if (!rows.length) return resolve([]);
+
+                const header    = rows[0].map(h => _prodUploadNorm(h));
+                const idxSku    = header.findIndex(h => h === 'sku' || h === 'codigo sku' || h === 'codigo');
+                const idxIdioma = header.findIndex(h => h === 'idioma' || h === 'lingua' || h === 'language');
+                // "nome do produto" começa igual; a descrição é a coluna longa
+                const idxNome   = header.findIndex(h => h.startsWith('nome'));
+                const idxDesc   = header.findIndex(h => h.startsWith('descricao'));
+                if (idxSku === -1 || idxIdioma === -1) return resolve([]);
+
+                const linhas = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const sku = String(rows[i][idxSku] || '').trim();
+                    if (!sku) continue;
+                    const idi = _prodUploadResolverIdioma(rows[i][idxIdioma]);
+                    linhas.push({
+                        sku,
+                        idioma: idi.idioma,
+                        idioma_outro: idi.idioma_outro,
+                        idioma_texto: String(rows[i][idxIdioma] || '').trim(),
+                        nome: idxNome !== -1 ? String(rows[i][idxNome] || '').trim() : '',
+                        descricao: idxDesc !== -1 ? String(rows[i][idxDesc] || '').trim() : '',
+                    });
+                }
+                resolve(linhas);
+            } catch (err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(arquivo);
+    });
+}
+
+// --------------------------------------------------
 // UTILITÁRIOS
 // --------------------------------------------------
 function escapeHtml(value) {
@@ -271,6 +393,12 @@ async function carregarProdutos() {
         notify('Erro ao carregar produtos.', 'error');
         _produtos = [];
     }
+    // Ordem alfabética pelo Nome do Produto — feito no cliente com localeCompare
+    // (pt-BR, sem diferenciar maiúscula/acento) porque o ORDER BY do Postgres
+    // depende do collation do banco e não fica um "A a Z" natural.
+    _produtos.sort((a, b) =>
+        (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
+    );
     renderTabela(document.getElementById('filtroProdutos')?.value || '');
 }
 
@@ -451,6 +579,7 @@ const PROD_UPLOAD_ALIASES = {
     'sku': 'sku', 'codigo sku': 'sku', 'codigo': 'sku', 'cod': 'sku',
     'nome': 'nome', 'produto': 'nome', 'nome do produto': 'nome', 'descricao': 'descricao',
     'descricao tecnica': 'descricao',
+    'idioma': 'idioma_nome', 'lingua': 'idioma_nome', 'language': 'idioma_nome', 'idioma do produto': 'idioma_nome',
     'categoria': 'categoria',
     'tipo': 'tipo',
     'marca': 'marca', 'fabricante': 'marca',
@@ -477,7 +606,7 @@ const PROD_UPLOAD_ALIASES = {
     'lote': 'lote',
     'data fabricacao': 'data_fabricacao', 'fabricacao': 'data_fabricacao',
     'data validade': 'data_validade', 'validade': 'data_validade',
-    'referencia interna': 'referencia_interna', 'ref interna': 'referencia_interna',
+    'tags': 'tags', 'tag': 'tags', 'etiquetas': 'tags',
     'referencia fornecedor': 'referencia_fornecedor', 'ref fornecedor': 'referencia_fornecedor',
     'referencia outra': 'referencia_outra', 'outra referencia': 'referencia_outra',
     'empresa parceira': 'empresa_parceira_ref', 'parceiro': 'empresa_parceira_ref', 'fornecedor parceiro': 'empresa_parceira_ref',
@@ -499,6 +628,27 @@ const PROD_UPLOAD_CAMPOS_DATA = ['data_fabricacao', 'data_validade'];
 
 // Campos numéricos além dos já tratados (preco_custo/preco_venda/estoque_atual/estoque_minimo).
 const PROD_UPLOAD_CAMPOS_NUMERO_EXTRA = ['custos_fixos', 'imposto', 'estoque_maximo'];
+
+// Idioma do nome/descrição digitado à mão na planilha → código do <select> do
+// formulário. Só os 6 da lista têm código; qualquer outro texto ("Italiano",
+// "Japonês"...) vira idioma "outro" com o texto guardado no campo Outro.
+const PROD_IDIOMA_ALIASES = {
+    'de': 'de', 'alemao': 'de', 'german': 'de', 'deutsch': 'de',
+    'zh': 'zh', 'chines': 'zh', 'mandarim': 'zh', 'chinese': 'zh',
+    'es': 'es', 'espanhol': 'es', 'spanish': 'es', 'castelhano': 'es', 'castellano': 'es',
+    'fr': 'fr', 'frances': 'fr', 'french': 'fr', 'francais': 'fr',
+    'en': 'en', 'ingles': 'en', 'english': 'en',
+    'pt': 'pt', 'portugues': 'pt', 'portuguese': 'pt', 'br': 'pt', 'pt br': 'pt',
+};
+
+function _prodUploadResolverIdioma(txt) {
+    const bruto = String(txt || '').trim();
+    if (!bruto) return { idioma: 'pt', idioma_outro: null };
+    const norm = _prodUploadNorm(bruto);
+    if (norm === 'outro') return { idioma: 'outro', idioma_outro: '' };
+    const cod = PROD_IDIOMA_ALIASES[norm];
+    return cod ? { idioma: cod, idioma_outro: null } : { idioma: 'outro', idioma_outro: bruto };
+}
 
 function _prodUploadNorm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
@@ -573,6 +723,19 @@ function _prodUploadParsearExcelLote(rows) {
         Object.entries(PROD_UPLOAD_CAMPOS_BOOLEANOS).forEach(([campo, padrao]) => {
             p[campo] = _prodUploadParaBooleano(p[campo], padrao);
         });
+        // Tags: uma célula só, separada por ; ou vírgula → array de minúsculas
+        p.tags = p.tags
+            ? String(p.tags).split(/[;,]/).map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, 10)
+            : [];
+        // Idioma do nome/descrição principal → entrada base de nomes_idiomas
+        const _idi = _prodUploadResolverIdioma(p.idioma_nome);
+        p.nomes_idiomas = [{
+            idioma: _idi.idioma,
+            idioma_outro: _idi.idioma_outro,
+            nome: p.nome,
+            descricao: p.descricao || '',
+        }];
+        delete p.idioma_nome;
         p.status = p.status || 'ativo';
         p.moeda  = p.moeda  || 'BRL';
 
