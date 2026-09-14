@@ -444,7 +444,7 @@ function renderTabela(filtro) {
     const q    = (filtro || '').trim().toLowerCase();
     const all  = _produtos;
     const list = q
-        ? all.filter(p => `${p.sku} ${p.nome} ${p.categoria} ${p.ncm} ${p.marca}`.toLowerCase().includes(q))
+        ? all.filter(p => `${p.sku} ${p.nome} ${p.categoria} ${p.ncm} ${p.marca} ${(p.tags || []).join(' ')}`.toLowerCase().includes(q))
         : all;
 
     count.textContent = `${list.length} produto${list.length !== 1 ? 's' : ''}`;
@@ -469,6 +469,7 @@ function renderTabela(filtro) {
                     <th>NCM</th>
                     <th>Unidade Comercial</th>
                     <th>Lote</th>
+                    <th>Tags</th>
                     <th>Valor de Venda</th>
                     <th>Status</th>
                     <th>Ações</th>
@@ -484,6 +485,7 @@ function renderTabela(filtro) {
                     <td>${escapeHtml(p.ncm || '—')}</td>
                     <td>${escapeHtml(p.unidade_medida || '—')}</td>
                     <td>${escapeHtml(p.lote || '—')}</td>
+                    <td>${_prodListaTagsMini(p)}</td>
                     <td>${_prodListaValoresVenda(p)}</td>
                     <td>${statusProdBadge(p.status)}</td>
                     <td>
@@ -514,6 +516,15 @@ function _prodListaValoresVenda(p) {
     return `<div class="prod-valores-venda">${precos.map(pr => `
         <span class="prod-valor-tag">${escapeHtml(pr.moeda)} ${Number(pr.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
     `).join('')}</div>`;
+}
+
+// Mesmo estilo/classe (.tag-item-mini, de style-cadastro.css) já usado na
+// lista de Empresas (renderTagsMini, cadastros.js) — só as 2 primeiras, pra
+// não estourar a largura da célula; produto pode ter até 10 tags.
+function _prodListaTagsMini(p) {
+    const tags = p.tags || [];
+    if (!tags.length) return '—';
+    return tags.slice(0, 2).map(t => `<span class="tag-item-mini">${escapeHtml(t)}</span>`).join('');
 }
 
 // --------------------------------------------------

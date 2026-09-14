@@ -660,12 +660,27 @@ async function buscarDadosPlano() {
         const usuario = obterUsuarioLogado();
         if (!usuario?.empresa_id) return { sucesso: false };
 
-        const [{ data: empresa, error }, { count: totalAtivos }, { count: totalUsuarios }] = await Promise.all([
-            supabaseClient
+        // usuarios_extras_pagos (database-empresas-usuarios-extras.sql) — se a
+        // coluna ainda não existir (migração não rodada), cai pro select sem
+        // ela em vez de derrubar a função inteira (era exatamente essa
+        // combinação — coluna nova + função crítica sem fallback — que já
+        // causou incidente antes neste projeto, ver empresas.expira_em).
+        let empresa, error;
+        ({ data: empresa, error } = await supabaseClient
+            .from('empresas')
+            .select('razao_social, plano, usuarios_extras_pagos')
+            .eq('id', usuario.empresa_id)
+            .single());
+        if (error) {
+            ({ data: empresa, error } = await supabaseClient
                 .from('empresas')
                 .select('razao_social, plano')
                 .eq('id', usuario.empresa_id)
-                .single(),
+                .single());
+        }
+        if (error) return { sucesso: false };
+
+        const [{ count: totalAtivos }, { count: totalUsuarios }] = await Promise.all([
             supabaseClient
                 .from('usuarios')
                 .select('*', { count: 'exact', head: true })
@@ -677,12 +692,12 @@ async function buscarDadosPlano() {
                 .eq('empresa_id', usuario.empresa_id)
         ]);
 
-        if (error) return { sucesso: false };
         return {
             sucesso: true,
             data: {
                 razao_social: empresa.razao_social,
                 plano: empresa.plano || 'basico',
+                usuarios_extras_pagos: empresa.usuarios_extras_pagos || 0,
                 usuarios_ativos: totalAtivos || 0,
                 total_usuarios: totalUsuarios || 0
             }
@@ -762,7 +777,7 @@ async function buscarChaveEmpresa() {
 async function buscarProcessos(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
-        if (!usuario || !usuario.empresa_id) return { sucesso: false, data: [] };
+        if (!usuario || !usuario.empresa_id) return { sucesso: false, mensagem: 'Não autenticado', data: [] };
 
         let query = supabaseClient
             .from('processos')
@@ -953,7 +968,7 @@ async function excluirProcesso(id) {
 async function buscarProdutos(apenasAtivos = false) {
     try {
         const usuario = obterUsuarioLogado();
-        if (!usuario || !usuario.empresa_id) return { sucesso: false, data: [] };
+        if (!usuario || !usuario.empresa_id) return { sucesso: false, mensagem: 'Não autenticado', data: [] };
 
         let query = supabaseClient
             .from('produtos')

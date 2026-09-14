@@ -27,9 +27,9 @@ const PLANOS = {
     },
     profissional: {
         nome: 'Profissional', icone: 'fa-rocket', cor: '#f7931e', corFundo: '#fff7ed',
-        total: 5, admins: 2, subs: 3,
-        descricao: '2 administradores + 3 sub-usuários.',
-        recursos: ['Tudo do Regular', 'Até 5 usuários simultâneos', '2 administradores', 'Relatórios avançados', 'Suporte prioritário'],
+        total: 5, admins: 1, subs: 4,
+        descricao: '1 administrador + 4 sub-usuários.',
+        recursos: ['Tudo do Regular', 'Até 5 usuários simultâneos', 'Permissões avançadas por módulo', 'Relatórios avançados', 'Suporte prioritário'],
     },
     empresa: {
         nome: 'Empresa', icone: 'fa-building', cor: '#7c3aed', corFundo: '#ede9fe',
@@ -55,10 +55,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     const res = await buscarDadosPerfilCompleto();
     dadosPerfil = res.sucesso ? res.data : {};
 
-    console.log('[Perfil] dadosPerfil.empresa_id:', dadosPerfil?.empresa_id);
-    console.log('[Perfil] usuarioAtual.empresa_id:', usuarioAtual?.empresa_id);
-    console.log('[Perfil] dadosPerfil.empresas (join):', dadosPerfil?.empresas);
-
     // Usa join do buscarDadosPerfilCompleto se retornou dados
     // Caso contrário, tenta query direta na tabela empresas
     if (!dadosPerfil.empresas) {
@@ -69,7 +65,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 .select('id, razao_social, nome_fantasia, cnpj, ie, im, suframa, cep, estado, cidade, endereco, numero, complemento, status, expira_em')
                 .eq('id', empresaId)
                 .single();
-            console.log('[Perfil] query direta empresas:', { empData, empErr });
             if (!empErr && empData) dadosPerfil.empresas = empData;
         }
     }
@@ -583,10 +578,15 @@ function renderizarPlano(dados) {
     const plano         = PLANOS[planoKey] || PLANOS.basico;
     const ativos        = dados.usuarios_ativos || 0;
     const totalUsuarios = dados.total_usuarios  || 0;
+    const extras        = dados.usuarios_extras_pagos || 0;
     const isEmpresa     = planoKey === 'empresa';
     const proximos      = { basico: 'regular', regular: 'profissional', profissional: 'empresa' };
     const proximo       = proximos[planoKey];
-    const capacidade    = isEmpresa ? totalUsuarios : plano.total;
+    // Vagas extras compradas à parte (sem trocar de plano) somam à
+    // capacidade base — combinadas fora do sistema e liberadas pelo Marpex
+    // direto no banco (empresas.usuarios_extras_pagos), sem gateway de
+    // pagamento integrado ainda.
+    const capacidade    = isEmpresa ? totalUsuarios : plano.total + extras;
     const vagas         = isEmpresa ? null : capacidade - ativos;
     const pct           = isEmpresa ? null : Math.min((ativos / capacidade) * 100, 100);
     const corBarra      = !isEmpresa && vagas === 0 ? '#dc2626' : vagas === 1 ? '#f59e0b' : plano.cor;
@@ -617,6 +617,7 @@ function renderizarPlano(dados) {
                 <div class="plano-bloco-info">
                     <div class="plano-bloco-nome" style="color:${plano.cor};">${plano.nome}</div>
                     <div class="plano-bloco-desc">${plano.descricao}</div>
+                    ${!isEmpresa && extras > 0 ? `<div class="plano-bloco-desc" style="color:${plano.cor};font-weight:600;">+ ${extras} usuário${extras !== 1 ? 's' : ''} extra${extras !== 1 ? 's' : ''} contratado${extras !== 1 ? 's' : ''}</div>` : ''}
                 </div>
                 <div class="plano-bloco-stats">
                     <div class="plano-bloco-stat">
@@ -662,6 +663,15 @@ function renderizarPlano(dados) {
         </div>
     `;
 
+    // ── Usuários extras (sem trocar de plano) ──────────────────
+    // Só faz sentido oferecer pra quem tem um teto de licenças — no plano
+    // Empresa a capacidade já é ilimitada/combinada por contrato.
+    const extrasLinkHtml = !isEmpresa ? `
+        <div class="plano-extras-link">
+            Precisa de mais vagas sem trocar de plano?
+            <a href="#" onclick="solicitarUsuariosExtras(); return false;">Adicionar usuários extras</a>
+        </div>` : '';
+
     // ── Upgrade ───────────────────────────────────────────────
     if (proximo) {
         const prox   = PLANOS[proximo];
@@ -681,6 +691,7 @@ function renderizarPlano(dados) {
                     <i class="fa-solid fa-arrow-trend-up"></i> Upgrade
                 </button>
             </div>
+            ${extrasLinkHtml}
         `;
     } else {
         document.getElementById('planoUpgrade').innerHTML = `
@@ -688,8 +699,13 @@ function renderizarPlano(dados) {
                 <i class="fa-solid fa-trophy" style="color:#ca8a04;"></i>
                 <span>Você está no plano máximo — capacidade <strong>personalizada</strong> ativa.</span>
             </div>
+            ${extrasLinkHtml}
         `;
     }
+}
+
+function solicitarUsuariosExtras() {
+    mostrarToast('Entre em contato pra combinar o valor e liberar usuários extras no seu plano atual.', 'sucesso');
 }
 
 function solicitarUpgrade(planoDesejado) {

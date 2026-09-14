@@ -412,10 +412,13 @@ function abrirModalNovoUsuario() {
     const totalAtual = dadosPlanoAtual?.total_usuarios ?? (todosUsuarios.length + 1);
 
     const PLANO_TOTAL = { basico: 1, regular: 3, profissional: 5, empresa: Infinity };
-    const limiteTotal = PLANO_TOTAL[planoKey] ?? 1;
+    // Vagas extras compradas à parte (sem trocar de plano) — combinadas fora
+    // do sistema (não tem gateway de pagamento integrado) e liberadas pelo
+    // Marpex direto no banco (empresas.usuarios_extras_pagos).
+    const limiteTotal = (PLANO_TOTAL[planoKey] ?? 1) + (dadosPlanoAtual?.usuarios_extras_pagos || 0);
 
     if (totalAtual >= limiteTotal) {
-        window.location.href = 'inicio.html';
+        mostrarToast(`Limite de ${limiteTotal} usuário${limiteTotal !== 1 ? 's' : ''} do seu plano atingido. Fale com a gente pra adicionar vagas extras ou fazer upgrade.`, 'erro');
         return;
     }
 
