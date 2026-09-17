@@ -528,28 +528,26 @@ async function salvarProduto(e) {
 
     if (!jaExistia && res.data?.id) _prodEditandoId = res.data.id;
 
-    // Embalagens têm tabela própria — só dá pra gravar depois de ter o
-    // produto_id (na criação, só existe depois do insert acima).
+    // Embalagens/Composição têm tabela própria — só dá pra gravar depois de
+    // ter o produto_id (na criação, só existe depois do insert acima). As 3
+    // listas são independentes entre si — a falha de uma (ex: migração de
+    // uma ainda não rodou) não deve impedir as outras de salvar.
+    const avisos = [];
+
     const resEmb = await window.supabaseAPI.salvarEmbalagensProduto(_prodEditandoId, _prodEmbalagens.map(_prodEmbalagemParaLinhaDb), 'caixa');
-    if (!resEmb.sucesso) {
-        mostrarNotificacao('Produto salvo, mas houve erro ao salvar as embalagens: ' + (resEmb.mensagem || 'Tente novamente.'), 'warning');
-        return;
-    }
+    if (!resEmb.sucesso) avisos.push('embalagens: ' + (resEmb.mensagem || 'tente novamente'));
 
     const resEmbUnit = await window.supabaseAPI.salvarEmbalagensProduto(_prodEditandoId, _prodEmbalagensUnitarias.map(_prodEmbalagemUnitariaParaLinhaDb), 'unitaria');
-    if (!resEmbUnit.sucesso) {
-        mostrarNotificacao('Produto salvo, mas houve erro ao salvar as embalagens unitárias: ' + (resEmbUnit.mensagem || 'Tente novamente.'), 'warning');
-        return;
-    }
+    if (!resEmbUnit.sucesso) avisos.push('embalagens unitárias: ' + (resEmbUnit.mensagem || 'tente novamente'));
 
-    // Composição também tem tabela própria — mesmo motivo das embalagens.
     const resComposicao = await window.supabaseAPI.salvarComposicaoProduto(_prodEditandoId, _prodComposicoes.map(_prodComposicaoParaLinhaDb));
-    if (!resComposicao.sucesso) {
-        mostrarNotificacao('Produto salvo, mas houve erro ao salvar a composição: ' + (resComposicao.mensagem || 'Tente novamente.'), 'warning');
-        return;
-    }
+    if (!resComposicao.sucesso) avisos.push('composição: ' + (resComposicao.mensagem || 'tente novamente'));
 
-    mostrarNotificacao(jaExistia ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!', 'sucesso');
+    if (avisos.length) {
+        mostrarNotificacao('Produto salvo, mas houve erro ao salvar ' + avisos.join(' | '), 'warning');
+    } else {
+        mostrarNotificacao(jaExistia ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!', 'sucesso');
+    }
 
     // Edição sempre abre numa aba nova (via editarProduto() em produtos.js) —
     // fecha sozinha depois de dar tempo do usuário ler a confirmação.
