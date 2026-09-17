@@ -113,9 +113,10 @@ function docRenderizar() {
         const docRows = tipos.map(tipo => {
             const reg = salvos[tipo.id];
             const assinado = !!reg?.assinado;
-            // Documento assinado conta como feito automaticamente, mesmo que
-            // o campo Nº correspondente não tenha sido preenchido no Processo.
-            const feito = tipo.custom ? null : (assinado || docFeitoAutomatico(p._processos, tipo.id));
+            // Documento assinado OU já anexado (pelo Processo ou avulso)
+            // conta como feito automaticamente, mesmo que o campo Nº
+            // correspondente não tenha sido preenchido no Processo.
+            const feito = tipo.custom ? null : (assinado || !!reg?.arquivo_path || docFeitoAutomatico(p._processos, tipo.id));
             return {
                 tipo, feito, assinado,
                 assinadoPor: reg?.assinado_por,
@@ -266,6 +267,21 @@ function _docRenderLinha(pedido, r) {
                 ${arquivoPath ? `<button class="doc-row-excluir" title="Baixar documento assinado" onclick="docBaixarAssinatura('${arquivoPath.replace(/'/g, "\\'")}','${(arquivoNome || 'documento').replace(/'/g, "\\'")}')"><i class="fa-solid fa-download"></i></button>` : ''}
                 <button class="doc-row-excluir" title="Desmarcar assinatura" onclick="docDesmarcarAssinatura('${pedido.id}','${tipo.id}')"><i class="fa-solid fa-rotate-left"></i></button>
             </div>`;
+    } else if (arquivoPath) {
+        // Já tem arquivo anexado (veio do Processo ou de um anexo avulso)
+        // mas ainda não foi assinado — evita pedir upload de novo.
+        const nomeEsc = (arquivoNome || 'documento').replace(/'/g, "\\'");
+        const pathEsc = arquivoPath.replace(/'/g, "\\'");
+        assinaturaHtml = `
+            <div class="doc-assinatura-anexado">
+                <button class="doc-anexo-ver" title="Ver arquivo anexado" onclick="docBaixarAssinatura('${pathEsc}','${nomeEsc}')">
+                    <i class="fa-solid fa-paperclip"></i> ${arquivoNome || 'Anexado'}
+                </button>
+                <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${pedido.id}','${tipo.id}','${labelEsc}')">
+                    <i class="fa-regular fa-circle"></i> Assinar
+                </button>
+                <button class="doc-row-excluir" title="Remover anexo" onclick="docExcluirAnexo('${pedido.id}','${tipo.id}')"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
     } else {
         assinaturaHtml = `
             <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${pedido.id}','${tipo.id}','${labelEsc}')">
@@ -303,6 +319,18 @@ function docAbrirModalAssinatura(pedidoId, tipoId, tipoLabel) {
     document.getElementById('docModalAssinadoPor').value = '';
     document.getElementById('docModalAssinadoPor').style.borderColor = '';
     document.getElementById('docModalArquivo').value = '';
+
+    // Se já existe um arquivo anexado (Processo ou anexo avulso), a
+    // assinatura reaproveita ele — não obriga a subir de novo.
+    const reg = _docSalvos[pedidoId]?.[tipoId];
+    const existenteEl = document.getElementById('docModalArquivoExistente');
+    if (reg?.arquivo_path && existenteEl) {
+        existenteEl.innerHTML = `<i class="fa-solid fa-paperclip"></i> Já anexado: <strong>${reg.arquivo_nome || 'documento'}</strong> — deixe em branco pra manter, ou escolha outro pra substituir.`;
+        existenteEl.style.display = 'block';
+    } else if (existenteEl) {
+        existenteEl.style.display = 'none';
+    }
+
     document.getElementById('docModalAssinatura').style.display = 'flex';
 }
 
@@ -320,26 +348,33 @@ async function docConfirmarAssinaturaModal() {
     const fileInput = document.getElementById('docModalArquivo');
     const nome = nomeInput.value.trim();
     const file = fileInput.files[0];
+    const jaTemArquivo = !!_docSalvos[pedidoId]?.[tipoId]?.arquivo_path;
 
     if (!nome) { nomeInput.style.borderColor = '#dc2626'; return; }
-    if (!file) { mostrarNotificacao('Anexe o documento assinado.', 'erro'); return; }
+    if (!file && !jaTemArquivo) { mostrarNotificacao('Anexe o documento assinado.', 'erro'); return; }
 
     const btn = document.querySelector('#docModalAssinatura .doc-modal-btn-confirmar');
     const btnHtmlOriginal = btn?.innerHTML;
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...'; }
 
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `${pedidoId}/${tipoId}_${Date.now()}_${safeName}`;
-
-    const { error: uploadError } = await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).upload(path, file);
-    if (uploadError) {
-        mostrarNotificacao('Erro ao enviar arquivo: ' + uploadError.message, 'erro');
-        if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
-        return;
+    // Só sobe um arquivo novo se o usuário escolheu um — senão a
+    // assinatura reaproveita o que já estava anexado (mantido pelo
+    // supabase-api quando arquivoPath vem null).
+    let path = null, nomeArquivo = null;
+    if (file) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        path = `${pedidoId}/${tipoId}_${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).upload(path, file);
+        if (uploadError) {
+            mostrarNotificacao('Erro ao enviar arquivo: ' + uploadError.message, 'erro');
+            if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+            return;
+        }
+        nomeArquivo = file.name;
     }
 
     const isCustom = tipoId.startsWith('custom_');
-    const res = await window.supabaseAPI.marcarDocumentoAssinado(pedidoId, tipoId, true, nome, isCustom ? tipoLabel : null, path, file.name);
+    const res = await window.supabaseAPI.marcarDocumentoAssinado(pedidoId, tipoId, true, nome, isCustom ? tipoLabel : null, path, nomeArquivo);
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
     if (!res.sucesso) {
         mostrarNotificacao('Erro ao registrar assinatura: ' + res.mensagem, 'erro');
@@ -373,6 +408,25 @@ async function docDesmarcarAssinatura(pedidoId, tipoId) {
     }
     (_docSalvos[pedidoId] ||= {})[tipoId] = res.data;
     docRenderizar();
+}
+
+// Remove só o arquivo anexado (mantém a linha do documento) — some tanto o
+// anexo quanto a assinatura, já que uma assinatura não faz sentido sem o
+// arquivo por trás.
+async function docExcluirAnexo(pedidoId, tipoId) {
+    const reg = _docSalvos[pedidoId]?.[tipoId];
+    if (!reg?.arquivo_path) return;
+    if (!confirm('Remover o arquivo anexado deste documento?')) return;
+
+    await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).remove([reg.arquivo_path]);
+    const res = await window.supabaseAPI.limparAnexoDocumentoPedido(pedidoId, tipoId);
+    if (!res.sucesso) {
+        mostrarNotificacao('Erro ao remover anexo: ' + res.mensagem, 'erro');
+        return;
+    }
+    (_docSalvos[pedidoId] ||= {})[tipoId] = res.data || { ...reg, arquivo_path: null, arquivo_nome: null, enviado_por: null, enviado_em: null, assinado: false, assinado_por: null, assinado_em: null };
+    docRenderizar();
+    mostrarNotificacao('Anexo removido.', 'sucesso');
 }
 
 function docAbrirNovoPersonalizado(pedidoId) {

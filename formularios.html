@@ -2311,9 +2311,9 @@
                                         </div>
                                     </div>
 
-                                    <!-- Status | URL da Imagem | Categoria | Tipo -->
+                                    <!-- Status | URL da Imagem | Unidade Comercial | Categoria | Tipo -->
                                     <div class="form-group full-width">
-                                        <div style="display:grid; grid-template-columns: 0.5fr 1fr 1fr 1fr; gap: 16px; align-items: end;">
+                                        <div style="display:grid; grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr; gap: 16px; align-items: end;">
                                             <div class="form-group" style="margin-bottom:0;">
                                                 <label for="prod-status">Status</label>
                                                 <select id="prod-status" name="status">
@@ -2345,6 +2345,13 @@
                                                 <input type="url" id="prod-imagem-url" name="imagem_url" placeholder="https://..." data-no-caps>
                                             </div>
                                             <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prod-unidade">Unidade Comercial</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="prod-unidade" name="unidade_medida" placeholder="Ex: UN, KG..." autocomplete="off">
+                                                    <div class="autocomplete-list" id="prod-unidade-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom:0;">
                                                 <label for="prod-categoria">Categoria</label>
                                                 <input type="text" id="prod-categoria" name="categoria" placeholder="Ex: Eletrônicos">
                                             </div>
@@ -2352,45 +2359,6 @@
                                                 <label for="prod-tipo">Tipo</label>
                                                 <input type="text" id="prod-tipo" name="tipo" placeholder="Ex: Produto acabado">
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Linha 1: Unidade Comercial | Comprimento | Largura | Altura | Peso Bruto | Peso Líquido -->
-                                    <div class="form-group full-width">
-                                        <div style="background:#faf5ea; border-radius:10px; padding:16px 20px;">
-                                        <div style="font-weight:600; font-size:13px; color:#374151; margin-bottom:12px;">
-                                            Dimensões Unitárias do Produto
-                                            <span class="info-balao direita" data-tooltip="Dimensões unitárias do produto, como é apresentado nas gôndolas de mercados ou em e-commerce."><i class="fa-solid fa-circle-info"></i></span>
-                                        </div>
-                                        <div class="form-row-6">
-                                            <div class="form-group">
-                                                <label for="prod-unidade">Unidade Comercial</label>
-                                                <div class="autocomplete-wrapper">
-                                                    <input type="text" id="prod-unidade" name="unidade_medida" placeholder="Ex: UN, KG..." autocomplete="off">
-                                                    <div class="autocomplete-list" id="prod-unidade-lista"></div>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-comprimento-produto">Comprimento (cm)</label>
-                                                <input type="text" inputmode="decimal" id="prod-comprimento-produto" name="comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-largura-produto">Largura (cm)</label>
-                                                <input type="text" inputmode="decimal" id="prod-largura-produto" name="largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-altura-produto">Altura (cm)</label>
-                                                <input type="text" inputmode="decimal" id="prod-altura-produto" name="altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-peso-bruto-produto">Peso Bruto (kg)</label>
-                                                <input type="text" inputmode="decimal" id="prod-peso-bruto-produto" name="peso_bruto" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="prod-peso-liquido-produto">Peso Líquido (kg)</label>
-                                                <input type="text" inputmode="decimal" id="prod-peso-liquido-produto" name="peso_liquido" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
-                                            </div>
-                                        </div>
                                         </div>
                                     </div>
 
@@ -2721,6 +2689,101 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
+                                    <!-- Botão para abrir o formulário de uma nova Embalagem Unitária -->
+                                    <div class="form-group full-width">
+                                        <button type="button" id="btn-add-embalagem-unitaria" class="btn-add-idioma" onclick="prodAbrirFormEmbalagemUnitaria()">
+                                            <i class="fa-solid fa-plus"></i> Adicionar Embalagem Unitária
+                                        </button>
+                                    </div>
+
+                                    <!-- Formulário de uma Embalagem Unitária (oculto até "Adicionar", "Ver" ou "Editar") -->
+                                    <div class="form-group full-width" id="prod-embalagem-unitaria-form" style="display:none; background:#f8faff; border-radius:10px; padding:16px 20px;">
+
+                                    <div class="form-group full-width">
+                                        <div class="log-sub-body">
+                                            <!-- Nome da Embalagem Unitária -->
+                                            <div class="form-group full-width">
+                                                <label for="prod-embunit-nome">Nome da Embalagem Unitária <span class="required">*</span>
+                                                    <span class="info-balao direita" data-tooltip="Título de referência pra identificar esta embalagem unitária (ex: Unidade Avulsa, Kit 3 Unidades)."><i class="fa-solid fa-circle-info"></i></span>
+                                                </label>
+                                                <input type="text" id="prod-embunit-nome" name="embunit_nome" placeholder="Ex: Unidade Avulsa" data-no-caps>
+                                            </div>
+                                            <!-- Comprimento | Largura | Altura | Volume | Quantidade -->
+                                            <div class="form-row-4 log-sub-row">
+                                                <div class="form-group">
+                                                    <label for="prod-embunit-comprimento">Comprimento (cm)</label>
+                                                    <input type="text" inputmode="decimal" id="prod-embunit-comprimento" name="embunit_comprimento" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this); prodCalcularVolumeUnitario();">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-embunit-largura">Largura (cm)</label>
+                                                    <input type="text" inputmode="decimal" id="prod-embunit-largura" name="embunit_largura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this); prodCalcularVolumeUnitario();">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-embunit-altura">Altura (cm)</label>
+                                                    <input type="text" inputmode="decimal" id="prod-embunit-altura" name="embunit_altura" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this); prodCalcularVolumeUnitario();">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-embunit-volume">Volume (m³)</label>
+                                                    <input type="text" id="prod-embunit-volume" name="embunit_volume" readonly placeholder="0,0000" style="background:#f1f5f9;cursor:default;">
+                                                </div>
+                                            </div>
+                                            <!-- Quantidade | Peso Bruto | Peso Líquido -->
+                                            <div class="form-row-3 log-sub-row">
+                                                <div class="form-group">
+                                                    <label for="prod-embunit-quantidade">Quantidade</label>
+                                                    <input type="number" id="prod-embunit-quantidade" name="embunit_quantidade" min="1" step="1" placeholder="Ex: 1">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-embunit-peso-bruto">Peso Bruto (kg)</label>
+                                                    <input type="text" inputmode="decimal" id="prod-embunit-peso-bruto" name="embunit_peso_bruto" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-embunit-peso-liquido">Peso Líquido (kg)</label>
+                                                    <input type="text" inputmode="decimal" id="prod-embunit-peso-liquido" name="embunit_peso_liquido" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Ações do formulário de embalagem unitária -->
+                                    <div class="log-sub-row" style="display:flex; gap:10px; margin-top:6px;">
+                                        <button type="button" id="btn-embunit-salvar" class="btn-save" onclick="prodSalvarEmbalagemUnitaria()">
+                                            <i class="fa-solid fa-floppy-disk"></i> Salvar
+                                        </button>
+                                        <button type="button" id="btn-embunit-editar" class="btn-save" style="display:none;" onclick="prodSalvarEmbalagemUnitaria()">
+                                            <i class="fa-solid fa-pen"></i> Editar
+                                        </button>
+                                        <button type="button" id="btn-embunit-excluir" class="btn-clear" onclick="prodExcluirEmbalagemUnitariaForm()">
+                                            <i class="fa-solid fa-trash"></i> Excluir
+                                        </button>
+                                        <button type="button" id="btn-embunit-fechar" class="btn-clear" style="display:none;" onclick="prodFecharVisualizacaoEmbalagemUnitaria()">
+                                            <i class="fa-solid fa-xmark"></i> Fechar
+                                        </button>
+                                    </div>
+
+                                    </div>
+                                    <!-- /Formulário de Embalagem Unitária -->
+
+                                    <!-- Tabela de Embalagens Unitárias cadastradas -->
+                                    <div class="form-group full-width" id="prod-embalagens-unitarias-tabela-wrapper" style="display:none;">
+                                        <div class="tabela-embalagens-wrap">
+                                            <table class="tabela-embalagens">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Embalagem Unitária</th>
+                                                        <th>Dimensões</th>
+                                                        <th>Volume (m³)</th>
+                                                        <th>Quantidade</th>
+                                                        <th>Peso Líquido (kg)</th>
+                                                        <th>Peso Bruto (kg)</th>
+                                                        <th>Ações</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="prod-embalagens-unitarias-tabela-corpo"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
                                     <!-- Botão para abrir o formulário de uma nova embalagem -->
                                     <div class="form-group full-width">
                                         <button type="button" id="btn-add-embalagem" class="btn-add-idioma" onclick="prodAbrirFormEmbalagem()">
@@ -2868,6 +2931,117 @@
                                     </div>
 
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO: Composição -->
+                        <div class="form-section">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-flask"></i>
+                                Composição
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+
+                                <!-- Formulário de um Ingrediente (oculto até "Adicionar Ingrediente", "Ver" ou "Editar") -->
+                                <div class="form-group full-width" id="prod-composicao-form" style="display:none; background:#f8faff; border-radius:10px; padding:16px 20px;">
+
+                                    <div class="form-group full-width">
+                                        <div class="log-sub-body">
+                                            <!-- Ingrediente / Matéria-Prima | Nome Técnico | CAS | INS / E-number -->
+                                            <div class="form-row-4">
+                                                <div class="form-group">
+                                                    <label for="prod-comp-ingrediente">Ingrediente / Matéria-Prima <span class="required">*</span></label>
+                                                    <input type="text" id="prod-comp-ingrediente" name="comp_ingrediente" placeholder="Ex: Cloreto de Sódio" data-no-caps>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-comp-nome-tecnico">Nome Técnico</label>
+                                                    <input type="text" id="prod-comp-nome-tecnico" name="comp_nome_tecnico" placeholder="Ex: Sodium Chloride" data-no-caps>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-comp-cas">CAS</label>
+                                                    <input type="text" id="prod-comp-cas" name="comp_cas" placeholder="Ex: 7647-14-5">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-comp-ins">INS / E-number</label>
+                                                    <input type="text" id="prod-comp-ins" name="comp_ins" placeholder="Ex: INS 508 / E508">
+                                                </div>
+                                            </div>
+                                            <!-- Concentração % | Função | País Origem Ingrediente -->
+                                            <div class="form-row-3 log-sub-row">
+                                                <div class="form-group">
+                                                    <label for="prod-comp-concentracao">Concentração %</label>
+                                                    <input type="text" inputmode="decimal" id="prod-comp-concentracao" name="comp_concentracao" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-comp-funcao">Função</label>
+                                                    <input type="text" id="prod-comp-funcao" name="comp_funcao" placeholder="Ex: Conservante" data-no-caps>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="prod-comp-pais-origem">País Origem Ingrediente</label>
+                                                    <input type="text" id="prod-comp-pais-origem" name="comp_pais_origem" placeholder="Ex: Brasil" data-no-caps>
+                                                </div>
+                                            </div>
+                                            <!-- Observação -->
+                                            <div class="prod-obs-wrapper log-sub-row">
+                                                <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
+                                                    <span>Observação</span>
+                                                    <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
+                                                </div>
+                                                <div class="prod-obs-content">
+                                                    <textarea id="prod-comp-observacao" name="comp_observacao" placeholder="Informações adicionais sobre este ingrediente..." style="height:60px;resize:vertical;"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Ações do formulário de composição -->
+                                    <div class="log-sub-row" style="display:flex; gap:10px; margin-top:6px;">
+                                        <button type="button" id="btn-composicao-salvar" class="btn-save" onclick="prodSalvarComposicao()">
+                                            <i class="fa-solid fa-floppy-disk"></i> Salvar
+                                        </button>
+                                        <button type="button" id="btn-composicao-editar" class="btn-save" style="display:none;" onclick="prodSalvarComposicao()">
+                                            <i class="fa-solid fa-pen"></i> Editar
+                                        </button>
+                                        <button type="button" id="btn-composicao-excluir" class="btn-clear" onclick="prodExcluirComposicaoForm()">
+                                            <i class="fa-solid fa-trash"></i> Excluir
+                                        </button>
+                                        <button type="button" id="btn-composicao-fechar" class="btn-clear" style="display:none;" onclick="prodFecharVisualizacaoComposicao()">
+                                            <i class="fa-solid fa-xmark"></i> Fechar
+                                        </button>
+                                    </div>
+
+                                </div>
+                                <!-- /Formulário de Composição -->
+
+                                <!-- Tabela de Ingredientes cadastrados -->
+                                <div class="form-group full-width" id="prod-composicao-tabela-wrapper" style="display:none;">
+                                    <div class="tabela-embalagens-wrap">
+                                        <table class="tabela-embalagens">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ingrediente / Matéria-Prima</th>
+                                                    <th>Nome Técnico</th>
+                                                    <th>CAS</th>
+                                                    <th>INS / E-number</th>
+                                                    <th>Concentração %</th>
+                                                    <th>Função</th>
+                                                    <th>País Origem</th>
+                                                    <th>Ações</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="prod-composicao-tabela-corpo"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Botão para abrir o formulário de um novo ingrediente -->
+                                <div class="form-group full-width">
+                                    <button type="button" id="btn-add-composicao" class="btn-add-idioma" onclick="prodAbrirFormComposicao()">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Ingrediente
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
 

@@ -475,11 +475,6 @@ function _coletarDadosProduto() {
         marca:                  g('prod-marca'),
         unidade_medida:         g('prod-unidade'),
         lote:                   g('prod-lote'),
-        comprimento:            gv('prod-comprimento-produto')  || null,
-        largura:                gv('prod-largura-produto')      || null,
-        altura:                 gv('prod-altura-produto')       || null,
-        peso_bruto:             gv('prod-peso-bruto-produto')   || null,
-        peso_liquido:           gv('prod-peso-liquido-produto') || null,
         data_fabricacao:        g('prod-data-fabricacao') || null,
         data_validade:          g('prod-data-validade') || null,
         tags:                   _prodTagsArray,
@@ -535,9 +530,22 @@ async function salvarProduto(e) {
 
     // Embalagens têm tabela própria — só dá pra gravar depois de ter o
     // produto_id (na criação, só existe depois do insert acima).
-    const resEmb = await window.supabaseAPI.salvarEmbalagensProduto(_prodEditandoId, _prodEmbalagens.map(_prodEmbalagemParaLinhaDb));
+    const resEmb = await window.supabaseAPI.salvarEmbalagensProduto(_prodEditandoId, _prodEmbalagens.map(_prodEmbalagemParaLinhaDb), 'caixa');
     if (!resEmb.sucesso) {
         mostrarNotificacao('Produto salvo, mas houve erro ao salvar as embalagens: ' + (resEmb.mensagem || 'Tente novamente.'), 'warning');
+        return;
+    }
+
+    const resEmbUnit = await window.supabaseAPI.salvarEmbalagensProduto(_prodEditandoId, _prodEmbalagensUnitarias.map(_prodEmbalagemUnitariaParaLinhaDb), 'unitaria');
+    if (!resEmbUnit.sucesso) {
+        mostrarNotificacao('Produto salvo, mas houve erro ao salvar as embalagens unitárias: ' + (resEmbUnit.mensagem || 'Tente novamente.'), 'warning');
+        return;
+    }
+
+    // Composição também tem tabela própria — mesmo motivo das embalagens.
+    const resComposicao = await window.supabaseAPI.salvarComposicaoProduto(_prodEditandoId, _prodComposicoes.map(_prodComposicaoParaLinhaDb));
+    if (!resComposicao.sucesso) {
+        mostrarNotificacao('Produto salvo, mas houve erro ao salvar a composição: ' + (resComposicao.mensagem || 'Tente novamente.'), 'warning');
         return;
     }
 
@@ -579,15 +587,6 @@ async function _prodPreencherEdicao(dados) {
     set('prod-marca', dados.marca);
     set('prod-unidade', dados.unidade_medida);
     set('prod-lote', dados.lote);
-    // Dimensões/pesos formatados com vírgula decimal, igual o que
-    // prodMascaraDecimal espera ao editar (senão o próximo caractere digitado
-    // apaga tudo depois do ponto — a máscara só aceita dígito e vírgula).
-    const fmtDecimal = v => (v === null || v === undefined) ? '' : String(v).replace('.', ',');
-    set('prod-comprimento-produto',  fmtDecimal(dados.comprimento));
-    set('prod-largura-produto',      fmtDecimal(dados.largura));
-    set('prod-altura-produto',       fmtDecimal(dados.altura));
-    set('prod-peso-bruto-produto',   fmtDecimal(dados.peso_bruto));
-    set('prod-peso-liquido-produto', fmtDecimal(dados.peso_liquido));
     set('prod-data-fabricacao', dados.data_fabricacao);
     set('prod-data-validade', dados.data_validade);
     set('prod-ref-fornecedor', dados.referencia_fornecedor);
@@ -682,9 +681,18 @@ async function _prodPreencherEdicao(dados) {
     }
 
     // Embalagens — tabela própria (produto_embalagens), busca à parte pelo produto_id
-    const resEmbalagens = await window.supabaseAPI.buscarEmbalagensProduto(dados.id);
+    const resEmbalagens = await window.supabaseAPI.buscarEmbalagensProduto(dados.id, 'caixa');
     _prodEmbalagens = (resEmbalagens.sucesso ? resEmbalagens.data : []).map(_prodEmbalagemDeLinhaDb);
     if (typeof _prodRenderTabelaEmbalagens === 'function') _prodRenderTabelaEmbalagens();
+
+    const resEmbalagensUnit = await window.supabaseAPI.buscarEmbalagensProduto(dados.id, 'unitaria');
+    _prodEmbalagensUnitarias = (resEmbalagensUnit.sucesso ? resEmbalagensUnit.data : []).map(_prodEmbalagemUnitariaDeLinhaDb);
+    if (typeof _prodRenderTabelaEmbalagensUnitarias === 'function') _prodRenderTabelaEmbalagensUnitarias();
+
+    // Composição — tabela própria (produto_composicao), busca à parte pelo produto_id
+    const resComposicao = await window.supabaseAPI.buscarComposicaoProduto(dados.id);
+    _prodComposicoes = (resComposicao.sucesso ? resComposicao.data : []).map(_prodComposicaoDeLinhaDb);
+    if (typeof _prodRenderTabelaComposicao === 'function') _prodRenderTabelaComposicao();
 
     // Documentos (só os do tipo link — arquivos locais nunca foram persistidos)
     (dados.documentos || []).forEach(doc => {
@@ -1033,6 +1041,10 @@ async function procCarregarEdicao(id) {
     set('proc-proposta-id', p.proforma_id);
     set('proc-pedido-id',   p.pedido_id);
 
+    // Documentos: anexos reais já existentes pro pedido (pode ter vindo
+    // deste processo ou de outro processo do mesmo pedido).
+    if (p.pedido_id) await _docCarregarAnexosProcesso(p.pedido_id);
+
     // Guarda ID para atualização
     const idEl = document.getElementById('proc-id');
     if (idEl) idEl.value = p.id;
@@ -1215,6 +1227,7 @@ function criarNovo() {
         if (pdfWrap)    pdfWrap.style.display    = 'none';
     } else {
         document.getElementById('form-processo')?.reset();
+        _docLimparAnexosVisuais();
     }
 }
 
@@ -3609,6 +3622,14 @@ async function _procPreencherDaProforma(id) {
             }
             const remetentePedidoEl = document.getElementById('proc-emissor-pedido-remetente');
             if (remetentePedidoEl) remetentePedidoEl.value = _procPedidoRemetenteNome || '';
+
+            // Guarda o pedido_id cedo (não só ao salvar) pra já poder
+            // anexar documentos num processo ainda não salvo, e carrega
+            // anexos já existentes pro pedido (podem vir de outro processo).
+            const pedidoIdEl = document.getElementById('proc-pedido-id');
+            if (pedidoIdEl) pedidoIdEl.value = data.pedido_id;
+            _docLimparAnexosVisuais();
+            await _docCarregarAnexosProcesso(data.pedido_id);
         }
 
         // Tipo
@@ -4094,41 +4115,121 @@ function iniciarCEPDestino() {
 // ========================================
 // DOCUMENTOS — UPLOAD / VER / EXCLUIR
 // ========================================
+// Anexo real (Supabase Storage), gravado na mesma tabela pedido_documentos
+// que a tela Documentos usa pra assinatura — anexar aqui já deixa o
+// documento pronto pra ser assinado lá, sem precisar subir o arquivo de
+// novo. Ver [[project_documentos_processo_anexo_unificado]] na memória.
+const BUCKET_DOC_PEDIDO = 'pedido-documentos-assinados';
+let _docAnexosProcesso = {}; // tipoId -> { path, nome }
+
+function _docPedidoIdAtual() {
+    return document.getElementById('proc-pedido-id')?.value || null;
+}
+
+function _docAtualizarCampoVisual(id, nomeArquivo) {
+    const span = document.getElementById('doc-filename-' + id);
+    if (span) {
+        span.innerHTML = nomeArquivo ? `<i class="fa-solid fa-paperclip"></i> ${nomeArquivo}` : '';
+        span.classList.toggle('doc-filename-ativo', !!nomeArquivo);
+    }
+    const campo = document.getElementById('doc-file-' + id)?.closest('.doc-campo');
+    campo?.querySelector('.doc-btn-ver')?.classList.toggle('ativo', !!nomeArquivo);
+    campo?.querySelector('.doc-btn-del')?.classList.toggle('ativo', !!nomeArquivo);
+}
+
+// Carrega os anexos já existentes pro pedido (podem ter vindo de outro
+// processo do mesmo pedido, ou de uma assinatura feita direto na tela
+// Documentos) — chamado ao editar um processo e ao selecionar a Proforma
+// de origem num processo novo.
+async function _docCarregarAnexosProcesso(pedidoId) {
+    _docAnexosProcesso = {};
+    if (!pedidoId) return;
+    const res = await window.supabaseAPI.buscarDocumentosPedidos([pedidoId]);
+    (res.data || []).forEach(reg => {
+        if (!reg.arquivo_path) return;
+        _docAnexosProcesso[reg.tipo_documento] = { path: reg.arquivo_path, nome: reg.arquivo_nome };
+        _docAtualizarCampoVisual(reg.tipo_documento, reg.arquivo_nome);
+    });
+}
+
+function _docLimparAnexosVisuais() {
+    _docAnexosProcesso = {};
+    document.querySelectorAll('.doc-campo').forEach(campo => {
+        const fileInput = campo.querySelector('.doc-file-input');
+        if (fileInput) fileInput.value = '';
+        const span = campo.querySelector('.doc-filename');
+        if (span) { span.innerHTML = ''; span.classList.remove('doc-filename-ativo'); }
+        campo.querySelector('.doc-btn-ver')?.classList.remove('ativo');
+        campo.querySelector('.doc-btn-del')?.classList.remove('ativo');
+    });
+}
 
 function docUpload(id) {
+    const pedidoId = _docPedidoIdAtual();
+    if (!pedidoId) {
+        mostrarNotificacao('Selecione a Proforma de origem antes de anexar documentos.', 'erro');
+        return;
+    }
     const fileInput = document.getElementById('doc-file-' + id);
     if (!fileInput) return;
     fileInput.click();
-    fileInput.onchange = () => {
+    fileInput.onchange = async () => {
         const file = fileInput.files[0];
         if (!file) return;
-        const span = document.getElementById('doc-filename-' + id);
-        if (span) {
-            span.innerHTML = `<i class="fa-solid fa-paperclip"></i> ${file.name}`;
-            span.classList.add('doc-filename-ativo');
+
+        const btnUp = fileInput.closest('.doc-campo')?.querySelector('.doc-btn-upload');
+        const iconeOriginal = btnUp?.innerHTML;
+        if (btnUp) { btnUp.disabled = true; btnUp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
+
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${pedidoId}/${id}_${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabaseClient.storage.from(BUCKET_DOC_PEDIDO).upload(path, file);
+        if (uploadError) {
+            mostrarNotificacao('Erro ao enviar arquivo: ' + uploadError.message, 'erro');
+            if (btnUp) { btnUp.disabled = false; btnUp.innerHTML = iconeOriginal; }
+            fileInput.value = '';
+            return;
         }
-        const btnVer = fileInput.closest('.doc-campo')?.querySelector('.doc-btn-ver');
-        const btnDel = fileInput.closest('.doc-campo')?.querySelector('.doc-btn-del');
-        if (btnVer) btnVer.classList.add('ativo');
-        if (btnDel) btnDel.classList.add('ativo');
+
+        const res = await window.supabaseAPI.anexarDocumentoPedido(pedidoId, id, null, path, file.name);
+        if (btnUp) { btnUp.disabled = false; btnUp.innerHTML = iconeOriginal; }
+        if (!res.sucesso) {
+            mostrarNotificacao('Erro ao registrar anexo: ' + res.mensagem, 'erro');
+            fileInput.value = '';
+            return;
+        }
+
+        _docAnexosProcesso[id] = { path, nome: file.name };
+        _docAtualizarCampoVisual(id, file.name);
+        mostrarNotificacao('Documento anexado.', 'sucesso');
     };
 }
 
 function docVer(id) {
-    const fileInput = document.getElementById('doc-file-' + id);
-    if (!fileInput || !fileInput.files[0]) return;
-    const url = URL.createObjectURL(fileInput.files[0]);
-    window.open(url, '_blank');
+    const anexo = _docAnexosProcesso[id];
+    if (!anexo) return;
+    // Bucket é público — usa a URL pública direta (síncrona, sem download
+    // de blob) em vez de window.open após um await, que o navegador trata
+    // como popup não solicitado pelo usuário e bloqueia.
+    const { data } = supabaseClient.storage.from(BUCKET_DOC_PEDIDO).getPublicUrl(anexo.path);
+    window.open(data.publicUrl, '_blank');
 }
 
-function docExcluir(id) {
+async function docExcluir(id) {
+    const pedidoId = _docPedidoIdAtual();
+    const anexo = _docAnexosProcesso[id];
+    if (!pedidoId || !anexo) return;
+    if (!confirm('Remover o arquivo anexado a este documento? Isso também desfaz a assinatura, se houver.')) return;
+
+    await supabaseClient.storage.from(BUCKET_DOC_PEDIDO).remove([anexo.path]);
+    const res = await window.supabaseAPI.limparAnexoDocumentoPedido(pedidoId, id);
+    if (!res.sucesso) { mostrarNotificacao('Erro ao remover anexo: ' + res.mensagem, 'erro'); return; }
+
+    delete _docAnexosProcesso[id];
     const fileInput = document.getElementById('doc-file-' + id);
     if (fileInput) fileInput.value = '';
-    const span = document.getElementById('doc-filename-' + id);
-    if (span) { span.innerHTML = ''; span.classList.remove('doc-filename-ativo'); }
-    const campo = fileInput?.closest('.doc-campo');
-    campo?.querySelector('.doc-btn-ver')?.classList.remove('ativo');
-    campo?.querySelector('.doc-btn-del')?.classList.remove('ativo');
+    _docAtualizarCampoVisual(id, null);
+    mostrarNotificacao('Anexo removido.', 'sucesso');
 }
 
 // ========================================
@@ -5059,6 +5160,435 @@ function _prodRenderTabelaEmbalagens() {
                 <button type="button" class="btn-acao btn-visualizar" title="Ver" onclick="prodVerEmbalagem(${dados.id})"><i class="fa-solid fa-eye"></i></button>
                 <button type="button" class="btn-acao btn-editar" title="Editar" onclick="prodEditarEmbalagem(${dados.id})"><i class="fa-solid fa-pen"></i></button>
                 <button type="button" class="btn-acao btn-excluir" title="Excluir" onclick="prodExcluirEmbalagemTabela(${dados.id})"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`).join('');
+}
+
+// ========================================
+// PRODUTO — EMBALAGENS UNITÁRIAS (LOGÍSTICA)
+// ========================================
+// Mesma tabela produto_embalagens da Embalagem/Dimensões da Caixa acima —
+// só que filtrada por tipo='unitaria' (ver
+// database-produto-embalagens-tipo-unitaria.sql). Descreve o produto em si
+// (o que veio dos campos de Comprimento/Largura/Altura/Peso que existiam
+// direto em Dados Gerais), não a caixa de transporte — por isso não tem
+// Modal de Transporte/Acondicionamento/Cubagem aérea, mas ganha Volume
+// (mesma fórmula da Cubagem) e Quantidade.
+
+let _prodEmbalagensUnitarias = [];
+let _prodEmbalagemUnitariaEditandoId = null;
+
+const _PROD_EMBALAGEM_UNITARIA_CAMPOS = [
+    'prod-embunit-nome',
+    'prod-embunit-comprimento', 'prod-embunit-largura', 'prod-embunit-altura',
+    'prod-embunit-peso-bruto', 'prod-embunit-peso-liquido', 'prod-embunit-quantidade',
+];
+
+function _prodEmbalagemUnitariaParaLinhaDb(e) {
+    const num = v => { const n = parseFloat(String(v || '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+    return {
+        nome:         e['prod-embunit-nome'] || null,
+        comprimento:  num(e['prod-embunit-comprimento']),
+        largura:      num(e['prod-embunit-largura']),
+        altura:       num(e['prod-embunit-altura']),
+        peso_bruto:   num(e['prod-embunit-peso-bruto']),
+        peso_liquido: num(e['prod-embunit-peso-liquido']),
+        quantidade:   e['prod-embunit-quantidade'] ? parseInt(e['prod-embunit-quantidade'], 10) : null,
+    };
+}
+
+// "id" aqui é só uma chave local pra editar/excluir dentro da lista da tela
+// (mesma convenção da Embalagem/Dimensões da Caixa) — não é o UUID real da
+// linha no banco, que é regerado a cada salvamento (CRUD substitui-tudo).
+function _prodEmbalagemUnitariaDeLinhaDb(row, indiceLocal) {
+    const fmt = v => (v === null || v === undefined) ? '' : String(v).replace('.', ',');
+    return {
+        id: Date.now() + indiceLocal,
+        'prod-embunit-nome':         row.nome || '',
+        'prod-embunit-comprimento':  fmt(row.comprimento),
+        'prod-embunit-largura':      fmt(row.largura),
+        'prod-embunit-altura':       fmt(row.altura),
+        'prod-embunit-peso-bruto':   fmt(row.peso_bruto),
+        'prod-embunit-peso-liquido': fmt(row.peso_liquido),
+        'prod-embunit-quantidade':   row.quantidade ?? '',
+    };
+}
+
+function _prodEmbalagemUnitariaBotoes(modo) {
+    // modo: 'novo' | 'edicao' | 'visualizacao'
+    document.getElementById('btn-embunit-salvar').style.display  = modo === 'novo'         ? '' : 'none';
+    document.getElementById('btn-embunit-editar').style.display  = modo === 'edicao'       ? '' : 'none';
+    document.getElementById('btn-embunit-excluir').style.display = modo !== 'visualizacao' ? '' : 'none';
+    document.getElementById('btn-embunit-fechar').style.display  = modo === 'visualizacao' ? '' : 'none';
+}
+
+function _prodEmbalagemUnitariaSetCamposDisabled(desabilitado) {
+    document.querySelectorAll('#prod-embalagem-unitaria-form input, #prod-embalagem-unitaria-form select, #prod-embalagem-unitaria-form textarea')
+        .forEach(el => { el.disabled = desabilitado; });
+}
+
+// Volume (m³) = C x L x A / 1.000.000, mesma fórmula da Cubagem da outra
+// embalagem — chamado de "Volume" aqui porque essa seção não tem Modal de
+// Transporte (não existe o conceito de cubagem aérea pra ela).
+function prodCalcularVolumeUnitario() {
+    const campo = document.getElementById('prod-embunit-volume');
+    if (!campo) return;
+    const num = id => parseFloat((document.getElementById(id)?.value || '').replace(',', '.')) || 0;
+    const c = num('prod-embunit-comprimento'), l = num('prod-embunit-largura'), a = num('prod-embunit-altura');
+    if (!c || !l || !a) { campo.value = ''; return; }
+    const m3 = (c * l * a) / 1000000;
+    campo.value = m3.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+}
+
+function prodLimparFormEmbalagemUnitaria() {
+    _PROD_EMBALAGEM_UNITARIA_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    prodCalcularVolumeUnitario();
+}
+
+function prodAbrirFormEmbalagemUnitaria() {
+    _prodEmbalagemUnitariaEditandoId = null;
+    prodLimparFormEmbalagemUnitaria();
+    _prodEmbalagemUnitariaSetCamposDisabled(false);
+    _prodEmbalagemUnitariaBotoes('novo');
+
+    const form = document.getElementById('prod-embalagem-unitaria-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function _prodEmbalagemUnitariaColetarDados() {
+    const dados = { id: _prodEmbalagemUnitariaEditandoId || Date.now() };
+    _PROD_EMBALAGEM_UNITARIA_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        dados[id] = el ? el.value.trim() : '';
+    });
+    return dados;
+}
+
+function _prodEmbalagemUnitariaPreencherForm(dados) {
+    _PROD_EMBALAGEM_UNITARIA_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = dados[id] || '';
+    });
+    prodCalcularVolumeUnitario();
+}
+
+function _prodEmbalagemUnitariaFecharForm() {
+    _prodEmbalagemUnitariaEditandoId = null;
+    document.getElementById('prod-embalagem-unitaria-form').style.display = 'none';
+    prodLimparFormEmbalagemUnitaria();
+    _prodEmbalagemUnitariaSetCamposDisabled(false);
+}
+
+// Sem modal de confirmação de dimensões aqui (aquilo era específico do
+// Modal de Transporte da outra embalagem) — salva direto.
+function prodSalvarEmbalagemUnitaria() {
+    const nomeEl = document.getElementById('prod-embunit-nome');
+    if (!nomeEl.value.trim()) {
+        alert('Informe o Nome da Embalagem Unitária.');
+        nomeEl.focus();
+        return;
+    }
+
+    const dados = _prodEmbalagemUnitariaColetarDados();
+    if (_prodEmbalagemUnitariaEditandoId) {
+        const idx = _prodEmbalagensUnitarias.findIndex(e => e.id === _prodEmbalagemUnitariaEditandoId);
+        if (idx > -1) _prodEmbalagensUnitarias[idx] = dados;
+    } else {
+        _prodEmbalagensUnitarias.push(dados);
+    }
+
+    _prodEmbalagemUnitariaFecharForm();
+    _prodRenderTabelaEmbalagensUnitarias();
+}
+
+function prodExcluirEmbalagemUnitariaForm() {
+    if (_prodEmbalagemUnitariaEditandoId) {
+        if (!confirm('Deseja realmente excluir esta embalagem unitária?')) return;
+        _prodEmbalagensUnitarias = _prodEmbalagensUnitarias.filter(e => e.id !== _prodEmbalagemUnitariaEditandoId);
+        _prodRenderTabelaEmbalagensUnitarias();
+    }
+    _prodEmbalagemUnitariaFecharForm();
+}
+
+function prodFecharVisualizacaoEmbalagemUnitaria() {
+    _prodEmbalagemUnitariaFecharForm();
+}
+
+function prodEditarEmbalagemUnitaria(id) {
+    const dados = _prodEmbalagensUnitarias.find(e => e.id === id);
+    if (!dados) return;
+    _prodEmbalagemUnitariaEditandoId = id;
+    prodLimparFormEmbalagemUnitaria();
+    _prodEmbalagemUnitariaPreencherForm(dados);
+    _prodEmbalagemUnitariaSetCamposDisabled(false);
+    _prodEmbalagemUnitariaBotoes('edicao');
+
+    const form = document.getElementById('prod-embalagem-unitaria-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function prodVerEmbalagemUnitaria(id) {
+    const dados = _prodEmbalagensUnitarias.find(e => e.id === id);
+    if (!dados) return;
+    _prodEmbalagemUnitariaEditandoId = id;
+    prodLimparFormEmbalagemUnitaria();
+    _prodEmbalagemUnitariaPreencherForm(dados);
+    _prodEmbalagemUnitariaSetCamposDisabled(true);
+    _prodEmbalagemUnitariaBotoes('visualizacao');
+
+    const form = document.getElementById('prod-embalagem-unitaria-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function prodExcluirEmbalagemUnitariaTabela(id) {
+    if (!confirm('Deseja realmente excluir esta embalagem unitária?')) return;
+    _prodEmbalagensUnitarias = _prodEmbalagensUnitarias.filter(e => e.id !== id);
+    if (_prodEmbalagemUnitariaEditandoId === id) _prodEmbalagemUnitariaFecharForm();
+    _prodRenderTabelaEmbalagensUnitarias();
+}
+
+function _prodEmbalagemUnitariaDimensoesTexto(dados) {
+    const c = dados['prod-embunit-comprimento'], l = dados['prod-embunit-largura'], a = dados['prod-embunit-altura'];
+    if (!c && !l && !a) return '—';
+    return `${c || '—'} × ${l || '—'} × ${a || '—'} cm`;
+}
+
+function _prodEmbalagemUnitariaVolumeTexto(dados) {
+    const c = parseFloat((dados['prod-embunit-comprimento'] || '').replace(',', '.'));
+    const l = parseFloat((dados['prod-embunit-largura'] || '').replace(',', '.'));
+    const a = parseFloat((dados['prod-embunit-altura'] || '').replace(',', '.'));
+    if (!c || !l || !a) return '—';
+    return ((c * l * a) / 1000000).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+}
+
+function _prodRenderTabelaEmbalagensUnitarias() {
+    const wrapper = document.getElementById('prod-embalagens-unitarias-tabela-wrapper');
+    const corpo   = document.getElementById('prod-embalagens-unitarias-tabela-corpo');
+    if (!wrapper || !corpo) return;
+
+    if (!_prodEmbalagensUnitarias.length) {
+        wrapper.style.display = 'none';
+        corpo.innerHTML = '';
+        return;
+    }
+
+    wrapper.style.display = '';
+    corpo.innerHTML = _prodEmbalagensUnitarias.map(dados => `
+        <tr>
+            <td>${_prodEscapeHtml(dados['prod-embunit-nome'] || '—')}</td>
+            <td>${_prodEscapeHtml(_prodEmbalagemUnitariaDimensoesTexto(dados))}</td>
+            <td>${_prodEscapeHtml(_prodEmbalagemUnitariaVolumeTexto(dados))}</td>
+            <td>${_prodEscapeHtml(dados['prod-embunit-quantidade'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-embunit-peso-liquido'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-embunit-peso-bruto'] || '—')}</td>
+            <td>
+                <button type="button" class="btn-acao btn-visualizar" title="Ver" onclick="prodVerEmbalagemUnitaria(${dados.id})"><i class="fa-solid fa-eye"></i></button>
+                <button type="button" class="btn-acao btn-editar" title="Editar" onclick="prodEditarEmbalagemUnitaria(${dados.id})"><i class="fa-solid fa-pen"></i></button>
+                <button type="button" class="btn-acao btn-excluir" title="Excluir" onclick="prodExcluirEmbalagemUnitariaTabela(${dados.id})"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`).join('');
+}
+
+// ========================================
+// PRODUTO — COMPOSIÇÃO (ingredientes/matérias-primas, produto_composicao)
+// ========================================
+// Lista própria (compliance regulatório de exportação — INS/E-number, CAS,
+// país de origem do ingrediente). Mesmo padrão "substitui tudo" das
+// Embalagens: CRUD local em memória, persistido só ao salvar o produto.
+
+let _prodComposicoes = [];
+let _prodComposicaoEditandoId = null;
+
+const _PROD_COMPOSICAO_CAMPOS = [
+    'prod-comp-ingrediente', 'prod-comp-nome-tecnico', 'prod-comp-cas', 'prod-comp-ins',
+    'prod-comp-concentracao', 'prod-comp-funcao', 'prod-comp-pais-origem', 'prod-comp-observacao',
+];
+
+function _prodComposicaoParaLinhaDb(e) {
+    const num = v => { const n = parseFloat(String(v || '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+    return {
+        ingrediente:      e['prod-comp-ingrediente'] || null,
+        nome_tecnico:     e['prod-comp-nome-tecnico'] || null,
+        cas:              e['prod-comp-cas'] || null,
+        ins_enumber:      e['prod-comp-ins'] || null,
+        concentracao_pct: num(e['prod-comp-concentracao']),
+        funcao:           e['prod-comp-funcao'] || null,
+        pais_origem:      e['prod-comp-pais-origem'] || null,
+        observacao:       e['prod-comp-observacao'] || null,
+    };
+}
+
+// "id" aqui é só uma chave local pra editar/excluir dentro da lista da tela
+// (mesma convenção das Embalagens) — não é o UUID real da linha no banco,
+// que é regerado a cada salvamento (CRUD substitui-tudo).
+function _prodComposicaoDeLinhaDb(row, indiceLocal) {
+    const fmt = v => (v === null || v === undefined) ? '' : String(v).replace('.', ',');
+    return {
+        id: Date.now() + indiceLocal,
+        'prod-comp-ingrediente':  row.ingrediente || '',
+        'prod-comp-nome-tecnico': row.nome_tecnico || '',
+        'prod-comp-cas':          row.cas || '',
+        'prod-comp-ins':          row.ins_enumber || '',
+        'prod-comp-concentracao': fmt(row.concentracao_pct),
+        'prod-comp-funcao':       row.funcao || '',
+        'prod-comp-pais-origem':  row.pais_origem || '',
+        'prod-comp-observacao':  row.observacao || '',
+    };
+}
+
+function _prodComposicaoBotoes(modo) {
+    // modo: 'novo' | 'edicao' | 'visualizacao'
+    document.getElementById('btn-composicao-salvar').style.display  = modo === 'novo'         ? '' : 'none';
+    document.getElementById('btn-composicao-editar').style.display  = modo === 'edicao'       ? '' : 'none';
+    document.getElementById('btn-composicao-excluir').style.display = modo !== 'visualizacao' ? '' : 'none';
+    document.getElementById('btn-composicao-fechar').style.display  = modo === 'visualizacao' ? '' : 'none';
+}
+
+function _prodComposicaoSetCamposDisabled(desabilitado) {
+    document.querySelectorAll('#prod-composicao-form input, #prod-composicao-form select, #prod-composicao-form textarea')
+        .forEach(el => { el.disabled = desabilitado; });
+}
+
+function prodLimparFormComposicao() {
+    _PROD_COMPOSICAO_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
+function prodAbrirFormComposicao() {
+    _prodComposicaoEditandoId = null;
+    prodLimparFormComposicao();
+    _prodComposicaoSetCamposDisabled(false);
+    _prodComposicaoBotoes('novo');
+
+    const form = document.getElementById('prod-composicao-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function _prodComposicaoColetarDados() {
+    const dados = { id: _prodComposicaoEditandoId || Date.now() };
+    _PROD_COMPOSICAO_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        dados[id] = el ? el.value.trim() : '';
+    });
+    return dados;
+}
+
+function _prodComposicaoPreencherForm(dados) {
+    _PROD_COMPOSICAO_CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = dados[id] || '';
+    });
+}
+
+function _prodComposicaoFecharForm() {
+    _prodComposicaoEditandoId = null;
+    document.getElementById('prod-composicao-form').style.display = 'none';
+    prodLimparFormComposicao();
+    _prodComposicaoSetCamposDisabled(false);
+}
+
+function prodSalvarComposicao() {
+    const ingredienteEl = document.getElementById('prod-comp-ingrediente');
+    if (!ingredienteEl.value.trim()) {
+        alert('Informe o Ingrediente / Matéria-Prima.');
+        ingredienteEl.focus();
+        return;
+    }
+
+    const dados = _prodComposicaoColetarDados();
+    if (_prodComposicaoEditandoId) {
+        const idx = _prodComposicoes.findIndex(e => e.id === _prodComposicaoEditandoId);
+        if (idx > -1) _prodComposicoes[idx] = dados;
+    } else {
+        _prodComposicoes.push(dados);
+    }
+
+    _prodComposicaoFecharForm();
+    _prodRenderTabelaComposicao();
+}
+
+function prodExcluirComposicaoForm() {
+    if (_prodComposicaoEditandoId) {
+        if (!confirm('Deseja realmente excluir este ingrediente?')) return;
+        _prodComposicoes = _prodComposicoes.filter(e => e.id !== _prodComposicaoEditandoId);
+        _prodRenderTabelaComposicao();
+    }
+    _prodComposicaoFecharForm();
+}
+
+function prodFecharVisualizacaoComposicao() {
+    _prodComposicaoFecharForm();
+}
+
+function prodEditarComposicao(id) {
+    const dados = _prodComposicoes.find(e => e.id === id);
+    if (!dados) return;
+    _prodComposicaoEditandoId = id;
+    prodLimparFormComposicao();
+    _prodComposicaoPreencherForm(dados);
+    _prodComposicaoSetCamposDisabled(false);
+    _prodComposicaoBotoes('edicao');
+
+    const form = document.getElementById('prod-composicao-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function prodVerComposicao(id) {
+    const dados = _prodComposicoes.find(e => e.id === id);
+    if (!dados) return;
+    _prodComposicaoEditandoId = id;
+    prodLimparFormComposicao();
+    _prodComposicaoPreencherForm(dados);
+    _prodComposicaoSetCamposDisabled(true);
+    _prodComposicaoBotoes('visualizacao');
+
+    const form = document.getElementById('prod-composicao-form');
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function prodExcluirComposicaoTabela(id) {
+    if (!confirm('Deseja realmente excluir este ingrediente?')) return;
+    _prodComposicoes = _prodComposicoes.filter(e => e.id !== id);
+    if (_prodComposicaoEditandoId === id) _prodComposicaoFecharForm();
+    _prodRenderTabelaComposicao();
+}
+
+function _prodRenderTabelaComposicao() {
+    const wrapper = document.getElementById('prod-composicao-tabela-wrapper');
+    const corpo   = document.getElementById('prod-composicao-tabela-corpo');
+    if (!wrapper || !corpo) return;
+
+    if (!_prodComposicoes.length) {
+        wrapper.style.display = 'none';
+        corpo.innerHTML = '';
+        return;
+    }
+
+    wrapper.style.display = '';
+    corpo.innerHTML = _prodComposicoes.map(dados => `
+        <tr>
+            <td>${_prodEscapeHtml(dados['prod-comp-ingrediente'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-comp-nome-tecnico'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-comp-cas'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-comp-ins'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-comp-concentracao'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-comp-funcao'] || '—')}</td>
+            <td>${_prodEscapeHtml(dados['prod-comp-pais-origem'] || '—')}</td>
+            <td>
+                <button type="button" class="btn-acao btn-visualizar" title="Ver" onclick="prodVerComposicao(${dados.id})"><i class="fa-solid fa-eye"></i></button>
+                <button type="button" class="btn-acao btn-editar" title="Editar" onclick="prodEditarComposicao(${dados.id})"><i class="fa-solid fa-pen"></i></button>
+                <button type="button" class="btn-acao btn-excluir" title="Excluir" onclick="prodExcluirComposicaoTabela(${dados.id})"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>`).join('');
 }

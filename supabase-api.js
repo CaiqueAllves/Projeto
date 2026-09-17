@@ -1012,11 +1012,6 @@ function _prodMontarPayload(dados) {
         marca:                   dados.marca || null,
         unidade_medida:          dados.unidade_medida || null,
         lote:                    dados.lote || null,
-        comprimento:             dados.comprimento || null,
-        largura:                 dados.largura || null,
-        altura:                  dados.altura || null,
-        peso_bruto:              dados.peso_bruto || null,
-        peso_liquido:            dados.peso_liquido || null,
         data_fabricacao:         dados.data_fabricacao || null,
         data_validade:           dados.data_validade || null,
         tags:                    Array.isArray(dados.tags) ? dados.tags : [],
@@ -1054,12 +1049,18 @@ function _prodMontarPayload(dados) {
 // comportamento que já existia com o JSONB) — mais simples que fazer diff
 // de linha adicionada/editada/removida, e o volume por produto é pequeno.
 
-async function buscarEmbalagensProduto(produtoId) {
+// `tipo` distingue as duas listas que hoje moram na mesma tabela:
+// 'caixa' (Embalagem / Dimensões da Caixa — a de transporte, com Modal/
+// Acondicionamento/Cubagem) e 'unitaria' (Embalagem Unitária — a do
+// produto em si, mais simples, com Volume/Quantidade). Ver
+// database-produto-embalagens-tipo-unitaria.sql.
+async function buscarEmbalagensProduto(produtoId, tipo = 'caixa') {
     try {
         const { data, error } = await supabaseClient
             .from('produto_embalagens')
             .select('*')
             .eq('produto_id', produtoId)
+            .eq('tipo', tipo)
             .order('criado_em');
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
@@ -1068,15 +1069,19 @@ async function buscarEmbalagensProduto(produtoId) {
     }
 }
 
-async function salvarEmbalagensProduto(produtoId, linhas) {
+async function salvarEmbalagensProduto(produtoId, linhas, tipo = 'caixa') {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
+        // Substitui só as linhas DESTE tipo — não mexe nas do outro tipo
+        // (senão salvar a Embalagem Unitária apagaria a de Dimensões da
+        // Caixa do mesmo produto, e vice-versa).
         const { error: errDel } = await supabaseClient
             .from('produto_embalagens')
             .delete()
-            .eq('produto_id', produtoId);
+            .eq('produto_id', produtoId)
+            .eq('tipo', tipo);
         if (errDel) return { sucesso: false, mensagem: errDel.message };
 
         if (!linhas?.length) return { sucesso: true };
@@ -1084,6 +1089,7 @@ async function salvarEmbalagensProduto(produtoId, linhas) {
         const rows = linhas.map(l => ({
             produto_id: produtoId,
             empresa_id: usuario.empresa_id,
+            tipo,
             nome:                          l.nome || null,
             tipo_embalagem:                l.tipo_embalagem || null,
             tipo_embalagem_codigo:         l.tipo_embalagem_codigo || null,
@@ -1097,11 +1103,62 @@ async function salvarEmbalagensProduto(produtoId, linhas) {
             peso_bruto:                    l.peso_bruto ?? null,
             peso_liquido:                  l.peso_liquido ?? null,
             empilhamento_maximo:           l.empilhamento_maximo ?? null,
+            quantidade:                    l.quantidade ?? null,
             observacoes:                   l.observacoes || null,
             medidas_caixa:                 l.medidas_caixa || [],
         }));
 
         const { error } = await supabaseClient.from('produto_embalagens').insert(rows);
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message };
+    }
+}
+
+// ── Composição (produto_composicao) — mesmo padrão "substitui tudo" das
+// Embalagens: deleta todas as linhas do produto e reinsere a lista atual.
+async function buscarComposicaoProduto(produtoId) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('produto_composicao')
+            .select('*')
+            .eq('produto_id', produtoId)
+            .order('criado_em');
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) {
+        return { sucesso: false, mensagem: err.message, data: [] };
+    }
+}
+
+async function salvarComposicaoProduto(produtoId, linhas) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
+
+        const { error: errDel } = await supabaseClient
+            .from('produto_composicao')
+            .delete()
+            .eq('produto_id', produtoId);
+        if (errDel) return { sucesso: false, mensagem: errDel.message };
+
+        if (!linhas?.length) return { sucesso: true };
+
+        const rows = linhas.map(l => ({
+            produto_id:       produtoId,
+            empresa_id:       usuario.empresa_id,
+            ingrediente:      l.ingrediente || null,
+            nome_tecnico:     l.nome_tecnico || null,
+            cas:              l.cas || null,
+            ins_enumber:      l.ins_enumber || null,
+            concentracao_pct: l.concentracao_pct ?? null,
+            funcao:           l.funcao || null,
+            pais_origem:      l.pais_origem || null,
+            observacao:       l.observacao || null,
+        }));
+
+        const { error } = await supabaseClient.from('produto_composicao').insert(rows);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {
@@ -1911,6 +1968,8 @@ window.supabaseAPI = {
     atualizarIdiomasEmLote,
     buscarEmbalagensProduto,
     salvarEmbalagensProduto,
+    buscarComposicaoProduto,
+    salvarComposicaoProduto,
     editarProduto,
     excluirProduto,
     atualizarTenantEmpresa,
@@ -1938,6 +1997,8 @@ window.supabaseAPI = {
     buscarPedidoIdPorProforma,
     buscarDocumentosPedidos,
     marcarDocumentoAssinado,
+    anexarDocumentoPedido,
+    limparAnexoDocumentoPedido,
     excluirDocumentoPedido,
     // Financeiro
     buscarContasPagar,
@@ -2400,34 +2461,119 @@ async function buscarDocumentosPedidos(pedidoIds) {
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
 }
 
-// Marca/desmarca assinatura, com o arquivo do documento já assinado
-// anexado (upload real via Storage, path/nome gravados aqui). Também serve
-// pra criar a linha de um documento customizado (assinado=false, só com
-// tipo_label). Não existe e-signature real nesta app: "assinadoPor" é texto
-// livre digitado pelo usuário (quem assinou fisicamente, pode ser um
-// terceiro); "enviado_por" é sempre o usuário logado que fez o upload,
-// capturado automaticamente — pode ser uma pessoa diferente de quem assinou.
-// "assinado_em" é a data/hora capturada pelo sistema — nunca digitada.
+// Marca/desmarca assinatura. "assinadoPor" é texto livre digitado pelo
+// usuário (quem assinou fisicamente, pode ser um terceiro); "assinado_em"
+// é a data/hora capturada pelo sistema — nunca digitada. arquivoPath/
+// arquivoNome são OPCIONAIS aqui: só passe quando um arquivo novo estiver
+// sendo enviado JUNTO da assinatura — se o documento já tinha sido
+// anexado antes (pelo formulário de Processo, ou por marcarAnexado), deixe
+// os dois de fora que o arquivo já salvo é preservado (nem o desmarcar
+// assinatura apaga o anexo — só a condição de "assinado" muda).
 async function marcarDocumentoAssinado(pedidoId, tipoDocumento, assinado, assinadoPor = null, tipoLabel = null, arquivoPath = null, arquivoNome = null) {
     try {
         const usuario = obterUsuarioLogado();
-        const { data, error } = await supabaseClient
+        const payload = {
+            pedido_id:      pedidoId,
+            tipo_documento: tipoDocumento,
+            tipo_label:     tipoLabel,
+            assinado:       assinado,
+            assinado_por:   assinado ? assinadoPor : null,
+            assinado_em:    assinado ? new Date().toISOString() : null,
+            atualizado_em:  new Date().toISOString(),
+            atualizado_por: usuario?.id || null,
+        };
+        if (arquivoPath) {
+            payload.arquivo_path = arquivoPath;
+            payload.arquivo_nome = arquivoNome;
+            payload.enviado_por  = usuario?.nome || usuario?.email || null;
+            payload.enviado_em   = new Date().toISOString();
+        }
+        let { data, error } = await supabaseClient
             .from('pedido_documentos')
-            .upsert({
-                pedido_id:      pedidoId,
-                tipo_documento: tipoDocumento,
-                tipo_label:     tipoLabel,
-                assinado:       assinado,
-                assinado_por:   assinado ? assinadoPor : null,
-                assinado_em:    assinado ? new Date().toISOString() : null,
-                arquivo_path:   assinado ? arquivoPath : null,
-                arquivo_nome:   assinado ? arquivoNome : null,
-                enviado_por:    assinado ? (usuario?.nome || usuario?.email || null) : null,
-                atualizado_em:  new Date().toISOString(),
-                atualizado_por: usuario?.id || null,
-            }, { onConflict: 'pedido_id,tipo_documento' })
+            .upsert(payload, { onConflict: 'pedido_id,tipo_documento' })
             .select()
             .single();
+        // Migração database-pedido-documentos-anexo-envio.sql (coluna
+        // enviado_em) pode não ter rodado ainda — tenta de novo sem ela.
+        if (error && String(error.message).includes('enviado_em')) {
+            delete payload.enviado_em;
+            ({ data, error } = await supabaseClient
+                .from('pedido_documentos')
+                .upsert(payload, { onConflict: 'pedido_id,tipo_documento' })
+                .select()
+                .single());
+        }
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// Anexa um arquivo a um documento do pedido SEM assinar — usado pelo botão
+// "Anexar" da seção Documentos do formulário de Processo (upload real via
+// Storage, path/nome gravados aqui, feito pela página chamadora). Se o
+// documento já existir (linha já criada por uma assinatura anterior, ou
+// por outro processo do mesmo pedido), só atualiza o anexo — não mexe em
+// assinado/assinado_por/assinado_em.
+async function anexarDocumentoPedido(pedidoId, tipoDocumento, tipoLabel, arquivoPath, arquivoNome) {
+    try {
+        const usuario = obterUsuarioLogado();
+        const payload = {
+            pedido_id:      pedidoId,
+            tipo_documento: tipoDocumento,
+            tipo_label:     tipoLabel,
+            arquivo_path:   arquivoPath,
+            arquivo_nome:   arquivoNome,
+            enviado_por:    usuario?.nome || usuario?.email || null,
+            enviado_em:     new Date().toISOString(),
+            atualizado_em:  new Date().toISOString(),
+            atualizado_por: usuario?.id || null,
+        };
+        let { data, error } = await supabaseClient
+            .from('pedido_documentos')
+            .upsert(payload, { onConflict: 'pedido_id,tipo_documento' })
+            .select()
+            .single();
+        // Migração database-pedido-documentos-anexo-envio.sql (coluna
+        // enviado_em) pode não ter rodado ainda — tenta de novo sem ela.
+        if (error && String(error.message).includes('enviado_em')) {
+            delete payload.enviado_em;
+            ({ data, error } = await supabaseClient
+                .from('pedido_documentos')
+                .upsert(payload, { onConflict: 'pedido_id,tipo_documento' })
+                .select()
+                .single());
+        }
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// Remove só o anexo (arquivo em si já apagado do Storage pela página
+// chamadora) — cascata pra "não assinado" junto, já que não faz sentido
+// um documento continuar "assinado" sem nenhum arquivo por trás.
+async function limparAnexoDocumentoPedido(pedidoId, tipoDocumento) {
+    try {
+        const payload = {
+            arquivo_path: null, arquivo_nome: null, enviado_por: null, enviado_em: null,
+            assinado: false, assinado_por: null, assinado_em: null,
+        };
+        let { data, error } = await supabaseClient
+            .from('pedido_documentos')
+            .update(payload)
+            .eq('pedido_id', pedidoId).eq('tipo_documento', tipoDocumento)
+            .select()
+            .maybeSingle();
+        // Migração database-pedido-documentos-anexo-envio.sql (coluna
+        // enviado_em) pode não ter rodado ainda — tenta de novo sem ela.
+        if (error && String(error.message).includes('enviado_em')) {
+            delete payload.enviado_em;
+            ({ data, error } = await supabaseClient
+                .from('pedido_documentos')
+                .update(payload)
+                .eq('pedido_id', pedidoId).eq('tipo_documento', tipoDocumento)
+                .select()
+                .maybeSingle());
+        }
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
