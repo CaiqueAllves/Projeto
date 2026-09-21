@@ -42,3 +42,14 @@ CREATE POLICY chamados_mensagens_insert_suporte ON chamados_mensagens FOR INSERT
 DROP POLICY IF EXISTS chamados_anexos_select_suporte ON storage.objects;
 CREATE POLICY chamados_anexos_select_suporte ON storage.objects FOR SELECT TO authenticated
     USING (bucket_id = 'chamados-anexos' AND auth_is_suporte_admin());
+
+-- ── Fecha o acesso anônimo aos chamados ──────────────────────────────────
+-- Verificado ao vivo em 2026-09-21: com a anon key (pública no JS) dava pra
+-- LER todos os chamados de todas as empresas — sobrou uma policy TO anon do
+-- database-chamados.sql original. As policies reais (authenticated) já
+-- existem; estas linhas só removem as antigas (idempotente).
+DROP POLICY IF EXISTS chamados_select_anon ON chamados;
+DROP POLICY IF EXISTS chamados_insert_anon ON chamados;
+DROP POLICY IF EXISTS chamados_update_anon ON chamados;
+DROP POLICY IF EXISTS chamados_mensagens_select_anon ON chamados_mensagens;
+DROP POLICY IF EXISTS chamados_mensagens_insert_anon ON chamados_mensagens;
