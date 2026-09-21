@@ -196,7 +196,8 @@
 .doc-pedido-tabela tbody tr:hover { background: #fafcff; }
 
 .doc-pedido-tabela th:nth-child(2), .doc-pedido-tabela td:nth-child(2),
-.doc-pedido-tabela th:nth-child(3), .doc-pedido-tabela td:nth-child(3) {
+.doc-pedido-tabela th:nth-child(3), .doc-pedido-tabela td:nth-child(3),
+.doc-pedido-tabela th:nth-child(4), .doc-pedido-tabela td:nth-child(4) {
     text-align: center;
 }
 
@@ -379,3 +380,21 @@
     .doc-pedido-tabela tbody tr { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 10px 16px; }
     .doc-pedido-tabela tbody td { padding: 2px 0; border-bottom: none; }
 }
+
+/* ── Hiperlinks (documento / pedido / proforma / processo) ── */
+.doc-link { color:#2563eb; text-decoration:none; font-weight:500; }
+.doc-link:hover { text-decoration:underline; }
+.doc-link i { font-size:11px; opacity:.85; }
+.doc-pedido-numero .doc-link { font-weight:700; color:#1e293b; }
+.doc-pedido-numero .doc-link:hover { color:#2563eb; }
+.doc-sub { margin-top:2px; font-size:11px; color:#64748b; }
+.doc-num-ref { color:#475569; font-weight:600; }
+.doc-sub .doc-link .fa-file-pdf { color:#dc2626; }
+
+/* ── Coluna Anexo ── */
+.doc-anexo-btn { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border:1px dashed #93c5fd; border-radius:999px; background:#f8fbff; color:#2563eb; font-size:12px; font-weight:600; cursor:pointer; transition:background .15s, border-color .15s; }
+.doc-anexo-btn:hover { background:#eff6ff; border-color:#3b82f6; }
+.doc-anexo-btn.carregando { pointer-events:none; opacity:.7; }
+.doc-anexo-cell { display:inline-flex; align-items:center; gap:4px; max-width:100%; }
+.doc-anexo-cell .doc-anexo-ver { max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-decoration:none; }
+label.doc-row-excluir { cursor:pointer; display:inline-flex; align-items:center; }

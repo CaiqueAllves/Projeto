@@ -806,7 +806,7 @@ function _suporteRenderChamados(chamados) {
 
         return `<div class="suporte-chamado-item" onclick="_suporteAbrirChamado('${c.id}')">
             <div class="suporte-chamado-info">
-                <p class="suporte-chamado-titulo">${c.numero != null ? `<strong>${_suporteNumFmt(c.numero)}</strong> · ` : ''}${_suporteEscapar(c.titulo)}</p>
+                <p class="suporte-chamado-titulo">${c.numero != null ? `<span class="suporte-chamado-num">${_suporteNumFmt(c.numero)}</span>` : ''}${_suporteEscapar(c.titulo)}</p>
                 <div class="suporte-chamado-sub">
                     ${moduloHtml}
                     <span class="suporte-chamado-data">Atualizado em ${dataFmt}</span>
@@ -899,7 +899,9 @@ async function _suporteCarregarChamadoDetalhe(id, silencioso = false) {
 }
 
 function _suporteRenderChamadoDetalhe(chamado, mensagens) {
-    document.getElementById('suporteChamadoDetalheTitulo').textContent = (chamado.numero != null ? _suporteNumFmt(chamado.numero) + ' · ' : '') + chamado.titulo;
+    const tituloEl = document.getElementById('suporteChamadoDetalheTitulo');
+    tituloEl.textContent = chamado.titulo;
+    if (chamado.numero != null) { const n = document.createElement('span'); n.className = 'suporte-chamado-num'; n.textContent = _suporteNumFmt(chamado.numero); tituloEl.prepend(n); }
 
     const statusLabel = { aberto: 'Aberto', em_andamento: 'Em andamento', resolvido: 'Resolvido' };
     const badgeClass  = { aberto: 'suporte-badge-aberto', em_andamento: 'suporte-badge-em_andamento', resolvido: 'suporte-badge-resolvido' };
@@ -949,10 +951,12 @@ function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl) {
     const role = autorTipo === 'suporte' ? 'ia' : 'user';
     div.className = `chat-msg chat-msg-${role}`;
 
-    const span = document.createElement('span');
-    span.style.whiteSpace = 'pre-wrap';
-    span.textContent = texto;
-    div.appendChild(span);
+    if (!(anexoUrl && texto === '(anexo)')) {
+        const span = document.createElement('span');
+        span.style.whiteSpace = 'pre-wrap';
+        span.textContent = texto;
+        div.appendChild(span);
+    }
 
     if (anexoUrl && /^https:\/\//i.test(anexoUrl)) {
         const a = document.createElement('a');

@@ -1718,3 +1718,25 @@ form small {
 .suporte-chamado-item--novo { border-color:#ef4444; background:#fef2f2; }
 .suporte-pill-nova { display:inline-block; margin-left:4px; padding:1px 8px; border-radius:999px; background:#ef4444; color:#fff; font-size:10px; font-weight:700; vertical-align:middle; }
 @media (prefers-reduced-motion: reduce) { .suporte-float--novo::before, .suporte-float--balanca, .suporte-toast-notif--entra { animation:none; } }
+
+.suporte-chamado-num { display:inline-block; margin-right:7px; padding:1px 8px; border-radius:999px; background:#4776ec; color:#fff; font-size:11px; font-weight:700; letter-spacing:.3px; vertical-align:middle; }
+.suporte-chamados-header .suporte-chamado-num { background:rgba(255,255,255,.25); }
+
+/* ── Caixa de confirmação (confirmarAcao) ─────────────────────────────── */
+.confirmar-overlay { position:fixed; inset:0; z-index:20000; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(15,23,42,.5); backdrop-filter:blur(2px); animation:confirmarFundo .15s ease; }
+.confirmar-caixa { width:100%; max-width:380px; padding:26px 24px 20px; background:#fff; border-radius:16px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.28); animation:confirmarEntra .2s cubic-bezier(.2,.9,.3,1.2); }
+.confirmar-icone { width:52px; height:52px; margin:0 auto 12px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; background:#eff6ff; color:#4776ec; }
+.confirmar-icone--perigo { background:#fef2f2; color:#dc2626; }
+.confirmar-titulo { margin:0 0 6px; font-size:16px; font-weight:700; color:#0f172a; }
+.confirmar-msg { margin:0 0 20px; font-size:13.5px; line-height:1.5; color:#64748b; overflow-wrap:anywhere; }
+.confirmar-acoes { display:flex; gap:10px; }
+.confirmar-btn { flex:1; padding:10px 14px; border:none; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer; transition:filter .15s, box-shadow .15s; }
+.confirmar-btn:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(71,118,236,.35); }
+.confirmar-btn--cancelar { background:#f1f5f9; color:#475569; }
+.confirmar-btn--ok { background:linear-gradient(135deg,#4776ec,#7c3aed); color:#fff; }
+.confirmar-btn--perigo { background:#dc2626; color:#fff; }
+.confirmar-btn:hover { filter:brightness(.95); }
+.confirmar-saindo { opacity:0; transition:opacity .14s; }
+@keyframes confirmarFundo { from { opacity:0; } to { opacity:1; } }
+@keyframes confirmarEntra { from { transform:translateY(12px) scale(.96); opacity:0; } to { transform:none; opacity:1; } }
+@media (prefers-reduced-motion: reduce) { .confirmar-overlay, .confirmar-caixa { animation:none; } }

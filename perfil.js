@@ -538,7 +538,7 @@ async function baixarDocEmpresa(path, nome) {
 }
 
 async function excluirDocEmpresa(path) {
-    if (!confirm('Deseja excluir este documento? Esta ação não pode ser desfeita.')) return;
+    if (!(await confirmarAcao('Deseja excluir este documento? Esta ação não pode ser desfeita.', { titulo: 'Excluir documento', confirmar: 'Excluir', perigo: true }))) return;
 
     const { error } = await supabaseClient.storage
         .from(BUCKET_DOCS)

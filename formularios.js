@@ -32,8 +32,8 @@ function toggleSection(titleEl) {
 }
 
 // Limpar formulário
-function limparForm(formId) {
-    if (confirm('Deseja limpar todos os campos?')) {
+async function limparForm(formId) {
+    if (await confirmarAcao('Deseja limpar todos os campos?', { titulo: 'Limpar campos', confirmar: 'Limpar', perigo: true })) {
         document.getElementById(formId).reset();
     }
 }
@@ -4205,7 +4205,7 @@ async function docExcluir(id) {
     const pedidoId = _docPedidoIdAtual();
     const anexo = _docAnexosProcesso[id];
     if (!pedidoId || !anexo) return;
-    if (!confirm('Remover o arquivo anexado a este documento? Isso também desfaz a assinatura, se houver.')) return;
+    if (!(await confirmarAcao('Remover o arquivo anexado a este documento? Isso também desfaz a assinatura, se houver.', { titulo: 'Remover anexo', confirmar: 'Remover', perigo: true }))) return;
 
     await supabaseClient.storage.from(BUCKET_DOC_PEDIDO).remove([anexo.path]);
     const res = await window.supabaseAPI.limparAnexoDocumentoPedido(pedidoId, id);
@@ -5069,9 +5069,9 @@ function prodConfirmarSalvarEmbalagem() {
     _prodRenderTabelaEmbalagens();
 }
 
-function prodExcluirEmbalagemForm() {
+async function prodExcluirEmbalagemForm() {
     if (_prodEmbalagemEditandoId) {
-        if (!confirm('Deseja realmente excluir esta embalagem?')) return;
+        if (!(await confirmarAcao('Deseja realmente excluir esta embalagem?', { titulo: 'Excluir embalagem', confirmar: 'Excluir', perigo: true }))) return;
         _prodEmbalagens = _prodEmbalagens.filter(e => e.id !== _prodEmbalagemEditandoId);
         _prodRenderTabelaEmbalagens();
     }
@@ -5110,8 +5110,8 @@ function prodVerEmbalagem(id) {
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function prodExcluirEmbalagemTabela(id) {
-    if (!confirm('Deseja realmente excluir esta embalagem?')) return;
+async function prodExcluirEmbalagemTabela(id) {
+    if (!(await confirmarAcao('Deseja realmente excluir esta embalagem?', { titulo: 'Excluir embalagem', confirmar: 'Excluir', perigo: true }))) return;
     _prodEmbalagens = _prodEmbalagens.filter(e => e.id !== id);
     if (_prodEmbalagemEditandoId === id) _prodEmbalagemFecharForm();
     _prodRenderTabelaEmbalagens();
@@ -5291,9 +5291,9 @@ function prodSalvarEmbalagemUnitaria() {
     _prodRenderTabelaEmbalagensUnitarias();
 }
 
-function prodExcluirEmbalagemUnitariaForm() {
+async function prodExcluirEmbalagemUnitariaForm() {
     if (_prodEmbalagemUnitariaEditandoId) {
-        if (!confirm('Deseja realmente excluir esta embalagem unitária?')) return;
+        if (!(await confirmarAcao('Deseja realmente excluir esta embalagem unitária?', { titulo: 'Excluir embalagem unitária', confirmar: 'Excluir', perigo: true }))) return;
         _prodEmbalagensUnitarias = _prodEmbalagensUnitarias.filter(e => e.id !== _prodEmbalagemUnitariaEditandoId);
         _prodRenderTabelaEmbalagensUnitarias();
     }
@@ -5332,8 +5332,8 @@ function prodVerEmbalagemUnitaria(id) {
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function prodExcluirEmbalagemUnitariaTabela(id) {
-    if (!confirm('Deseja realmente excluir esta embalagem unitária?')) return;
+async function prodExcluirEmbalagemUnitariaTabela(id) {
+    if (!(await confirmarAcao('Deseja realmente excluir esta embalagem unitária?', { titulo: 'Excluir embalagem unitária', confirmar: 'Excluir', perigo: true }))) return;
     _prodEmbalagensUnitarias = _prodEmbalagensUnitarias.filter(e => e.id !== id);
     if (_prodEmbalagemUnitariaEditandoId === id) _prodEmbalagemUnitariaFecharForm();
     _prodRenderTabelaEmbalagensUnitarias();
@@ -5502,9 +5502,9 @@ function prodSalvarComposicao() {
     _prodRenderTabelaComposicao();
 }
 
-function prodExcluirComposicaoForm() {
+async function prodExcluirComposicaoForm() {
     if (_prodComposicaoEditandoId) {
-        if (!confirm('Deseja realmente excluir este ingrediente?')) return;
+        if (!(await confirmarAcao('Deseja realmente excluir este ingrediente?', { titulo: 'Excluir ingrediente', confirmar: 'Excluir', perigo: true }))) return;
         _prodComposicoes = _prodComposicoes.filter(e => e.id !== _prodComposicaoEditandoId);
         _prodRenderTabelaComposicao();
     }
@@ -5543,8 +5543,8 @@ function prodVerComposicao(id) {
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function prodExcluirComposicaoTabela(id) {
-    if (!confirm('Deseja realmente excluir este ingrediente?')) return;
+async function prodExcluirComposicaoTabela(id) {
+    if (!(await confirmarAcao('Deseja realmente excluir este ingrediente?', { titulo: 'Excluir ingrediente', confirmar: 'Excluir', perigo: true }))) return;
     _prodComposicoes = _prodComposicoes.filter(e => e.id !== id);
     if (_prodComposicaoEditandoId === id) _prodComposicaoFecharForm();
     _prodRenderTabelaComposicao();

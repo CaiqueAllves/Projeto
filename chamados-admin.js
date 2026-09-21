@@ -7,6 +7,8 @@
 const CAD_STATUS_LABEL = { aberto: 'Aberto', em_andamento: 'Em andamento', resolvido: 'Resolvido' };
 
 let _cadChamados = [];
+let _cadNaoLidos = new Map();      // chamado_id -> 'novo' | 'mensagem'  (novidade que o Administrador ainda não viu)
+let _cadNovidadesOk = false;       // false = tabela chamados_leituras indisponível (sem destaque)
 let _cadFiltro = 'todos';
 let _cadAbertoId = null;
 
@@ -57,7 +59,69 @@ async function cadCarregar(silencioso = false) {
         return;
     }
     _cadChamados = data || [];
+    await _cadCalcularNovidades(silencioso);
     cadRenderizar();
+}
+
+// Novidade = chamado que o Administrador nunca abriu ("novo") ou que recebeu mensagem do usuário
+// depois da última vez que ele abriu ("mensagem"). O "visto" fica em chamados_leituras (servidor).
+async function _cadCalcularNovidades(silencioso) {
+    const u = obterUsuarioLogado();
+    if (!u?.id) return;
+    const ids = _cadChamados.map(c => c.id);
+    const [lei, msgs] = await Promise.all([
+        supabaseClient.from('chamados_leituras').select('chamado_id, visto_em').eq('usuario_id', u.id),
+        supabaseClient.from('chamados_mensagens').select('chamado_id, created_at').eq('autor_tipo', 'usuario').order('created_at', { ascending: false }).limit(1000),
+    ]);
+    if (lei.error || msgs.error) { _cadNovidadesOk = false; _cadNaoLidos = new Map(); return; }
+    _cadNovidadesOk = true;
+
+    const vistos = new Map(lei.data.map(x => [x.chamado_id, x.visto_em]));
+    if (!lei.data.length && ids.length) {
+        // Primeira vez do Administrador na Central: o histórico existente conta como visto (senão tudo apareceria como novo)
+        const agora = new Date().toISOString();
+        await supabaseClient.from('chamados_leituras').upsert(ids.map(id => ({ chamado_id: id, usuario_id: u.id, visto_em: agora })), { onConflict: 'chamado_id,usuario_id' });
+        ids.forEach(id => vistos.set(id, agora));
+    }
+    const ultimaMsg = new Map();
+    for (const m of msgs.data) if (!ultimaMsg.has(m.chamado_id)) ultimaMsg.set(m.chamado_id, m.created_at);
+
+    const anteriores = _cadNaoLidos;
+    const novo = new Map();
+    for (const id of ids) {
+        if (id === _cadAbertoId) continue; // conversa aberta na tela: já está sendo lida
+        if (!vistos.has(id)) novo.set(id, 'novo');
+        else if (ultimaMsg.has(id) && new Date(ultimaMsg.get(id)) > new Date(vistos.get(id))) novo.set(id, 'mensagem');
+    }
+    _cadNaoLidos = novo;
+
+    // Avisa em tela o que chegou desde a última atualização automática
+    if (silencioso) {
+        for (const [id, tipo] of novo) {
+            if (anteriores.get(id) === tipo) continue;
+            const c = _cadChamados.find(x => x.id === id);
+            mostrarNotificacao?.(`${_cadNum(c)} · ${c?.titulo || ''} — ${tipo === 'novo' ? 'novo chamado' : 'nova mensagem do usuário'}`, 'sucesso');
+            _cadPiscar.add(id);
+        }
+    }
+    _cadAtualizarContagemNovidades();
+}
+let _cadPiscar = new Set();
+
+function _cadAtualizarContagemNovidades() {
+    const n = _cadNaoLidos.size;
+    const el = document.getElementById('cadContagemNovidades');
+    if (el) { el.textContent = n; el.style.display = n ? '' : 'none'; }
+    document.title = document.title.replace(/^\(\d+\)\s*/, '');
+    if (n) document.title = `(${n}) ${document.title}`;
+}
+
+async function _cadMarcarVisto(id) {
+    const u = obterUsuarioLogado();
+    if (!u?.id || !_cadNovidadesOk) return;
+    _cadNaoLidos.delete(id);
+    _cadAtualizarContagemNovidades();
+    await supabaseClient.from('chamados_leituras').upsert({ chamado_id: id, usuario_id: u.id, visto_em: new Date().toISOString() }, { onConflict: 'chamado_id,usuario_id' });
 }
 
 function cadTrocarCampoBusca() {
@@ -79,7 +143,8 @@ function _cadEmpresa(c) { return c.empresas?.nome_fantasia || c.empresas?.razao_
 function cadRenderizar() {
     const termo = (document.getElementById('buscaChamado')?.value || '').toLowerCase().trim();
     const itens = _cadChamados.filter(c => {
-        if (_cadFiltro !== 'todos' && (c.status || 'aberto') !== _cadFiltro) return false;
+        if (_cadFiltro === 'novidades') { if (!_cadNaoLidos.has(c.id)) return false; }
+        else if (_cadFiltro !== 'todos' && (c.status || 'aberto') !== _cadFiltro) return false;
         if (!termo) return true;
         const campo = document.getElementById('buscaCampo')?.value || 'todos';
         const numero = c.numero != null ? `${_cadNum(c)} ${c.numero}` : '';
@@ -103,10 +168,12 @@ function cadRenderizar() {
             <tbody>
                 ${itens.map(c => {
                     const st = c.status || 'aberto';
-                    return `<tr onclick="cadAbrir('${c.id}')">
-                        <td class="cad-numero">${_cadNum(c)}</td>
+                    const nl = _cadNaoLidos.get(c.id);
+                    const piscar = _cadPiscar.delete(c.id);
+                    return `<tr onclick="cadAbrir('${c.id}')" class="${nl ? 'cad-nao-lido' : ''}${piscar ? ' cad-piscar' : ''}">
+                        <td class="cad-numero">${nl ? '<span class="cad-ponto" title="Novidade"></span>' : ''}${_cadNum(c)}</td>
                         <td>${_cadData(c.updated_at)}</td>
-                        <td class="cad-titulo">${_cadEsc(c.titulo)}${c.anexo_url ? ' <i class="fa-solid fa-paperclip"></i>' : ''}</td>
+                        <td class="cad-titulo">${_cadEsc(c.titulo)}${c.anexo_url ? ' <i class="fa-solid fa-paperclip"></i>' : ''}${nl ? ` <span class="cad-pill-novo">${nl === 'novo' ? 'Novo chamado' : 'Nova mensagem'}</span>` : ''}</td>
                         <td>${_cadEsc(c.modulo || '—')}</td>
                         <td>${_cadEsc(_cadSolicitante(c))}</td>
                         <td>${_cadEsc(_cadEmpresa(c))}</td>
@@ -126,6 +193,7 @@ async function cadAbrir(id) {
     const c = _cadChamados.find(x => x.id === id);
     if (!c) return;
     _cadAbertoId = id;
+    _cadMarcarVisto(id);
     const st = c.status || 'aberto';
     document.getElementById('cadModalNum').textContent = _cadNum(c);
     document.getElementById('cadModalNum').style.display = c.numero != null ? '' : 'none';
@@ -188,6 +256,7 @@ async function _cadCarregarThread(silencioso = false) {
     if (error) { if (!silencioso) el.innerHTML = '<div class="cad-vazio">Erro ao carregar a conversa.</div>'; return; }
     const assinatura = `${(data || []).length}|${data?.[data.length - 1]?.created_at || ''}`;
     if (silencioso && assinatura === _cadThreadAssinatura) return;
+    if (silencioso && _cadThreadAssinatura) _cadMarcarVisto(idAlvo);
     _cadThreadAssinatura = assinatura;
     document.getElementById('cadModalContagem').textContent = (data || []).length ? `(${data.length})` : '';
 
@@ -268,7 +337,7 @@ setInterval(() => {
 async function cadExcluir(id) {
     const c = _cadChamados.find(x => x.id === id);
     if (!c) return;
-    if (!confirm(`Excluir o chamado "${c.titulo}"? A conversa e os anexos também serão apagados. Esta ação não pode ser desfeita.`)) return;
+    if (!(await confirmarAcao(`Excluir o chamado "${c.titulo}"? A conversa e os anexos também serão apagados. Esta ação não pode ser desfeita.`, { titulo: 'Excluir chamado', confirmar: 'Excluir', perigo: true }))) return;
 
     // Anexos no Storage (melhor esforço — se falhar, o chamado ainda é excluído)
     try {

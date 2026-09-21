@@ -100,6 +100,121 @@ function _docRenderProgresso(total, assinados) {
         </div>`;
 }
 
+// ── Hiperlinks: cada documento/pedido/proforma/processo abre o registro real ──
+const _docEsc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const _docUrlPedido   = id => `pedidos.html?editar=${encodeURIComponent(id)}&modo=visualizar`;
+const _docUrlProforma = id => `formularios.html?tab=proposta&id=${encodeURIComponent(id)}&modo=visualizar`;
+const _docUrlProcesso = id => `formularios.html?tab=processo&id=${encodeURIComponent(id)}&modo=visualizar`;
+const _docUrlProcessoPdf = id => `formularios.html?tab=processo&id=${encodeURIComponent(id)}&modo=pdf`;
+
+function _docUrlArquivo(path) {
+    try {
+        const u = supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).getPublicUrl(path).data?.publicUrl;
+        return /^https:\/\//i.test(u || '') ? u : null;
+    } catch { return null; }
+}
+
+function _docLink(href, texto, titulo, icone) {
+    return `<a class="doc-link" href="${_docEsc(href)}" target="_blank" rel="noopener" title="${_docEsc(titulo)}" onclick="event.stopPropagation()">${icone ? `<i class="fa-solid ${icone}"></i> ` : ''}${_docEsc(texto)}</a>`;
+}
+
+// Nome do documento: link pro arquivo anexado (upload/assinado) ou, se não houver,
+// pro registro criado no sistema (Proforma / Processo onde o Nº foi preenchido).
+function _docNomeComLink(pedido, r) {
+    const { tipo, arquivoPath, arquivoNome } = r;
+    const tag = tipo.modal ? `<span class="doc-tipo-tag">${_docEsc(DOC_MODAL_LABEL[tipo.modal])}</span>` : '';
+
+    const arquivoUrl = arquivoPath ? _docUrlArquivo(arquivoPath) : null;
+    let sistema = null;
+    let numero = '';
+    let prDoc = null;
+    if (!tipo.custom) {
+        if (tipo.id === 'proforma' && pedido._proformas?.length) {
+            const pf = pedido._proformas[0];
+            sistema = { href: _docUrlProforma(pf.id), texto: `Proforma ${pf.codigo || ''}`.trim(), titulo: `Abrir a Proforma ${pf.codigo || ''} criada no sistema`, icone: 'fa-file-lines' };
+        }
+        const pr = (pedido._processos || []).find(x => String(x.documentos?.[tipo.id] ?? '').trim() !== '');
+        if (pr) {
+            prDoc = pr;
+            numero = String(pr.documentos[tipo.id]).trim();
+            if (!sistema) sistema = { href: _docUrlProcesso(pr.id), texto: `Processo ${pr.numero_processo || ''}`.trim(), titulo: `Nº ${numero} — abrir o Processo ${pr.numero_processo || ''}`, icone: 'fa-ship' };
+        }
+    }
+
+    let principal;
+    if (arquivoUrl) principal = _docLink(arquivoUrl, tipo.label, `Abrir arquivo${arquivoNome ? ': ' + arquivoNome : ''}`, 'fa-paperclip');
+    else if (sistema) principal = _docLink(sistema.href, tipo.label, sistema.titulo, sistema.icone);
+    else principal = _docEsc(tipo.label);
+
+    const extra = [];
+    if (numero) extra.push(`<span class="doc-num-ref">Nº ${_docEsc(numero)}</span>`);
+    if (arquivoUrl && sistema) extra.push(_docLink(sistema.href, sistema.texto, sistema.titulo, sistema.icone));
+    if (prDoc) extra.push(_docLink(_docUrlProcessoPdf(prDoc.id), 'PDF', `Gerar o PDF do Processo ${prDoc.numero_processo || ''}`.trim(), 'fa-file-pdf'));
+    return `${principal}${tag}${extra.length ? `<div class="doc-sub">${extra.join(' · ')}</div>` : ''}`;
+}
+
+// ── Coluna Anexo: anexar o documento (ainda não assinado), ver, substituir, remover ──
+const DOC_ANEXO_ACEITA = '.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx';
+const DOC_ANEXO_MAX_MB = 15;
+
+function _docAnexoCelula(pedido, r) {
+    const { tipo, arquivoPath, arquivoNome } = r;
+    const input = `<input type="file" hidden accept="${DOC_ANEXO_ACEITA}" onchange="docAnexarArquivo('${pedido.id}','${tipo.id}',this)">`;
+    const url = arquivoPath ? _docUrlArquivo(arquivoPath) : null;
+    if (!arquivoPath) {
+        return `<label class="doc-anexo-btn" title="Anexar o documento (mesmo que ainda não esteja assinado)"><i class="fa-solid fa-upload"></i> Anexar${input}</label>`;
+    }
+    const nome = _docEsc(arquivoNome || 'documento');
+    const ver = url
+        ? `<a class="doc-anexo-ver" href="${_docEsc(url)}" target="_blank" rel="noopener" title="Abrir ${nome}"><i class="fa-solid fa-paperclip"></i> ${nome}</a>`
+        : `<span class="doc-anexo-ver"><i class="fa-solid fa-paperclip"></i> ${nome}</span>`;
+    return `<div class="doc-anexo-cell">${ver}
+        <label class="doc-row-excluir" title="Substituir o arquivo"><i class="fa-solid fa-arrow-up-from-bracket"></i>${input}</label>
+        <button class="doc-row-excluir" title="Remover anexo" onclick="docExcluirAnexo('${pedido.id}','${tipo.id}')"><i class="fa-solid fa-trash"></i></button>
+    </div>`;
+}
+
+async function docAnexarArquivo(pedidoId, tipoId, input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (!exigirEmpresaVinculada()) { input.value = ''; return; }
+    if (file.size > DOC_ANEXO_MAX_MB * 1024 * 1024) { mostrarNotificacao(`Arquivo maior que ${DOC_ANEXO_MAX_MB} MB.`, 'erro'); input.value = ''; return; }
+
+    const reg = _docSalvos[pedidoId]?.[tipoId];
+    if (reg?.assinado && !(await confirmarAcao('Este documento já está assinado. Substituir o arquivo mantém a assinatura registrada. Continuar?', { titulo: 'Substituir arquivo', confirmar: 'Substituir' }))) { input.value = ''; return; }
+
+    const label = input.closest('label');
+    label.classList.add('carregando');
+    label.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${pedidoId}/${tipoId}_${Date.now()}_${safeName}`;
+    const { error: erroUp } = await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).upload(path, file);
+    if (erroUp) { mostrarNotificacao('Erro ao enviar o arquivo: ' + erroUp.message, 'erro'); docRenderizar(); return; }
+
+    const rotulo = tipoId.startsWith('custom_') ? (reg?.tipo_label || null) : null;
+    const res = await window.supabaseAPI.anexarDocumentoPedido(pedidoId, tipoId, rotulo, path, file.name);
+    if (!res.sucesso) {
+        await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).remove([path]);
+        mostrarNotificacao('Erro ao registrar o anexo: ' + res.mensagem, 'erro');
+        docRenderizar();
+        return;
+    }
+    if (reg?.arquivo_path) supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).remove([reg.arquivo_path]).catch(() => {}); // arquivo antigo substituído
+    (_docSalvos[pedidoId] ||= {})[tipoId] = res.data;
+    docRenderizar();
+    mostrarNotificacao('Documento anexado.', 'sucesso');
+}
+
+function _docLinksProformas(p) {
+    const l = p._proformas || [];
+    return l.length ? l.map(pf => _docLink(_docUrlProforma(pf.id), pf.codigo || '—', 'Abrir Proforma')).join(', ') : '—';
+}
+function _docLinksProcessos(p) {
+    const l = p._processos || [];
+    return l.length ? l.map(pr => _docLink(_docUrlProcesso(pr.id), pr.numero_processo || '—', 'Abrir Processo')).join(', ') : '—';
+}
+
 function docRenderizar() {
     const container = document.getElementById('documentosContainer');
     const termo = (document.getElementById('buscaDoc')?.value || '').toLowerCase().trim();
@@ -187,15 +302,15 @@ function _docRenderLinhaPedido({ pedido, remetente, destinatario, docRowsFiltrad
                 </button>
             </td>
             <td>
-                <div class="doc-pedido-numero">${pedido.numero || '—'}</div>
+                <div class="doc-pedido-numero">${pedido.numero ? _docLink(_docUrlPedido(pedido.id), pedido.numero, 'Abrir o Pedido') : '—'}</div>
                 <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Remetente:</span> <span class="doc-parceiro-valor">${remetente}</span></div>
                 <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Destinatário:</span> <span class="doc-parceiro-valor">${destinatario}</span></div>
             </td>
             <td class="doc-col-status"><span class="doc-badge doc-badge-ped-${pedido.status || ''}">${DOC_LABELS_PEDIDO[pedido.status] || pedido.status || '—'}</span></td>
             <td class="doc-col-progresso">${_docRenderProgresso(totalDocs, assinadosDocs)}</td>
-            <td class="doc-referencia">${prof.texto}</td>
+            <td class="doc-referencia">${_docLinksProformas(pedido)}</td>
             <td class="doc-col-status">${prof.statusTexto !== '—' ? `<span class="doc-badge doc-badge-neutro">${prof.statusTexto}</span>` : '—'}</td>
-            <td class="doc-referencia">${proc.texto}</td>
+            <td class="doc-referencia">${_docLinksProcessos(pedido)}</td>
             <td class="doc-col-status">${proc.statusTexto !== '—' ? `<span class="doc-badge doc-badge-neutro">${proc.statusTexto}</span>` : '—'}</td>
             <td class="doc-criado-por">${pedido.criado_por || '—'}</td>
         </tr>`;
@@ -212,7 +327,7 @@ function _docRenderLinhaPedido({ pedido, remetente, destinatario, docRowsFiltrad
                         </button>
                     </div>
                     <table class="doc-pedido-tabela">
-                        <thead><tr><th>Documento</th><th>Status</th><th>Assinatura</th><th></th></tr></thead>
+                        <thead><tr><th>Documento</th><th>Status</th><th>Anexo</th><th>Assinatura</th><th></th></tr></thead>
                         <tbody>
                             ${docRowsFiltradas.map(r => _docRenderLinha(pedido, r)).join('')}
                             ${_docNovoEmPedido === pedido.id ? _docRenderLinhaNova(pedido.id) : ''}
@@ -233,7 +348,7 @@ function _docRenderLinhaNova(pedidoId) {
                     style="width:100%; padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;"
                     onkeydown="if(event.key==='Enter') docSalvarPersonalizado('${pedidoId}'); if(event.key==='Escape') docCancelarPersonalizado();">
             </td>
-            <td colspan="2" style="white-space:nowrap;">
+            <td colspan="3" style="white-space:nowrap;">
                 <button class="doc-pedido-add" onclick="docSalvarPersonalizado('${pedidoId}')">Salvar</button>
                 <button class="doc-row-excluir" onclick="docCancelarPersonalizado()" title="Cancelar"><i class="fa-solid fa-xmark"></i></button>
             </td>
@@ -260,28 +375,18 @@ function _docRenderLinha(pedido, r) {
         assinaturaHtml = `
             <div class="doc-assinatura-feita">
                 <div class="doc-assinatura-info">
-                    <div class="doc-assinatura-por"><i class="fa-solid fa-signature"></i> ${assinadoPor || '—'}</div>
-                    ${enviadoPor ? `<div class="doc-assinatura-enviado">Enviado por <strong>${enviadoPor}</strong></div>` : ''}
+                    <div class="doc-assinatura-por"><i class="fa-solid fa-signature"></i> ${_docEsc(assinadoPor || '—')}</div>
+                    ${enviadoPor ? `<div class="doc-assinatura-enviado">Enviado por <strong>${_docEsc(enviadoPor)}</strong></div>` : ''}
                     <div class="doc-assinatura-data">${dataFmt}</div>
                 </div>
-                ${arquivoPath ? `<button class="doc-row-excluir" title="Baixar documento assinado" onclick="docBaixarAssinatura('${arquivoPath.replace(/'/g, "\\'")}','${(arquivoNome || 'documento').replace(/'/g, "\\'")}')"><i class="fa-solid fa-download"></i></button>` : ''}
                 <button class="doc-row-excluir" title="Desmarcar assinatura" onclick="docDesmarcarAssinatura('${pedido.id}','${tipo.id}')"><i class="fa-solid fa-rotate-left"></i></button>
             </div>`;
     } else if (arquivoPath) {
-        // Já tem arquivo anexado (veio do Processo ou de um anexo avulso)
-        // mas ainda não foi assinado — evita pedir upload de novo.
-        const nomeEsc = (arquivoNome || 'documento').replace(/'/g, "\\'");
-        const pathEsc = arquivoPath.replace(/'/g, "\\'");
+        // Arquivo já anexado (coluna Anexo) e ainda não assinado: só falta assinar
         assinaturaHtml = `
-            <div class="doc-assinatura-anexado">
-                <button class="doc-anexo-ver" title="Ver arquivo anexado" onclick="docBaixarAssinatura('${pathEsc}','${nomeEsc}')">
-                    <i class="fa-solid fa-paperclip"></i> ${arquivoNome || 'Anexado'}
-                </button>
-                <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${pedido.id}','${tipo.id}','${labelEsc}')">
-                    <i class="fa-regular fa-circle"></i> Assinar
-                </button>
-                <button class="doc-row-excluir" title="Remover anexo" onclick="docExcluirAnexo('${pedido.id}','${tipo.id}')"><i class="fa-solid fa-trash"></i></button>
-            </div>`;
+            <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${pedido.id}','${tipo.id}','${labelEsc}')">
+                <i class="fa-regular fa-circle"></i> Assinar
+            </button>`;
     } else {
         assinaturaHtml = `
             <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${pedido.id}','${tipo.id}','${labelEsc}')">
@@ -291,8 +396,9 @@ function _docRenderLinha(pedido, r) {
 
     return `
         <tr>
-            <td>${tipo.label}${tag}</td>
+            <td>${_docNomeComLink(pedido, r)}</td>
             <td>${statusHtml}</td>
+            <td>${_docAnexoCelula(pedido, r)}</td>
             <td>${assinaturaHtml}</td>
             <td>${excluir}</td>
         </tr>`;
@@ -416,7 +522,7 @@ async function docDesmarcarAssinatura(pedidoId, tipoId) {
 async function docExcluirAnexo(pedidoId, tipoId) {
     const reg = _docSalvos[pedidoId]?.[tipoId];
     if (!reg?.arquivo_path) return;
-    if (!confirm('Remover o arquivo anexado deste documento?')) return;
+    if (!(await confirmarAcao('Remover o arquivo anexado deste documento?', { titulo: 'Remover anexo', confirmar: 'Remover', perigo: true }))) return;
 
     await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).remove([reg.arquivo_path]);
     const res = await window.supabaseAPI.limparAnexoDocumentoPedido(pedidoId, tipoId);
