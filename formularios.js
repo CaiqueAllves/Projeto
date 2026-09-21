@@ -163,7 +163,7 @@ async function salvarEmpresa(e) {
         return true;
     }
 
-    if (!checar('emp-tipo-cadastro', 'Selecione o tipo de identificação da empresa (CNPJ, CPF ou Outros).')) return;
+    if (!checar('emp-tipo-cadastro', 'Selecione o tipo de identificação da empresa (CNPJ ou CPF).')) return;
     if (!checar('emp-documento',     'Informe o Número de Identificação da empresa.')) return;
     if (!checar('emp-nome',          'Informe a Razão Social da empresa.')) return;
 
@@ -1961,7 +1961,6 @@ function onModeloChange(modelo) {
     const paisCodigo     = document.getElementById('emp-pais-codigo');
     const ieGroup        = document.getElementById('emp-ie')?.closest('.form-group');
     const sufrGroup      = document.getElementById('btn-suframa')?.closest('.form-group');
-    const tipoCadSel     = document.getElementById('emp-tipo-cadastro');
     const tipoGroup      = document.getElementById('emp-tipo-group');
     const coletaDivider  = document.getElementById('emp-coleta-divider-wrapper');
     const coletaGroup    = document.getElementById('emp-coleta-group');
@@ -2000,10 +1999,6 @@ function onModeloChange(modelo) {
         if (paisGroup)  paisGroup.style.display = 'none';
         if (ieGroup)    ieGroup.style.display = '';
         if (sufrGroup)  sufrGroup.style.display = '';
-        if (tipoCadSel) {
-            Array.from(tipoCadSel.options).forEach(o => { o.style.display = o.value === 'outros' ? 'none' : ''; });
-            if (tipoCadSel.value === 'outros') tipoCadSel.value = '';
-        }
         if (window._empPaisAtualizar) window._empPaisAtualizar();
     } else if (isCompany) {
         // Foreign only — clear country, show picker but exclude Brasil
@@ -2013,12 +2008,6 @@ function onModeloChange(modelo) {
         if (ieGroup)    ieGroup.style.display = 'none';
         if (ieInput)    ieInput.value = '';
         if (sufrGroup)  sufrGroup.style.display = 'none';
-        if (tipoCadSel) {
-            Array.from(tipoCadSel.options).forEach(o => {
-                o.style.display = o.value === 'outros' ? 'none' : '';
-            });
-            if (tipoCadSel.value === 'outros') tipoCadSel.value = '';
-        }
         if (window._empPaisAtualizar) window._empPaisAtualizar();
     } else {
         // Outros — BR + foreign, show everything
@@ -2026,7 +2015,6 @@ function onModeloChange(modelo) {
         if (paisGroup)  paisGroup.style.display = '';
         if (ieGroup)    ieGroup.style.display = '';
         if (sufrGroup)  sufrGroup.style.display = '';
-        if (tipoCadSel) Array.from(tipoCadSel.options).forEach(o => { o.style.display = ''; });
         if (window._empPaisAtualizar) window._empPaisAtualizar();
     }
 }
