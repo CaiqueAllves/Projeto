@@ -11,25 +11,87 @@
 .cad-badge-em_andamento { background:#fffbeb; color:#b45309; }
 .cad-badge-resolvido { background:#f0fdf4; color:#15803d; }
 
-.cad-overlay { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:9999; align-items:center; justify-content:center; padding:16px; }
-.cad-modal { background:#fff; border-radius:14px; width:100%; max-width:640px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,.2); }
-.cad-modal-header { display:flex; justify-content:space-between; gap:12px; padding:18px 20px; border-bottom:1px solid #e2e8f0; }
-.cad-modal-header h3 { margin:0 0 4px; font-size:16px; color:#1e293b; }
-.cad-modal-header p { margin:0; font-size:12px; color:#64748b; }
-.cad-modal-fechar { background:none; border:none; font-size:18px; color:#94a3b8; cursor:pointer; }
-.cad-modal-body { padding:16px 20px; overflow-y:auto; flex:1; }
-.cad-modal-body h4 { margin:16px 0 8px; font-size:13px; color:#475569; }
-.cad-status-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
-.cad-status-row label { font-size:12px; font-weight:600; color:#64748b; }
-.cad-status-row select { padding:6px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; }
-.cad-descricao { background:#f8fafc; border-radius:8px; padding:12px; font-size:13px; color:#334155; white-space:pre-wrap; }
-.cad-anexo { display:inline-block; margin-top:10px; font-size:12.5px; font-weight:600; color:#4f46e5; text-decoration:none; }
-.cad-thread { display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; }
-.cad-msg { max-width:85%; padding:8px 12px; border-radius:10px; font-size:13px; background:#f1f5f9; }
-.cad-msg p { margin:2px 0 0; white-space:pre-wrap; }
-.cad-msg-autor { font-size:11px; color:#64748b; font-weight:600; }
-.cad-msg-suporte { align-self:flex-end; background:#eef2ff; }
-.cad-modal-footer { display:flex; gap:10px; padding:14px 20px; border-top:1px solid #e2e8f0; }
-.cad-modal-footer textarea { flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; resize:none; }
-.cad-enviar { padding:0 18px; border:none; border-radius:8px; background:linear-gradient(135deg,#4776ec,#7c3aed); color:#fff; font-weight:600; cursor:pointer; }
+.cad-overlay { position:fixed; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(2px); z-index:9999; align-items:center; justify-content:center; padding:16px; }
+.cad-modal { background:#fff; border-radius:16px; width:100%; max-width:760px; height:min(88vh, 820px); display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,.28); overflow:hidden; animation:cadEntra .22s ease; }
+@keyframes cadEntra { from { transform:translateY(14px) scale(.98); opacity:0; } to { transform:none; opacity:1; } }
+
+.cad-modal-header { padding:18px 22px 14px; border-bottom:1px solid #e2e8f0; background:linear-gradient(180deg,#f8fafc,#fff); }
+.cad-header-linha { display:flex; justify-content:space-between; align-items:center; gap:14px; }
+.cad-header-titulo { display:flex; align-items:center; gap:10px; min-width:0; }
+.cad-header-titulo h3 { margin:0; font-size:17px; color:#0f172a; line-height:1.3; overflow-wrap:anywhere; }
+.cad-num-pill { flex:0 0 auto; padding:3px 10px; border-radius:999px; background:#4776ec; color:#fff; font-size:12px; font-weight:700; letter-spacing:.3px; }
+.cad-header-acoes { display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+.cad-modal-fechar { background:none; border:none; width:34px; height:34px; border-radius:8px; font-size:17px; color:#94a3b8; cursor:pointer; }
+.cad-modal-fechar:hover { background:#f1f5f9; color:#475569; }
+.cad-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.cad-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:#f1f5f9; border-radius:999px; font-size:12px; color:#475569; }
+.cad-chip i { color:#94a3b8; font-size:11px; }
+
+.cad-modal-body { flex:1; overflow-y:auto; padding:18px 22px; background:#fbfcfe; }
+.cad-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; }
+.cad-card-label { margin:0 0 8px; font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; display:flex; align-items:center; gap:6px; }
+.cad-conversa-label { margin:20px 0 10px; }
+.cad-card-label span { font-weight:500; text-transform:none; letter-spacing:0; color:#94a3b8; }
+.cad-descricao { font-size:14px; color:#1e293b; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+.cad-anexo { display:inline-flex; align-items:center; gap:6px; margin-top:10px; font-size:12.5px; font-weight:600; color:#4f46e5; text-decoration:none; }
+
+.cad-thumb { position:relative; display:inline-block; margin-top:10px; padding:0; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; background:#fff; cursor:zoom-in; max-width:100%; }
+.cad-thumb img { display:block; max-width:100%; max-height:200px; }
+.cad-thumb span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.35); color:#fff; font-size:20px; opacity:0; transition:opacity .15s; }
+.cad-thumb:hover span { opacity:1; }
+
+.cad-thread { display:flex; flex-direction:column; gap:12px; }
+.cad-dia { text-align:center; margin:4px 0; }
+.cad-dia span { display:inline-block; padding:2px 12px; background:#e2e8f0; border-radius:999px; font-size:11px; font-weight:600; color:#64748b; }
+.cad-linha { display:flex; gap:10px; align-items:flex-end; max-width:88%; }
+.cad-linha-usuario { align-self:flex-start; }
+.cad-linha-suporte { align-self:flex-end; flex-direction:row-reverse; }
+.cad-avatar { flex:0 0 32px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.cad-avatar-usuario { background:#94a3b8; }
+.cad-avatar-suporte { background:linear-gradient(135deg,#4776ec,#7c3aed); font-size:13px; }
+.cad-msg { padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.5; min-width:0; }
+.cad-msg p { margin:2px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.cad-msg-autor { display:block; font-size:11.5px; color:#64748b; font-weight:700; }
+.cad-msg-autor em { font-style:normal; font-weight:500; color:#94a3b8; margin-left:4px; }
+.cad-msg-usuario { background:#fff; border:1px solid #e2e8f0; border-bottom-left-radius:4px; color:#1e293b; }
+.cad-msg-suporte { background:#eef2ff; border:1px solid #dfe6ff; border-bottom-right-radius:4px; color:#1e293b; }
+.cad-vazio-thread { padding:22px; color:#94a3b8; }
+.cad-vazio-thread i { font-size:24px; margin-bottom:6px; }
+
+.cad-anexo-chip { display:flex; align-items:center; gap:10px; margin:0 22px; padding:6px 10px; background:#f1f5f9; border-radius:10px; font-size:12px; color:#475569; }
+.cad-anexo-chip img { width:36px; height:36px; object-fit:cover; border-radius:6px; }
+.cad-anexo-chip span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cad-anexo-chip button { background:none; border:none; cursor:pointer; color:#94a3b8; }
+.cad-modal-footer { display:flex; align-items:flex-end; gap:10px; padding:12px 22px 4px; }
+.cad-clipe { display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:10px; cursor:pointer; color:#64748b; font-size:16px; }
+.cad-clipe:hover { background:#f1f5f9; color:#4776ec; }
+.cad-modal-footer textarea { flex:1; padding:9px 12px; border:1px solid #cbd5e1; border-radius:12px; font-family:inherit; font-size:14px; line-height:1.4; resize:none; min-height:38px; max-height:130px; outline:none; box-sizing:border-box; }
+.cad-modal-footer textarea:focus { border-color:#4776ec; box-shadow:0 0 0 3px rgba(71,118,236,.15); }
+.cad-enviar { height:38px; padding:0 18px; border:none; border-radius:10px; background:linear-gradient(135deg,#4776ec,#7c3aed); color:#fff; font-weight:600; font-size:13.5px; cursor:pointer; display:flex; align-items:center; gap:6px; }
 .cad-enviar:disabled { opacity:.6; cursor:not-allowed; }
+.cad-dica { margin:6px 22px 12px; font-size:11px; color:#94a3b8; }
+
+.cad-lightbox { position:fixed; inset:0; z-index:10001; background:rgba(15,23,42,.88); align-items:center; justify-content:center; padding:24px; cursor:zoom-out; }
+.cad-lightbox img { max-width:100%; max-height:100%; border-radius:10px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+
+@media (max-width:600px) {
+    .cad-modal { height:94vh; border-radius:14px; }
+    .cad-header-linha { flex-direction:column; }
+    .cad-linha { max-width:100%; }
+}
+.cad-acoes { width:70px; text-align:center; }
+.cad-btn-excluir { background:none; border:none; color:#cbd5e1; cursor:pointer; font-size:14px; padding:6px 8px; border-radius:6px; transition:background .15s,color .15s; }
+.cad-btn-excluir:hover { background:#fef2f2; color:#dc2626; }
+
+.cad-status-select { appearance:none; -webkit-appearance:none; border:none; border-radius:999px; padding:4px 26px 4px 12px; font-size:11.5px; font-weight:600; cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 10px center; }
+.cad-status-select:focus { outline:2px solid #c7d2fe; }
+.cad-header-acoes .cad-status-select { padding:6px 28px 6px 14px; font-size:12px; }
+
+.cad-numero { font-weight:700; color:#4776ec; white-space:nowrap; }
+.cad-busca-campo { padding:9px 12px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; font-size:13px; color:#334155; }
+
+.cad-busca-grupo { display:flex; align-items:center; gap:10px; flex:1; min-width:280px; max-width:640px; }
+.cad-busca-grupo .busca-container { flex:1; min-width:0; }
+.cad-busca-grupo .cad-busca-campo { flex:0 0 auto; }

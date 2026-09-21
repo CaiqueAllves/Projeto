@@ -68,7 +68,9 @@ let _suporteChamadoAbertoId = null;
     const btnHtml = `
         <div class="suporte-float" id="suporteFloat" title="Suporte">
             <i class="fa-solid fa-circle-question"></i>
-        </div>`;
+            <span class="suporte-badge-notif" id="suporteBadgeFloat" style="display:none;"></span>
+        </div>
+        <div class="suporte-toast-notif" id="suporteToastNotif" style="display:none;" onclick="suporteAbrirNotificacao()"></div>`;
 
     const panelHtml = `
         <div class="suporte-panel" id="suportePanel">
@@ -116,7 +118,7 @@ let _suporteChamadoAbertoId = null;
                             <i class="fa-regular fa-envelope-open"></i>
                         </div>
                         <div class="suporte-opcao-texto">
-                            <span class="suporte-opcao-titulo">Meus chamados</span>
+                            <span class="suporte-opcao-titulo">Meus chamados <span class="suporte-badge-notif suporte-badge-notif--inline" id="suporteBadgeMenu" style="display:none;"></span></span>
                             <span class="suporte-opcao-desc">Acompanhe e responda os chamados que você abriu.</span>
                         </div>
                         <i class="fa-solid fa-chevron-right suporte-opcao-arrow"></i>
@@ -330,7 +332,16 @@ let _suporteChamadoAbertoId = null;
                 <div class="suporte-chat-msgs" id="suporteChamadoDetalheMsgs"></div>
 
                 <div class="suporte-chat-bottom">
+                    <div class="suporte-resp-anexo-chip" id="suporteRespAnexoChip" style="display:none;">
+                        <img id="suporteRespAnexoThumb" alt="">
+                        <span id="suporteRespAnexoNome"></span>
+                        <button type="button" onclick="suporteRemoverAnexoResposta()" title="Remover anexo"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
                     <div class="suporte-chat-input-row">
+                        <label class="suporte-resp-clipe" title="Anexar imagem ou print (ou cole com Ctrl+V)">
+                            <i class="fa-solid fa-paperclip"></i>
+                            <input type="file" id="suporteRespArquivo" accept="image/*,.pdf" style="display:none;" onchange="suporteEscolherAnexoResposta(this.files[0])">
+                        </label>
                         <input type="text" id="suporteChamadoDetalheInput"
                             placeholder="Escreva uma mensagem..."
                             onkeydown="if(event.key==='Enter')suporteEnviarMensagemChamado()"
@@ -358,6 +369,10 @@ let _suporteChamadoAbertoId = null;
         });
 
         document.getElementById('suporteReportDesc').addEventListener('paste', _suportePasteImagem);
+        document.getElementById('suporteChamadoDetalheInput').addEventListener('paste', e => {
+            const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith('image/'));
+            if (item) { e.preventDefault(); suporteEscolherAnexoResposta(item.getAsFile()); }
+        });
     }
 
     if (document.readyState === 'loading') {
@@ -605,6 +620,8 @@ async function _suporteGerarResumoIA(titulo, modulo, desc) {
 }
 
 let _suporteWhatsAppTexto = '';
+let _suporteUltimoNumero = null;
+const _suporteNumFmt = n => '#' + String(n).padStart(4, '0');
 
 function suporteAbrirWhatsApp() {
     if (!_suporteWhatsAppTexto) return;
@@ -652,12 +669,16 @@ async function suporteEnviarReport() {
             payload.usuario_nome  = usuario?.nome  || null;
             payload.usuario_email = usuario?.email || null;
 
-            let { data, error } = await supabaseClient.from('chamados').insert(payload).select('id').single();
-            // Migração database-chamados-central-admin.sql ainda não rodou — tenta sem as colunas novas
+            let { data, error } = await supabaseClient.from('chamados').insert(payload).select('id, numero').single();
+            // Migrações ainda não rodadas (número / nome do solicitante) — tenta sem as colunas novas
+            if (error && /numero/.test(error.message || '')) {
+                ({ data, error } = await supabaseClient.from('chamados').insert(payload).select('id').single());
+            }
             if (error && /usuario_(nome|email)/.test(error.message || '')) {
                 delete payload.usuario_nome; delete payload.usuario_email;
                 ({ data, error } = await supabaseClient.from('chamados').insert(payload).select('id').single());
             }
+            if (data?.numero != null) _suporteUltimoNumero = data.numero;
             return (!error && data) ? data.id : null;
         } catch (e) {
             console.warn('[Suporte Report] Supabase save failed:', e);
@@ -667,6 +688,7 @@ async function suporteEnviarReport() {
 
     const resumoPromise = _suporteGerarResumoIA(titulo, modulo, desc);
 
+    _suporteUltimoNumero = null;
     const [chamadoId, resumoIA] = await Promise.all([salvarPromise, resumoPromise]);
 
     // 2. Upload do anexo (print colado ou arquivo manual), se houver
@@ -693,9 +715,11 @@ async function suporteEnviarReport() {
         `*Triagem IA:* ${resumoCurto}`,
         `*Página:* ${window.location.href}`,
         anexoUrl ? `*Print:* ${anexoUrl}` : null,
-        `*Chamado:* ${chamadoId || 'N/A (não foi salvo no sistema)'}`
+        `*Chamado:* ${_suporteUltimoNumero != null ? _suporteNumFmt(_suporteUltimoNumero) : (chamadoId || 'N/A (não foi salvo no sistema)')}`
     ].filter(Boolean).join('\n');
 
+    const tituloSucesso = document.querySelector('#suporteReportSucesso .suporte-sucesso-titulo');
+    if (tituloSucesso) tituloSucesso.textContent = _suporteUltimoNumero != null ? `Chamado ${_suporteNumFmt(_suporteUltimoNumero)} enviado!` : 'Enviado com sucesso!';
     _suporteReportSetEstado('sucesso');
 }
 
@@ -708,11 +732,11 @@ function _suporteMostrarChamados() {
     _suporteCarregarChamados();
 }
 
-async function _suporteCarregarChamados() {
+async function _suporteCarregarChamados(silencioso = false) {
     const lista = document.getElementById('suporteChamadosLista');
 
     // Mostrar loading
-    lista.innerHTML = `<div class="suporte-chamados-loading"><div class="suporte-loading-spinner"></div></div>`;
+    if (!silencioso) lista.innerHTML = `<div class="suporte-chamados-loading"><div class="suporte-loading-spinner"></div></div>`;
 
     if (typeof supabaseClient === 'undefined' || !supabaseClient) {
         lista.innerHTML = `<div class="suporte-chamados-vazio">
@@ -727,7 +751,7 @@ async function _suporteCarregarChamados() {
     try {
         let query = supabaseClient
             .from('chamados')
-            .select('id, titulo, modulo, status, updated_at, anexo_url')
+            .select('*')
             .order('updated_at', { ascending: false })
             .limit(30);
 
@@ -744,6 +768,7 @@ async function _suporteCarregarChamados() {
         _suporteRenderChamados(data || []);
 
     } catch (e) {
+        if (silencioso) return;
         console.error('[Suporte Chamados]', e);
         lista.innerHTML = `<div class="suporte-chamados-vazio">
             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -781,7 +806,7 @@ function _suporteRenderChamados(chamados) {
 
         return `<div class="suporte-chamado-item" onclick="_suporteAbrirChamado('${c.id}')">
             <div class="suporte-chamado-info">
-                <p class="suporte-chamado-titulo">${_suporteEscapar(c.titulo)}</p>
+                <p class="suporte-chamado-titulo">${c.numero != null ? `<strong>${_suporteNumFmt(c.numero)}</strong> · ` : ''}${_suporteEscapar(c.titulo)}</p>
                 <div class="suporte-chamado-sub">
                     ${moduloHtml}
                     <span class="suporte-chamado-data">Atualizado em ${dataFmt}</span>
@@ -793,6 +818,7 @@ function _suporteRenderChamados(chamados) {
             ${anexoHtml}
         </div>`;
     }).join('');
+    _suporteAplicarNaoLidosNaLista();
 }
 
 function _suporteEscapar(str) {
@@ -819,11 +845,17 @@ function _suporteFecharChamadoDetalhe() {
     _suporteCarregarChamados();
 }
 
-async function _suporteCarregarChamadoDetalhe(id) {
+// silencioso = atualização automática em segundo plano (sem spinner, sem
+// mexer na tela se nada mudou, sem mostrar erro de rede passageiro)
+let _suporteDetalheAssinatura = '';
+async function _suporteCarregarChamadoDetalhe(id, silencioso = false) {
     const msgsEl = document.getElementById('suporteChamadoDetalheMsgs');
     const metaEl = document.getElementById('suporteChamadoDetalheMeta');
-    msgsEl.innerHTML = `<div class="suporte-chamados-loading"><div class="suporte-loading-spinner"></div></div>`;
-    metaEl.innerHTML = '';
+    if (!silencioso) {
+        _suporteDetalheAssinatura = '';
+        msgsEl.innerHTML = `<div class="suporte-chamados-loading"><div class="suporte-loading-spinner"></div></div>`;
+        metaEl.innerHTML = '';
+    }
 
     if (typeof supabaseClient === 'undefined' || !supabaseClient) {
         msgsEl.innerHTML = `<div class="suporte-chamados-vazio">
@@ -836,7 +868,7 @@ async function _suporteCarregarChamadoDetalhe(id) {
     try {
         const { data: chamado, error: errChamado } = await supabaseClient
             .from('chamados')
-            .select('id, titulo, modulo, descricao, status, anexo_url, created_at')
+            .select('*')
             .eq('id', id)
             .single();
         if (errChamado) throw errChamado;
@@ -848,9 +880,16 @@ async function _suporteCarregarChamadoDetalhe(id) {
             .order('created_at', { ascending: true });
         if (errMsgs) throw errMsgs;
 
-        _suporteRenderChamadoDetalhe(chamado, mensagens || []);
+        const lista = mensagens || [];
+        const assinatura = `${chamado.status}|${lista.length}|${lista[lista.length - 1]?.id || ''}`;
+        if (silencioso && assinatura === _suporteDetalheAssinatura) return;
+        if (id !== _suporteChamadoAbertoId) return; // usuário já saiu/trocou de chamado
+        _suporteDetalheAssinatura = assinatura;
+        _suporteRenderChamadoDetalhe(chamado, lista);
+        _suporteMarcarVisto(id);
 
     } catch (e) {
+        if (silencioso) return;
         console.error('[Suporte Chamado Detalhe]', e);
         msgsEl.innerHTML = `<div class="suporte-chamados-vazio">
             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -860,7 +899,7 @@ async function _suporteCarregarChamadoDetalhe(id) {
 }
 
 function _suporteRenderChamadoDetalhe(chamado, mensagens) {
-    document.getElementById('suporteChamadoDetalheTitulo').textContent = chamado.titulo;
+    document.getElementById('suporteChamadoDetalheTitulo').textContent = (chamado.numero != null ? _suporteNumFmt(chamado.numero) + ' · ' : '') + chamado.titulo;
 
     const statusLabel = { aberto: 'Aberto', em_andamento: 'Em andamento', resolvido: 'Resolvido' };
     const badgeClass  = { aberto: 'suporte-badge-aberto', em_andamento: 'suporte-badge-em_andamento', resolvido: 'suporte-badge-resolvido' };
@@ -915,24 +954,52 @@ function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl) {
     span.textContent = texto;
     div.appendChild(span);
 
-    if (anexoUrl) {
+    if (anexoUrl && /^https:\/\//i.test(anexoUrl)) {
         const a = document.createElement('a');
         a.href = anexoUrl;
         a.target = '_blank';
         a.rel = 'noopener';
-        a.className = 'suporte-chamado-anexo';
-        a.title = 'Ver anexo';
-        a.innerHTML = '<i class="fa-solid fa-paperclip"></i> Anexo';
+        a.title = 'Abrir anexo';
+        if (/\.(png|jpe?g|gif|webp)(\?|$)/i.test(anexoUrl)) {
+            a.className = 'suporte-msg-img';
+            const img = document.createElement('img');
+            img.src = anexoUrl;
+            img.alt = 'Anexo';
+            a.appendChild(img);
+        } else {
+            a.className = 'suporte-chamado-anexo';
+            a.innerHTML = '<i class="fa-solid fa-paperclip"></i> Anexo';
+        }
         div.appendChild(a);
     }
 
     return div;
 }
 
+let _suporteAnexoResposta = null;
+
+function suporteEscolherAnexoResposta(arquivo) {
+    if (!arquivo) return;
+    if (arquivo.size > 10 * 1024 * 1024) { alert('O arquivo é grande demais (máx. 10 MB).'); return; }
+    _suporteAnexoResposta = arquivo;
+    const chip = document.getElementById('suporteRespAnexoChip');
+    const thumb = document.getElementById('suporteRespAnexoThumb');
+    document.getElementById('suporteRespAnexoNome').textContent = arquivo.name || 'imagem colada';
+    if (arquivo.type.startsWith('image/')) { thumb.src = URL.createObjectURL(arquivo); thumb.style.display = ''; } else { thumb.style.display = 'none'; }
+    chip.style.display = 'flex';
+}
+
+function suporteRemoverAnexoResposta() {
+    _suporteAnexoResposta = null;
+    document.getElementById('suporteRespAnexoChip').style.display = 'none';
+    document.getElementById('suporteRespArquivo').value = '';
+}
+
 async function suporteEnviarMensagemChamado() {
     const input = document.getElementById('suporteChamadoDetalheInput');
     const texto = input.value.trim();
-    if (!texto || !_suporteChamadoAbertoId) return;
+    const arquivo = _suporteAnexoResposta;
+    if ((!texto && !arquivo) || !_suporteChamadoAbertoId) return;
 
     const sendBtn = document.getElementById('suporteChamadoDetalheSend');
     input.disabled = true;
@@ -941,12 +1008,23 @@ async function suporteEnviarMensagemChamado() {
     const usuario = (typeof obterUsuarioLogado === 'function') ? obterUsuarioLogado() : null;
 
     try {
+        let anexoUrl = null;
+        if (arquivo) {
+            const caminho = `${_suporteChamadoAbertoId}/${Date.now()}.${_suporteExtensaoArquivo(arquivo)}`;
+            const { error: errUp } = await supabaseClient.storage.from('chamados-anexos')
+                .upload(caminho, arquivo, { contentType: arquivo.type || 'image/png' });
+            if (errUp) throw errUp;
+            anexoUrl = supabaseClient.storage.from('chamados-anexos').getPublicUrl(caminho).data?.publicUrl || null;
+        }
+
+        const mensagem = texto || '(anexo)';
         const payload = {
             chamado_id: _suporteChamadoAbertoId,
             autor_tipo: 'usuario',
             usuario_id: usuario?.id || null,
             usuario_nome: usuario?.nome || null,
-            mensagem: texto
+            mensagem,
+            anexo_url: anexoUrl
         };
 
         const { error } = await supabaseClient.from('chamados_mensagens').insert(payload);
@@ -959,9 +1037,11 @@ async function suporteEnviarMensagemChamado() {
 
         const msgsEl = document.getElementById('suporteChamadoDetalheMsgs');
         msgsEl.querySelector('.suporte-chamado-sem-respostas')?.remove();
-        msgsEl.appendChild(_suporteMontarBalaoMensagem('usuario', texto, null));
+        msgsEl.appendChild(_suporteMontarBalaoMensagem('usuario', mensagem, anexoUrl));
         msgsEl.scrollTop = msgsEl.scrollHeight;
         input.value = '';
+        suporteRemoverAnexoResposta();
+        _suporteDetalheAssinatura = ''; // próxima atualização automática redesenha com a versão do banco
 
     } catch (e) {
         console.error('[Suporte Chamado] Erro ao enviar mensagem:', e);
@@ -972,3 +1052,176 @@ async function suporteEnviarMensagemChamado() {
         input.focus();
     }
 }
+
+// ── Atualização automática (o usuário vê a resposta do suporte sem recarregar) ──
+// Polling leve enquanto o painel está aberto e a aba visível.
+setInterval(() => {
+    if (document.hidden) return;
+    const painel = document.getElementById('suportePanel');
+    if (!painel || !painel.classList.contains('ativo')) return;
+    if (document.getElementById('suporteChamadoDetalheView')?.classList.contains('ativo') && _suporteChamadoAbertoId) {
+        _suporteCarregarChamadoDetalhe(_suporteChamadoAbertoId, true);
+    } else if (document.getElementById('suporteChamadosView')?.classList.contains('ativo')) {
+        _suporteCarregarChamados(true);
+    }
+}, 8000);
+
+// ── Notificações de resposta/mensagem nova ────────────────────────────────────
+// Usuário comum: avisa quando o suporte responde um chamado (badge + animação no
+// botão flutuante, aviso "Nova resposta no chamado #N", ponto no "Meus chamados").
+// Administrador (Central): avisa chamado novo e mensagem nova de usuário.
+// Sem servidor de push — polling leve a cada 20s; o "visto" fica no localStorage.
+
+let _suporteNaoLidos = new Set();      // ids de chamados com resposta não lida (usuário)
+let _suporteNotifTotal = null;          // total anterior (null = primeira verificação)
+let _suporteToastChamadoId = null;
+let _suporteToastTimer = null;
+
+function _suporteChaveVistos() {
+    const u = (typeof obterUsuarioLogado === 'function') ? obterUsuarioLogado() : null;
+    return u?.id ? `suporte_vistos_${u.id}` : null;
+}
+
+function _suporteLerVistos() {
+    const chave = _suporteChaveVistos();
+    if (!chave) return null;
+    try {
+        const v = JSON.parse(localStorage.getItem(chave) || 'null');
+        if (v?.baseline) return v;
+    } catch {}
+    const novo = { baseline: new Date().toISOString(), chamados: {} };
+    localStorage.setItem(chave, JSON.stringify(novo));
+    return novo;
+}
+
+function _suporteMarcarVisto(chamadoId) {
+    const chave = _suporteChaveVistos();
+    const v = _suporteLerVistos();
+    if (!chave || !v) return;
+    v.chamados[chamadoId] = new Date().toISOString();
+    localStorage.setItem(chave, JSON.stringify(v));
+    if (_suporteNaoLidos.delete(chamadoId)) _suporteAtualizarBadges(_suporteNaoLidos.size, false);
+}
+
+function _suporteAtualizarBadges(total, animar) {
+    const rotulo = total > 9 ? '9+' : String(total);
+    ['suporteBadgeFloat', 'suporteBadgeMenu'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = rotulo;
+        el.style.display = total > 0 ? '' : 'none';
+    });
+    const flutuante = document.getElementById('suporteFloat');
+    if (flutuante) {
+        flutuante.classList.toggle('suporte-float--novo', total > 0);
+        if (animar) { flutuante.classList.remove('suporte-float--balanca'); void flutuante.offsetWidth; flutuante.classList.add('suporte-float--balanca'); }
+    }
+    document.title = document.title.replace(/^\(\d+\)\s*/, '');
+    if (total > 0) document.title = `(${total}) ${document.title}`;
+}
+
+function _suporteMostrarToast(texto, chamadoId) {
+    const el = document.getElementById('suporteToastNotif');
+    if (!el) return;
+    _suporteToastChamadoId = chamadoId || null;
+    el.innerHTML = `<i class="fa-solid fa-bell"></i> <span></span>`;
+    el.querySelector('span').textContent = texto;
+    el.style.display = 'flex';
+    el.classList.remove('suporte-toast-notif--entra'); void el.offsetWidth; el.classList.add('suporte-toast-notif--entra');
+    clearTimeout(_suporteToastTimer);
+    _suporteToastTimer = setTimeout(() => { el.style.display = 'none'; }, 8000);
+}
+
+function suporteAbrirNotificacao() {
+    document.getElementById('suporteToastNotif').style.display = 'none';
+    if (typeof ehAdminSuporte === 'function' && ehAdminSuporte()) { window.location.href = 'chamados-admin.html'; return; }
+    document.getElementById('suportePanel')?.classList.add('ativo');
+    if (_suporteToastChamadoId) { suporteAcao('chamados'); setTimeout(() => _suporteAbrirChamado(_suporteToastChamadoId), 150); }
+    else suporteAcao('chamados');
+}
+
+function _suporteNumFmtSeguro(c) { return c?.numero != null ? ' ' + _suporteNumFmt(c.numero) : ''; }
+
+async function _suporteVerificarNovidades() {
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
+    const usuario = (typeof obterUsuarioLogado === 'function') ? obterUsuarioLogado() : null;
+    if (!usuario?.id) return;
+    try {
+        if (typeof ehAdminSuporte === 'function' && ehAdminSuporte()) return _suporteVerificarNovidadesAdmin();
+
+        const vistos = _suporteLerVistos();
+        const { data: msgs, error } = await supabaseClient.from('chamados_mensagens')
+            .select('chamado_id, created_at').eq('autor_tipo', 'suporte')
+            .gt('created_at', vistos.baseline).order('created_at', { ascending: false }).limit(100);
+        if (error) return;
+
+        const abertoAgora = document.getElementById('suportePanel')?.classList.contains('ativo')
+            && document.getElementById('suporteChamadoDetalheView')?.classList.contains('ativo')
+            ? _suporteChamadoAbertoId : null;
+
+        const naoLidos = new Map(); // chamado_id -> quantidade
+        for (const m of (msgs || [])) {
+            const visto = vistos.chamados[m.chamado_id] || vistos.baseline;
+            if (m.created_at > visto) naoLidos.set(m.chamado_id, (naoLidos.get(m.chamado_id) || 0) + 1);
+        }
+        if (abertoAgora && naoLidos.has(abertoAgora)) { _suporteMarcarVisto(abertoAgora); naoLidos.delete(abertoAgora); }
+
+        const total = Array.from(naoLidos.values()).reduce((a, b) => a + b, 0);
+        _suporteNaoLidos = new Set(naoLidos.keys());
+        const subiu = _suporteNotifTotal !== null && total > _suporteNotifTotal;
+        _suporteNotifTotal = total;
+        _suporteAtualizarBadges(total, subiu);
+        _suporteAplicarNaoLidosNaLista();
+
+        if (subiu) {
+            const id = msgs.find(m => naoLidos.has(m.chamado_id))?.chamado_id;
+            let num = '';
+            try { const { data: c } = await supabaseClient.from('chamados').select('numero').eq('id', id).maybeSingle(); num = _suporteNumFmtSeguro(c); } catch {}
+            _suporteMostrarToast(`Nova resposta no chamado${num}`, id);
+        }
+    } catch (e) { /* rede instável: tenta de novo no próximo ciclo */ }
+}
+
+// Administrador: chamado novo + mensagem nova de usuário desde a última visita à Central
+async function _suporteVerificarNovidadesAdmin() {
+    const emCentral = window.location.pathname.split('/').pop() === 'chamados-admin.html' && !document.hidden;
+    let desde = localStorage.getItem('suporte_admin_visto');
+    if (!desde) { desde = new Date().toISOString(); localStorage.setItem('suporte_admin_visto', desde); }
+    if (emCentral) { localStorage.setItem('suporte_admin_visto', new Date().toISOString()); _suporteNotifTotal = 0; _suporteAtualizarBadgeAdmin(0, false); return; }
+
+    const [novos, msgs] = await Promise.all([
+        supabaseClient.from('chamados').select('id, numero', { count: 'exact' }).gt('created_at', desde).order('created_at', { ascending: false }).limit(1),
+        supabaseClient.from('chamados_mensagens').select('chamado_id', { count: 'exact' }).eq('autor_tipo', 'usuario').gt('created_at', desde).order('created_at', { ascending: false }).limit(1),
+    ]);
+    if (novos.error || msgs.error) return;
+    const total = (novos.count || 0) + (msgs.count || 0);
+    const subiu = _suporteNotifTotal !== null && total > _suporteNotifTotal;
+    _suporteNotifTotal = total;
+    _suporteAtualizarBadgeAdmin(total, subiu);
+    if (subiu) {
+        _suporteMostrarToast((novos.count || 0) > 0 && (novos.count || 0) >= (msgs.count || 0) ? `Novo chamado${_suporteNumFmtSeguro(novos.data?.[0])}` : 'Nova mensagem de usuário em um chamado', null);
+    }
+}
+
+function _suporteAtualizarBadgeAdmin(total, animar) {
+    const rotulo = total > 9 ? '9+' : String(total);
+    let b = document.getElementById('menuChamadosBadge');
+    const item = document.getElementById('menu-chamados-admin');
+    if (item && !b) { b = document.createElement('span'); b.id = 'menuChamadosBadge'; b.className = 'suporte-badge-notif suporte-badge-notif--menu'; item.appendChild(b); }
+    if (b) { b.textContent = rotulo; b.style.display = total > 0 ? '' : 'none'; }
+    _suporteAtualizarBadges(total, animar);
+}
+
+function _suporteAplicarNaoLidosNaLista() {
+    document.querySelectorAll('#suporteChamadosLista .suporte-chamado-item').forEach(item => {
+        const m = /_suporteAbrirChamado\('([^']+)'\)/.exec(item.getAttribute('onclick') || '');
+        const novo = !!m && _suporteNaoLidos.has(m[1]);
+        item.classList.toggle('suporte-chamado-item--novo', novo);
+        const info = item.querySelector('.suporte-chamado-titulo');
+        if (info && novo && !info.querySelector('.suporte-pill-nova')) info.insertAdjacentHTML('beforeend', ' <span class="suporte-pill-nova">Nova resposta</span>');
+        if (info && !novo) info.querySelector('.suporte-pill-nova')?.remove();
+    });
+}
+
+setTimeout(_suporteVerificarNovidades, 3000);
+setInterval(() => { if (!document.hidden) _suporteVerificarNovidades(); }, 20000);

@@ -38,9 +38,18 @@
         <div class="content" style="padding:32px; display:flex; flex-direction:column; gap:20px;">
 
             <div class="filtros-container">
-                <div class="busca-container">
-                    <input type="text" id="buscaChamado" placeholder="Buscar por título, solicitante ou empresa..." oninput="cadRenderizar()">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+                <div class="cad-busca-grupo">
+                    <div class="busca-container">
+                        <input type="text" id="buscaChamado" placeholder="Buscar em todos os campos..." oninput="cadRenderizar()">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <select id="buscaCampo" class="cad-busca-campo" onchange="cadTrocarCampoBusca()" title="Filtrar por">
+                        <option value="todos">Todos os campos</option>
+                        <option value="chamado">Chamado</option>
+                        <option value="usuario">Usuário</option>
+                        <option value="empresa">Empresa</option>
+                        <option value="modulo">Módulo</option>
+                    </select>
                 </div>
                 <div class="filtros-btns">
                     <button class="filtro-btn active" data-status="todos"        onclick="cadFiltrar('todos')"><i class="fa-solid fa-list"></i> Todos</button>
@@ -66,31 +75,53 @@
 <div class="cad-overlay" id="cadModal" style="display:none;" onclick="if(event.target===this) cadFecharModal()">
     <div class="cad-modal">
         <div class="cad-modal-header">
-            <div>
-                <h3 id="cadModalTitulo">Chamado</h3>
-                <p id="cadModalSub"></p>
+            <div class="cad-header-linha">
+                <div class="cad-header-titulo">
+                    <span class="cad-num-pill" id="cadModalNum"></span>
+                    <h3 id="cadModalTitulo">Chamado</h3>
+                </div>
+                <div class="cad-header-acoes">
+                    <select id="cadModalStatus" class="cad-status-select" onchange="cadMudarStatus(this.value)" title="Alterar status">
+                        <option value="aberto">Aberto</option>
+                        <option value="em_andamento">Em andamento</option>
+                        <option value="resolvido">Resolvido</option>
+                    </select>
+                    <button class="cad-modal-fechar" onclick="cadFecharModal()" title="Fechar (Esc)"><i class="fa-solid fa-xmark"></i></button>
+                </div>
             </div>
-            <button class="cad-modal-fechar" onclick="cadFecharModal()" title="Fechar"><i class="fa-solid fa-xmark"></i></button>
+            <div class="cad-chips" id="cadModalChips"></div>
         </div>
-        <div class="cad-modal-body">
-            <div class="cad-status-row">
-                <label for="cadModalStatus">Status</label>
-                <select id="cadModalStatus" onchange="cadMudarStatus(this.value)">
-                    <option value="aberto">Aberto</option>
-                    <option value="em_andamento">Em andamento</option>
-                    <option value="resolvido">Resolvido</option>
-                </select>
-            </div>
-            <div class="cad-descricao" id="cadModalDesc"></div>
-            <div id="cadModalAnexo"></div>
-            <h4>Conversa</h4>
+
+        <div class="cad-modal-body" id="cadModalBody">
+            <section class="cad-card">
+                <p class="cad-card-label"><i class="fa-solid fa-circle-info"></i> Problema relatado <span id="cadModalQuando"></span></p>
+                <div class="cad-descricao" id="cadModalDesc"></div>
+                <div id="cadModalAnexo"></div>
+            </section>
+
+            <p class="cad-card-label cad-conversa-label"><i class="fa-regular fa-comments"></i> Conversa <span id="cadModalContagem"></span></p>
             <div class="cad-thread" id="cadModalThread"></div>
         </div>
+
+        <div class="cad-anexo-chip" id="cadAnexoChip" style="display:none;">
+            <img id="cadAnexoThumb" alt="" style="display:none;">
+            <span id="cadAnexoNome"></span>
+            <button type="button" onclick="cadRemoverAnexo()" title="Remover anexo"><i class="fa-solid fa-xmark"></i></button>
+        </div>
         <div class="cad-modal-footer">
-            <textarea id="cadModalResposta" rows="2" placeholder="Responder ao usuário..."></textarea>
+            <label class="cad-clipe" title="Anexar imagem ou print (ou cole com Ctrl+V)">
+                <i class="fa-solid fa-paperclip"></i>
+                <input type="file" id="cadModalArquivo" accept="image/*,.pdf" style="display:none;" onchange="cadEscolherAnexo(this.files[0])">
+            </label>
+            <textarea id="cadModalResposta" rows="1" placeholder="Responder ao usuário..." oninput="cadAjustarAltura(this)"></textarea>
             <button class="cad-enviar" id="cadModalEnviar" onclick="cadEnviarResposta()"><i class="fa-solid fa-paper-plane"></i> Enviar</button>
         </div>
+        <p class="cad-dica">Enter envia · Shift+Enter quebra a linha · Ctrl+V cola um print</p>
     </div>
+</div>
+
+<div class="cad-lightbox" id="cadLightbox" style="display:none;" onclick="cadFecharLightbox()">
+    <img id="cadLightboxImg" alt="Anexo ampliado">
 </div>
 
 <script src="supabase.min.js"></script>
