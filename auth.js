@@ -198,8 +198,8 @@ function verificarAutoLogin() {
     }
 
     if (usuarioAtual) {
-        // Já está logado - redirecionar para dashboard
-        window.location.href = 'inicio.html';
+        // Já está logado - redirecionar para o app (abas)
+        window.location.href = 'app.html';
     } else {
         // Preencher CPF se salvo
         const savedCpf = localStorage.getItem('cpfSalvo');
@@ -220,6 +220,7 @@ function handleLogout() {
         localStorage.removeItem('rememberMe');
         localStorage.removeItem('usuarioSalvo');
         localStorage.removeItem('lastLogin');
+        sessionStorage.removeItem('abas_abertas_v2');
         window.location.href = 'login.html';
     }
 }

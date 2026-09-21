@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Marpex</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style-base.css">
+    <link rel="stylesheet" href="style-navegador.css">
+    <link rel="stylesheet" href="style-app-abas.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style-mobile.css">
+</head>
+
+<body>
+
+<div class="main-layout" style="display: flex;">
+    <aside></aside>
+
+    <div class="topbar">
+        <div class="topbar-left">
+            <h2 id="abasTitulo"><i class="fa-solid fa-chart-line"></i> Marpex</h2>
+        </div>
+        <div class="topbar-right">
+            <div class="user-info-card">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="user-details">
+                    <div class="user-name" id="displayUsername">User...</div>
+                    <div class="user-email" id="userEmail">usuario@email.com</div>
+                </div>
+            </div>
+            <div class="logout" onclick="handleLogout()">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="abas-barra" id="abasBarra" role="tablist"></div>
+    <div class="abas-area" id="abasArea"></div>
+</div>
+
+<script src="supabase.min.js"></script>
+<script src="supabase-api.js"></script>
+<script src="auth.js"></script>
+<script src="navegador.js"></script>
+<script src="app-abas.js"></script>
+</body>
+</html>

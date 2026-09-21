@@ -579,8 +579,9 @@ window.handleLogin = async function(event) {
             localStorage.setItem('lastLogin', new Date().toISOString());
         }
 
+        sessionStorage.removeItem('abas_abertas_v2'); // login novo começa sem abas antigas
         setTimeout(() => {
-            window.location.href = 'inicio.html';
+            window.location.href = 'app.html';
         }, 1000);
 
     } else {

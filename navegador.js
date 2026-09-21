@@ -2,6 +2,27 @@
 // NAVEGAÇÃO - SIDEBAR CENTRALIZADO
 // ========================================
 
+// ── Modo "abas" (app.html) ────────────────────────────────────────────────────
+// As telas rodam dentro de iframes do app.html (uma aba por tela, mantendo o
+// estado ao trocar). Dentro do iframe (_EMBUTIDO) a tela esconde menu lateral e
+// topbar — quem mostra isso é o app.html. Aberta direto (favorito, F5, link),
+// a tela redireciona pra dentro do app.html. Saída de emergência:
+// localStorage.semAbas = '1' (ou ?semabas=1) desliga o redirecionamento.
+const _EMBUTIDO = window.self !== window.top;
+const _PAGINAS_SEM_SHELL = ['app.html', 'formularios.html', 'login.html', 'termos.html', 'index.html', ''];
+(function () {
+    const pagina = window.location.pathname.split('/').pop().toLowerCase();
+    if (_EMBUTIDO) { document.documentElement.classList.add('embedded'); return; }
+    const desligado = localStorage.getItem('semAbas') === '1' || new URLSearchParams(window.location.search).get('semabas') === '1';
+    if (desligado || _PAGINAS_SEM_SHELL.includes(pagina)) return;
+    window.__redirecionandoParaShell = true;
+    window.location.replace('app.html?abrir=' + encodeURIComponent(pagina + window.location.search));
+})();
+
+// Página/consulta "de referência" do menu: no app.html vêm da aba ativa
+function _paginaNav() { return (window.__navPagina ?? window.location.pathname.split('/').pop()).toLowerCase(); }
+function _buscaNav()  { return window.__navBusca ?? window.location.search; }
+
 const SIDEBAR_HTML = `
     <h2><i class="fa-solid fa-file-contract"></i> Marpex</h2>
 
@@ -279,7 +300,9 @@ const _MODULO_PAGINAS = {
 };
 
 function _getModuloAtual() {
-    const pagina = window.location.pathname.split('/').pop().toLowerCase();
+    const pagina = _paginaNav();
+    // No app.html (abas) cada tela tem o seu módulo — as que não estão no mapa são do Operacional
+    if (window.__navPagina !== undefined) return _MODULO_PAGINAS[pagina] || 'operacional';
     return _MODULO_PAGINAS[pagina] || sessionStorage.getItem('modulo_ativo') || 'operacional';
 }
 
@@ -301,6 +324,7 @@ function setModulo(mod) {
 // ========================================
 
 function _initNavegador() {
+    if (_EMBUTIDO || window.__redirecionandoParaShell) return;
     injetarSidebar();
     setModulo(_getModuloAtual());
     inicializarMenuColapsavel();
@@ -315,11 +339,9 @@ if (document.readyState === 'loading') {
 }
 
 function destacarInicio() {
-    const paginaAtual = window.location.pathname.split('/').pop().toLowerCase();
+    const paginaAtual = _paginaNav();
     const menuInicio = document.getElementById('menu-inicio');
-    if (menuInicio && paginaAtual !== 'inicio.html' && paginaAtual !== '') {
-        menuInicio.classList.add('menu-inicio-ativo');
-    }
+    if (menuInicio) menuInicio.classList.toggle('menu-inicio-ativo', paginaAtual !== 'inicio.html' && paginaAtual !== '');
 }
 
 // ========================================
@@ -328,9 +350,7 @@ function destacarInicio() {
 
 function destacarMenuAtivo() {
     // Pegar o nome da página atual
-    const paginaAtual = window.location.pathname.split('/').pop().toLowerCase();
-    
-    console.log('Página atual:', paginaAtual);
+    const paginaAtual = _paginaNav();
     
     // Remover classe active de todos os itens
     document.querySelectorAll('aside li, aside .submenu a').forEach(item => {
@@ -390,7 +410,7 @@ function destacarMenuAtivo() {
 
     let idAtivo;
     if (paginaAtual === 'formularios.html') {
-        const tabAtual = new URLSearchParams(window.location.search).get('tab') || 'empresa';
+        const tabAtual = new URLSearchParams(_buscaNav()).get('tab') || 'empresa';
         idAtivo = mapeamentoAbasFormularios[tabAtual] || 'submenu-clientes';
     } else {
         idAtivo = mapeamento[paginaAtual];
@@ -401,7 +421,6 @@ function destacarMenuAtivo() {
         
         if (elementoAtivo) {
             elementoAtivo.classList.add('active');
-            console.log('Menu ativo:', idAtivo);
             
             // Se for um submenu, expandir o menu pai
             if (idAtivo.startsWith('submenu-')) {

@@ -1056,7 +1056,7 @@ async function suporteEnviarMensagemChamado() {
 // ── Atualização automática (o usuário vê a resposta do suporte sem recarregar) ──
 // Polling leve enquanto o painel está aberto e a aba visível.
 setInterval(() => {
-    if (document.hidden) return;
+    if (document.hidden || document.documentElement.dataset.abaInativa === '1') return;
     const painel = document.getElementById('suportePanel');
     if (!painel || !painel.classList.contains('ativo')) return;
     if (document.getElementById('suporteChamadoDetalheView')?.classList.contains('ativo') && _suporteChamadoAbertoId) {
@@ -1072,6 +1072,8 @@ setInterval(() => {
 // Administrador (Central): avisa chamado novo e mensagem nova de usuário.
 // Sem servidor de push — polling leve a cada 20s; o "visto" fica no localStorage.
 
+let _suporteLeiturasOk = null;          // null = ainda não sabe; false = tabela não existe (usa só o localStorage)
+let _suporteNaoLidosQtd = new Map();   // chamado_id -> nº de respostas não lidas
 let _suporteNaoLidos = new Set();      // ids de chamados com resposta não lida (usuário)
 let _suporteNotifTotal = null;          // total anterior (null = primeira verificação)
 let _suporteToastChamadoId = null;
@@ -1098,9 +1100,20 @@ function _suporteMarcarVisto(chamadoId) {
     const chave = _suporteChaveVistos();
     const v = _suporteLerVistos();
     if (!chave || !v) return;
-    v.chamados[chamadoId] = new Date().toISOString();
+    const agora = new Date().toISOString();
+    v.chamados[chamadoId] = agora;
     localStorage.setItem(chave, JSON.stringify(v));
-    if (_suporteNaoLidos.delete(chamadoId)) _suporteAtualizarBadges(_suporteNaoLidos.size, false);
+    // "Visto" no servidor (vale em qualquer navegador/dispositivo) — só se a migração database-chamados-leituras.sql rodou
+    const u = (typeof obterUsuarioLogado === 'function') ? obterUsuarioLogado() : null;
+    if (_suporteLeiturasOk !== false && u?.id && typeof supabaseClient !== 'undefined') {
+        supabaseClient.from('chamados_leituras').upsert({ chamado_id: chamadoId, usuario_id: u.id, visto_em: agora }, { onConflict: 'chamado_id,usuario_id' })
+            .then(({ error }) => { if (error && /chamados_leituras|relation|schema cache/i.test(error.message || '')) _suporteLeiturasOk = false; });
+    }
+    if (_suporteNaoLidos.delete(chamadoId)) {
+        _suporteNotifTotal = Math.max(0, (_suporteNotifTotal || 0) - (_suporteNaoLidosQtd.get(chamadoId) || 1));
+        _suporteNaoLidosQtd.delete(chamadoId);
+        _suporteAtualizarBadges(_suporteNotifTotal, false);
+    }
 }
 
 function _suporteAtualizarBadges(total, animar) {
@@ -1134,7 +1147,11 @@ function _suporteMostrarToast(texto, chamadoId) {
 
 function suporteAbrirNotificacao() {
     document.getElementById('suporteToastNotif').style.display = 'none';
-    if (typeof ehAdminSuporte === 'function' && ehAdminSuporte()) { window.location.href = 'chamados-admin.html'; return; }
+    if (typeof ehAdminSuporte === 'function' && ehAdminSuporte()) {
+        if (window.top !== window && typeof window.top.abrirAba === 'function') window.top.abrirAba('chamados-admin.html');
+        else window.location.href = 'chamados-admin.html';
+        return;
+    }
     document.getElementById('suportePanel')?.classList.add('ativo');
     if (_suporteToastChamadoId) { suporteAcao('chamados'); setTimeout(() => _suporteAbrirChamado(_suporteToastChamadoId), 150); }
     else suporteAcao('chamados');
@@ -1150,9 +1167,22 @@ async function _suporteVerificarNovidades() {
         if (typeof ehAdminSuporte === 'function' && ehAdminSuporte()) return _suporteVerificarNovidadesAdmin();
 
         const vistos = _suporteLerVistos();
+        // Só os chamados que ESTE usuário abriu (quem relatou é quem precisa ser avisado)
+        const { data: meus } = await supabaseClient.from('chamados').select('id').eq('usuario_id', usuario.id).limit(300);
+        const ids = (meus || []).map(c => c.id);
+        if (!ids.length) { _suporteNaoLidos = new Set(); _suporteNaoLidosQtd = new Map(); _suporteNotifTotal = 0; _suporteAtualizarBadges(0, false); return; }
+
+        let leituras = null;
+        if (_suporteLeiturasOk !== false) {
+            const r = await supabaseClient.from('chamados_leituras').select('chamado_id, visto_em').eq('usuario_id', usuario.id).in('chamado_id', ids);
+            if (r.error) { if (/chamados_leituras|relation|schema cache/i.test(r.error.message || '')) _suporteLeiturasOk = false; }
+            else { _suporteLeiturasOk = true; leituras = new Map((r.data || []).map(x => [x.chamado_id, x.visto_em])); }
+        }
+        // Sem a tabela no servidor: cai no "visto" local (janela de 7 dias, pra não perder respostas de quem voltou depois)
+        const desde = leituras ? '1970-01-01T00:00:00Z' : new Date(Date.now() - 7 * 86400000).toISOString();
         const { data: msgs, error } = await supabaseClient.from('chamados_mensagens')
-            .select('chamado_id, created_at').eq('autor_tipo', 'suporte')
-            .gt('created_at', vistos.baseline).order('created_at', { ascending: false }).limit(100);
+            .select('chamado_id, created_at').eq('autor_tipo', 'suporte').in('chamado_id', ids)
+            .gt('created_at', desde).order('created_at', { ascending: false }).limit(300);
         if (error) return;
 
         const abertoAgora = document.getElementById('suportePanel')?.classList.contains('ativo')
@@ -1160,15 +1190,20 @@ async function _suporteVerificarNovidades() {
             ? _suporteChamadoAbertoId : null;
 
         const naoLidos = new Map(); // chamado_id -> quantidade
+        const t = iso => new Date(iso).getTime();
         for (const m of (msgs || [])) {
-            const visto = vistos.chamados[m.chamado_id] || vistos.baseline;
-            if (m.created_at > visto) naoLidos.set(m.chamado_id, (naoLidos.get(m.chamado_id) || 0) + 1);
+            const visto = leituras ? (leituras.get(m.chamado_id) || '1970-01-01T00:00:00Z') : (vistos.chamados[m.chamado_id] || desde);
+            if (t(m.created_at) > t(visto)) naoLidos.set(m.chamado_id, (naoLidos.get(m.chamado_id) || 0) + 1);
         }
         if (abertoAgora && naoLidos.has(abertoAgora)) { _suporteMarcarVisto(abertoAgora); naoLidos.delete(abertoAgora); }
 
         const total = Array.from(naoLidos.values()).reduce((a, b) => a + b, 0);
         _suporteNaoLidos = new Set(naoLidos.keys());
-        const subiu = _suporteNotifTotal !== null && total > _suporteNotifTotal;
+        _suporteNaoLidosQtd = naoLidos;
+        // Primeira checagem da sessão de login com resposta pendente também avisa (quem voltou depois da resposta)
+        const primeiraDaSessao = !sessionStorage.getItem('suporte_aviso_inicial') && total > 0;
+        if (primeiraDaSessao) sessionStorage.setItem('suporte_aviso_inicial', '1');
+        const subiu = (_suporteNotifTotal !== null && total > _suporteNotifTotal) || primeiraDaSessao;
         _suporteNotifTotal = total;
         _suporteAtualizarBadges(total, subiu);
         _suporteAplicarNaoLidosNaLista();
@@ -1186,7 +1221,7 @@ async function _suporteVerificarNovidades() {
 async function _suporteVerificarNovidadesAdmin() {
     const emCentral = window.location.pathname.split('/').pop() === 'chamados-admin.html' && !document.hidden;
     let desde = localStorage.getItem('suporte_admin_visto');
-    if (!desde) { desde = new Date().toISOString(); localStorage.setItem('suporte_admin_visto', desde); }
+    if (!desde) { desde = new Date(Date.now() - 7 * 86400000).toISOString(); localStorage.setItem('suporte_admin_visto', desde); }
     if (emCentral) { localStorage.setItem('suporte_admin_visto', new Date().toISOString()); _suporteNotifTotal = 0; _suporteAtualizarBadgeAdmin(0, false); return; }
 
     const [novos, msgs] = await Promise.all([
@@ -1205,9 +1240,11 @@ async function _suporteVerificarNovidadesAdmin() {
 
 function _suporteAtualizarBadgeAdmin(total, animar) {
     const rotulo = total > 9 ? '9+' : String(total);
-    let b = document.getElementById('menuChamadosBadge');
-    const item = document.getElementById('menu-chamados-admin');
-    if (item && !b) { b = document.createElement('span'); b.id = 'menuChamadosBadge'; b.className = 'suporte-badge-notif suporte-badge-notif--menu'; item.appendChild(b); }
+    // No app.html o menu lateral vive na janela principal, não no iframe da tela
+    const docMenu = (window.top !== window) ? window.top.document : document;
+    let b = docMenu.getElementById('menuChamadosBadge');
+    const item = docMenu.getElementById('menu-chamados-admin');
+    if (item && !b) { b = docMenu.createElement('span'); b.id = 'menuChamadosBadge'; b.className = 'suporte-badge-notif suporte-badge-notif--menu'; item.appendChild(b); }
     if (b) { b.textContent = rotulo; b.style.display = total > 0 ? '' : 'none'; }
     _suporteAtualizarBadges(total, animar);
 }
@@ -1223,5 +1260,7 @@ function _suporteAplicarNaoLidosNaLista() {
     });
 }
 
-setTimeout(_suporteVerificarNovidades, 3000);
-setInterval(() => { if (!document.hidden) _suporteVerificarNovidades(); }, 20000);
+// Em aba inativa do app.html (iframe escondido) não faz polling — só a aba visível consulta
+const _suporteAbaInativa = () => document.documentElement.dataset.abaInativa === '1';
+setTimeout(() => { if (!_suporteAbaInativa()) _suporteVerificarNovidades(); }, 3000);
+setInterval(() => { if (!document.hidden && !_suporteAbaInativa()) _suporteVerificarNovidades(); }, 20000);

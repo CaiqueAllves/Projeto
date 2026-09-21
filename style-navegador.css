@@ -283,3 +283,10 @@ aside h2 {
 
 .mod-em-breve i  { font-size: 28px; }
 .mod-em-breve p  { font-size: 12px; margin: 0; line-height: 1.5; }
+
+/* ── Tela dentro de uma aba do app.html (iframe): sem menu lateral nem topbar ── */
+html.embedded aside,
+html.embedded .topbar,
+html.embedded .mob-overlay,
+html.embedded .mob-conta-dropdown { display: none !important; }
+html.embedded main { margin-left: 0 !important; padding-top: 0 !important; }
