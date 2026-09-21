@@ -1325,6 +1325,8 @@ form small {
     transition: background 0.15s;
 }
 .suporte-sucesso-btn:hover { background: #e2e8f0; }
+.suporte-sucesso-btn-wpp { background: #25d366; color: #fff; margin-bottom: 8px; }
+.suporte-sucesso-btn-wpp:hover { background: #1fb457; }
 
 /* ── Meus Chamados ────────────────────────────────────────────────────── */
 .suporte-chamados-view {

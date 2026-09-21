@@ -10,11 +10,9 @@
 // que guarda a chave da Anthropic no servidor e nunca a expõe no front-end.
 const SUPORTE_IA_ENDPOINT = `${SUPABASE_URL}/functions/v1/suporte-ia`;
 
-// EmailJS — configure em https://www.emailjs.com
-const SUPORTE_EMAILJS_PUBLIC_KEY  = 'zpEU_nVjkI8qGClOC';
-const SUPORTE_EMAILJS_SERVICE_ID  = 'service_umbw1hi';
-const SUPORTE_EMAILJS_TEMPLATE_ID = 'template_ddtkzcj';
-const SUPORTE_EMAIL_DESTINO       = 'marpex.controller@hotmail.com';
+// Repasse do chamado: mensagem pronta no WhatsApp da equipe (wa.me — abre o
+// WhatsApp do usuário com o texto preenchido; ele só confirma o envio).
+const SUPORTE_WHATSAPP_DESTINO    = '5511987216497';
 
 // ── Prompt do assistente de IA ───────────────────────────────────────────────
 
@@ -268,7 +266,10 @@ let _suporteChamadoAbertoId = null;
                 <div class="suporte-report-sucesso" id="suporteReportSucesso">
                     <div class="suporte-sucesso-icon"><i class="fa-solid fa-circle-check"></i></div>
                     <p class="suporte-sucesso-titulo">Enviado com sucesso!</p>
-                    <p class="suporte-sucesso-desc">Recebemos seu reporte. Nossa equipe vai analisar e entrar em contato em breve.</p>
+                    <p class="suporte-sucesso-desc">Recebemos seu reporte. Toque abaixo para avisar nossa equipe pelo WhatsApp e agilizar o atendimento.</p>
+                    <button class="suporte-sucesso-btn suporte-sucesso-btn-wpp" onclick="suporteAbrirWhatsApp()">
+                        <i class="fa-brands fa-whatsapp"></i> Avisar a equipe no WhatsApp
+                    </button>
                     <button class="suporte-sucesso-btn" onclick="suporteVoltarMenu()">Fechar</button>
                 </div>
 
@@ -603,13 +604,11 @@ async function _suporteGerarResumoIA(titulo, modulo, desc) {
     }
 }
 
-function _suporteCarregarEmailJS(callback) {
-    if (window.emailjs) { callback(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-    script.onload  = () => { emailjs.init(SUPORTE_EMAILJS_PUBLIC_KEY); callback(); };
-    script.onerror = () => callback(new Error('Falha ao carregar EmailJS'));
-    document.head.appendChild(script);
+let _suporteWhatsAppTexto = '';
+
+function suporteAbrirWhatsApp() {
+    if (!_suporteWhatsAppTexto) return;
+    window.open(`https://wa.me/${SUPORTE_WHATSAPP_DESTINO}?text=${encodeURIComponent(_suporteWhatsAppTexto)}`, '_blank', 'noopener');
 }
 
 async function suporteEnviarReport() {
@@ -650,7 +649,15 @@ async function suporteEnviarReport() {
             if (usuario?.empresa_id) payload.empresa_proprietaria_id = usuario.empresa_id;
             if (usuario?.id)         payload.usuario_id = usuario.id;
 
-            const { data, error } = await supabaseClient.from('chamados').insert(payload).select('id').single();
+            payload.usuario_nome  = usuario?.nome  || null;
+            payload.usuario_email = usuario?.email || null;
+
+            let { data, error } = await supabaseClient.from('chamados').insert(payload).select('id').single();
+            // Migração database-chamados-central-admin.sql ainda não rodou — tenta sem as colunas novas
+            if (error && /usuario_(nome|email)/.test(error.message || '')) {
+                delete payload.usuario_nome; delete payload.usuario_email;
+                ({ data, error } = await supabaseClient.from('chamados').insert(payload).select('id').single());
+            }
             return (!error && data) ? data.id : null;
         } catch (e) {
             console.warn('[Suporte Report] Supabase save failed:', e);
@@ -675,37 +682,21 @@ async function suporteEnviarReport() {
         }
     }
 
-    // 3. Enviar email via EmailJS
-    _suporteCarregarEmailJS(async (err) => {
-        if (err) {
-            console.error('[Suporte Report] Falha ao carregar script do EmailJS (CDN bloqueado?):', err);
-        } else {
-            try {
-                const anexoBloco = anexoUrl
-                    ? `<a href="${anexoUrl}" style="color:#4f46e5; text-decoration:none; font-weight:bold;">Ver print anexado →</a>`
-                    : 'Nenhum anexo enviado';
+    // 3. Monta a mensagem de WhatsApp (o envio em si é um clique do usuário)
+    const resumoCurto = resumoIA ? String(resumoIA).slice(0, 600) : 'Triagem automática indisponível.';
+    _suporteWhatsAppTexto = [
+        '*Novo chamado Marpex*',
+        `*Título:* ${titulo}`,
+        `*Módulo:* ${modulo || 'Não informado'}`,
+        `*Usuário:* ${usuario?.nome || 'N/A'}${usuario?.email ? ' (' + usuario.email + ')' : ''}`,
+        `*Descrição:* ${desc}`,
+        `*Triagem IA:* ${resumoCurto}`,
+        `*Página:* ${window.location.href}`,
+        anexoUrl ? `*Print:* ${anexoUrl}` : null,
+        `*Chamado:* ${chamadoId || 'N/A (não foi salvo no sistema)'}`
+    ].filter(Boolean).join('\n');
 
-                await emailjs.send(SUPORTE_EMAILJS_SERVICE_ID, SUPORTE_EMAILJS_TEMPLATE_ID, {
-                    to_email:  SUPORTE_EMAIL_DESTINO,
-                    titulo,
-                    modulo:    modulo || 'Não informado',
-                    descricao: desc,
-                    pagina:    window.location.href,
-                    data_hora: new Date().toLocaleString('pt-BR'),
-                    anexo_bloco: anexoBloco,
-                    anexo_url:   anexoUrl || '',
-                    chamado_id: chamadoId || 'N/A',
-                    resumo_ia: resumoIA || 'Triagem automática indisponível no momento.'
-                });
-            } catch (emailErr) {
-                console.warn('[Suporte Report] Email failed:', emailErr);
-                // Não bloqueia se já salvou no Supabase
-            }
-        }
-
-        // Sucesso se salvou no Supabase OU se email foi enviado
-        _suporteReportSetEstado('sucesso');
-    });
+    _suporteReportSetEstado('sucesso');
 }
 
 // ── ④ Meus chamados ───────────────────────────────────────────────────────────

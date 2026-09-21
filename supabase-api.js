@@ -458,6 +458,14 @@ async function excluirEmpresaCadastrada(id) {
 // UTILITÁRIOS
 // ========================================
 
+// Único usuário com acesso à Central de Chamados (mesma regra vale no banco:
+// auth_is_suporte_admin() em database-chamados-central-admin.sql).
+const SUPORTE_ADMIN_EMAIL = 'administrador@teste.com';
+function ehAdminSuporte() {
+    const u = obterUsuarioLogado();
+    return !!u?.email && u.email.trim().toLowerCase() === SUPORTE_ADMIN_EMAIL;
+}
+
 function obterUsuarioLogado() {
     const str = sessionStorage.getItem('usuarioLogado');
     return str ? JSON.parse(str) : null;

@@ -46,6 +46,10 @@ const SIDEBAR_HTML = `
                 <i class="fa-solid fa-chart-line"></i> Relatórios
             </li>
 
+            <li id="menu-chamados-admin" style="display:none;" onclick="window.location.href='chamados-admin.html'">
+                <i class="fa-solid fa-headset"></i> Central de Chamados
+            </li>
+
             <li id="menu-termos" onclick="window.location.href='termos.html'">
                 <i class="fa-solid fa-scale-balanced"></i> Termos
             </li>
@@ -132,6 +136,7 @@ function injetarSidebar() {
     const aside = document.querySelector('aside');
     if (aside && !aside.querySelector('.menu-item')) {
         aside.innerHTML = SIDEBAR_HTML;
+        if (typeof ehAdminSuporte === 'function' && ehAdminSuporte()) document.getElementById('menu-chamados-admin').style.display = '';
     }
 }
 
@@ -344,6 +349,7 @@ function destacarMenuAtivo() {
         'proforma.html':            'submenu-documentos-cadastro',
         'processos.html':           'submenu-processos-cadastro',
         'documentos.html':          'menu-documentos',
+        'chamados-admin.html':      'menu-chamados-admin',
         'relatorios.html':          'menu-relatorios',
         'relatorios-produtos.html': 'menu-relatorios',
         'relatorios-proforma.html': 'menu-relatorios',
