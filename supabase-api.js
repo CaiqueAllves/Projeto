@@ -1473,30 +1473,14 @@ async function registrarEmpresaPropria({ razaoSocial, cnpj }) {
         if (!razaoSocial) return { sucesso: false, mensagem: 'Informe a Razão Social.' };
 
         const chaveGerada = gerarChaveEmpresa();
-        const { data: empresaCriada, error: erroEmpresa } = await supabaseClient
-            .from('empresas')
-            .insert({
-                razao_social: razaoSocial,
-                nome_fantasia: razaoSocial,
-                cnpj: cnpj || null,
-                email: usuario.email,
-                status: 'ativo',
-                plano: 'free',
-                chave_empresa: chaveGerada
-            })
-            .select()
-            .single();
 
-        if (erroEmpresa) return { sucesso: false, mensagem: 'Erro ao criar empresa: ' + erroEmpresa.message };
-
-        const { error: erroUsuario } = await supabaseClient
-            .from('usuarios')
-            .update({ empresa_id: empresaCriada.id })
-            .eq('id', usuario.id);
-
-        if (erroUsuario) return { sucesso: false, mensagem: 'Erro ao vincular usuário à empresa: ' + erroUsuario.message };
-
-        return { sucesso: true, chave_gerada: chaveGerada, data: empresaCriada };
+        // Caminho seguro: função no banco que cria a empresa E vincula o
+        // usuário (o cliente não pode mais mudar usuarios.empresa_id direto —
+        // ver database-usuarios-protege-empresa-id.sql).
+        const { data: viaRpc, error: erroRpc } = await supabaseClient
+            .rpc('registrar_empresa_propria', { p_razao_social: razaoSocial, p_cnpj: cnpj || '', p_chave: chaveGerada });
+        if (!erroRpc) return { sucesso: true, chave_gerada: chaveGerada, data: viaRpc };
+        return { sucesso: false, mensagem: 'Erro ao criar empresa: ' + erroRpc.message };
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
     }
