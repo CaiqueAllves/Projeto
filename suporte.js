@@ -307,6 +307,10 @@ let _suporteChamadoAbertoId = null;
 
             </div>
 
+            <div class="suporte-lightbox" id="suporteLightbox" style="display:none;" onclick="suporteFecharLightbox()">
+                <img id="suporteLightboxImg" alt="Anexo ampliado">
+            </div>
+
             <!-- ⑤ Detalhe do chamado -->
             <div class="suporte-chamado-detalhe-view" id="suporteChamadoDetalheView">
 
@@ -342,10 +346,10 @@ let _suporteChamadoAbertoId = null;
                             <i class="fa-solid fa-paperclip"></i>
                             <input type="file" id="suporteRespArquivo" accept="image/*,.pdf" style="display:none;" onchange="suporteEscolherAnexoResposta(this.files[0])">
                         </label>
-                        <input type="text" id="suporteChamadoDetalheInput"
+                        <textarea id="suporteChamadoDetalheInput" rows="1"
                             placeholder="Escreva uma mensagem..."
-                            onkeydown="if(event.key==='Enter')suporteEnviarMensagemChamado()"
-                            autocomplete="off">
+                            oninput="suporteAjustarAlturaResposta(this)"
+                            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();suporteEnviarMensagemChamado();}"></textarea>
                         <button class="suporte-chat-send" id="suporteChamadoDetalheSend" onclick="suporteEnviarMensagemChamado()">
                             <i class="fa-solid fa-paper-plane"></i>
                         </button>
@@ -939,10 +943,13 @@ function _suporteRenderChamadoDetalhe(chamado, mensagens) {
     msgsEl.innerHTML = '';
 
     if (!mensagens.length) {
-        msgsEl.innerHTML = `<p class="suporte-chamado-sem-respostas">Nenhuma resposta ainda. Escreva algo abaixo se quiser complementar o problema.</p>`;
+        msgsEl.innerHTML = `<div class="suporte-chamado-sem-respostas"><i class="fa-regular fa-comment-dots"></i><br>Nenhuma resposta ainda. Escreva algo abaixo se quiser complementar o problema.</div>`;
     } else {
+        let diaAnterior = '';
         mensagens.forEach(m => {
-            msgsEl.appendChild(_suporteMontarBalaoMensagem(m.autor_tipo, m.mensagem, m.anexo_url));
+            const dia = new Date(m.created_at).toDateString();
+            if (dia !== diaAnterior) { msgsEl.insertAdjacentHTML('beforeend', `<div class="suporte-msg-dia"><span>${_suporteDiaFmt(m.created_at)}</span></div>`); diaAnterior = dia; }
+            msgsEl.appendChild(_suporteMontarBalaoMensagem(m.autor_tipo, m.mensagem, m.anexo_url, m.created_at));
         });
     }
 
@@ -956,17 +963,52 @@ function _suporteRenderChamadoDetalhe(chamado, mensagens) {
     input.placeholder = podeResponder ? 'Escreva uma mensagem...' : 'Este chamado já foi resolvido';
 }
 
-function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl) {
+const _suporteDiaFmt = iso => {
+    const d = new Date(iso), hoje = new Date(), ontem = new Date(Date.now() - 86400000);
+    if (d.toDateString() === hoje.toDateString()) return 'Hoje';
+    if (d.toDateString() === ontem.toDateString()) return 'Ontem';
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+};
+const _suporteHoraFmt = iso => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+function suporteAbrirLightbox(url) {
+    if (!/^https:\/\//i.test(url)) return;
+    document.getElementById('suporteLightboxImg').src = url;
+    document.getElementById('suporteLightbox').style.display = 'flex';
+}
+function suporteFecharLightbox() {
+    document.getElementById('suporteLightbox').style.display = 'none';
+    document.getElementById('suporteLightboxImg').src = '';
+}
+
+function suporteAjustarAlturaResposta(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+document.addEventListener('click', e => { if (e.target.closest('.suporte-msg-img')) { e.preventDefault(); suporteAbrirLightbox(e.target.closest('.suporte-msg-img').querySelector('img')?.src); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('suporteLightbox')?.style.display === 'flex') suporteFecharLightbox(); });
+
+function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl, criadoEm) {
     const div = document.createElement('div');
     // Reaproveita o estilo do chat de IA: "usuario" à direita, "suporte" à esquerda
     const role = autorTipo === 'suporte' ? 'ia' : 'user';
     div.className = `chat-msg chat-msg-${role}`;
 
+    if (autorTipo === 'suporte') {
+        const avatar = document.createElement('div');
+        avatar.className = 'suporte-msg-avatar';
+        avatar.innerHTML = '<i class="fa-solid fa-headset"></i>';
+        div.appendChild(avatar);
+    }
+    const corpo = document.createElement('div');
+    corpo.className = 'suporte-msg-corpo';
+
     if (!(anexoUrl && texto === '(anexo)')) {
         const span = document.createElement('span');
         span.style.whiteSpace = 'pre-wrap';
         span.textContent = texto;
-        div.appendChild(span);
+        corpo.appendChild(span);
     }
 
     if (anexoUrl && /^https:\/\//i.test(anexoUrl)) {
@@ -977,6 +1019,7 @@ function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl) {
         a.title = 'Abrir anexo';
         if (/\.(png|jpe?g|gif|webp)(\?|$)/i.test(anexoUrl)) {
             a.className = 'suporte-msg-img';
+            a.onclick = e => e.preventDefault();
             const img = document.createElement('img');
             img.src = anexoUrl;
             img.alt = 'Anexo';
@@ -985,9 +1028,11 @@ function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl) {
             a.className = 'suporte-chamado-anexo';
             a.innerHTML = '<i class="fa-solid fa-paperclip"></i> Anexo';
         }
-        div.appendChild(a);
+        corpo.appendChild(a);
     }
 
+    if (criadoEm) { const hora = document.createElement('span'); hora.className = 'suporte-msg-hora'; hora.textContent = _suporteHoraFmt(criadoEm); corpo.appendChild(hora); }
+    div.appendChild(corpo);
     return div;
 }
 
@@ -1055,6 +1100,7 @@ async function suporteEnviarMensagemChamado() {
         msgsEl.appendChild(_suporteMontarBalaoMensagem('usuario', mensagem, anexoUrl));
         msgsEl.scrollTop = msgsEl.scrollHeight;
         input.value = '';
+        suporteAjustarAlturaResposta(input);
         suporteRemoverAnexoResposta();
         _suporteDetalheAssinatura = ''; // próxima atualização automática redesenha com a versão do banco
 

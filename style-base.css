@@ -1017,10 +1017,23 @@ form small {
 
 .chat-msg {
     display: flex;
-    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
     max-width: 86%;
     animation: chatFadeIn 0.15s ease;
 }
+.suporte-msg-corpo { display: flex; flex-direction: column; min-width: 0; }
+.suporte-msg-avatar {
+    flex: 0 0 22px; width: 22px; height: 22px; margin-top: 2px; border-radius: 50%;
+    background: linear-gradient(135deg, #4776ec, #7c3aed); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+}
+.suporte-msg-hora { margin-top: 2px; font-size: 10px; color: #94a3b8; padding: 0 4px; }
+.chat-msg-user .suporte-msg-hora { text-align: right; }
+.suporte-msg-dia { text-align: center; margin: 4px 0; }
+.suporte-msg-dia span { display: inline-block; padding: 2px 10px; background: #e2e8f0; border-radius: 999px; font-size: 10.5px; font-weight: 600; color: #64748b; }
+.suporte-msg-img { display: block; }
+.suporte-msg-img img { max-width: 100%; max-height: 140px; border-radius: 10px; cursor: zoom-in; display: block; }
 @keyframes chatFadeIn {
     from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -1109,6 +1122,24 @@ form small {
     opacity: 0.6;
     cursor: not-allowed;
 }
+.suporte-chat-input-row textarea {
+    flex: 1;
+    padding: 9px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 18px;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.4;
+    resize: none;
+    min-height: 36px;
+    max-height: 100px;
+    outline: none;
+    color: #334155;
+    background: #f8fafc;
+    transition: border-color 0.15s;
+}
+.suporte-chat-input-row textarea:focus { border-color: #4776ec; background: white; }
+.suporte-chat-input-row textarea:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .suporte-chat-send {
     width: 38px;
@@ -1562,6 +1593,7 @@ form small {
     letter-spacing: 0.03em;
     margin: 14px 14px 0;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .suporte-chamado-sem-respostas {
@@ -1570,7 +1602,9 @@ form small {
     text-align: center;
     padding: 16px 8px;
     margin: 0;
+    line-height: 1.8;
 }
+.suporte-chamado-sem-respostas i { font-size: 20px; color: #cbd5e1; }
 
 #suporteChamadoDetalheMsgs {
     max-height: 220px;
@@ -1743,3 +1777,6 @@ form small {
 
 .suporte-msg-nova { animation:suporteMsgNova 2.4s ease; }
 @keyframes suporteMsgNova { 0% { box-shadow:0 0 0 0 rgba(71,118,236,.55); background:#dbeafe; } 30% { box-shadow:0 0 0 8px rgba(71,118,236,0); } 100% { background:inherit; } }
+
+.suporte-lightbox { position: fixed; inset: 0; z-index: 10002; background: rgba(15,23,42,.88); align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+.suporte-lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
