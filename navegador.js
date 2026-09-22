@@ -67,10 +67,6 @@ const SIDEBAR_HTML = `
                 <i class="fa-solid fa-chart-line"></i> Relatórios
             </li>
 
-            <li id="menu-chamados-admin" style="display:none;" onclick="window.location.href='chamados-admin.html'">
-                <i class="fa-solid fa-headset"></i> Central de Chamados
-            </li>
-
             <li id="menu-termos" onclick="window.location.href='termos.html'">
                 <i class="fa-solid fa-scale-balanced"></i> Termos
             </li>
@@ -148,6 +144,9 @@ const SIDEBAR_HTML = `
             </li>
             <li id="menu-permissoes" onclick="window.location.href='permissoes.html'">
                 <i class="fa-solid fa-user-shield"></i> Usuários e Permissões
+            </li>
+            <li id="menu-chamados-admin" style="display:none;" onclick="window.location.href='chamados-admin.html'">
+                <i class="fa-solid fa-headset"></i> Central de Chamados
             </li>
         </ul>
     </div>
@@ -297,6 +296,7 @@ const _MODULO_PAGINAS = {
     'dre.html':                   'financeiro',
     'perfil.html':                'configuracoes',
     'permissoes.html':            'configuracoes',
+    'chamados-admin.html':        'configuracoes',
 };
 
 function _getModuloAtual() {
