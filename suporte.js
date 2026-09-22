@@ -848,11 +848,13 @@ function _suporteFecharChamadoDetalhe() {
 // silencioso = atualização automática em segundo plano (sem spinner, sem
 // mexer na tela se nada mudou, sem mostrar erro de rede passageiro)
 let _suporteDetalheAssinatura = '';
+let _suporteDetalheQtd = -1;
 async function _suporteCarregarChamadoDetalhe(id, silencioso = false) {
     const msgsEl = document.getElementById('suporteChamadoDetalheMsgs');
     const metaEl = document.getElementById('suporteChamadoDetalheMeta');
     if (!silencioso) {
         _suporteDetalheAssinatura = '';
+        _suporteDetalheQtd = -1;
         msgsEl.innerHTML = `<div class="suporte-chamados-loading"><div class="suporte-loading-spinner"></div></div>`;
         metaEl.innerHTML = '';
     }
@@ -884,8 +886,17 @@ async function _suporteCarregarChamadoDetalhe(id, silencioso = false) {
         const assinatura = `${chamado.status}|${lista.length}|${lista[lista.length - 1]?.id || ''}`;
         if (silencioso && assinatura === _suporteDetalheAssinatura) return;
         if (id !== _suporteChamadoAbertoId) return; // usuário já saiu/trocou de chamado
+        const qtdAntes = _suporteDetalheQtd;
         _suporteDetalheAssinatura = assinatura;
+        _suporteDetalheQtd = lista.length;
         _suporteRenderChamadoDetalhe(chamado, lista);
+        if (silencioso && qtdAntes >= 0 && lista.length > qtdAntes && lista[lista.length - 1]?.autor_tipo === 'suporte') {
+            const baloes = document.querySelectorAll('#suporteChamadoDetalheMsgs .chat-msg');
+            baloes[baloes.length - 1]?.classList.add('suporte-msg-nova');
+            _suporteMostrarToast('Nova resposta do suporte neste chamado', id);
+            const f = document.getElementById('suporteFloat');
+            if (f) { f.classList.remove('suporte-float--balanca'); void f.offsetWidth; f.classList.add('suporte-float--balanca'); }
+        }
         _suporteMarcarVisto(id);
 
     } catch (e) {
@@ -1171,8 +1182,10 @@ async function _suporteVerificarNovidades() {
         if (typeof ehAdminSuporte === 'function' && ehAdminSuporte()) return _suporteVerificarNovidadesAdmin();
 
         const vistos = _suporteLerVistos();
-        // Só os chamados que ESTE usuário abriu (quem relatou é quem precisa ser avisado)
-        const { data: meus } = await supabaseClient.from('chamados').select('id').eq('usuario_id', usuario.id).limit(300);
+        // Chamados visíveis pra este usuário (os da empresa dele e os que ele abriu — a RLS já filtra).
+        // Antes só contavam os com usuario_id == ele, e um chamado sem usuario_id (ou aberto por outra
+        // pessoa da mesma empresa) nunca gerava aviso.
+        const { data: meus } = await supabaseClient.from('chamados').select('id').order('updated_at', { ascending: false }).limit(300);
         const ids = (meus || []).map(c => c.id);
         if (!ids.length) { _suporteNaoLidos = new Set(); _suporteNaoLidosQtd = new Map(); _suporteNotifTotal = 0; _suporteAtualizarBadges(0, false); return; }
 
@@ -1183,7 +1196,8 @@ async function _suporteVerificarNovidades() {
             else { _suporteLeiturasOk = true; leituras = new Map((r.data || []).map(x => [x.chamado_id, x.visto_em])); }
         }
         // Sem a tabela no servidor: cai no "visto" local (janela de 7 dias, pra não perder respostas de quem voltou depois)
-        const desde = leituras ? '1970-01-01T00:00:00Z' : new Date(Date.now() - 7 * 86400000).toISOString();
+        const padraoSemLeitura = new Date(Date.now() - 3 * 86400000).toISOString(); // sem registro de leitura: só respostas dos últimos 3 dias contam
+        const desde = leituras ? padraoSemLeitura : new Date(Date.now() - 7 * 86400000).toISOString();
         const { data: msgs, error } = await supabaseClient.from('chamados_mensagens')
             .select('chamado_id, created_at').eq('autor_tipo', 'suporte').in('chamado_id', ids)
             .gt('created_at', desde).order('created_at', { ascending: false }).limit(300);
@@ -1196,7 +1210,7 @@ async function _suporteVerificarNovidades() {
         const naoLidos = new Map(); // chamado_id -> quantidade
         const t = iso => new Date(iso).getTime();
         for (const m of (msgs || [])) {
-            const visto = leituras ? (leituras.get(m.chamado_id) || '1970-01-01T00:00:00Z') : (vistos.chamados[m.chamado_id] || desde);
+            const visto = leituras ? (leituras.get(m.chamado_id) || padraoSemLeitura) : (vistos.chamados[m.chamado_id] || desde);
             if (t(m.created_at) > t(visto)) naoLidos.set(m.chamado_id, (naoLidos.get(m.chamado_id) || 0) + 1);
         }
         if (abertoAgora && naoLidos.has(abertoAgora)) { _suporteMarcarVisto(abertoAgora); naoLidos.delete(abertoAgora); }
@@ -1267,4 +1281,23 @@ function _suporteAplicarNaoLidosNaLista() {
 // Em aba inativa do app.html (iframe escondido) não faz polling — só a aba visível consulta
 const _suporteAbaInativa = () => document.documentElement.dataset.abaInativa === '1';
 setTimeout(() => { if (!_suporteAbaInativa()) _suporteVerificarNovidades(); }, 3000);
-setInterval(() => { if (!document.hidden && !_suporteAbaInativa()) _suporteVerificarNovidades(); }, 20000);
+setInterval(() => { if (!document.hidden && !_suporteAbaInativa()) _suporteVerificarNovidades(); }, 12000);
+
+// Diagnóstico: rode  suporteDiagnostico()  no console (F12) da tela de quem abriu o chamado
+// pra ver por que o aviso de resposta não apareceu.
+async function suporteDiagnostico() {
+    const u = obterUsuarioLogado();
+    const out = { usuario: { id: u?.id, nome: u?.nome, email: u?.email }, admin: typeof ehAdminSuporte === 'function' && ehAdminSuporte(), abaInativa: _suporteAbaInativa(), leiturasOk: _suporteLeiturasOk };
+    const meus = await supabaseClient.from('chamados').select('id, numero, titulo, usuario_id').eq('usuario_id', u.id);
+    out.chamadosAbertosPorMim = meus.error ? meus.error.message : (meus.data || []).map(c => `${_suporteNumFmt(c.numero)} ${c.titulo}`);
+    const ids = (meus.data || []).map(c => c.id);
+    if (ids.length) {
+        const msgs = await supabaseClient.from('chamados_mensagens').select('chamado_id, autor_tipo, created_at').in('chamado_id', ids).order('created_at', { ascending: false }).limit(10);
+        out.ultimasMensagens = msgs.error ? msgs.error.message : msgs.data;
+        const lei = await supabaseClient.from('chamados_leituras').select('chamado_id, visto_em').eq('usuario_id', u.id).in('chamado_id', ids);
+        out.leituras = lei.error ? lei.error.message : lei.data;
+    }
+    out.naoLidosAgora = Array.from(_suporteNaoLidosQtd.entries());
+    console.log('[Diagnóstico suporte]', out);
+    return out;
+}

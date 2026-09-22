@@ -1740,3 +1740,6 @@ form small {
 @keyframes confirmarFundo { from { opacity:0; } to { opacity:1; } }
 @keyframes confirmarEntra { from { transform:translateY(12px) scale(.96); opacity:0; } to { transform:none; opacity:1; } }
 @media (prefers-reduced-motion: reduce) { .confirmar-overlay, .confirmar-caixa { animation:none; } }
+
+.suporte-msg-nova { animation:suporteMsgNova 2.4s ease; }
+@keyframes suporteMsgNova { 0% { box-shadow:0 0 0 0 rgba(71,118,236,.55); background:#dbeafe; } 30% { box-shadow:0 0 0 8px rgba(71,118,236,0); } 100% { background:inherit; } }
