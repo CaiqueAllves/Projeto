@@ -1,79 +1,90 @@
 // ========================================
-// DOCUMENTOS — status de documentos por Pedido
+// DOCUMENTOS — status de documentos por Proforma
 // ========================================
 // Não existe assinatura digital real nessa aplicação: o status de cada
 // documento é marcado manualmente pelo usuário. A lista de documentos de
-// um pedido é: um conjunto fixo (universal) + o conjunto específico do
-// modal de transporte da(s) proforma(s) geradas a partir dele + quaisquer
-// tipos customizados que o usuário tenha adicionado.
+// uma Proforma é: um conjunto fixo (universal) + o conjunto específico
+// do(s) modal(is) de transporte dos Processos gerados a partir dela (uma
+// Proforma pode gerar N) + quaisquer tipos customizados que o usuário
+// tenha adicionado.
 // Taxonomia (DOC_TIPOS_UNIVERSAIS/DOC_TIPOS_MODAL/DOC_MODAL_LABEL) e os
-// helpers docTiposDoPedido()/docFeitoAutomatico() vêm de doc-tipos.js,
+// helpers docTiposDaProforma()/docFeitoAutomatico() vêm de doc-tipos.js,
 // compartilhado com a seção "Pendências do Sistema" em inicio.js.
 
-const DOC_LABELS_PEDIDO   = { aguardando: 'Aguardando', confirmado: 'Confirmado', em_producao: 'Em Produção', embarcado: 'Embarcado', entregue: 'Entregue', cancelado: 'Cancelado' };
 const DOC_LABELS_PROFORMA = { enviado: 'Enviado', aprovado: 'Aprovado', pendente: 'Pendente', encerrado: 'Encerrado' };
 const DOC_LABELS_PROCESSO = { aberto: 'Aberto', em_andamento: 'Em Andamento', aguardando_documentos: 'Aguard. Documentos', concluido: 'Concluído', cancelado: 'Cancelado' };
 
-let _docPedidos      = [];
-let _docSalvos       = {};   // pedido_id -> { tipo_documento -> registro }
+let _docProformas    = [];
+let _docSalvos       = {};   // proforma_id -> { tipo_documento -> registro }
 let _docFiltroAtual  = 'todos';
-let _docNovoEmPedido = null;   // id do pedido com a linha de "novo documento" aberta
-let _docExpandidos   = new Set(); // ids de pedido expandidos manualmente
-let _docRecolhidos   = new Set(); // ids de pedido recolhidos manualmente (vence a expansão forçada por filtro/busca)
+let _docNovoEmProforma = null;   // id da proforma com a linha de "novo documento" aberta
+let _docExpandidos   = new Set(); // ids de proforma expandidos manualmente
+let _docRecolhidos   = new Set(); // ids de proforma recolhidos manualmente (vence a expansão forçada por filtro/busca)
 
 document.addEventListener('DOMContentLoaded', async () => {
     await docCarregar();
 });
 
+function _docEmissorNome(p) {
+    if (p.emissor_tipo === 'terceiro') {
+        return p.parceiro?.nome_fantasia || p.parceiro?.razao_social || p.parceiro_razao_social || '—';
+    }
+    return 'Própria empresa';
+}
+
+function _docDestinatarioNome(p) {
+    if (p.destinatario_emp?.razao_social) {
+        return p.destinatario_emp.nome_fantasia || p.destinatario_emp.razao_social;
+    }
+    return p.destinatario_razao_social || '—';
+}
+
 async function docCarregar() {
     const container = document.getElementById('documentosContainer');
     container.innerHTML = '<div class="doc-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>';
 
-    const resPedidos = await buscarPedidos();
-    if (!resPedidos.sucesso) {
-        container.innerHTML = '<div class="doc-vazio">Erro ao carregar pedidos.</div>';
+    const usuario = obterUsuarioLogado();
+    let query = supabaseClient.from('proformas').select('*').neq('status', 'excluido').order('created_at', { ascending: false });
+    if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+    const { data, error } = await query;
+    if (error) {
+        container.innerHTML = '<div class="doc-vazio">Erro ao carregar proformas.</div>';
         return;
     }
-    _docPedidos = resPedidos.data || [];
+    _docProformas = data || [];
 
-    const pedidoIds = _docPedidos.map(p => p.id).filter(Boolean);
-    if (pedidoIds.length > 0) {
-        const { data: proformas } = await supabaseClient
-            .from('proformas').select('id, codigo, modal, status, pedido_id').in('pedido_id', pedidoIds);
-        const proformasMap = {};
-        (proformas || []).forEach(pf => { (proformasMap[pf.pedido_id] ||= []).push(pf); });
-
-        const proformaIds = (proformas || []).map(pf => pf.id);
-        let processosMap = {};
-        if (proformaIds.length > 0) {
-            const { data: procs } = await supabaseClient
-                .from('processos').select('id, numero_processo, status, proforma_id, documentos').in('proforma_id', proformaIds);
-            (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
-        }
-        _docPedidos.forEach(p => {
-            p._proformas = proformasMap[p.id] || [];
-            p._processos = p._proformas.flatMap(pf => processosMap[pf.id] || []);
-        });
-    } else {
-        _docPedidos.forEach(p => { p._proformas = []; p._processos = []; });
+    // parceiro_id/destinatario_id são BIGINT — referenciam "parceiros".
+    const empresaIds = [...new Set([
+        ..._docProformas.map(p => p.parceiro_id).filter(Boolean),
+        ..._docProformas.map(p => p.destinatario_id).filter(Boolean),
+    ])];
+    let empresaMap = {};
+    if (empresaIds.length > 0) {
+        const { data: parc } = await supabaseClient
+            .from('parceiros').select('id, razao_social, nome_fantasia').in('id', empresaIds);
+        (parc || []).forEach(e => { empresaMap[e.id] = e; });
     }
 
-    const resDocs = await window.supabaseAPI.buscarDocumentosPedidos(pedidoIds);
+    const proformaIds = _docProformas.map(p => p.id).filter(Boolean);
+    let processosMap = {};
+    if (proformaIds.length > 0) {
+        const { data: procs } = await supabaseClient
+            .from('processos').select('id, numero_processo, status, proforma_id, modal, documentos').in('proforma_id', proformaIds);
+        (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
+    }
+    _docProformas.forEach(p => {
+        p.parceiro         = empresaMap[p.parceiro_id]     || null;
+        p.destinatario_emp = empresaMap[p.destinatario_id] || null;
+        p._processos       = processosMap[p.id] || [];
+    });
+
+    const resDocs = await window.supabaseAPI.buscarDocumentosProformas(proformaIds);
     _docSalvos = {};
     (resDocs.data || []).forEach(d => {
-        (_docSalvos[d.pedido_id] ||= {})[d.tipo_documento] = d;
+        (_docSalvos[d.proforma_id] ||= {})[d.tipo_documento] = d;
     });
 
     docRenderizar();
-}
-
-function _docColunaProforma(p) {
-    const lista = p._proformas || [];
-    if (!lista.length) return { texto: '—', statusTexto: '—' };
-    return {
-        texto:       lista.map(pf => pf.codigo || '—').join(', '),
-        statusTexto: lista.map(pf => DOC_LABELS_PROFORMA[pf.status] || pf.status || '—').join(', '),
-    };
 }
 
 function _docColunaProcesso(p) {
@@ -100,9 +111,8 @@ function _docRenderProgresso(total, assinados) {
         </div>`;
 }
 
-// ── Hiperlinks: cada documento/pedido/proforma/processo abre o registro real ──
+// ── Hiperlinks: cada documento/proforma/processo abre o registro real ──
 const _docEsc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const _docUrlPedido   = id => `pedidos.html?editar=${encodeURIComponent(id)}&modo=visualizar`;
 const _docUrlProforma = id => `formularios.html?tab=proposta&id=${encodeURIComponent(id)}&modo=visualizar`;
 const _docUrlProcesso = id => `formularios.html?tab=processo&id=${encodeURIComponent(id)}&modo=visualizar`;
 const _docUrlProcessoPdf = id => `formularios.html?tab=processo&id=${encodeURIComponent(id)}&modo=pdf`;
@@ -120,7 +130,7 @@ function _docLink(href, texto, titulo, icone) {
 
 // Nome do documento: link pro arquivo anexado (upload/assinado) ou, se não houver,
 // pro registro criado no sistema (Proforma / Processo onde o Nº foi preenchido).
-function _docNomeComLink(pedido, r) {
+function _docNomeComLink(proforma, r) {
     const { tipo, arquivoPath, arquivoNome } = r;
     const tag = tipo.modal ? `<span class="doc-tipo-tag">${_docEsc(DOC_MODAL_LABEL[tipo.modal])}</span>` : '';
 
@@ -129,11 +139,10 @@ function _docNomeComLink(pedido, r) {
     let numero = '';
     let prDoc = null;
     if (!tipo.custom) {
-        if (tipo.id === 'proforma' && pedido._proformas?.length) {
-            const pf = pedido._proformas[0];
-            sistema = { href: _docUrlProforma(pf.id), texto: `Proforma ${pf.codigo || ''}`.trim(), titulo: `Abrir a Proforma ${pf.codigo || ''} criada no sistema`, icone: 'fa-file-lines' };
+        if (tipo.id === 'proforma') {
+            sistema = { href: _docUrlProforma(proforma.id), texto: `Proforma ${proforma.codigo || ''}`.trim(), titulo: `Abrir a Proforma ${proforma.codigo || ''}`, icone: 'fa-file-lines' };
         }
-        const pr = (pedido._processos || []).find(x => String(x.documentos?.[tipo.id] ?? '').trim() !== '');
+        const pr = (proforma._processos || []).find(x => String(x.documentos?.[tipo.id] ?? '').trim() !== '');
         if (pr) {
             prDoc = pr;
             numero = String(pr.documentos[tipo.id]).trim();
@@ -157,9 +166,9 @@ function _docNomeComLink(pedido, r) {
 const DOC_ANEXO_ACEITA = '.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx';
 const DOC_ANEXO_MAX_MB = 15;
 
-function _docAnexoCelula(pedido, r) {
+function _docAnexoCelula(proforma, r) {
     const { tipo, arquivoPath, arquivoNome } = r;
-    const input = `<input type="file" hidden accept="${DOC_ANEXO_ACEITA}" onchange="docAnexarArquivo('${pedido.id}','${tipo.id}',this)">`;
+    const input = `<input type="file" hidden accept="${DOC_ANEXO_ACEITA}" onchange="docAnexarArquivo('${proforma.id}','${tipo.id}',this)">`;
     const url = arquivoPath ? _docUrlArquivo(arquivoPath) : null;
     if (!arquivoPath) {
         return `<label class="doc-anexo-btn" title="Anexar o documento (mesmo que ainda não esteja assinado)"><i class="fa-solid fa-upload"></i> Anexar${input}</label>`;
@@ -170,17 +179,17 @@ function _docAnexoCelula(pedido, r) {
         : `<span class="doc-anexo-ver"><i class="fa-solid fa-paperclip"></i> ${nome}</span>`;
     return `<div class="doc-anexo-cell">${ver}
         <label class="doc-row-excluir" title="Substituir o arquivo"><i class="fa-solid fa-arrow-up-from-bracket"></i>${input}</label>
-        <button class="doc-row-excluir" title="Remover anexo" onclick="docExcluirAnexo('${pedido.id}','${tipo.id}')"><i class="fa-solid fa-trash"></i></button>
+        <button class="doc-row-excluir" title="Remover anexo" onclick="docExcluirAnexo('${proforma.id}','${tipo.id}')"><i class="fa-solid fa-trash"></i></button>
     </div>`;
 }
 
-async function docAnexarArquivo(pedidoId, tipoId, input) {
+async function docAnexarArquivo(proformaId, tipoId, input) {
     const file = input.files[0];
     if (!file) return;
     if (!exigirEmpresaVinculada()) { input.value = ''; return; }
     if (file.size > DOC_ANEXO_MAX_MB * 1024 * 1024) { mostrarNotificacao(`Arquivo maior que ${DOC_ANEXO_MAX_MB} MB.`, 'erro'); input.value = ''; return; }
 
-    const reg = _docSalvos[pedidoId]?.[tipoId];
+    const reg = _docSalvos[proformaId]?.[tipoId];
     if (reg?.assinado && !(await confirmarAcao('Este documento já está assinado. Substituir o arquivo mantém a assinatura registrada. Continuar?', { titulo: 'Substituir arquivo', confirmar: 'Substituir' }))) { input.value = ''; return; }
 
     const label = input.closest('label');
@@ -188,12 +197,12 @@ async function docAnexarArquivo(pedidoId, tipoId, input) {
     label.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `${pedidoId}/${tipoId}_${Date.now()}_${safeName}`;
+    const path = `${proformaId}/${tipoId}_${Date.now()}_${safeName}`;
     const { error: erroUp } = await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).upload(path, file);
     if (erroUp) { mostrarNotificacao('Erro ao enviar o arquivo: ' + erroUp.message, 'erro'); docRenderizar(); return; }
 
     const rotulo = tipoId.startsWith('custom_') ? (reg?.tipo_label || null) : null;
-    const res = await window.supabaseAPI.anexarDocumentoPedido(pedidoId, tipoId, rotulo, path, file.name);
+    const res = await window.supabaseAPI.anexarDocumentoProforma(proformaId, tipoId, rotulo, path, file.name);
     if (!res.sucesso) {
         await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).remove([path]);
         mostrarNotificacao('Erro ao registrar o anexo: ' + res.mensagem, 'erro');
@@ -201,15 +210,11 @@ async function docAnexarArquivo(pedidoId, tipoId, input) {
         return;
     }
     if (reg?.arquivo_path) supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).remove([reg.arquivo_path]).catch(() => {}); // arquivo antigo substituído
-    (_docSalvos[pedidoId] ||= {})[tipoId] = res.data;
+    (_docSalvos[proformaId] ||= {})[tipoId] = res.data;
     docRenderizar();
     mostrarNotificacao('Documento anexado.', 'sucesso');
 }
 
-function _docLinksProformas(p) {
-    const l = p._proformas || [];
-    return l.length ? l.map(pf => _docLink(_docUrlProforma(pf.id), pf.codigo || '—', 'Abrir Proforma')).join(', ') : '—';
-}
 function _docLinksProcessos(p) {
     const l = p._processos || [];
     return l.length ? l.map(pr => _docLink(_docUrlProcesso(pr.id), pr.numero_processo || '—', 'Abrir Processo')).join(', ') : '—';
@@ -219,10 +224,10 @@ function docRenderizar() {
     const container = document.getElementById('documentosContainer');
     const termo = (document.getElementById('buscaDoc')?.value || '').toLowerCase().trim();
 
-    const linhas = _docPedidos.map(p => {
-        const remetente    = p.remetente?.nome_fantasia || p.remetente?.razao_social || 'Própria empresa';
-        const destinatario = p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—';
-        const tipos   = docTiposDoPedido(p._proformas, _docSalvos[p.id]);
+    const linhas = _docProformas.map(p => {
+        const remetente    = _docEmissorNome(p);
+        const destinatario = _docDestinatarioNome(p);
+        const tipos   = docTiposDaProforma(p._processos, _docSalvos[p.id]);
         const salvos  = _docSalvos[p.id] || {};
 
         const docRows = tipos.map(tipo => {
@@ -247,17 +252,17 @@ function docRenderizar() {
         if (_docFiltroAtual === 'pendentes') docRowsFiltradas = docRows.filter(r => !r.assinado);
         if (_docFiltroAtual === 'assinados') docRowsFiltradas = docRows.filter(r => r.assinado);
 
-        // Progresso sempre calculado em cima de TODOS os documentos do
-        // pedido (não só os filtrados) — senão o % mudaria sozinho ao
+        // Progresso sempre calculado em cima de TODOS os documentos da
+        // proforma (não só os filtrados) — senão o % mudaria sozinho ao
         // trocar de aba de filtro, o que ia confundir mais que ajudar.
         const totalDocs     = docRows.length;
         const assinadosDocs = docRows.filter(r => r.assinado).length;
 
-        return { pedido: p, remetente, destinatario, docRowsFiltradas, totalDocs, assinadosDocs };
-    }).filter(({ pedido, remetente, destinatario, docRowsFiltradas }) => {
+        return { proforma: p, remetente, destinatario, docRowsFiltradas, totalDocs, assinadosDocs };
+    }).filter(({ proforma, remetente, destinatario, docRowsFiltradas }) => {
         if (docRowsFiltradas.length === 0) return false;
         if (!termo) return true;
-        const alvo = `${pedido.numero || ''} ${remetente} ${destinatario}`.toLowerCase();
+        const alvo = `${proforma.codigo || ''} ${remetente} ${destinatario}`.toLowerCase();
         return alvo.includes(termo);
     });
 
@@ -273,64 +278,57 @@ function docRenderizar() {
             <thead>
                 <tr>
                     <th class="doc-col-seta"></th>
-                    <th>Pedido</th>
-                    <th class="doc-col-status">Status do Pedido</th>
-                    <th class="doc-col-progresso">Documentos</th>
                     <th>Proforma</th>
                     <th class="doc-col-status">Status da Proforma</th>
+                    <th class="doc-col-progresso">Documentos</th>
                     <th>Processo</th>
                     <th class="doc-col-status">Status do Processo</th>
-                    <th>Criado por</th>
                 </tr>
             </thead>
             <tbody>
-                ${linhas.map(l => _docRenderLinhaPedido(l, forcarExpandir)).join('')}
+                ${linhas.map(l => _docRenderLinhaProforma(l, forcarExpandir)).join('')}
             </tbody>
         </table>`;
 }
 
-function _docRenderLinhaPedido({ pedido, remetente, destinatario, docRowsFiltradas, totalDocs, assinadosDocs }, forcarExpandir) {
-    const expandido = _docExpandidos.has(pedido.id) || (forcarExpandir && !_docRecolhidos.has(pedido.id));
-    const prof = _docColunaProforma(pedido);
-    const proc = _docColunaProcesso(pedido);
+function _docRenderLinhaProforma({ proforma, remetente, destinatario, docRowsFiltradas, totalDocs, assinadosDocs }, forcarExpandir) {
+    const expandido = _docExpandidos.has(proforma.id) || (forcarExpandir && !_docRecolhidos.has(proforma.id));
+    const proc = _docColunaProcesso(proforma);
 
     const linhaResumo = `
         <tr class="doc-linha-pedido">
             <td class="doc-col-seta">
-                <button class="doc-toggle" onclick="docToggleLinha('${pedido.id}', ${expandido})" title="${expandido ? 'Recolher' : 'Expandir'}">
+                <button class="doc-toggle" onclick="docToggleLinha('${proforma.id}', ${expandido})" title="${expandido ? 'Recolher' : 'Expandir'}">
                     <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
                 </button>
             </td>
             <td>
-                <div class="doc-pedido-numero">${pedido.numero ? _docLink(_docUrlPedido(pedido.id), pedido.numero, 'Abrir o Pedido') : '—'}</div>
+                <div class="doc-pedido-numero">${_docLink(_docUrlProforma(proforma.id), proforma.codigo || '—', 'Abrir a Proforma')}</div>
                 <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Remetente:</span> <span class="doc-parceiro-valor">${remetente}</span></div>
                 <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Destinatário:</span> <span class="doc-parceiro-valor">${destinatario}</span></div>
             </td>
-            <td class="doc-col-status"><span class="doc-badge doc-badge-ped-${pedido.status || ''}">${DOC_LABELS_PEDIDO[pedido.status] || pedido.status || '—'}</span></td>
+            <td class="doc-col-status"><span class="doc-badge doc-badge-neutro">${DOC_LABELS_PROFORMA[proforma.status] || proforma.status || '—'}</span></td>
             <td class="doc-col-progresso">${_docRenderProgresso(totalDocs, assinadosDocs)}</td>
-            <td class="doc-referencia">${_docLinksProformas(pedido)}</td>
-            <td class="doc-col-status">${prof.statusTexto !== '—' ? `<span class="doc-badge doc-badge-neutro">${prof.statusTexto}</span>` : '—'}</td>
-            <td class="doc-referencia">${_docLinksProcessos(pedido)}</td>
+            <td class="doc-referencia">${_docLinksProcessos(proforma)}</td>
             <td class="doc-col-status">${proc.statusTexto !== '—' ? `<span class="doc-badge doc-badge-neutro">${proc.statusTexto}</span>` : '—'}</td>
-            <td class="doc-criado-por">${pedido.criado_por || '—'}</td>
         </tr>`;
 
     if (!expandido) return linhaResumo;
 
     const linhaDetalhe = `
         <tr class="doc-linha-detalhe">
-            <td colspan="9">
+            <td colspan="6">
                 <div class="doc-detalhe-wrap">
                     <div class="doc-detalhe-header">
-                        <button class="doc-pedido-add" onclick="docAbrirNovoPersonalizado('${pedido.id}')">
+                        <button class="doc-pedido-add" onclick="docAbrirNovoPersonalizado('${proforma.id}')">
                             <i class="fa-solid fa-plus"></i> Documento
                         </button>
                     </div>
                     <table class="doc-pedido-tabela">
                         <thead><tr><th>Documento</th><th>Status</th><th>Anexo</th><th>Assinatura</th><th></th></tr></thead>
                         <tbody>
-                            ${docRowsFiltradas.map(r => _docRenderLinha(pedido, r)).join('')}
-                            ${_docNovoEmPedido === pedido.id ? _docRenderLinhaNova(pedido.id) : ''}
+                            ${docRowsFiltradas.map(r => _docRenderLinha(proforma, r)).join('')}
+                            ${_docNovoEmProforma === proforma.id ? _docRenderLinhaNova(proforma.id) : ''}
                         </tbody>
                     </table>
                 </div>
@@ -340,27 +338,27 @@ function _docRenderLinhaPedido({ pedido, remetente, destinatario, docRowsFiltrad
     return linhaResumo + linhaDetalhe;
 }
 
-function _docRenderLinhaNova(pedidoId) {
+function _docRenderLinhaNova(proformaId) {
     return `
         <tr>
             <td colspan="2">
-                <input type="text" id="docNovoNome_${pedidoId}" placeholder="Nome do documento..."
+                <input type="text" id="docNovoNome_${proformaId}" placeholder="Nome do documento..."
                     style="width:100%; padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;"
-                    onkeydown="if(event.key==='Enter') docSalvarPersonalizado('${pedidoId}'); if(event.key==='Escape') docCancelarPersonalizado();">
+                    onkeydown="if(event.key==='Enter') docSalvarPersonalizado('${proformaId}'); if(event.key==='Escape') docCancelarPersonalizado();">
             </td>
             <td colspan="3" style="white-space:nowrap;">
-                <button class="doc-pedido-add" onclick="docSalvarPersonalizado('${pedidoId}')">Salvar</button>
+                <button class="doc-pedido-add" onclick="docSalvarPersonalizado('${proformaId}')">Salvar</button>
                 <button class="doc-row-excluir" onclick="docCancelarPersonalizado()" title="Cancelar"><i class="fa-solid fa-xmark"></i></button>
             </td>
         </tr>`;
 }
 
-function _docRenderLinha(pedido, r) {
+function _docRenderLinha(proforma, r) {
     const { tipo, feito, assinado, assinadoPor, assinadoEm, enviadoPor, arquivoPath, arquivoNome, reg } = r;
     const tag = tipo.modal ? `<span class="doc-tipo-tag">${DOC_MODAL_LABEL[tipo.modal]}</span>` : '';
     const labelEsc = (tipo.label || '').replace(/'/g, "\\'");
     const excluir = tipo.custom
-        ? `<button class="doc-row-excluir" onclick="docExcluirPersonalizado('${pedido.id}','${tipo.id}', ${reg?.id ? `'${reg.id}'` : 'null'})" title="Remover"><i class="fa-solid fa-trash"></i></button>`
+        ? `<button class="doc-row-excluir" onclick="docExcluirPersonalizado('${proforma.id}','${tipo.id}', ${reg?.id ? `'${reg.id}'` : 'null'})" title="Remover"><i class="fa-solid fa-trash"></i></button>`
         : '';
 
     const statusHtml = tipo.custom
@@ -379,48 +377,48 @@ function _docRenderLinha(pedido, r) {
                     ${enviadoPor ? `<div class="doc-assinatura-enviado">Enviado por <strong>${_docEsc(enviadoPor)}</strong></div>` : ''}
                     <div class="doc-assinatura-data">${dataFmt}</div>
                 </div>
-                <button class="doc-row-excluir" title="Desmarcar assinatura" onclick="docDesmarcarAssinatura('${pedido.id}','${tipo.id}')"><i class="fa-solid fa-rotate-left"></i></button>
+                <button class="doc-row-excluir" title="Desmarcar assinatura" onclick="docDesmarcarAssinatura('${proforma.id}','${tipo.id}')"><i class="fa-solid fa-rotate-left"></i></button>
             </div>`;
     } else if (arquivoPath) {
         // Arquivo já anexado (coluna Anexo) e ainda não assinado: só falta assinar
         assinaturaHtml = `
-            <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${pedido.id}','${tipo.id}','${labelEsc}')">
+            <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${proforma.id}','${tipo.id}','${labelEsc}')">
                 <i class="fa-regular fa-circle"></i> Assinar
             </button>`;
     } else {
         assinaturaHtml = `
-            <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${pedido.id}','${tipo.id}','${labelEsc}')">
+            <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${proforma.id}','${tipo.id}','${labelEsc}')">
                 <i class="fa-regular fa-circle"></i> Não Assinado
             </button>`;
     }
 
     return `
         <tr>
-            <td>${_docNomeComLink(pedido, r)}</td>
+            <td>${_docNomeComLink(proforma, r)}</td>
             <td>${statusHtml}</td>
-            <td>${_docAnexoCelula(pedido, r)}</td>
+            <td>${_docAnexoCelula(proforma, r)}</td>
             <td>${assinaturaHtml}</td>
             <td>${excluir}</td>
         </tr>`;
 }
 
-function docToggleLinha(pedidoId, estavaExpandido) {
+function docToggleLinha(proformaId, estavaExpandido) {
     if (estavaExpandido) {
-        _docExpandidos.delete(pedidoId);
-        _docRecolhidos.add(pedidoId);
+        _docExpandidos.delete(proformaId);
+        _docRecolhidos.add(proformaId);
     } else {
-        _docExpandidos.add(pedidoId);
-        _docRecolhidos.delete(pedidoId);
+        _docExpandidos.add(proformaId);
+        _docRecolhidos.delete(proformaId);
     }
     docRenderizar();
 }
 
 // ── Assinatura digital (anexo do documento assinado) ────────────────────
-const BUCKET_DOC_ASSINATURA = 'pedido-documentos-assinados';
-let _docAssinaturaAlvo = null; // { pedidoId, tipoId, tipoLabel }
+const BUCKET_DOC_ASSINATURA = 'proforma-documentos-assinados';
+let _docAssinaturaAlvo = null; // { proformaId, tipoId, tipoLabel }
 
-function docAbrirModalAssinatura(pedidoId, tipoId, tipoLabel) {
-    _docAssinaturaAlvo = { pedidoId, tipoId, tipoLabel };
+function docAbrirModalAssinatura(proformaId, tipoId, tipoLabel) {
+    _docAssinaturaAlvo = { proformaId, tipoId, tipoLabel };
     document.getElementById('docModalAssinaturaLabel').textContent = tipoLabel;
     document.getElementById('docModalAssinadoPor').value = '';
     document.getElementById('docModalAssinadoPor').style.borderColor = '';
@@ -428,7 +426,7 @@ function docAbrirModalAssinatura(pedidoId, tipoId, tipoLabel) {
 
     // Se já existe um arquivo anexado (Processo ou anexo avulso), a
     // assinatura reaproveita ele — não obriga a subir de novo.
-    const reg = _docSalvos[pedidoId]?.[tipoId];
+    const reg = _docSalvos[proformaId]?.[tipoId];
     const existenteEl = document.getElementById('docModalArquivoExistente');
     if (reg?.arquivo_path && existenteEl) {
         existenteEl.innerHTML = `<i class="fa-solid fa-paperclip"></i> Já anexado: <strong>${reg.arquivo_nome || 'documento'}</strong> — deixe em branco pra manter, ou escolha outro pra substituir.`;
@@ -448,13 +446,13 @@ function docFecharModalAssinatura() {
 async function docConfirmarAssinaturaModal() {
     if (!exigirEmpresaVinculada()) return;
     if (!_docAssinaturaAlvo) return;
-    const { pedidoId, tipoId, tipoLabel } = _docAssinaturaAlvo;
+    const { proformaId, tipoId, tipoLabel } = _docAssinaturaAlvo;
 
     const nomeInput = document.getElementById('docModalAssinadoPor');
     const fileInput = document.getElementById('docModalArquivo');
     const nome = nomeInput.value.trim();
     const file = fileInput.files[0];
-    const jaTemArquivo = !!_docSalvos[pedidoId]?.[tipoId]?.arquivo_path;
+    const jaTemArquivo = !!_docSalvos[proformaId]?.[tipoId]?.arquivo_path;
 
     if (!nome) { nomeInput.style.borderColor = '#dc2626'; return; }
     if (!file && !jaTemArquivo) { mostrarNotificacao('Anexe o documento assinado.', 'erro'); return; }
@@ -469,7 +467,7 @@ async function docConfirmarAssinaturaModal() {
     let path = null, nomeArquivo = null;
     if (file) {
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        path = `${pedidoId}/${tipoId}_${Date.now()}_${safeName}`;
+        path = `${proformaId}/${tipoId}_${Date.now()}_${safeName}`;
         const { error: uploadError } = await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).upload(path, file);
         if (uploadError) {
             mostrarNotificacao('Erro ao enviar arquivo: ' + uploadError.message, 'erro');
@@ -480,13 +478,13 @@ async function docConfirmarAssinaturaModal() {
     }
 
     const isCustom = tipoId.startsWith('custom_');
-    const res = await window.supabaseAPI.marcarDocumentoAssinado(pedidoId, tipoId, true, nome, isCustom ? tipoLabel : null, path, nomeArquivo);
+    const res = await window.supabaseAPI.marcarDocumentoAssinado(proformaId, tipoId, true, nome, isCustom ? tipoLabel : null, path, nomeArquivo);
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
     if (!res.sucesso) {
         mostrarNotificacao('Erro ao registrar assinatura: ' + res.mensagem, 'erro');
         return;
     }
-    (_docSalvos[pedidoId] ||= {})[tipoId] = res.data;
+    (_docSalvos[proformaId] ||= {})[tipoId] = res.data;
     docFecharModalAssinatura();
     docRenderizar();
     mostrarNotificacao('Assinatura registrada.', 'sucesso');
@@ -505,76 +503,76 @@ async function docBaixarAssinatura(path, nome) {
     URL.revokeObjectURL(url);
 }
 
-async function docDesmarcarAssinatura(pedidoId, tipoId) {
-    const tipoLabelAtual = _docSalvos[pedidoId]?.[tipoId]?.tipo_label || null;
-    const res = await window.supabaseAPI.marcarDocumentoAssinado(pedidoId, tipoId, false, null, tipoLabelAtual);
+async function docDesmarcarAssinatura(proformaId, tipoId) {
+    const tipoLabelAtual = _docSalvos[proformaId]?.[tipoId]?.tipo_label || null;
+    const res = await window.supabaseAPI.marcarDocumentoAssinado(proformaId, tipoId, false, null, tipoLabelAtual);
     if (!res.sucesso) {
         mostrarNotificacao('Erro ao desmarcar assinatura: ' + res.mensagem, 'erro');
         return;
     }
-    (_docSalvos[pedidoId] ||= {})[tipoId] = res.data;
+    (_docSalvos[proformaId] ||= {})[tipoId] = res.data;
     docRenderizar();
 }
 
 // Remove só o arquivo anexado (mantém a linha do documento) — some tanto o
 // anexo quanto a assinatura, já que uma assinatura não faz sentido sem o
 // arquivo por trás.
-async function docExcluirAnexo(pedidoId, tipoId) {
-    const reg = _docSalvos[pedidoId]?.[tipoId];
+async function docExcluirAnexo(proformaId, tipoId) {
+    const reg = _docSalvos[proformaId]?.[tipoId];
     if (!reg?.arquivo_path) return;
     if (!(await confirmarAcao('Remover o arquivo anexado deste documento?', { titulo: 'Remover anexo', confirmar: 'Remover', perigo: true }))) return;
 
     await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).remove([reg.arquivo_path]);
-    const res = await window.supabaseAPI.limparAnexoDocumentoPedido(pedidoId, tipoId);
+    const res = await window.supabaseAPI.limparAnexoDocumentoProforma(proformaId, tipoId);
     if (!res.sucesso) {
         mostrarNotificacao('Erro ao remover anexo: ' + res.mensagem, 'erro');
         return;
     }
-    (_docSalvos[pedidoId] ||= {})[tipoId] = res.data || { ...reg, arquivo_path: null, arquivo_nome: null, enviado_por: null, enviado_em: null, assinado: false, assinado_por: null, assinado_em: null };
+    (_docSalvos[proformaId] ||= {})[tipoId] = res.data || { ...reg, arquivo_path: null, arquivo_nome: null, enviado_por: null, enviado_em: null, assinado: false, assinado_por: null, assinado_em: null };
     docRenderizar();
     mostrarNotificacao('Anexo removido.', 'sucesso');
 }
 
-function docAbrirNovoPersonalizado(pedidoId) {
-    _docNovoEmPedido = pedidoId;
-    _docExpandidos.add(pedidoId);
+function docAbrirNovoPersonalizado(proformaId) {
+    _docNovoEmProforma = proformaId;
+    _docExpandidos.add(proformaId);
     docRenderizar();
-    setTimeout(() => document.getElementById(`docNovoNome_${pedidoId}`)?.focus(), 50);
+    setTimeout(() => document.getElementById(`docNovoNome_${proformaId}`)?.focus(), 50);
 }
 
 function docCancelarPersonalizado() {
-    _docNovoEmPedido = null;
+    _docNovoEmProforma = null;
     docRenderizar();
 }
 
-async function docSalvarPersonalizado(pedidoId) {
+async function docSalvarPersonalizado(proformaId) {
     if (!exigirEmpresaVinculada()) return;
-    const input = document.getElementById(`docNovoNome_${pedidoId}`);
+    const input = document.getElementById(`docNovoNome_${proformaId}`);
     const nome = input?.value.trim();
     if (!nome) {
         input?.style.setProperty('border-color', '#dc2626');
         return;
     }
     const tipoId = `custom_${Date.now()}`;
-    const res = await window.supabaseAPI.marcarDocumentoAssinado(pedidoId, tipoId, false, null, nome);
+    const res = await window.supabaseAPI.marcarDocumentoAssinado(proformaId, tipoId, false, null, nome);
     if (!res.sucesso) {
         mostrarNotificacao('Erro ao adicionar documento: ' + res.mensagem, 'erro');
         return;
     }
-    (_docSalvos[pedidoId] ||= {})[tipoId] = res.data;
-    _docNovoEmPedido = null;
+    (_docSalvos[proformaId] ||= {})[tipoId] = res.data;
+    _docNovoEmProforma = null;
     docRenderizar();
     mostrarNotificacao('Documento adicionado.', 'sucesso');
 }
 
-async function docExcluirPersonalizado(pedidoId, tipoId, registroId) {
+async function docExcluirPersonalizado(proformaId, tipoId, registroId) {
     if (!registroId) return;
-    const res = await window.supabaseAPI.excluirDocumentoPedido(registroId);
+    const res = await window.supabaseAPI.excluirDocumentoProforma(registroId);
     if (!res.sucesso) {
         mostrarNotificacao('Erro ao remover documento: ' + res.mensagem, 'erro');
         return;
     }
-    if (_docSalvos[pedidoId]) delete _docSalvos[pedidoId][tipoId];
+    if (_docSalvos[proformaId]) delete _docSalvos[proformaId][tipoId];
     docRenderizar();
     mostrarNotificacao('Documento removido.', 'sucesso');
 }

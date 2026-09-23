@@ -10,7 +10,6 @@
 let _propTodas    = [];
 let _propFiltradas = [];
 let _propExcluirId = null;
-let _propPedidosMap = {};
 let _propViewMode  = 'kanban';
 let _propExcluidosAberto = false;
 
@@ -106,19 +105,6 @@ async function propCarregar() {
     if (!res.sucesso) return;
     _propTodas = res.data || [];
     _propFiltradas = [..._propTodas];
-
-    // Link reverso: quais propostas já geraram um Pedido
-    _propPedidosMap = {};
-    const oportunidadeIds = _propTodas.map(o => o.id).filter(Boolean);
-    if (oportunidadeIds.length > 0) {
-        try {
-            const { data: pedidosLinkados } = await supabaseClient
-                .from('pedidos')
-                .select('id, numero, oportunidade_id')
-                .in('oportunidade_id', oportunidadeIds);
-            (pedidosLinkados || []).forEach(p => { _propPedidosMap[p.oportunidade_id] = p; });
-        } catch (e) {}
-    }
 
     propRenderizar();
 }
@@ -236,16 +222,6 @@ function _propRenderCard(o) {
     const etapa     = o.etapa || 'proposta';
     const expandido = _propCardsExpandidos.has(o.id);
 
-    let botaoPedido = '';
-    if (etapa === 'fechado') {
-        const pedidoLinkado = _propPedidosMap[o.id];
-        if (pedidoLinkado) {
-            botaoPedido = `<button class="btn-ver-processo" onclick="propVerPedido('${pedidoLinkado.id}')"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido ${_propEscapar(pedidoLinkado.numero || '')}</button>`;
-        } else {
-            botaoPedido = `<button class="btn-seguir-processo" onclick="propGerarPedido('${o.id}')"><i class="fa-solid fa-bag-shopping"></i> Gerar Pedido</button>`;
-        }
-    }
-
     return `
     <div class="prop-kcard ${expandido ? 'prop-kcard-expandido' : ''}" data-etapa="${etapa}" data-id="${o.id}">
         <div class="prop-kcard-top">
@@ -263,7 +239,6 @@ function _propRenderCard(o) {
             <span class="prop-kcard-empresa-valor">${_propEscapar(destinoRazao)}</span>
         </div>
         <div class="prop-kcard-valor"><i class="fa-solid fa-coins"></i> <span>${valor}</span></div>
-        ${botaoPedido}
         ${expandido ? `
         <div class="prop-kcard-meta">
             <span class="prop-kcard-label">Responsável:</span> <span>${o.responsavel ? _propEscapar(o.responsavel) : '—'}</span>
@@ -395,14 +370,6 @@ function _propRenderizarTabela() {
         const podeAvancar = etapa !== 'fechado' && etapa !== 'perdido';
         const proxEtapa   = { proposta: 'negociacao', negociacao: 'fechado' };
 
-        let botaoPedido = '';
-        if (etapa === 'fechado') {
-            const pedidoLinkado = _propPedidosMap[o.id];
-            botaoPedido = pedidoLinkado
-                ? `<button class="pl-btn-acao pl-btn-editar" onclick="propVerPedido('${pedidoLinkado.id}')" title="Ver Pedido ${_propEscapar(pedidoLinkado.numero || '')}"><i class="fa-solid fa-bag-shopping"></i></button>`
-                : `<button class="pl-btn-acao pl-btn-editar" onclick="propGerarPedido('${o.id}')" title="Gerar Pedido"><i class="fa-solid fa-bag-shopping"></i></button>`;
-        }
-
         return `<tr class="prop-row prop-row-${etapa}">
             <td class="prop-num">${_propEscapar(o.titulo)}</td>
             <td>${remetente
@@ -415,8 +382,7 @@ function _propRenderizarTabela() {
             <td>${previsao}</td>
             <td>
                 <div class="ped-acoes">
-                    ${botaoPedido}
-                    ${podeAvancar ? `<button class="pl-btn-acao pl-btn-avancar" onclick="propAvancarEtapa('${o.id}')" title="Avançar para ${PROP_ETAPA_LABEL[proxEtapa[etapa]]}"><i class="fa-solid fa-arrow-right"></i></button>` : ''}
+                                ${podeAvancar ? `<button class="pl-btn-acao pl-btn-avancar" onclick="propAvancarEtapa('${o.id}')" title="Avançar para ${PROP_ETAPA_LABEL[proxEtapa[etapa]]}"><i class="fa-solid fa-arrow-right"></i></button>` : ''}
                     <button class="pl-btn-acao pl-btn-editar" onclick="propAbrirModal('${o.id}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
                     </button>
@@ -427,29 +393,6 @@ function _propRenderizarTabela() {
             </td>
         </tr>`;
     }).join('');
-}
-
-// ── Gerar/ver Pedido a partir da proposta ──────────────────────────────────
-
-function propGerarPedido(id) {
-    const o = _propTodas.find(x => x.id === id);
-    if (!o) return;
-    const cliente   = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '';
-    const remetente = o.remetente?.nome_fantasia || o.remetente?.razao_social || '';
-    const params = new URLSearchParams({
-        oportunidade_id:        id,
-        cliente_id:             o.cliente_id || '',
-        cliente_nome:           cliente,
-        remetente_parceiro_id:  o.remetente_parceiro_id || '',
-        remetente_nome:         remetente,
-        valor:                  o.valor || '',
-        moeda:                  o.moeda || 'USD',
-    });
-    window.open(`pedidos.html?${params.toString()}`, '_blank');
-}
-
-function propVerPedido(pedidoId) {
-    window.open(`pedidos.html?editar=${pedidoId}`, '_blank');
 }
 
 // ── Avançar etapa ──────────────────────────────────────────────────────────

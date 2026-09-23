@@ -96,7 +96,7 @@ function crSelecionarPlanoConta(id, label) {
     document.getElementById('crAutoPlanoConta').innerHTML = '';
 }
 
-// ── Abertura pré-preenchida a partir de Pedido/Processo (módulos Comercial/Operacional) ──
+// ── Abertura pré-preenchida a partir de Proforma/Processo (módulos Comercial/Operacional) ──
 
 async function _crVerificarGeracaoViaUrl() {
     const params      = new URLSearchParams(window.location.search);
@@ -106,24 +106,32 @@ async function _crVerificarGeracaoViaUrl() {
     const editarId = params.get('editar');
     if (editarId) { crAbrirModal(editarId); return; }
 
-    const pedidoId    = params.get('gerar_pedido_id');
+    const proformaId  = params.get('gerar_proforma_id');
     const processoId  = params.get('gerar_processo_id');
-    if (!pedidoId && !processoId) return;
+    if (!proformaId && !processoId) return;
 
-    if (pedidoId) {
-        const { data: pedido } = await supabaseClient
-            .from('pedidos')
-            .select('id, numero, cliente_id, valor_total, moeda, parceiros(razao_social, nome_fantasia)')
-            .eq('id', pedidoId).maybeSingle();
-        if (pedido) {
+    if (proformaId) {
+        const { data: proforma } = await supabaseClient
+            .from('proformas')
+            .select('id, codigo, destinatario_id, destinatario_razao_social, valor_total, moeda_principal')
+            .eq('id', proformaId).maybeSingle();
+        if (proforma) {
+            // destinatario_id é BIGINT — referencia "parceiros", não "empresas"
+            // (mesmo espaço de ID que contas_receber.parceiro_id já usa).
+            let clienteNome = proforma.destinatario_razao_social || '';
+            if (proforma.destinatario_id) {
+                const { data: parc } = await supabaseClient
+                    .from('parceiros').select('razao_social, nome_fantasia').eq('id', proforma.destinatario_id).maybeSingle();
+                if (parc) clienteNome = parc.nome_fantasia || parc.razao_social || clienteNome;
+            }
             crAbrirModal(null, {
-                descricao:   `Pedido ${pedido.numero || ''}`.trim(),
-                clienteId:   pedido.cliente_id || null,
-                clienteNome: pedido.parceiros?.nome_fantasia || pedido.parceiros?.razao_social || '',
-                pedidoId:    pedido.id,
-                pedidoNome:  pedido.numero || '',
-                valor:       pedido.valor_total || '',
-                moeda:       pedido.moeda || 'BRL',
+                descricao:    `Proforma ${proforma.codigo || ''}`.trim(),
+                clienteId:    proforma.destinatario_id || null,
+                clienteNome,
+                proformaId:   proforma.id,
+                proformaNome: proforma.codigo || '',
+                valor:        proforma.valor_total || '',
+                moeda:        proforma.moeda_principal || 'BRL',
             });
         }
     } else if (processoId) {
@@ -175,6 +183,10 @@ async function crCarregar() {
     crRenderizar();
 }
 
+function _crNomeCliente(c) {
+    return c.parceiros?.nome_fantasia || c.parceiros?.razao_social || '—';
+}
+
 function _crAtualizarVencidos() {
     const hoje = new Date().toISOString().split('T')[0];
     _crTodas.forEach(c => {
@@ -194,7 +206,7 @@ function crRenderizar() {
     }
 
     tbody.innerHTML = _crFiltradas.map(c => {
-        const cliente = c.parceiros?.nome_fantasia || c.parceiros?.razao_social || '—';
+        const cliente = _crNomeCliente(c);
         const valor   = _crFmtValor(c.valor, c.moeda);
         const venc    = c.data_vencimento
             ? new Date(c.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')
@@ -210,7 +222,7 @@ function crRenderizar() {
         const podeReceber = c.status === 'pendente' || c.status === 'vencido';
 
         return `<tr>
-            <td><strong>${_crEsc(c.descricao)}</strong>${c.plano_contas?.subfator_nome ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.plano_contas.conta_codigo)} — ${_crEsc(c.plano_contas.subfator_nome)}</span>` : (c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.categoria)}</span>` : '')}${c.pedidos?.numero ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-bag-shopping"></i> Pedido ${_crEsc(c.pedidos.numero)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_crEsc(c.processos.numero_processo)}</span>` : ''}</td>
+            <td><strong>${_crEsc(c.descricao)}</strong>${c.plano_contas?.subfator_nome ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.plano_contas.conta_codigo)} — ${_crEsc(c.plano_contas.subfator_nome)}</span>` : (c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.categoria)}</span>` : '')}${c.proformas?.codigo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_crEsc(c.proformas.codigo)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_crEsc(c.processos.numero_processo)}</span>` : ''}</td>
             <td>${_crEsc(cliente)}</td>
             <td class="td-valor entrada">${valor}</td>
             <td>${venc}</td>
@@ -256,7 +268,7 @@ function crFiltrar() {
         const termo  = document.getElementById('filtroContas')?.value.toLowerCase().trim() || '';
         const status = document.getElementById('filtroStatus')?.value || '';
         _crFiltradas = _crTodas.filter(c => {
-            const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
+            const txt = [c.descricao, _crNomeCliente(c)]
                 .filter(Boolean).join(' ').toLowerCase();
             return (!termo || txt.includes(termo)) && (!status || c.status === status);
         });
@@ -296,16 +308,16 @@ function crAbrirModal(id = null, prefill = null) {
     // Reseta o estado derivado antes de recalcular pra este registro — evita
     // herdar o travamento de Cliente/Processo de uma abertura anterior do modal.
     _crResetCamposDerivados();
-    const pedidoId = c?.pedido_id || prefill?.pedidoId || '';
-    document.getElementById('crPedidoNome').value = c?.pedidos?.numero || prefill?.pedidoNome || '';
-    document.getElementById('crPedidoId').value   = pedidoId;
+    const proformaId = c?.proforma_id || prefill?.proformaId || '';
+    document.getElementById('crProformaNome').value = c?.proformas?.codigo || prefill?.proformaNome || '';
+    document.getElementById('crProformaId').value   = proformaId;
 
-    if (pedidoId) {
+    if (proformaId) {
         const processoSalvoId   = c?.processo_id || prefill?.processoId || '';
         const processoSalvoNome = c?.processos?.numero_processo || prefill?.processoNome || '';
-        _crDerivarDoPedido(pedidoId).then(() => {
+        _crDerivarDaProforma(proformaId).then(() => {
             // Garante que o processo já salvo apareça mesmo se não estiver mais
-            // entre os processos atuais do pedido (ex: processo trocado depois).
+            // entre os processos atuais da proforma (ex: processo trocado depois).
             if (processoSalvoId) {
                 document.getElementById('crProcessoId').value   = processoSalvoId;
                 document.getElementById('crProcessoNome').value = processoSalvoNome || document.getElementById('crProcessoNome').value;
@@ -338,7 +350,7 @@ function crAbrirModal(id = null, prefill = null) {
 function crFecharModal() {
     document.getElementById('crModalOverlay').classList.remove('ativo');
     document.getElementById('crAutoParceiro').innerHTML = '';
-    document.getElementById('crAutoPedido').innerHTML   = '';
+    document.getElementById('crAutoProforma').innerHTML   = '';
     document.getElementById('crAutoProcesso').innerHTML = '';
     document.getElementById('crAutoPlanoConta').innerHTML = '';
 }
@@ -381,7 +393,7 @@ async function crSalvar() {
     const dados = {
         descricao,
         parceiro_id:      document.getElementById('crClienteId').value || null,
-        pedido_id:        document.getElementById('crPedidoId').value || null,
+        proforma_id:      document.getElementById('crProformaId').value || null,
         processo_id:      document.getElementById('crProcessoId').value || null,
         valor,
         moeda:            document.getElementById('crMoeda').value,
@@ -451,61 +463,53 @@ function crSelecionarParceiro(id, nome) {
     document.getElementById('crAutoParceiro').innerHTML = '';
 }
 
-// ── Autocomplete vínculo — Pedido ────────────────────────────────────────────
+// ── Autocomplete vínculo — Proforma ──────────────────────────────────────────
 
-let _crBuscaPedidoTimer = null;
-let _crPedidoReqToken = 0; // mesma guarda de corrida do _crListarParceiros acima
+let _crBuscaProformaTimer = null;
+let _crProformaReqToken = 0; // mesma guarda de corrida do _crListarParceiros acima
 
-async function _crListarPedidos(termo) {
-    const box = document.getElementById('crAutoPedido');
-    const meuToken = ++_crPedidoReqToken;
+async function _crListarProformas(termo) {
+    const box = document.getElementById('crAutoProforma');
+    const meuToken = ++_crProformaReqToken;
     try {
         const usuario = obterUsuarioLogado();
         let query = supabaseClient
-            .from('pedidos')
-            .select('id, numero')
+            .from('proformas')
+            .select('id, codigo')
+            .neq('status', 'excluido')
             .limit(termo ? 8 : 15);
-        if (termo) query = query.ilike('numero', `%${termo}%`);
-        else query = query.order('numero', { ascending: false });
-        if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        if (termo) query = query.ilike('codigo', `%${termo}%`);
+        else query = query.order('codigo', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         const { data } = await query;
-        if (meuToken !== _crPedidoReqToken) return; // resposta antiga, descarta
-        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum pedido encontrado</div>'; return; }
+        if (meuToken !== _crProformaReqToken) return; // resposta antiga, descarta
+        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma proforma encontrada</div>'; return; }
         box.innerHTML = data.map(p => `
-            <div class="pl-auto-item" onclick="crSelecionarPedido('${p.id}', '${_crEsc(p.numero || '')}')">
-                <span class="pl-auto-nome">${_crEsc(p.numero || '')}</span>
+            <div class="pl-auto-item" onclick="crSelecionarProforma('${p.id}', '${_crEsc(p.codigo || '')}')">
+                <span class="pl-auto-nome">${_crEsc(p.codigo || '')}</span>
             </div>`).join('');
     } catch (e) {}
 }
 
-function crBuscarPedido(termo) {
-    document.getElementById('crPedidoId').value = '';
+function crBuscarProforma(termo) {
+    document.getElementById('crProformaId').value = '';
     if (!termo) _crResetCamposDerivados();
-    clearTimeout(_crBuscaPedidoTimer);
-    _crBuscaPedidoTimer = setTimeout(() => _crListarPedidos(termo?.length >= 2 ? termo : ''), 300);
+    clearTimeout(_crBuscaProformaTimer);
+    _crBuscaProformaTimer = setTimeout(() => _crListarProformas(termo?.length >= 2 ? termo : ''), 300);
 }
 
-function crMostrarPedido(termo) {
-    _crListarPedidos(termo?.length >= 2 ? termo : '');
+function crMostrarProforma(termo) {
+    _crListarProformas(termo?.length >= 2 ? termo : '');
 }
 
-async function crSelecionarPedido(id, numero) {
-    document.getElementById('crPedidoId').value   = id;
-    document.getElementById('crPedidoNome').value = numero;
-    document.getElementById('crAutoPedido').innerHTML = '';
-    await _crDerivarDoPedido(id);
+async function crSelecionarProforma(id, codigo) {
+    document.getElementById('crProformaId').value   = id;
+    document.getElementById('crProformaNome').value = codigo;
+    document.getElementById('crAutoProforma').innerHTML = '';
+    await _crDerivarDaProforma(id);
 }
 
-// ── Derivação Cliente/Valor/Processo a partir do Pedido escolhido ──────────
-// Pedido é o campo-âncora (opcional): sem ele, Cliente fica livre pra buscar
-// e Processo fica desabilitado. Ao escolher um Pedido, o Cliente é travado
-// (nome/razão social vem do próprio pedido — evita vincular a um parceiro
-// que não bate com o pedido). Valor/Moeda vêm do valor_total do pedido só
-// como sugestão (editável — uma conta pode ser só uma parcela/taxa dele, não
-// o valor cheio). Já o Processo é restrito só aos processos deste pedido:
-// 0 → trava vazio, 1 → preenche sozinho e trava, >1 → usuário escolhe entre
-// eles. Mesmo padrão 0/1/vários usado em pedGerarProcesso (pedidos.js).
-let _crPedidoProcessos = [];
+let _crProformaProcessos = [];
 
 function _crResetCamposDerivados() {
     const clienteInput  = document.getElementById('crClienteNome');
@@ -514,75 +518,90 @@ function _crResetCamposDerivados() {
     document.getElementById('crClienteId').value = '';
     clienteInput.value = '';
     processoInput.disabled = true;
-    processoInput.placeholder = 'Escolha um Pedido primeiro';
+    processoInput.placeholder = 'Escolha uma Proforma primeiro';
     processoInput.value = '';
     document.getElementById('crProcessoId').value = '';
     document.getElementById('crAutoProcesso').innerHTML = '';
-    _crPedidoProcessos = [];
+    _crProformaProcessos = [];
 }
 
-async function _crDerivarDoPedido(pedidoId) {
+// Proforma é o campo-âncora (opcional): sem ela, Cliente fica livre pra
+// buscar (tabela parceiros, lançamento avulso) e Processo fica desabilitado.
+// Ao escolher uma Proforma, o Cliente é travado com o destinatário dela
+// (destinatario_id é BIGINT — mesmo espaço de ID de parceiro_id, referencia
+// "parceiros", não "empresas" — achado ao vivo em 2026-09-23, ver
+// [[project_proforma_parceiro_vs_empresas]]). Valor/Moeda vêm do valor_total
+// da proforma só como sugestão. Processo é restrito aos processos desta
+// proforma: 0 → trava vazio, 1 → preenche sozinho e trava, >1 → usuário
+// escolhe entre eles.
+async function _crDerivarDaProforma(proformaId) {
     const clienteInput  = document.getElementById('crClienteNome');
     const processoInput = document.getElementById('crProcessoNome');
 
     document.getElementById('crAutoParceiro').innerHTML = '';
     document.getElementById('crProcessoId').value = '';
     processoInput.value = '';
-    _crPedidoProcessos = [];
+    _crProformaProcessos = [];
 
     try {
         const usuario = obterUsuarioLogado();
 
-        const { data: pedido } = await supabaseClient
-            .from('pedidos')
-            .select('cliente_id, valor_total, moeda, parceiros!pedidos_cliente_id_fkey(razao_social, nome_fantasia)')
-            .eq('id', pedidoId)
+        const { data: proforma } = await supabaseClient
+            .from('proformas')
+            .select('destinatario_id, destinatario_razao_social, valor_total, moeda_principal')
+            .eq('id', proformaId)
             .single();
 
-        document.getElementById('crClienteId').value = pedido?.cliente_id || '';
-        clienteInput.value = pedido?.parceiros?.nome_fantasia || pedido?.parceiros?.razao_social || '';
+        let nomeCliente = proforma?.destinatario_razao_social || '';
+        if (proforma?.destinatario_id) {
+            const { data: parc } = await supabaseClient
+                .from('parceiros').select('razao_social, nome_fantasia').eq('id', proforma.destinatario_id).maybeSingle();
+            if (parc) nomeCliente = parc.nome_fantasia || parc.razao_social || nomeCliente;
+        }
+        document.getElementById('crClienteId').value = proforma?.destinatario_id || '';
+        clienteInput.value = nomeCliente;
         clienteInput.readOnly = true;
 
-        // Sugere Valor/Moeda do pedido — só se o campo ainda estiver vazio, pra
-        // não sobrescrever um valor já digitado ou o de uma conta já salva
+        // Sugere Valor/Moeda da proforma — só se o campo ainda estiver vazio,
+        // pra não sobrescrever um valor já digitado ou o de uma conta já salva
         // (crAbrirModal preenche o valor salvo antes de chamar esta função).
         const valorInput = document.getElementById('crValor');
-        if (!valorInput.value.trim() && pedido?.valor_total) {
-            valorInput.value = _crFormatarMonetario(pedido.valor_total);
-            if (pedido.moeda) document.getElementById('crMoeda').value = pedido.moeda;
+        if (!valorInput.value.trim() && proforma?.valor_total) {
+            valorInput.value = _crFormatarMonetario(proforma.valor_total);
+            if (proforma.moeda_principal) document.getElementById('crMoeda').value = proforma.moeda_principal;
         }
 
         let query = supabaseClient
             .from('processos')
             .select('id, numero_processo')
-            .eq('pedido_id', pedidoId)
+            .eq('proforma_id', proformaId)
             .order('numero_processo', { ascending: false });
         if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
         const { data: processos } = await query;
-        _crPedidoProcessos = processos || [];
+        _crProformaProcessos = processos || [];
 
-        if (_crPedidoProcessos.length === 0) {
+        if (_crProformaProcessos.length === 0) {
             processoInput.disabled = true;
-            processoInput.placeholder = 'Nenhum processo vinculado a este pedido';
-        } else if (_crPedidoProcessos.length === 1) {
-            document.getElementById('crProcessoId').value = _crPedidoProcessos[0].id;
-            processoInput.value = _crPedidoProcessos[0].numero_processo || '';
+            processoInput.placeholder = 'Nenhum processo vinculado a esta proforma';
+        } else if (_crProformaProcessos.length === 1) {
+            document.getElementById('crProcessoId').value = _crProformaProcessos[0].id;
+            processoInput.value = _crProformaProcessos[0].numero_processo || '';
             processoInput.disabled = true;
         } else {
             processoInput.disabled = false;
-            processoInput.placeholder = 'Selecione um dos processos deste pedido...';
+            processoInput.placeholder = 'Selecione um dos processos desta proforma...';
         }
     } catch (e) {}
 }
 
-// ── Autocomplete vínculo — Processo (restrito ao Pedido escolhido) ─────────
+// ── Autocomplete vínculo — Processo (restrito à Proforma escolhida) ────────
 
 function _crRenderizarProcessos(termo) {
     const box = document.getElementById('crAutoProcesso');
     const lista = termo
-        ? _crPedidoProcessos.filter(p => (p.numero_processo || '').toLowerCase().includes(termo.toLowerCase()))
-        : _crPedidoProcessos;
-    if (!lista.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo vinculado a este pedido</div>'; return; }
+        ? _crProformaProcessos.filter(p => (p.numero_processo || '').toLowerCase().includes(termo.toLowerCase()))
+        : _crProformaProcessos;
+    if (!lista.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo vinculado a esta proforma</div>'; return; }
     box.innerHTML = lista.map(p => `
         <div class="pl-auto-item" onclick="crSelecionarProcesso('${p.id}', '${_crEsc(p.numero_processo || '')}')">
             <span class="pl-auto-nome">${_crEsc(p.numero_processo || '')}</span>
@@ -609,8 +628,8 @@ document.addEventListener('click', e => {
         const box = document.getElementById('crAutoParceiro');
         if (box) box.innerHTML = '';
     }
-    if (!e.target.closest('#crAutoPedido') && !e.target.closest('#crPedidoNome')) {
-        const box = document.getElementById('crAutoPedido');
+    if (!e.target.closest('#crAutoProforma') && !e.target.closest('#crProformaNome')) {
+        const box = document.getElementById('crAutoProforma');
         if (box) box.innerHTML = '';
     }
     if (!e.target.closest('#crAutoProcesso') && !e.target.closest('#crProcessoNome')) {

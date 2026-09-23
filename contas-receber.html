@@ -125,15 +125,15 @@
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
                     <label>Descrição <span style="color:#ef4444">*</span></label>
-                    <input type="text" id="crDescricao" placeholder="Ex: Exportação de calçados — Pedido #001">
+                    <input type="text" id="crDescricao" placeholder="Ex: Exportação de calçados — Proforma #001">
                 </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label>Vincular a Pedido</label>
-                    <input type="text" id="crPedidoNome" placeholder="Buscar pedido por número..." autocomplete="off" oninput="crBuscarPedido(this.value)" onfocus="crMostrarPedido(this.value)">
-                    <input type="hidden" id="crPedidoId">
-                    <div class="pl-autocomplete" id="crAutoPedido"></div>
+                    <label>Vincular a Proforma</label>
+                    <input type="text" id="crProformaNome" placeholder="Buscar proforma por código..." autocomplete="off" oninput="crBuscarProforma(this.value)" onfocus="crMostrarProforma(this.value)">
+                    <input type="hidden" id="crProformaId">
+                    <div class="pl-autocomplete" id="crAutoProforma"></div>
                 </div>
             </div>
             <div class="fin-form-row">
@@ -145,7 +145,7 @@
                 </div>
                 <div class="fin-form-group">
                     <label>Vincular a Processo</label>
-                    <input type="text" id="crProcessoNome" placeholder="Escolha um Pedido primeiro" autocomplete="off" disabled oninput="crBuscarProcesso(this.value)" onfocus="crMostrarProcesso(this.value)">
+                    <input type="text" id="crProcessoNome" placeholder="Escolha uma Proforma primeiro" autocomplete="off" disabled oninput="crBuscarProcesso(this.value)" onfocus="crMostrarProcesso(this.value)">
                     <input type="hidden" id="crProcessoId">
                     <div class="pl-autocomplete" id="crAutoProcesso"></div>
                 </div>

@@ -168,74 +168,92 @@ function salvarTarefas() {
 // ========================================
 // PENDÊNCIAS DO SISTEMA (dados reais do Supabase)
 // ========================================
-// Critérios confirmados com o usuário: Pedido com status "aguardando",
-// Proforma com status "pendente", Processo com status "aberto", e
-// documentos já feitos mas ainda não assinados (usa a mesma taxonomia/
-// cálculo de doc-tipos.js, compartilhada com a tela Documentos). Produtos
-// pendentes (status "pendente") não pertencem a um Pedido específico, por
-// isso ficam numa lista separada, fora da tabela.
+// Critérios confirmados com o usuário: Proforma com status "pendente",
+// Processo com status "aberto", e documentos já feitos mas ainda não
+// assinados (usa a mesma taxonomia/cálculo de doc-tipos.js, compartilhada
+// com a tela Documentos). Produtos pendentes (status "pendente") não
+// pertencem a uma Proforma específica, por isso ficam numa lista
+// separada, fora da tabela.
 
-let _pendPedidos            = []; // pedidos com pelo menos 1 pendência, já com o detalhe calculado
+let _pendProformas          = []; // proformas com pelo menos 1 pendência, já com o detalhe calculado
 let _pendProdutosPendentes  = [];
 let _pendExpandidos         = new Set();
 
+function _pendEmissorNome(p) {
+    if (p.emissor_tipo === 'terceiro') {
+        return p.parceiro?.nome_fantasia || p.parceiro?.razao_social || p.parceiro_razao_social || '—';
+    }
+    return 'Própria empresa';
+}
+
+function _pendDestinatarioNome(p) {
+    if (p.destinatario_emp?.razao_social) {
+        return p.destinatario_emp.nome_fantasia || p.destinatario_emp.razao_social;
+    }
+    return p.destinatario_razao_social || '—';
+}
+
 async function carregarPendenciasSistema() {
     const usuario = obterUsuarioLogado();
-    if (!usuario) { _pendPedidos = []; _pendProdutosPendentes = []; return; }
+    if (!usuario) { _pendProformas = []; _pendProdutosPendentes = []; return; }
 
-    const resPedidos = await buscarPedidos();
-    const pedidos = resPedidos.sucesso ? (resPedidos.data || []) : [];
-    const pedidoIds = pedidos.map(p => p.id).filter(Boolean);
+    let query = supabaseClient.from('proformas').select('*').neq('status', 'excluido');
+    if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+    const { data: proformasData } = await query;
+    const proformas = proformasData || [];
+    const proformaIds = proformas.map(p => p.id).filter(Boolean);
 
-    const proformasMap = {};
+    // parceiro_id/destinatario_id são BIGINT — referenciam "parceiros".
+    const empresaIds = [...new Set([
+        ...proformas.map(p => p.parceiro_id).filter(Boolean),
+        ...proformas.map(p => p.destinatario_id).filter(Boolean),
+    ])];
+    let empresaMap = {};
+    if (empresaIds.length > 0) {
+        const { data: parc } = await supabaseClient
+            .from('parceiros').select('id, razao_social, nome_fantasia').in('id', empresaIds);
+        (parc || []).forEach(e => { empresaMap[e.id] = e; });
+    }
+
     const processosMap = {};
     let docsMap = {};
 
-    if (pedidoIds.length > 0) {
-        const { data: proformas } = await supabaseClient
-            .from('proformas').select('id, codigo, modal, status, pedido_id').in('pedido_id', pedidoIds);
-        (proformas || []).forEach(pf => { (proformasMap[pf.pedido_id] ||= []).push(pf); });
+    if (proformaIds.length > 0) {
+        const { data: procs } = await supabaseClient
+            .from('processos').select('id, numero_processo, status, proforma_id, modal, documentos').in('proforma_id', proformaIds);
+        (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
 
-        const proformaIds = (proformas || []).map(pf => pf.id);
-        if (proformaIds.length > 0) {
-            const { data: procs } = await supabaseClient
-                .from('processos').select('id, numero_processo, status, proforma_id, documentos').in('proforma_id', proformaIds);
-            (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
-        }
-
-        const resDocs = await window.supabaseAPI.buscarDocumentosPedidos(pedidoIds);
-        (resDocs.data || []).forEach(d => { (docsMap[d.pedido_id] ||= {})[d.tipo_documento] = d; });
+        const resDocs = await window.supabaseAPI.buscarDocumentosProformas(proformaIds);
+        (resDocs.data || []).forEach(d => { (docsMap[d.proforma_id] ||= {})[d.tipo_documento] = d; });
     }
 
-    _pendPedidos = pedidos.map(p => {
-        const proformasDoPedido = proformasMap[p.id] || [];
-        const processosDoPedido = proformasDoPedido.flatMap(pf => processosMap[pf.id] || []);
-        const docsSalvos        = docsMap[p.id] || {};
+    _pendProformas = proformas.map(p => {
+        const processosDaProforma = processosMap[p.id] || [];
+        const docsSalvos          = docsMap[p.id] || {};
 
-        const pedidoPendente     = p.status === 'aguardando';
-        const proformasPendentes = proformasDoPedido.filter(pf => pf.status === 'pendente');
-        const processosAbertos   = processosDoPedido.filter(pr => pr.status === 'aberto');
+        const proformaPendente  = p.status === 'pendente';
+        const processosAbertos  = processosDaProforma.filter(pr => pr.status === 'aberto');
 
         // Só conta documentos "feitos" pra saber quantos ainda faltam assinar
         // — um tipo que nunca foi gerado não é uma pendência de assinatura.
         let docsFeitos = 0, docsAssinados = 0;
-        docTiposDoPedido(proformasDoPedido, docsSalvos).forEach(tipo => {
+        docTiposDaProforma(processosDaProforma, docsSalvos).forEach(tipo => {
             if (tipo.custom) return;
             const reg = docsSalvos[tipo.id];
             const assinado = !!reg?.assinado;
-            const feito = assinado || docFeitoAutomatico(processosDoPedido, tipo.id);
+            const feito = assinado || docFeitoAutomatico(processosDaProforma, tipo.id);
             if (feito) { docsFeitos++; if (assinado) docsAssinados++; }
         });
         const temDocPendente = docsFeitos > docsAssinados;
 
-        const temPendencia = pedidoPendente || proformasPendentes.length > 0 || processosAbertos.length > 0 || temDocPendente;
+        const temPendencia = proformaPendente || processosAbertos.length > 0 || temDocPendente;
         if (!temPendencia) return null;
 
         return {
-            pedido: p,
-            remetente:    p.remetente?.nome_fantasia || p.remetente?.razao_social || 'Própria empresa',
-            destinatario: p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—',
-            pedidoPendente, proformasPendentes, processosAbertos,
+            proforma: p,
+            remetente:    _pendEmissorNome({ ...p, parceiro: empresaMap[p.parceiro_id] }),
+            destinatario: _pendDestinatarioNome({ ...p, destinatario_emp: empresaMap[p.destinatario_id] }),
+            proformaPendente, processosAbertos,
             docsFeitos, docsAssinados, temDocPendente,
         };
     }).filter(Boolean);
@@ -249,7 +267,7 @@ function renderizarTarefas() {
     const container = document.getElementById('tasksContainer');
     if (!container) return;
 
-    const totalPendencias = _pendPedidos.length + _pendProdutosPendentes.length;
+    const totalPendencias = _pendProformas.length + _pendProdutosPendentes.length;
     const totalPendente   = tarefas.filter(t => !t.concluida).length + totalPendencias;
 
     const badge = document.getElementById('tarefasCountBadge');
@@ -294,20 +312,20 @@ function renderizarTarefas() {
         container.appendChild(group);
     }
 
-    // Grupo 2: Pendências do Sistema — 1 linha por Pedido, com expandir
-    if (_pendPedidos.length > 0) {
+    // Grupo 2: Pendências do Sistema — 1 linha por Proforma, com expandir
+    if (_pendProformas.length > 0) {
         const group = document.createElement('div');
         group.className = 'tasks-group';
         group.innerHTML = `
-            <div class="tasks-group-header pendencias-header"><i class="fa-solid fa-triangle-exclamation"></i> Pendências do Sistema <span class="pendencias-count">${_pendPedidos.length}</span></div>
+            <div class="tasks-group-header pendencias-header"><i class="fa-solid fa-triangle-exclamation"></i> Pendências do Sistema <span class="pendencias-count">${_pendProformas.length}</span></div>
             <table class="pend-tabela">
-                <thead><tr><th class="pend-col-seta"></th><th>Pedido</th><th>Pendências</th></tr></thead>
-                <tbody>${_pendPedidos.map(_pendRenderLinha).join('')}</tbody>
+                <thead><tr><th class="pend-col-seta"></th><th>Proforma</th><th>Pendências</th></tr></thead>
+                <tbody>${_pendProformas.map(_pendRenderLinha).join('')}</tbody>
             </table>`;
         container.appendChild(group);
     }
 
-    // Grupo 3: Produtos Pendentes — lista simples, não pertence a um Pedido
+    // Grupo 3: Produtos Pendentes — lista simples, não pertence a uma Proforma
     if (_pendProdutosPendentes.length > 0) {
         const group = document.createElement('div');
         group.className = 'tasks-group';
@@ -334,31 +352,30 @@ function renderizarTarefas() {
     }
 }
 
-function pendToggleLinha(pedidoId) {
-    if (_pendExpandidos.has(pedidoId)) _pendExpandidos.delete(pedidoId);
-    else _pendExpandidos.add(pedidoId);
+function pendToggleLinha(proformaId) {
+    if (_pendExpandidos.has(proformaId)) _pendExpandidos.delete(proformaId);
+    else _pendExpandidos.add(proformaId);
     renderizarTarefas();
 }
 
 function _pendRenderLinha(item) {
-    const pedidoId  = item.pedido.id;
-    const expandido = _pendExpandidos.has(pedidoId);
+    const proformaId = item.proforma.id;
+    const expandido   = _pendExpandidos.has(proformaId);
 
     const tags = [];
-    if (item.pedidoPendente) tags.push(`<span class="pend-tag pend-tag-pedido">Pedido Aguardando</span>`);
-    if (item.proformasPendentes.length) tags.push(`<span class="pend-tag pend-tag-proforma">Proforma Pendente${item.proformasPendentes.length > 1 ? ` (${item.proformasPendentes.length})` : ''}</span>`);
+    if (item.proformaPendente) tags.push(`<span class="pend-tag pend-tag-proforma">Proforma Pendente</span>`);
     if (item.processosAbertos.length) tags.push(`<span class="pend-tag pend-tag-processo">Processo Aberto${item.processosAbertos.length > 1 ? ` (${item.processosAbertos.length})` : ''}</span>`);
     if (item.temDocPendente) tags.push(`<span class="pend-tag pend-tag-doc">${item.docsAssinados}/${item.docsFeitos} assinados</span>`);
 
     const linhaResumo = `
         <tr class="pend-linha">
             <td class="pend-col-seta">
-                <button class="pend-toggle" onclick="pendToggleLinha('${pedidoId}')" title="${expandido ? 'Recolher' : 'Expandir'}">
+                <button class="pend-toggle" onclick="pendToggleLinha('${proformaId}')" title="${expandido ? 'Recolher' : 'Expandir'}">
                     <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
                 </button>
             </td>
             <td>
-                <div class="pend-pedido-numero">${item.pedido.numero || '—'}</div>
+                <div class="pend-pedido-numero">${item.proforma.codigo || '—'}</div>
                 <div class="pend-pedido-parceiro">${item.destinatario}</div>
             </td>
             <td class="pend-tags">${tags.join('')}</td>
@@ -367,12 +384,9 @@ function _pendRenderLinha(item) {
     if (!expandido) return linhaResumo;
 
     const detalhes = [];
-    if (item.pedidoPendente) {
-        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-bag-shopping"></i> Pedido está <strong>aguardando</strong> confirmação. <a href="pedidos.html?editar=${pedidoId}">Abrir pedido</a></div>`);
+    if (item.proformaPendente) {
+        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-invoice"></i> Proforma está <strong>pendente</strong>. <a href="formularios.html?tab=proposta&id=${proformaId}" target="_blank">Abrir proforma</a></div>`);
     }
-    item.proformasPendentes.forEach(pf => {
-        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-invoice"></i> Proforma <strong>${pf.codigo || '—'}</strong> está pendente. <a href="formularios.html?tab=proposta&id=${pf.id}" target="_blank">Abrir proforma</a></div>`);
-    });
     item.processosAbertos.forEach(pr => {
         detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-diagram-project"></i> Processo <strong>${pr.numero_processo || '—'}</strong> está aberto. <a href="formularios.html?tab=processo&id=${pr.id}" target="_blank">Abrir processo</a></div>`);
     });

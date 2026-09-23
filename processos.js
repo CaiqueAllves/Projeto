@@ -91,17 +91,6 @@ async function carregarProcessos() {
             if (profs) profs.forEach(pr => { proformaMap[pr.id] = pr.codigo || ''; });
         }
 
-        // Busca número dos pedidos de origem (vínculo direto Processo -> Pedido)
-        const pedidoIds = [...new Set(processos.map(p => p.pedido_id).filter(Boolean))];
-        let pedidoMap = {};
-        if (pedidoIds.length > 0) {
-            const { data: peds } = await supabaseClient
-                .from('pedidos')
-                .select('id, numero')
-                .in('id', pedidoIds);
-            if (peds) peds.forEach(pd => { pedidoMap[pd.id] = pd.numero || ''; });
-        }
-
         _processosTodos = processos.map(p => ({
             id:                p.id,
             codigo:            p.numero_processo || p.id?.slice(0,8).toUpperCase(),
@@ -118,8 +107,6 @@ async function carregarProcessos() {
             valor_total:       p.valor_total || null,
             proforma_id:       p.proforma_id || null,
             proforma_codigo:   proformaMap[p.proforma_id] || '',
-            pedido_id:         p.pedido_id || null,
-            pedido_numero:     pedidoMap[p.pedido_id] || '',
             criado_em:         p.criado_em,
             atualizado_em:     p.atualizado_em || p.updated_at || null,
         }));
@@ -215,11 +202,6 @@ function procToggleCard(id) {
     renderKanban(document.getElementById('filtroProcessos')?.value || '');
 }
 
-function _identPedidoProcesso(p) {
-    if (!p.pedido_id) return 'Sem Pedido';
-    return `Pedido: ${p.pedido_numero || '—'}`;
-}
-
 function _identProformaProcesso(p) {
     if (!p.proforma_id) return 'Sem Proforma';
     return `Proforma: ${p.proforma_codigo || '—'}`;
@@ -256,10 +238,6 @@ function _renderCard(p) {
             </button>
         </div>
         <div class="proc-card-ident">
-            <i class="fa-solid fa-bag-shopping"></i>
-            <span>${escapeHtml(_identPedidoProcesso(p))}</span>
-        </div>
-        <div class="proc-card-ident">
             <i class="fa-solid fa-file-invoice-dollar"></i>
             <span>${escapeHtml(_identProformaProcesso(p))}</span>
         </div>
@@ -291,7 +269,6 @@ function _renderCard(p) {
                 ${optStatus}
             </select>
             ${p.proforma_id ? `<button class="btn-ver-processo" data-action="ver-proforma" data-id="${escapeHtml(p.proforma_id)}"><i class="fa-solid fa-file-invoice-dollar"></i> Ver Proforma ${escapeHtml(p.proforma_codigo || '')}</button>` : ''}
-            ${p.pedido_id ? `<button class="btn-ver-processo" data-action="ver-pedido" data-id="${escapeHtml(p.pedido_id)}"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido ${escapeHtml(p.pedido_numero || '')}</button>` : ''}
             <div class="proc-card-btns">
                 <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
                 <button class="btn-acao btn-pdf"     data-action="pdf"        data-id="${escapeHtml(p.id)}" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
@@ -311,9 +288,6 @@ function _filtrarProcessos(filtro) {
     // Vindo de "Ver Processos (N)" na Proforma — mostra só os processos daquela proforma
     const proformaIdParam = new URLSearchParams(window.location.search).get('proforma_id');
     if (proformaIdParam) list = list.filter(p => p.proforma_id === proformaIdParam);
-    // Vindo de "Ver Processos (N)" no Pedido — mostra os processos de todas as proformas do pedido
-    const pedidoIdParam = new URLSearchParams(window.location.search).get('pedido_id');
-    if (pedidoIdParam) list = list.filter(p => p.pedido_id === pedidoIdParam);
     if (status) list = list.filter(p => _getColuna(p.status || 'aberto') === status);
     if (q) list = list.filter(p => `${p.codigo} ${p.tipo} ${p.empresaExportador} ${p.empresaImportador} ${p.pais_origem} ${p.pais_destino} ${p.status}`.toLowerCase().includes(q));
     return list;
@@ -381,7 +355,6 @@ function renderLista(filtro) {
             <td><select class="proc-status-select proc-status-${status}" onchange="procAlterarStatus('${escapeHtml(p.id)}', this)">${opts}</select></td>
             <td><div class="proc-acoes">
                 ${p.proforma_id ? `<button class="btn-acao btn-ver" data-action="ver-proforma" data-id="${escapeHtml(p.proforma_id)}" title="Ver Proforma de origem"><i class="fa-solid fa-file-invoice-dollar"></i></button>` : ''}
-                ${p.pedido_id ? `<button class="btn-acao btn-ver" data-action="ver-pedido" data-id="${escapeHtml(p.pedido_id)}" title="Ver Pedido de origem"><i class="fa-solid fa-bag-shopping"></i></button>` : ''}
                 <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
                 <button class="btn-acao btn-pdf"     data-action="pdf"        data-id="${escapeHtml(p.id)}" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
                 <button class="btn-acao btn-editar"  data-action="editar"     data-id="${escapeHtml(p.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
@@ -425,7 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (action === 'visualizar')   window.open(`formularios.html?tab=processo&id=${id}&modo=visualizar`, '_blank');
         if (action === 'pdf')          window.open(`formularios.html?tab=processo&id=${id}&modo=pdf`, '_blank');
         if (action === 'ver-proforma') window.open(`formularios.html?tab=proposta&id=${id}&modo=visualizar`, '_blank');
-        if (action === 'ver-pedido')   window.open(`pedidos.html?editar=${id}`, '_blank');
         if (action === 'gerar-conta-pagar')   window.open(`contas-pagar.html?gerar_processo_id=${id}`, '_blank');
         if (action === 'gerar-conta-receber') window.open(`contas-receber.html?gerar_processo_id=${id}`, '_blank');
         if (action === 'excluir')      abrirModalExcluir(id);

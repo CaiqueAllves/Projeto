@@ -101,9 +101,6 @@ const SIDEBAR_HTML = `
             <li id="submenu-proposta" onclick="window.location.href='proposta.html'">
                 <i class="fa-solid fa-file-lines"></i> Proposta
             </li>
-            <li id="submenu-pedidos" onclick="window.location.href='pedidos.html'">
-                <i class="fa-solid fa-bag-shopping"></i> Pedidos
-            </li>
             <li id="submenu-relatorios-comercial" onclick="window.location.href='relatorios-comercial.html'">
                 <i class="fa-solid fa-chart-line"></i> Relatórios
             </li>
@@ -378,7 +375,6 @@ function destacarMenuAtivo() {
         // Comercial
         'proposta.html':              'submenu-proposta',
         'pipeline.html':              'submenu-pipeline',
-        'pedidos.html':               'submenu-pedidos',
         'relatorios-comercial.html':  'submenu-relatorios-comercial',
 
         // Financeiro

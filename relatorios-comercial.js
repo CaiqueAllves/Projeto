@@ -3,7 +3,6 @@
 // ========================================
 
 let _rcOportunidades = [];
-let _rcPedidos       = [];
 let _rcDias          = 30;
 
 // ── Inicialização ──────────────────────────────────────────────────────────
@@ -66,9 +65,8 @@ function _rcGetFiltro() {
 // ── Carregar dados ─────────────────────────────────────────────────────────
 
 async function rcCarregar() {
-    const [resOp, resPed] = await Promise.all([buscarOportunidades(), buscarPedidos()]);
+    const resOp = await buscarOportunidades();
     _rcOportunidades = resOp.data || [];
-    _rcPedidos       = resPed.data || [];
     rcRenderizar();
 }
 
@@ -84,21 +82,15 @@ function rcRenderizar() {
         return dt >= dtInicio && dt <= dtFim;
     });
 
-    const peds = _rcPedidos.filter(p => {
-        const dt = new Date(p.created_at);
-        return dt >= dtInicio && dt <= dtFim;
-    });
-
-    _rcRenderCards(ops, peds);
+    _rcRenderCards(ops);
     _rcRenderPipelineEtapas(ops);
-    _rcRenderTopClientes(ops, peds);
-    _rcRenderPedidosStatus(peds);
+    _rcRenderTopClientes(ops);
     _rcRenderConversao(ops);
 }
 
 // ── Cards de resumo ────────────────────────────────────────────────────────
 
-function _rcRenderCards(ops, peds) {
+function _rcRenderCards(ops) {
     const valorTotal = ops.reduce((s, o) => s + (Number(o.valor) || 0), 0);
     const fechadas   = ops.filter(o => o.etapa === 'fechado').length;
 
@@ -106,7 +98,6 @@ function _rcRenderCards(ops, peds) {
     document.getElementById('rcValorPipeline').textContent =
         'USD ' + valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     document.getElementById('rcOportunidadesFechadas').textContent = fechadas;
-    document.getElementById('rcTotalPedidos').textContent = peds.length;
 }
 
 // ── Pipeline por etapa ─────────────────────────────────────────────────────
@@ -147,22 +138,19 @@ function _rcRenderPipelineEtapas(ops) {
 
 // ── Top clientes ───────────────────────────────────────────────────────────
 
-function _rcRenderTopClientes(ops, peds) {
+function _rcRenderTopClientes(ops) {
     const el = document.getElementById('rcTopClientes');
 
-    // Agrupa por cliente (soma oportunidades + pedidos)
     const mapa = {};
-    [...ops, ...peds].forEach(item => {
+    ops.forEach(item => {
         const nome = item.parceiros?.nome_fantasia || item.parceiros?.razao_social;
         if (!nome) return;
-        if (!mapa[nome]) mapa[nome] = { oportunidades: 0, pedidos: 0 };
-        if (item.etapa !== undefined) mapa[nome].oportunidades++;
-        else mapa[nome].pedidos++;
+        mapa[nome] = (mapa[nome] || 0) + 1;
     });
 
     const lista = Object.entries(mapa)
-        .map(([nome, v]) => ({ nome, total: v.oportunidades + v.pedidos, ...v }))
-        .sort((a, b) => b.total - a.total)
+        .map(([nome, oportunidades]) => ({ nome, oportunidades }))
+        .sort((a, b) => b.oportunidades - a.oportunidades)
         .slice(0, 8);
 
     if (!lista.length) {
@@ -175,48 +163,9 @@ function _rcRenderTopClientes(ops, peds) {
             <span class="rc-cliente-pos">${i + 1}º</span>
             <span class="rc-cliente-nome">${_rcEscapar(c.nome)}</span>
             <div class="rc-cliente-badges">
-                ${c.oportunidades ? `<span class="rc-badge rc-badge-op">${c.oportunidades} op.</span>` : ''}
-                ${c.pedidos       ? `<span class="rc-badge rc-badge-ped">${c.pedidos} ped.</span>` : ''}
+                <span class="rc-badge rc-badge-op">${c.oportunidades} op.</span>
             </div>
         </div>`).join('');
-}
-
-// ── Pedidos por status ─────────────────────────────────────────────────────
-
-function _rcRenderPedidosStatus(peds) {
-    const el = document.getElementById('rcPedidosStatus');
-
-    const statuses = [
-        { key: 'aguardando',   label: 'Aguardando',   cor: '#94a3b8' },
-        { key: 'confirmado',   label: 'Confirmado',   cor: '#3b82f6' },
-        { key: 'em_producao',  label: 'Em produção',  cor: '#f97316' },
-        { key: 'embarcado',    label: 'Embarcado',    cor: '#8b5cf6' },
-        { key: 'entregue',     label: 'Entregue',     cor: '#22c55e' },
-        { key: 'cancelado',    label: 'Cancelado',    cor: '#ef4444' },
-    ];
-
-    const total = peds.length || 1;
-
-    if (!peds.length) {
-        el.innerHTML = '<p class="rc-vazio">Nenhum pedido no período.</p>';
-        return;
-    }
-
-    el.innerHTML = statuses.map(s => {
-        const cnt = peds.filter(p => p.status === s.key).length;
-        if (!cnt) return '';
-        const pct = Math.round((cnt / total) * 100);
-        return `<div class="rc-etapa-row">
-            <div class="rc-etapa-label">
-                <span style="color:${s.cor};font-weight:700">${s.label}</span>
-                <span class="rc-etapa-count">${cnt}</span>
-            </div>
-            <div class="rc-bar-wrap">
-                <div class="rc-bar" style="width:${pct}%;background:${s.cor}"></div>
-            </div>
-            <div class="rc-etapa-valor">${pct}%</div>
-        </div>`;
-    }).filter(Boolean).join('');
 }
 
 // ── Taxa de conversão ──────────────────────────────────────────────────────

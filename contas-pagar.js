@@ -102,6 +102,10 @@ async function cpCarregar() {
     cpRenderizar();
 }
 
+function _cpNomeFornecedor(c) {
+    return c.parceiros?.nome_fantasia || c.parceiros?.razao_social || '—';
+}
+
 function _cpAtualizarVencidos() {
     const hoje = new Date().toISOString().split('T')[0];
     _cpTodas.forEach(c => {
@@ -123,7 +127,7 @@ function cpRenderizar() {
     }
 
     tbody.innerHTML = _cpFiltradas.map(c => {
-        const parceiro = c.parceiros?.nome_fantasia || c.parceiros?.razao_social || '—';
+        const parceiro = _cpNomeFornecedor(c);
         const valor    = _cpFmtValor(c.valor, c.moeda);
         const venc     = c.data_vencimento
             ? new Date(c.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')
@@ -139,7 +143,7 @@ function cpRenderizar() {
         const podePagar = c.status === 'pendente' || c.status === 'vencido';
 
         return `<tr>
-            <td><strong>${_cpEsc(c.descricao)}</strong>${c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(c.categoria)}</span>` : ''}${c.pedidos?.numero ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-bag-shopping"></i> Pedido ${_cpEsc(c.pedidos.numero)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_cpEsc(c.processos.numero_processo)}</span>` : ''}</td>
+            <td><strong>${_cpEsc(c.descricao)}</strong>${c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(c.categoria)}</span>` : ''}${c.proformas?.codigo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_cpEsc(c.proformas.codigo)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_cpEsc(c.processos.numero_processo)}</span>` : ''}</td>
             <td>${_cpEsc(parceiro)}</td>
             <td class="td-valor">${valor}</td>
             <td>${venc}</td>
@@ -194,7 +198,7 @@ function cpFiltrar() {
         const status = document.getElementById('filtroStatus')?.value || '';
 
         _cpFiltradas = _cpTodas.filter(c => {
-            const txt = [c.descricao, c.parceiros?.razao_social, c.parceiros?.nome_fantasia]
+            const txt = [c.descricao, _cpNomeFornecedor(c)]
                 .filter(Boolean).join(' ').toLowerCase();
             const okTermo  = !termo  || txt.includes(termo);
             const okStatus = !status || c.status === status;
@@ -244,18 +248,18 @@ function cpAbrirModal(id = null, prefill = null) {
     // Reseta o Processo antes de recalcular pra este registro — evita herdar
     // o estado (habilitado/desabilitado) de uma abertura anterior do modal.
     _cpResetProcesso();
-    const pedidoId = c?.pedido_id || prefill?.pedidoId || '';
-    document.getElementById('cpPedidoNome').value = c?.pedidos?.numero || prefill?.pedidoNome || '';
-    document.getElementById('cpPedidoId').value   = pedidoId;
+    const proformaId = c?.proforma_id || prefill?.proformaId || '';
+    document.getElementById('cpProformaNome').value = c?.proformas?.codigo || prefill?.proformaNome || '';
+    document.getElementById('cpProformaId').value   = proformaId;
 
-    if (pedidoId) {
+    if (proformaId) {
         const processoSalvoId   = c?.processo_id || prefill?.processoId || '';
         const processoSalvoNome = c?.processos?.numero_processo || prefill?.processoNome || '';
         // Fornecedor já foi preenchido acima (registro salvo ou prefill), então
-        // a derivação abaixo só sugere o Remetente do pedido se ainda estiver vazio.
-        _cpDerivarDoPedido(pedidoId).then(() => {
+        // a derivação abaixo só sugere o Remetente da proforma se ainda estiver vazio.
+        _cpDerivarDaProforma(proformaId).then(() => {
             // Garante que o processo já salvo apareça mesmo se não estiver mais
-            // entre os processos atuais do pedido (ex: processo trocado depois).
+            // entre os processos atuais da proforma (ex: processo trocado depois).
             if (processoSalvoId) {
                 document.getElementById('cpProcessoId').value   = processoSalvoId;
                 document.getElementById('cpProcessoNome').value = processoSalvoNome || document.getElementById('cpProcessoNome').value;
@@ -280,7 +284,7 @@ function cpAbrirModal(id = null, prefill = null) {
 function cpFecharModal() {
     document.getElementById('cpModalOverlay').classList.remove('ativo');
     document.getElementById('cpAutoParceiro').innerHTML = '';
-    document.getElementById('cpAutoPedido').innerHTML   = '';
+    document.getElementById('cpAutoProforma').innerHTML   = '';
     document.getElementById('cpAutoProcesso').innerHTML = '';
 }
 
@@ -326,7 +330,7 @@ async function cpSalvar() {
     const dados = {
         descricao,
         parceiro_id:    document.getElementById('cpFornecedorId').value || null,
-        pedido_id:      document.getElementById('cpPedidoId').value || null,
+        proforma_id:    document.getElementById('cpProformaId').value || null,
         processo_id:    document.getElementById('cpProcessoId').value || null,
         valor,
         moeda:          document.getElementById('cpMoeda').value,
@@ -402,136 +406,145 @@ function cpSelecionarParceiro(id, nome) {
     document.getElementById('cpAutoParceiro').innerHTML = '';
 }
 
-// ── Autocomplete vínculo — Pedido ────────────────────────────────────────────
+// ── Autocomplete vínculo — Proforma ──────────────────────────────────────────
 
-let _cpBuscaPedidoTimer = null;
-let _cpPedidoReqToken = 0; // mesma guarda de corrida do _cpListarParceiros acima
+let _cpBuscaProformaTimer = null;
+let _cpProformaReqToken = 0; // mesma guarda de corrida do _cpListarParceiros acima
 
-async function _cpListarPedidos(termo) {
-    const box = document.getElementById('cpAutoPedido');
-    const meuToken = ++_cpPedidoReqToken;
+async function _cpListarProformas(termo) {
+    const box = document.getElementById('cpAutoProforma');
+    const meuToken = ++_cpProformaReqToken;
     try {
         const usuario = obterUsuarioLogado();
         let query = supabaseClient
-            .from('pedidos')
-            .select('id, numero')
+            .from('proformas')
+            .select('id, codigo')
+            .neq('status', 'excluido')
             .limit(termo ? 8 : 15);
-        if (termo) query = query.ilike('numero', `%${termo}%`);
-        else query = query.order('numero', { ascending: false });
-        if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
+        if (termo) query = query.ilike('codigo', `%${termo}%`);
+        else query = query.order('codigo', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         const { data } = await query;
-        if (meuToken !== _cpPedidoReqToken) return; // resposta antiga, descarta
-        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum pedido encontrado</div>'; return; }
+        if (meuToken !== _cpProformaReqToken) return; // resposta antiga, descarta
+        if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma proforma encontrada</div>'; return; }
         box.innerHTML = data.map(p => `
-            <div class="pl-auto-item" onclick="cpSelecionarPedido('${p.id}', '${_cpEsc(p.numero || '')}')">
-                <span class="pl-auto-nome">${_cpEsc(p.numero || '')}</span>
+            <div class="pl-auto-item" onclick="cpSelecionarProforma('${p.id}', '${_cpEsc(p.codigo || '')}')">
+                <span class="pl-auto-nome">${_cpEsc(p.codigo || '')}</span>
             </div>`).join('');
     } catch (e) {}
 }
 
-function cpBuscarPedido(termo) {
-    document.getElementById('cpPedidoId').value = '';
+function cpBuscarProforma(termo) {
+    document.getElementById('cpProformaId').value = '';
     if (!termo) _cpResetProcesso();
-    clearTimeout(_cpBuscaPedidoTimer);
-    _cpBuscaPedidoTimer = setTimeout(() => _cpListarPedidos(termo?.length >= 2 ? termo : ''), 300);
+    clearTimeout(_cpBuscaProformaTimer);
+    _cpBuscaProformaTimer = setTimeout(() => _cpListarProformas(termo?.length >= 2 ? termo : ''), 300);
 }
 
-function cpMostrarPedido(termo) {
-    _cpListarPedidos(termo?.length >= 2 ? termo : '');
+function cpMostrarProforma(termo) {
+    _cpListarProformas(termo?.length >= 2 ? termo : '');
 }
 
-async function cpSelecionarPedido(id, numero) {
-    document.getElementById('cpPedidoId').value   = id;
-    document.getElementById('cpPedidoNome').value = numero;
-    document.getElementById('cpAutoPedido').innerHTML = '';
-    await _cpDerivarDoPedido(id);
+async function cpSelecionarProforma(id, codigo) {
+    document.getElementById('cpProformaId').value   = id;
+    document.getElementById('cpProformaNome').value = codigo;
+    document.getElementById('cpAutoProforma').innerHTML = '';
+    await _cpDerivarDaProforma(id);
 }
 
-// ── Derivação Fornecedor/Valor/Processo a partir do Pedido escolhido ───────
+// ── Derivação Fornecedor/Valor/Processo a partir da Proforma escolhida ────
 // Diferente do Cliente em Contas a Receber, o Fornecedor aqui NÃO é travado:
-// um Pedido pode gerar contas a pagar pra vários fornecedores diferentes
+// uma Proforma pode gerar contas a pagar pra vários fornecedores diferentes
 // (frete, despachante, seguro...), não só quem remeteu a mercadoria. Então o
-// Remetente do pedido só é usado como sugestão (preenche se ainda tiver
-// vazio), o campo continua editável/buscável normalmente. Valor/Moeda também
-// são só sugestão (vêm do valor_total do pedido, mas uma conta pode ser só
-// uma parcela/taxa dele). Já o Processo é sempre restrito aos processos deste
-// pedido (mesmo padrão 0/1/vários usado em Contas a Receber e em
-// pedGerarProcesso, pedidos.js): 0 → trava vazio, 1 → preenche sozinho e
-// trava, >1 → usuário escolhe entre eles.
-let _cpPedidoProcessos = [];
+// Remetente da proforma (parceiro_id, BIGINT — quando emissor_tipo='terceiro')
+// só é usado como sugestão (preenche cpFornecedorId se nada tiver sido
+// escolhido ainda), o campo continua editável/buscável normalmente. Valor/
+// Moeda também são só sugestão (vêm do valor_total da proforma, mas uma
+// conta pode ser só uma parcela/taxa dela). Já o Processo é sempre restrito
+// aos processos desta proforma (mesmo padrão 0/1/vários usado em Contas a
+// Receber): 0 → trava vazio, 1 → preenche sozinho e trava, >1 → usuário
+// escolhe entre eles.
+let _cpProformaProcessos = [];
 
 function _cpResetProcesso() {
     const processoInput = document.getElementById('cpProcessoNome');
     processoInput.disabled = true;
-    processoInput.placeholder = 'Escolha um Pedido primeiro';
+    processoInput.placeholder = 'Escolha uma Proforma primeiro';
     processoInput.value = '';
     document.getElementById('cpProcessoId').value = '';
     document.getElementById('cpAutoProcesso').innerHTML = '';
-    _cpPedidoProcessos = [];
+    _cpProformaProcessos = [];
 }
 
-async function _cpDerivarDoPedido(pedidoId) {
+async function _cpDerivarDaProforma(proformaId) {
     const fornecedorInput = document.getElementById('cpFornecedorNome');
     const processoInput   = document.getElementById('cpProcessoNome');
 
     document.getElementById('cpProcessoId').value = '';
     processoInput.value = '';
-    _cpPedidoProcessos = [];
+    _cpProformaProcessos = [];
 
     try {
         const usuario = obterUsuarioLogado();
 
-        const { data: pedido } = await supabaseClient
-            .from('pedidos')
-            .select('remetente_parceiro_id, valor_total, moeda, remetente:parceiros!pedidos_remetente_parceiro_id_fkey(razao_social, nome_fantasia)')
-            .eq('id', pedidoId)
+        const { data: proforma } = await supabaseClient
+            .from('proformas')
+            .select('emissor_tipo, parceiro_id, parceiro_razao_social, valor_total, moeda_principal')
+            .eq('id', proformaId)
             .single();
 
-        if (pedido?.remetente_parceiro_id && !document.getElementById('cpFornecedorId').value) {
-            document.getElementById('cpFornecedorId').value = pedido.remetente_parceiro_id;
-            fornecedorInput.value = pedido.remetente?.nome_fantasia || pedido.remetente?.razao_social || '';
+        const semFornecedorEscolhido = !document.getElementById('cpFornecedorId').value;
+        if (proforma?.emissor_tipo === 'terceiro' && semFornecedorEscolhido) {
+            let nomeSugerido = proforma.parceiro_razao_social || '';
+            if (proforma.parceiro_id) {
+                const { data: parc } = await supabaseClient
+                    .from('parceiros').select('razao_social, nome_fantasia').eq('id', proforma.parceiro_id).maybeSingle();
+                if (parc) nomeSugerido = parc.nome_fantasia || parc.razao_social || nomeSugerido;
+            }
+            document.getElementById('cpFornecedorId').value = proforma.parceiro_id || '';
+            fornecedorInput.value = nomeSugerido;
         }
 
-        // Sugere Valor/Moeda do pedido — só se o campo ainda estiver vazio, pra
-        // não sobrescrever um valor já digitado ou o de uma conta já salva
+        // Sugere Valor/Moeda da proforma — só se o campo ainda estiver vazio,
+        // pra não sobrescrever um valor já digitado ou o de uma conta já salva
         // (cpAbrirModal preenche o valor salvo antes de chamar esta função).
         const valorInput = document.getElementById('cpValor');
-        if (!valorInput.value.trim() && pedido?.valor_total) {
-            valorInput.value = _cpFormatarMonetario(pedido.valor_total);
-            if (pedido.moeda) document.getElementById('cpMoeda').value = pedido.moeda;
+        if (!valorInput.value.trim() && proforma?.valor_total) {
+            valorInput.value = _cpFormatarMonetario(proforma.valor_total);
+            if (proforma.moeda_principal) document.getElementById('cpMoeda').value = proforma.moeda_principal;
         }
 
         let query = supabaseClient
             .from('processos')
             .select('id, numero_processo')
-            .eq('pedido_id', pedidoId)
+            .eq('proforma_id', proformaId)
             .order('numero_processo', { ascending: false });
         if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
         const { data: processos } = await query;
-        _cpPedidoProcessos = processos || [];
+        _cpProformaProcessos = processos || [];
 
-        if (_cpPedidoProcessos.length === 0) {
+        if (_cpProformaProcessos.length === 0) {
             processoInput.disabled = true;
-            processoInput.placeholder = 'Nenhum processo vinculado a este pedido';
-        } else if (_cpPedidoProcessos.length === 1) {
-            document.getElementById('cpProcessoId').value = _cpPedidoProcessos[0].id;
-            processoInput.value = _cpPedidoProcessos[0].numero_processo || '';
+            processoInput.placeholder = 'Nenhum processo vinculado a esta proforma';
+        } else if (_cpProformaProcessos.length === 1) {
+            document.getElementById('cpProcessoId').value = _cpProformaProcessos[0].id;
+            processoInput.value = _cpProformaProcessos[0].numero_processo || '';
             processoInput.disabled = true;
         } else {
             processoInput.disabled = false;
-            processoInput.placeholder = 'Selecione um dos processos deste pedido...';
+            processoInput.placeholder = 'Selecione um dos processos desta proforma...';
         }
     } catch (e) {}
 }
 
-// ── Autocomplete vínculo — Processo (restrito ao Pedido escolhido) ─────────
+// ── Autocomplete vínculo — Processo (restrito à Proforma escolhida) ───────
 
 function _cpRenderizarProcessos(termo) {
     const box = document.getElementById('cpAutoProcesso');
     const lista = termo
-        ? _cpPedidoProcessos.filter(p => (p.numero_processo || '').toLowerCase().includes(termo.toLowerCase()))
-        : _cpPedidoProcessos;
-    if (!lista.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo vinculado a este pedido</div>'; return; }
+        ? _cpProformaProcessos.filter(p => (p.numero_processo || '').toLowerCase().includes(termo.toLowerCase()))
+        : _cpProformaProcessos;
+    if (!lista.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo vinculado a esta proforma</div>'; return; }
     box.innerHTML = lista.map(p => `
         <div class="pl-auto-item" onclick="cpSelecionarProcesso('${p.id}', '${_cpEsc(p.numero_processo || '')}')">
             <span class="pl-auto-nome">${_cpEsc(p.numero_processo || '')}</span>
@@ -558,8 +571,8 @@ document.addEventListener('click', e => {
         const box = document.getElementById('cpAutoParceiro');
         if (box) box.innerHTML = '';
     }
-    if (!e.target.closest('#cpAutoPedido') && !e.target.closest('#cpPedidoNome')) {
-        const box = document.getElementById('cpAutoPedido');
+    if (!e.target.closest('#cpAutoProforma') && !e.target.closest('#cpProformaNome')) {
+        const box = document.getElementById('cpAutoProforma');
         if (box) box.innerHTML = '';
     }
     if (!e.target.closest('#cpAutoProcesso') && !e.target.closest('#cpProcessoNome')) {

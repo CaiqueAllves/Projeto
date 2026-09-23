@@ -369,7 +369,6 @@ function _pedRenderCardKanban(p) {
         ? new Date(p.data_entrega_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
         : '—';
     const status = p.status || 'aguardando';
-    const temProcesso = p._processos && p._processos.length > 0;
     const expandido = _pedCardsExpandidos.has(p.id);
 
     return `
@@ -415,9 +414,6 @@ function _pedRenderCardKanban(p) {
                 <button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>
                 ${_pedBotaoProcessos(p)}
                 ${_pedBotaoGerarProcesso(p)}
-                ${temProcesso
-                    ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
-                    : `<button class="pl-btn-acao pl-btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`}
                 <button class="pl-btn-acao pl-btn-editar" onclick="pedAbrirModal('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="pl-btn-acao pl-btn-excluir" onclick="pedAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </div>
@@ -472,9 +468,6 @@ function _pedRenderizarTabela(lista) {
                     <button class="pl-btn-acao pl-btn-editar" onclick="pedGerarProforma('${p.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>
                     ${_pedBotaoProcessos(p)}
                     ${_pedBotaoGerarProcesso(p)}
-                    ${(p._processos && p._processos.length > 0)
-                        ? `<button class="pl-btn-acao pl-btn-editar" onclick="pedGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
-                        : `<button class="pl-btn-acao pl-btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`}
                     <button class="pl-btn-acao pl-btn-editar" onclick="pedAbrirModal('${p.id}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
                     </button>
@@ -580,12 +573,6 @@ function pedGerarProcesso(proformaId) {
 
 function pedGerarProcesso(proformaId) {
     window.open(`formularios.html?tab=processo&proforma_id=${proformaId}`, '_blank');
-}
-
-// ── Gerar Conta a Receber a partir do pedido ────────────────────────────────
-
-function pedGerarContaReceber(id) {
-    window.open(`contas-receber.html?gerar_pedido_id=${id}`, '_blank');
 }
 
 // ── Alterar status inline ──────────────────────────────────────────────────

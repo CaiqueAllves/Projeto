@@ -820,12 +820,6 @@ async function confirmarSalvar() {
             // Cadastrar uma nova continua aberto por padrão.
             if (editandoId) _agendarFechamentoAutomatico();
 
-            // Proforma gerada a partir de um Pedido: vincula de volta ao pedido
-            const pedidoOrigemId = document.getElementById('prop-pedido-id')?.value || '';
-            if (!editandoId && pedidoOrigemId && res.data?.id) {
-                await window.supabaseAPI.vincularProformaAoPedido(pedidoOrigemId, res.data.id);
-            }
-
             // Auto-gerar PDF ao salvar (layout unificado — precisa do registro
             // completo, não só id/codigo, por isso salvarProposta/atualizarProforma
             // agora retornam a linha inteira)
@@ -841,14 +835,6 @@ async function confirmarSalvar() {
     const dadosProc = _coletarDadosProcesso();
     const editandoIdProc = document.getElementById('proc-id')?.value || '';
 
-    // Propaga o pedido de origem: se o processo nasce de uma proforma que por
-    // sua vez veio de um pedido, vincula o processo diretamente ao pedido
-    // (evita depender do salto processo → proforma_id → pedidos.proforma_id)
-    if (!editandoIdProc && dadosProc.proforma_id && !dadosProc.pedido_id) {
-        const resPedOrigem = await window.supabaseAPI.buscarPedidoIdPorProforma(dadosProc.proforma_id);
-        if (resPedOrigem?.data?.id) dadosProc.pedido_id = resPedOrigem.data.id;
-    }
-
     const resProc = editandoIdProc
         ? await window.supabaseAPI.atualizarProcesso(editandoIdProc, dadosProc)
         : await window.supabaseAPI.salvarProcesso(dadosProc);
@@ -859,15 +845,11 @@ async function confirmarSalvar() {
     if (resProc.sucesso) {
         localStorage.setItem('processos_updated', Date.now());
 
-        // Processo gerado a partir de uma proforma: marca a proforma como finalizada
+        // Processo gerado a partir de uma proforma: atualiza a referência
+        // "processo mais recente" nela (uma Proforma pode gerar vários)
         const propostaOrigemId = document.getElementById('proc-proposta-id')?.value || '';
         if (!editandoIdProc && propostaOrigemId && resProc.data?.id) {
             await window.supabaseAPI.marcarProformaFinalizada(propostaOrigemId, resProc.data.id);
-        }
-
-        // Processo gerado a partir de um pedido: avança o status pra "Em produção"
-        if (!editandoIdProc && dadosProc.pedido_id) {
-            await window.supabaseAPI.avancarStatusPedido(dadosProc.pedido_id, 'em_producao');
         }
 
         const tituloEl   = document.getElementById('pos-salvo-titulo');
@@ -1037,11 +1019,10 @@ async function procCarregarEdicao(id) {
 
     // Proforma de origem
     set('proc-proposta-id', p.proforma_id);
-    set('proc-pedido-id',   p.pedido_id);
 
-    // Documentos: anexos reais já existentes pro pedido (pode ter vindo
-    // deste processo ou de outro processo do mesmo pedido).
-    if (p.pedido_id) await _docCarregarAnexosProcesso(p.pedido_id);
+    // Documentos: anexos reais já existentes pra proforma (pode ter vindo
+    // deste processo ou de outro processo da mesma proforma).
+    if (p.proforma_id) await _docCarregarAnexosProcesso(p.proforma_id);
 
     // Guarda ID para atualização
     const idEl = document.getElementById('proc-id');
@@ -1077,7 +1058,6 @@ function _coletarDadosProcesso() {
     return {
         // Dados do Processo
         proforma_id:            document.getElementById('proc-proposta-id')?.value || null,
-        pedido_id:               document.getElementById('proc-pedido-id')?.value || null,
         tipo:                   v('proc-tipo'),
         proposito:              v('proc-proposito'),
         emissor_tipo:            document.querySelector('input[name="proc-emissor-tipo"]:checked')?.value || 'usuario',
@@ -1201,7 +1181,7 @@ function _coletarDadosProcesso() {
 // Alias mantido para compatibilidade com HTML existente
 function confirmarSalvarProcesso() { confirmarSalvar(); }
 
-function criarNovo() {
+async function criarNovo() {
     // Usuário optou por continuar cadastrando nesta aba — cancela o
     // fechamento automático agendado (só se aplica quando a ação era editar).
     _cancelarFechamentoAutomatico();
@@ -1218,7 +1198,7 @@ function criarNovo() {
         document.getElementById('form-proposta')?.reset();
         _propItens = [];
         propRenderizarItens();
-        propGerarCodigo();
+        await propGerarCodigo();
         const codigoWrap = document.getElementById('pos-salvo-codigo-wrap');
         const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
         if (codigoWrap) codigoWrap.style.display = 'none';
@@ -1271,6 +1251,12 @@ function salvarProposta(e) {
         if (!el) return;
         const vazio = el.tagName === 'SELECT' ? !el.value : !el.value?.trim();
         if (vazio) marcar(id, msg);
+    }
+
+    // ── Código (gerado de forma assíncrona ao abrir o formulário) ──
+    if (!document.getElementById('prop-codigo')?.value) {
+        mostrarNotificacao('Aguarde o código da proforma ser gerado.', 'warning');
+        return;
     }
 
     // ── Dados da Proforma ──────────────────
@@ -1334,12 +1320,6 @@ function salvarProposta(e) {
 
     if (document.getElementById('prop-prazo-pagamento')?.value === 'personalizado') {
         checar('prop-prazo-personalizado', 'Informe a condição de pagamento personalizada.');
-    }
-
-    // ── Pedido de origem (obrigatório para proforma nova) ──
-    const _propIdExistente = document.getElementById('prop-id')?.value || '';
-    if (!_propIdExistente && !document.getElementById('prop-pedido-id')?.value) {
-        erros.push('Esta proforma precisa ser gerada a partir de um Pedido. Volte para Pedidos e use "Gerar Proforma".');
     }
 
     // ── Resultado ─────────────────────────
@@ -1442,7 +1422,6 @@ function _coletarDadosProposta() {
         destinatario_doc_tipo:   g('prop-emp-dest-doc-tipo') || null,
         validade_dias:           g('prop-validade-dias') || null,
         obs_status:              g('prop-obs-status') || null,
-        pedido_id:               g('prop-pedido-id') || null,
     };
 }
 
@@ -3096,8 +3075,7 @@ function iniciarCamposStatus() {
 // falhado silenciosamente, essa função tenta buscar de novo na hora.
 let _procEmpresaPropria = null;
 
-// Nome do remetente do Pedido de origem (via Proforma → pedido_id →
-// remetente_parceiro_id) — mostrado no campo "Remetente" quando Emissor =
+// Nome do remetente da Proforma de origem — mostrado no campo "Remetente" quando Emissor =
 // Usuário, no lugar do dropdown Identificação da Empresa. Preenchido por
 // _procPreencherDaProforma().
 let _procPedidoRemetenteNome = null;
@@ -3421,202 +3399,25 @@ async function _acCarregarPropostas() {
     } catch { _acPropostas = []; }
 }
 
-let _acPedidosAbertos = [];
-
-async function _acCarregarPedidosAbertos() {
-    if (_acPedidosAbertos.length > 0) return;
-    try {
-        const usuario = obterUsuarioLogado();
-        // "Em aberto" = ainda em andamento (fora excluído/cancelado/entregue).
-        let query = supabaseClient
-            .from('pedidos')
-            .select('id, numero')
-            .not('status', 'in', '(excluido,cancelado,entregue)')
-            .order('created_at', { ascending: false });
-        if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
-        const { data } = await query;
-        _acPedidosAbertos = (data || []).map(p => ({ id: p.id, nome: p.numero, label: p.numero }));
-    } catch { _acPedidosAbertos = []; }
-}
-
-function _acMostrarPedidos(inputEl, listaEl, termo) {
-    const q = (termo || '').trim().toLowerCase();
-    const filtrados = q
-        ? _acPedidosAbertos.filter(p => (p.nome || '').toLowerCase().includes(q))
-        : _acPedidosAbertos;
-
-    if (filtrados.length === 0) {
-        listaEl.innerHTML = '<div class="autocomplete-vazio">Nenhum pedido em aberto encontrado</div>';
-    } else {
-        listaEl.innerHTML = filtrados.slice(0, 30).map(p => `
-            <div class="autocomplete-item"
-                 data-id="${p.id}"
-                 data-nome="${(p.nome || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${p.nome || ''}</span>
-            </div>`).join('');
-    }
-    _acPosicionar(inputEl, listaEl);
-    listaEl.classList.add('aberta');
-}
-
-function iniciarAutocompletePropPedido() {
-    const input    = document.getElementById('prop-pedido-origem');
-    const lista    = document.getElementById('prop-pedido-origem-lista');
-    const idOculto = document.getElementById('prop-pedido-id');
-    if (!input || !lista) return;
-
-    input.addEventListener('focus', async () => {
-        await _acCarregarPedidosAbertos();
-        _acMostrarPedidos(input, lista, input.value);
-    });
-
-    input.addEventListener('input', () => {
-        if (idOculto) idOculto.value = '';
-        _acMostrarPedidos(input, lista, input.value);
-    });
-
-    lista.addEventListener('mousedown', e => {
-        const item = e.target.closest('.autocomplete-item');
-        if (!item) return;
-        input.value = item.getAttribute('data-nome');
-        const selId = item.getAttribute('data-id');
-        if (idOculto) idOculto.value = selId;
-        _acFechar(lista);
-        _propPreencherDoPedido(selId);
-    });
-
-    document.addEventListener('click', e => {
-        if (!e.target.closest('.autocomplete-wrapper')) _acFechar(lista);
-    });
-}
-
-async function _propPreencherDoPedido(pedidoId) {
-    if (!pedidoId) return;
-    try {
-        const { data: pedido, error } = await supabaseClient
-            .from('pedidos')
-            .select('*, pedido_itens(*)')
-            .eq('id', pedidoId)
-            .single();
-        if (error || !pedido) return;
-
-        // ── Exibição do pedido de origem (somente leitura) ──
-        const origemEl    = document.getElementById('prop-pedido-origem');
-        const origemGroup = document.getElementById('prop-pedido-origem-group');
-        if (origemEl)    origemEl.value = pedido.numero || pedidoId;
-        if (origemGroup) origemGroup.style.display = '';
-
-        // ── Destinatário (cliente do pedido) ──
-        // O cliente do pedido vem da tabela "parceiros" (BIGINT), não
-        // "empresas" (UUID) — que é o que prop-emp-dest-id normalmente
-        // referencia. Usa o modo de texto livre (mesmo campo que já existe
-        // pra empresa não cadastrada) em vez de gravar um ID de tabela errada,
-        // que fazia o card da proforma mostrar "Destinatário: —".
-        if (pedido.cliente_id) {
-            const { data: parceiro } = await supabaseClient
-                .from('parceiros').select('id, razao_social, nome_fantasia, documento')
-                .eq('id', pedido.cliente_id).single();
-            if (parceiro) {
-                const razaoEl    = document.getElementById('prop-emp-dest-razao');
-                const razaoGroup = document.getElementById('prop-emp-dest-razao-group');
-                const buscaGroup = document.getElementById('prop-emp-dest-busca-group');
-                const btnCad     = document.getElementById('prop-btn-emp-dest-cadastrada');
-                if (razaoEl)    razaoEl.value = parceiro.nome_fantasia || parceiro.razao_social || '';
-                if (razaoGroup) razaoGroup.style.display = '';
-                if (buscaGroup) buscaGroup.style.display = 'none';
-                // A validação em confirmarSalvar() decide qual campo checar
-                // com base nessa classe — sem tirar "ativo" daqui, ela
-                // continuava exigindo prop-emp-dest-busca (vazio) mesmo com
-                // a Razão Social já preenchida, bloqueando o envio.
-                if (btnCad) btnCad.classList.remove('ativo');
-                if (parceiro.documento) {
-                    const docEl     = document.getElementById('prop-emp-dest-doc');
-                    const docTipoEl = document.getElementById('prop-emp-dest-doc-tipo');
-                    const docGroup  = document.getElementById('prop-emp-dest-doc-group');
-                    if (docEl) docEl.value = parceiro.documento;
-                    if (docTipoEl) {
-                        const digitos = String(parceiro.documento).replace(/\D/g, '');
-                        docTipoEl.value = digitos.length === 11 ? 'cpf' : 'cnpj';
-                    }
-                    if (docGroup) docGroup.style.display = '';
-                }
-            }
-        }
-
-        // ── Emissor (remetente terceiro do pedido, quando houver) ──
-        // Mesmo problema do destinatário: remetente_parceiro_id é um ID de
-        // "parceiros", não de "empresas" (prop-cliente-id normalmente espera
-        // um ID de empresas via autocomplete) — não seta o hidden, só o nome
-        // visível, que agora é salvo em parceiro_razao_social (snapshot).
-        if (pedido.remetente_parceiro_id) {
-            const { data: remetente } = await supabaseClient
-                .from('parceiros').select('id, razao_social, nome_fantasia, documento')
-                .eq('id', pedido.remetente_parceiro_id).single();
-            if (remetente) {
-                const radioTerceiro = document.getElementById('prop-emissor-terceiro');
-                if (radioTerceiro) {
-                    radioTerceiro.checked = true;
-                    radioTerceiro.dispatchEvent(new Event('change'));
-                }
-                const clienteEl = document.getElementById('prop-cliente');
-                if (clienteEl) clienteEl.value = remetente.nome_fantasia || remetente.razao_social || '';
-                const docEl = document.getElementById('prop-documento');
-                if (docEl && remetente.documento) docEl.value = _mascaraDocBR(remetente.documento);
-            }
-        }
-        // Sem remetente_parceiro_id: mantém "Própria empresa" (padrão já marcado no form)
-
-        // ── Itens + Moeda ──
-        const itensPedido = pedido.pedido_itens || [];
-        if (itensPedido.length) {
-            await _carregarMoedas();
-            const moeda = _acMoedas.find(m => m.sigla === pedido.moeda);
-            const moedaDescricao = moeda?.descricao || _acMoedas[0]?.descricao || '';
-
-            _propItens = itensPedido.map(it => ({
-                produto_id: it.produto_id || null,
-                produto: it.produto_nome || '',
-                qtd:     Number(it.quantidade) || 1,
-                unidade: it.unidade_medida || 'UN',
-                preco:   Number(it.preco_unitario) || 0,
-                moeda:   moedaDescricao,
-            }));
-            propRenderizarItens();
-        }
-    } catch { /* silêncio */ }
-}
-
 async function _procPreencherDaProforma(id) {
     if (!id) return;
     try {
         const { data, error } = await supabaseClient.from('proformas').select('*').eq('id', id).single();
         if (error || !data) return;
 
-        // Remetente do Pedido de origem (mostrado no campo "Remetente" quando
-        // Emissor = Usuário — ver iniciarEmissor()). Se o pedido não tem
-        // remetente_parceiro_id, o remetente é a própria empresa do tenant.
-        if (data.pedido_id) {
-            const { data: pedidoOrigem } = await supabaseClient
-                .from('pedidos').select('remetente_parceiro_id').eq('id', data.pedido_id).single();
-            if (pedidoOrigem?.remetente_parceiro_id) {
-                const { data: remetenteParceiro } = await supabaseClient
-                    .from('parceiros').select('razao_social, nome_fantasia')
-                    .eq('id', pedidoOrigem.remetente_parceiro_id).single();
-                _procPedidoRemetenteNome = remetenteParceiro?.nome_fantasia || remetenteParceiro?.razao_social || null;
-            } else if (pedidoOrigem) {
-                _procPedidoRemetenteNome = 'Própria empresa';
-            }
-            const remetentePedidoEl = document.getElementById('proc-emissor-pedido-remetente');
-            if (remetentePedidoEl) remetentePedidoEl.value = _procPedidoRemetenteNome || '';
+        // Remetente da Proforma de origem (mostrado no campo "Remetente"
+        // quando Emissor = Usuário — ver iniciarEmissor()). Se a proforma não
+        // tem remetente terceiro, o remetente é a própria empresa do tenant.
+        _procPedidoRemetenteNome = data.emissor_tipo === 'terceiro'
+            ? (data.parceiro_razao_social || null)
+            : 'Própria empresa';
+        const remetentePedidoEl = document.getElementById('proc-emissor-pedido-remetente');
+        if (remetentePedidoEl) remetentePedidoEl.value = _procPedidoRemetenteNome || '';
 
-            // Guarda o pedido_id cedo (não só ao salvar) pra já poder
-            // anexar documentos num processo ainda não salvo, e carrega
-            // anexos já existentes pro pedido (podem vir de outro processo).
-            const pedidoIdEl = document.getElementById('proc-pedido-id');
-            if (pedidoIdEl) pedidoIdEl.value = data.pedido_id;
-            _docLimparAnexosVisuais();
-            await _docCarregarAnexosProcesso(data.pedido_id);
-        }
+        // Carrega anexos já existentes pra proforma (podem vir de outro
+        // processo dela, ou de uma assinatura feita direto na tela Documentos).
+        _docLimparAnexosVisuais();
+        await _docCarregarAnexosProcesso(id);
 
         // Tipo
         const tipoEl = document.getElementById('proc-tipo');
@@ -4101,15 +3902,15 @@ function iniciarCEPDestino() {
 // ========================================
 // DOCUMENTOS — UPLOAD / VER / EXCLUIR
 // ========================================
-// Anexo real (Supabase Storage), gravado na mesma tabela pedido_documentos
+// Anexo real (Supabase Storage), gravado na mesma tabela proforma_documentos
 // que a tela Documentos usa pra assinatura — anexar aqui já deixa o
 // documento pronto pra ser assinado lá, sem precisar subir o arquivo de
 // novo. Ver [[project_documentos_processo_anexo_unificado]] na memória.
-const BUCKET_DOC_PEDIDO = 'pedido-documentos-assinados';
+const BUCKET_DOC_PROFORMA = 'proforma-documentos-assinados';
 let _docAnexosProcesso = {}; // tipoId -> { path, nome }
 
-function _docPedidoIdAtual() {
-    return document.getElementById('proc-pedido-id')?.value || null;
+function _docProformaIdAtual() {
+    return document.getElementById('proc-proposta-id')?.value || null;
 }
 
 function _docAtualizarCampoVisual(id, nomeArquivo) {
@@ -4123,14 +3924,14 @@ function _docAtualizarCampoVisual(id, nomeArquivo) {
     campo?.querySelector('.doc-btn-del')?.classList.toggle('ativo', !!nomeArquivo);
 }
 
-// Carrega os anexos já existentes pro pedido (podem ter vindo de outro
-// processo do mesmo pedido, ou de uma assinatura feita direto na tela
-// Documentos) — chamado ao editar um processo e ao selecionar a Proforma
-// de origem num processo novo.
-async function _docCarregarAnexosProcesso(pedidoId) {
+// Carrega os anexos já existentes pra proforma (podem ter vindo de outro
+// processo dela, ou de uma assinatura feita direto na tela Documentos) —
+// chamado ao editar um processo e ao selecionar a Proforma de origem num
+// processo novo.
+async function _docCarregarAnexosProcesso(proformaId) {
     _docAnexosProcesso = {};
-    if (!pedidoId) return;
-    const res = await window.supabaseAPI.buscarDocumentosPedidos([pedidoId]);
+    if (!proformaId) return;
+    const res = await window.supabaseAPI.buscarDocumentosProformas([proformaId]);
     (res.data || []).forEach(reg => {
         if (!reg.arquivo_path) return;
         _docAnexosProcesso[reg.tipo_documento] = { path: reg.arquivo_path, nome: reg.arquivo_nome };
@@ -4151,8 +3952,8 @@ function _docLimparAnexosVisuais() {
 }
 
 function docUpload(id) {
-    const pedidoId = _docPedidoIdAtual();
-    if (!pedidoId) {
+    const proformaId = _docProformaIdAtual();
+    if (!proformaId) {
         mostrarNotificacao('Selecione a Proforma de origem antes de anexar documentos.', 'erro');
         return;
     }
@@ -4168,8 +3969,8 @@ function docUpload(id) {
         if (btnUp) { btnUp.disabled = true; btnUp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
 
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const path = `${pedidoId}/${id}_${Date.now()}_${safeName}`;
-        const { error: uploadError } = await supabaseClient.storage.from(BUCKET_DOC_PEDIDO).upload(path, file);
+        const path = `${proformaId}/${id}_${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabaseClient.storage.from(BUCKET_DOC_PROFORMA).upload(path, file);
         if (uploadError) {
             mostrarNotificacao('Erro ao enviar arquivo: ' + uploadError.message, 'erro');
             if (btnUp) { btnUp.disabled = false; btnUp.innerHTML = iconeOriginal; }
@@ -4177,7 +3978,7 @@ function docUpload(id) {
             return;
         }
 
-        const res = await window.supabaseAPI.anexarDocumentoPedido(pedidoId, id, null, path, file.name);
+        const res = await window.supabaseAPI.anexarDocumentoProforma(proformaId, id, null, path, file.name);
         if (btnUp) { btnUp.disabled = false; btnUp.innerHTML = iconeOriginal; }
         if (!res.sucesso) {
             mostrarNotificacao('Erro ao registrar anexo: ' + res.mensagem, 'erro');
@@ -4197,18 +3998,18 @@ function docVer(id) {
     // Bucket é público — usa a URL pública direta (síncrona, sem download
     // de blob) em vez de window.open após um await, que o navegador trata
     // como popup não solicitado pelo usuário e bloqueia.
-    const { data } = supabaseClient.storage.from(BUCKET_DOC_PEDIDO).getPublicUrl(anexo.path);
+    const { data } = supabaseClient.storage.from(BUCKET_DOC_PROFORMA).getPublicUrl(anexo.path);
     window.open(data.publicUrl, '_blank');
 }
 
 async function docExcluir(id) {
-    const pedidoId = _docPedidoIdAtual();
+    const proformaId = _docProformaIdAtual();
     const anexo = _docAnexosProcesso[id];
-    if (!pedidoId || !anexo) return;
+    if (!proformaId || !anexo) return;
     if (!(await confirmarAcao('Remover o arquivo anexado a este documento? Isso também desfaz a assinatura, se houver.', { titulo: 'Remover anexo', confirmar: 'Remover', perigo: true }))) return;
 
-    await supabaseClient.storage.from(BUCKET_DOC_PEDIDO).remove([anexo.path]);
-    const res = await window.supabaseAPI.limparAnexoDocumentoPedido(pedidoId, id);
+    await supabaseClient.storage.from(BUCKET_DOC_PROFORMA).remove([anexo.path]);
+    const res = await window.supabaseAPI.limparAnexoDocumentoProforma(proformaId, id);
     if (!res.sucesso) { mostrarNotificacao('Erro ao remover anexo: ' + res.mensagem, 'erro'); return; }
 
     delete _docAnexosProcesso[id];
@@ -6120,16 +5921,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     const _urlTab       = _urlParams.get('tab');
     const _urlId        = _urlParams.get('id');
     const _urlModo      = _urlParams.get('modo');
+    const _urlDuplicar  = _urlParams.get('duplicar');
 
     // ?id= só é ID de proforma quando a aba ativa é a de proforma (aqui
     // chamada de "proposta" por legado) — não "qualquer aba que não seja
     // processo", que também pegava a de produto por engano (mesmo nome de
     // parâmetro ?id=, aba diferente) e tentava buscar o produto como se
     // fosse proforma, sempre falhando com "Proforma não encontrada."
-    const _propIdEdicao = _urlTab === 'proposta' ? _urlId : null;
+    const _propIdEdicao    = _urlTab === 'proposta' ? _urlId : null;
+    const _propIdDuplicar  = _urlTab === 'proposta' ? _urlDuplicar : null;
 
     if (!_propIdEdicao) {
-        propGerarCodigo();
+        await propGerarCodigo();
         const _propDataCriacao = document.getElementById('prop-data-emissao');
         if (_propDataCriacao) _propDataCriacao.value = new Date().toISOString().slice(0, 10);
     }
@@ -6140,7 +5943,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarValidadeProposta();
     iniciarAutocompletePaisOrigemProposta();
     iniciarAutocompletePaisDestinoProposta();
-    iniciarAutocompletePropPedido();
     iniciarAutocompletePropCliente();
     iniciarAutocompleteEmpresaDestinoProposta();
     iniciarAutocompleteAeroportos();
@@ -6150,13 +5952,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (_propIdEdicao) {
         await propCarregarEdicao(_propIdEdicao);
         if (_urlModo === 'visualizar') propAplicarModoVisualizacao();
-    } else {
-        // Proforma gerada a partir de um Pedido — pré-preenche o destinatário
-        const _propPedidoIdParam = _urlParams.get('pedido_id');
-        if (_propPedidoIdParam) {
-            document.getElementById('prop-pedido-id').value = _propPedidoIdParam;
-            await _propPreencherDoPedido(_propPedidoIdParam);
-        }
+    } else if (_propIdDuplicar) {
+        await propCarregarDuplicar(_propIdDuplicar);
     }
 
     // Processo — pré-preencher ao editar via ?tab=processo&id=...
@@ -6872,20 +6669,6 @@ async function propCarregarEdicao(id) {
     const display = document.getElementById('prop-codigo-display');
     if (display) display.textContent = d.codigo || '—';
 
-    // Pedido de origem (somente leitura)
-    if (d.pedido_id) {
-        g('prop-pedido-id', d.pedido_id);
-        const origemEl    = document.getElementById('prop-pedido-origem');
-        const origemGroup = document.getElementById('prop-pedido-origem-group');
-        if (origemGroup) origemGroup.style.display = '';
-        try {
-            const { data: pedido } = await supabaseClient.from('pedidos').select('numero').eq('id', d.pedido_id).single();
-            if (origemEl) origemEl.value = pedido?.numero || d.pedido_id;
-        } catch (_) {
-            if (origemEl) origemEl.value = d.pedido_id;
-        }
-    }
-
     // Idioma
     g('prop-idioma', d.idioma || 'pt');
     const idiomaOutroEl = document.getElementById('prop-idioma-outro');
@@ -6976,6 +6759,110 @@ async function propCarregarEdicao(id) {
     // Indicar modo edição no botão salvar
     const btnSalvar = document.querySelector('#form-proposta button[type="submit"]');
     if (btnSalvar) btnSalvar.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Atualizar Proforma';
+}
+
+// Duplicar: mesma leitura de dados que propCarregarEdicao, mas NÃO seta
+// prop-id (salva como registro novo) nem copia código/data de emissão —
+// o código já foi gerado do zero (propGerarCodigo, chamado antes desta
+// função por não haver _propIdEdicao) e a emissão vira hoje, com a validade
+// recalculada a partir de hoje (dispara o listener de iniciarValidadeProposta).
+async function propCarregarDuplicar(id) {
+    const res = await window.supabaseAPI.buscarProforma(id);
+    if (!res.sucesso || !res.data) {
+        mostrarNotificacao('Proforma não encontrada para duplicar.', 'erro');
+        return;
+    }
+    const d = res.data;
+    const g = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val ?? ''; };
+
+    // Idioma
+    g('prop-idioma', d.idioma || 'pt');
+    const idiomaOutroEl = document.getElementById('prop-idioma-outro');
+    if (idiomaOutroEl) {
+        idiomaOutroEl.value = d.idioma === 'outro' ? (d.idioma_outro || '') : '';
+        idiomaOutroEl.style.display = d.idioma === 'outro' ? '' : 'none';
+    }
+
+    // Campos simples
+    g('prop-tipo',           d.tipo);
+    g('prop-proposito',      d.proposito);
+    g('prop-documento',      d.documento);
+    g('prop-documento-tipo', d.documento_tipo);
+    g('prop-incoterm',       d.incoterm);
+    g('prop-origem-pais',    d.origem_pais);
+    g('prop-origem-pais-codigo', d.origem_pais_codigo);
+    g('prop-destino-pais',   d.destino_pais);
+    g('prop-destino-pais-codigo', d.destino_pais_codigo);
+    g('prop-porto-origem',   d.porto_origem);
+    g('prop-porto-destino',  d.porto_destino);
+    g('prop-aeroporto-origem',  d.aeroporto_origem);
+    g('prop-aeroporto-destino', d.aeroporto_destino);
+    g('prop-fronteira-saida',   d.fronteira_saida);
+    g('prop-fronteira-entrada', d.fronteira_entrada);
+    g('prop-forma-pagamento',   d.forma_pagamento);
+    g('prop-condicoes-obs',     d.condicoes_obs);
+    g('prop-observacoes',       d.observacoes);
+    g('prop-obs-status',        d.obs_status);
+
+    // Modal — dispara change para mostrar grupos corretos e habilitar incoterm
+    const modalEl = document.getElementById('prop-modal');
+    if (modalEl && d.modal) {
+        modalEl.value = d.modal;
+        modalEl.dispatchEvent(new Event('change'));
+    }
+
+    // Emissor
+    const emissorTipo = d.emissor_tipo || 'usuario';
+    const radioEl = document.querySelector(`input[name="prop-emissor-tipo"][value="${emissorTipo}"]`);
+    if (radioEl) {
+        radioEl.checked = true;
+        radioEl.dispatchEvent(new Event('change'));
+    }
+    if (emissorTipo === 'terceiro') {
+        if (d.parceiro_id) g('prop-cliente-id', d.parceiro_id);
+        if (d.parceiro_razao_social) g('prop-cliente', d.parceiro_razao_social);
+    }
+
+    // Destinatário
+    if (d.destinatario_id) {
+        g('prop-emp-dest-id', d.destinatario_id);
+    }
+    if (d.destinatario_razao_social) {
+        g('prop-emp-dest-razao', d.destinatario_razao_social);
+        const razaoGroup = document.getElementById('prop-emp-dest-razao-group');
+        const buscaGroup = document.getElementById('prop-emp-dest-busca-group');
+        if (razaoGroup) razaoGroup.style.display = '';
+        if (buscaGroup) buscaGroup.style.display = 'none';
+    }
+    if (d.destinatario_doc) {
+        g('prop-emp-dest-doc',      d.destinatario_doc);
+        g('prop-emp-dest-doc-tipo', d.destinatario_doc_tipo);
+        const docGroup = document.getElementById('prop-emp-dest-doc-group');
+        if (docGroup) docGroup.style.display = '';
+    }
+
+    // Validade — recalcula a data a partir de HOJE (o prazo em dias é o
+    // mesmo, mas a contagem começa na duplicata, não na proforma original).
+    if (d.validade_dias) {
+        g('prop-validade-dias', d.validade_dias);
+        document.getElementById('prop-validade-dias')?.dispatchEvent(new Event('change'));
+    }
+
+    // Itens
+    if (Array.isArray(d.itens) && d.itens.length > 0) {
+        await Promise.all([_carregarMoedas(), _carregarUnidades()]);
+        _propItens = d.itens.map(it => ({
+            produto_id: it.produto_id || null,
+            produto:  it.produto  || '',
+            qtd:      it.qtd      ?? it.quantidade ?? 1,
+            unidade:  it.unidade  || (_acUnidades[0]?.unidade || 'UN'),
+            preco:    it.preco    ?? it.preco_unit ?? 0,
+            moeda:    it.moeda    || (_acMoedas[0]?.descricao || 'USD'),
+        }));
+        propRenderizarItens();
+    }
+
+    mostrarNotificacao('Dados da proforma original copiados. Confira antes de salvar.', 'sucesso');
 }
 
 async function propGerarCodigo() {

@@ -1,5 +1,5 @@
 // ========================================
-// TAXONOMIA DE TIPOS DE DOCUMENTO POR PEDIDO
+// TAXONOMIA DE TIPOS DE DOCUMENTO POR PROFORMA
 // ========================================
 // Compartilhada entre documentos.js (tela Documentos) e inicio.js (seção
 // "Pendências do Sistema") — mesma fonte de verdade dos campos "Nº ..." da
@@ -35,11 +35,14 @@ const DOC_TIPOS_MODAL = {
 
 const DOC_MODAL_LABEL = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' };
 
-// Monta a lista de tipos aplicáveis a um pedido: universal + específico do(s)
-// modal(is) de transporte da(s) proforma(s) + customizados já salvos.
-function docTiposDoPedido(proformasDoPedido, docsSalvos) {
+// Monta a lista de tipos aplicáveis a uma proforma: universal + específico
+// do(s) modal(is) realmente usados nos Processos gerados a partir dela (uma
+// Proforma pode gerar N Processos, cada um com seu próprio modal de
+// transporte — pode divergir do modal só cotado na Proforma) + customizados
+// já salvos.
+function docTiposDaProforma(processosDaProforma, docsSalvos) {
     const tipos = [...DOC_TIPOS_UNIVERSAIS];
-    const modais = [...new Set((proformasDoPedido || []).map(pf => pf.modal).filter(Boolean))];
+    const modais = [...new Set((processosDaProforma || []).map(pr => pr.modal).filter(Boolean))];
     modais.forEach(modal => {
         (DOC_TIPOS_MODAL[modal] || []).forEach(t => tipos.push({ ...t, modal }));
     });
@@ -54,8 +57,8 @@ function docTiposDoPedido(proformasDoPedido, docsSalvos) {
 
 // "Feito" pros tipos fixos/por-modal é calculado a partir do campo Nº
 // correspondente já preenchido em processos.documentos (JSONB).
-function docFeitoAutomatico(processosDoPedido, tipoId) {
-    return (processosDoPedido || []).some(pr => {
+function docFeitoAutomatico(processosDaProforma, tipoId) {
+    return (processosDaProforma || []).some(pr => {
         const valor = pr.documentos?.[tipoId];
         return valor !== undefined && valor !== null && String(valor).trim() !== '';
     });

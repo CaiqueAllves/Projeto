@@ -42,7 +42,7 @@ async function fcCarregar() {
         .map(c => ({
             id:          c.id,
             tipoConta:   'receber',
-            pedidoId:    c.pedido_id || null,
+            proformaId:  c.proforma_id || null,
             data:        c.data_recebimento || c.data_vencimento,
             descricao:   c.descricao,
             tipo:        'entrada',
@@ -57,7 +57,7 @@ async function fcCarregar() {
         .map(c => ({
             id:          c.id,
             tipoConta:   'pagar',
-            pedidoId:    c.pedido_id || null,
+            proformaId:  c.proforma_id || null,
             data:        c.data_pagamento || c.data_vencimento,
             descricao:   c.descricao,
             tipo:        'saida',
@@ -129,9 +129,9 @@ function fcRenderizar(movs) {
             <td>
                 <div class="fin-acoes">
                     <button class="fin-btn-acao fin-btn-editar" onclick="window.open('${paginaConta}?editar=${m.id}', '_blank')" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                    ${m.pedidoId
-                        ? `<button class="fin-btn-acao fin-btn-editar" onclick="window.open('pedidos.html?editar=${m.pedidoId}', '_blank')" title="Ver Pedido"><i class="fa-solid fa-eye"></i></button>`
-                        : `<button class="fin-btn-acao" disabled title="Sem Pedido vinculado" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-eye"></i></button>`}
+                    ${m.proformaId
+                        ? `<button class="fin-btn-acao fin-btn-editar" onclick="window.open('formularios.html?tab=proposta&id=${m.proformaId}&modo=visualizar', '_blank')" title="Ver Proforma"><i class="fa-solid fa-eye"></i></button>`
+                        : `<button class="fin-btn-acao" disabled title="Sem Proforma vinculada" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-eye"></i></button>`}
                 </div>
             </td>
         </tr>`;

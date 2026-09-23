@@ -10,7 +10,6 @@
 let _plTodas     = [];
 let _plFiltradas = [];
 let _plTabAtiva  = 'proposta';
-let _plPedidosMap = {};
 let _plViewMode  = 'kanban';
 
 const PL_ETAPAS = ['proposta', 'negociacao', 'fechado'];
@@ -61,19 +60,6 @@ async function plCarregar() {
     // roda depois que o usuário digita algo).
     _plTodas = (res.data || []).filter(o => o.etapa !== 'perdido');
     _plFiltradas = [..._plTodas];
-
-    // Link reverso: quais propostas já geraram um Pedido (pro botão "Ver Pedido")
-    _plPedidosMap = {};
-    const oportunidadeIds = _plTodas.map(o => o.id).filter(Boolean);
-    if (oportunidadeIds.length > 0) {
-        try {
-            const { data: pedidosLinkados } = await supabaseClient
-                .from('pedidos')
-                .select('id, numero, oportunidade_id')
-                .in('oportunidade_id', oportunidadeIds);
-            (pedidosLinkados || []).forEach(p => { _plPedidosMap[p.oportunidade_id] = p; });
-        } catch (e) {}
-    }
 
     plRenderizar();
 }
@@ -145,11 +131,6 @@ function _plRenderizarTabela() {
         const badgeClass = PL_ETAPA_BADGE_CLASS[etapa] || '';
         const badgeLabel = PL_ETAPA_LABEL[etapa] || etapa;
 
-        const pedidoLinkado = _plPedidosMap[o.id];
-        const botaoPedido = (etapa === 'fechado' && pedidoLinkado)
-            ? `<button class="pl-btn-acao pl-btn-editar" onclick="plVerPedido('${pedidoLinkado.id}')" title="Ver Pedido ${_plEscapar(pedidoLinkado.numero || '')}"><i class="fa-solid fa-bag-shopping"></i></button>`
-            : '';
-
         return `<tr class="prop-row prop-row-${etapa}">
             <td class="prop-num">${_plEscapar(o.titulo)}</td>
             <td>${remetente
@@ -162,7 +143,6 @@ function _plRenderizarTabela() {
             <td>${previsao}</td>
             <td>
                 <div class="ped-acoes">
-                    ${botaoPedido}
                     <button class="pl-btn-acao pl-btn-editar" onclick="plVerDetalhes('${o.id}')" title="Ver detalhes"><i class="fa-solid fa-eye"></i></button>
                 </div>
             </td>
@@ -193,16 +173,6 @@ function _plRenderCard(o) {
         ? new Date(o.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
         : '—';
 
-    // Único botão mutável que sobra aqui: "Ver Pedido" é navegação, não
-    // escrita — abre pedidos.html, não altera nada em oportunidades.
-    let botaoPedido = '';
-    if (o.etapa === 'fechado') {
-        const pedidoLinkado = _plPedidosMap[o.id];
-        if (pedidoLinkado) {
-            botaoPedido = `<button class="btn-ver-processo" onclick="plVerPedido('${pedidoLinkado.id}')"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido ${_plEscapar(pedidoLinkado.numero || '')}</button>`;
-        }
-    }
-
     const expandido = _plCardsExpandidos.has(o.id);
 
     return `
@@ -224,7 +194,6 @@ function _plRenderCard(o) {
         </div>
 
         <div class="pl-kcard-valor"><i class="fa-solid fa-coins"></i> <span>${valor}</span></div>
-        ${botaoPedido}
 
         ${expandido ? `
         <div class="pl-kcard-meta">
@@ -278,10 +247,6 @@ function plAtualizarMobileTab() {
 
 function plVerDetalhes(id) {
     window.location.href = `proposta.html?visualizar=${id}`;
-}
-
-function plVerPedido(pedidoId) {
-    window.open(`pedidos.html?editar=${pedidoId}`, '_blank');
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────

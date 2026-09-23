@@ -9,10 +9,9 @@ let _viewMode        = 'kanban';
 
 const KANBAN_COLS = ['pendente', 'enviado', 'aprovado', 'encerrado'];
 
-// ── Nova Proforma agora nasce de um Pedido ──
-function profIrParaPedidos() {
-    mostrarNotificacao('Toda proforma nasce de um pedido. Crie ou escolha um pedido e use "Gerar Proforma".', 'info');
-    window.location.href = 'pedidos.html';
+// ── Nova Proforma — abre o formulário de cadastro direto, sem depender de nada ──
+function profNovaProforma() {
+    window.open('formularios.html?tab=proposta', '_blank');
 }
 
 // ── Helpers ──────────────────────────────
@@ -42,40 +41,50 @@ function _profModalIcon(modal) {
     return { aereo: 'fa-plane', maritimo: 'fa-ship', terrestre: 'fa-truck' }[modal] || 'fa-route';
 }
 
-// Botão de ação pra gerar/ver o processo vinculado à proforma — 1:1, uma
-// proforma gera no máximo 1 processo.
+// Botões de ação pra ver os processos já gerados e/ou gerar mais um — 1
+// Proforma pode gerar N Processos (o botão "Gerar Processo" nunca some).
+// Pode virar Processo em qualquer status ainda "ativo" (pendente, enviado ou
+// aprovado) — só some quando a proforma já está encerrada.
+const PROF_STATUS_PODE_GERAR_PROCESSO = ['pendente', 'enviado', 'aprovado'];
+
 function _profBotaoProcesso(p, status) {
     const processos = p._processos || [];
+    const botoesVer = processos.map((pr, i) => `
+        <button class="btn-ver-processo" onclick="profVerProcesso('${pr.id}')" title="${_profEscapar(pr.numero_processo || '')}">
+            <i class="fa-solid fa-eye"></i> ${processos.length > 1 ? `Processo ${i + 1}` : 'Ver Processo'}
+        </button>`).join('');
 
-    if (processos.length > 0) {
-        return `<button class="btn-ver-processo" onclick="profVerProcesso('${processos[0].id}')"><i class="fa-solid fa-eye"></i> Ver Processo</button>`;
-    }
+    const botaoGerar = PROF_STATUS_PODE_GERAR_PROCESSO.includes(status)
+        ? `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar Processo</button>`
+        : '';
 
-    if (status === 'aprovado') {
-        return `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar Processo</button>`;
-    }
-
-    return '';
+    return botoesVer + botaoGerar;
 }
 
-// Botão "Ver Pedido de origem" — link reverso de pedidos.proforma_id
-function _profBotaoPedido(p) {
-    if (!p._pedidoOrigemId) return '';
-    return `<button class="btn-ver-processo" onclick="profVerPedido('${p._pedidoOrigemId}')"><i class="fa-solid fa-bag-shopping"></i> Ver Pedido de origem</button>`;
+// Só habilitado depois de gerar pelo menos 1 Processo (mesmo critério que o
+// Pedido usava antes de ser eliminado — ver database-financeiro-proforma.sql).
+function _profBotaoContaReceber(p) {
+    const temProcesso = p._processos && p._processos.length > 0;
+    return temProcesso
+        ? `<button class="btn-acao btn-editar" onclick="profGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
+        : `<button class="btn-acao btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`;
 }
 
-// Identificação do pedido de origem — sempre mostra uma linha, mesmo que por
-// algum motivo não exista (não deveria acontecer, toda proforma nasce de um pedido).
-function _profIdentPedido(p) {
-    if (!p._pedidoOrigemId) return 'Sem Pedido';
-    return `Pedido: ${p._pedidoNumero || '—'}`;
+function profGerarContaReceber(id) {
+    window.open(`contas-receber.html?gerar_proforma_id=${id}`, '_blank');
+}
+
+// Abre o formulário de cadastro em branco, pré-preenchido com os dados desta
+// proforma (ver propCarregarDuplicar em formularios.js) — código/numeração
+// sempre gerado do zero, nunca copiado da original.
+function profDuplicar(id) {
+    window.open(`formularios.html?tab=proposta&duplicar=${id}`, '_blank');
 }
 
 function _profEmissorNome(p) {
     if (p.emissor_tipo === 'terceiro') {
-        // parceiro_id só resolve quando aponta pra um registro real de
-        // "empresas" — quando a proforma nasce de um Pedido, o remetente vem
-        // de "parceiros" (tabela/ID diferentes), então cai no snapshot em texto.
+        // parceiro_id resolve contra "parceiros" (ver empresaMap em
+        // profCarregarLista); sem parceiro_id, cai no snapshot em texto.
         return p.parceiro?.nome_fantasia || p.parceiro?.razao_social || p.parceiro_razao_social || '—';
     }
     return '(Própria empresa)';
@@ -126,6 +135,10 @@ async function profCarregarLista() {
 
         const proformas = data || [];
 
+        // parceiro_id/destinatario_id são BIGINT — referenciam "parceiros",
+        // não "empresas" (achado ao vivo — a query antiga aqui usava
+        // "empresas" por engano e nunca resolvia nada, sempre caindo no
+        // snapshot em texto parceiro_razao_social/destinatario_razao_social).
         const ids = [...new Set([
             ...proformas.map(p => p.parceiro_id).filter(Boolean),
             ...proformas.map(p => p.destinatario_id).filter(Boolean),
@@ -133,36 +146,24 @@ async function profCarregarLista() {
 
         let empresaMap = {};
         if (ids.length > 0) {
-            const { data: emps } = await supabaseClient
-                .from('empresas')
+            const { data: parc } = await supabaseClient
+                .from('parceiros')
                 .select('id, razao_social, nome_fantasia')
                 .in('id', ids);
-            (emps || []).forEach(e => { empresaMap[e.id] = e; });
+            (parc || []).forEach(e => { empresaMap[e.id] = e; });
         }
 
-        // Processo gerado a partir de cada proforma (1:1) — mesmo padrão de lookup
-        // em lote já usado em processos.js pra resolver a proforma de cada processo.
+        // Processos gerados a partir de cada proforma — 1 Proforma pode ter N.
         const proformaIds = proformas.map(p => p.id);
         let processosMap = {};
         if (proformaIds.length > 0) {
             const { data: procs } = await supabaseClient
                 .from('processos')
-                .select('id, proforma_id')
+                .select('id, proforma_id, numero_processo')
                 .in('proforma_id', proformaIds);
             (procs || []).forEach(pr => {
                 (processosMap[pr.proforma_id] ||= []).push(pr);
             });
-        }
-
-        // Número do pedido de origem — pra mostrar na identificação do card.
-        const pedidoIds = [...new Set(proformas.map(p => p.pedido_id).filter(Boolean))];
-        let pedidoNumeroMap = {};
-        if (pedidoIds.length > 0) {
-            const { data: peds } = await supabaseClient
-                .from('pedidos')
-                .select('id, numero')
-                .in('id', pedidoIds);
-            (peds || []).forEach(pd => { pedidoNumeroMap[pd.id] = pd.numero; });
         }
 
         _profTodos = proformas.map(p => ({
@@ -170,8 +171,6 @@ async function profCarregarLista() {
             parceiro:         empresaMap[p.parceiro_id]      || null,
             destinatario_emp: empresaMap[p.destinatario_id]  || null,
             _processos:       processosMap[p.id] || [],
-            _pedidoOrigemId:  p.pedido_id || null,
-            _pedidoNumero:    p.pedido_id ? (pedidoNumeroMap[p.pedido_id] || '') : '',
         }));
 
         profFiltrar();
@@ -239,11 +238,6 @@ function _profRenderCard(p) {
                 <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
             </button>
         </div>
-        <div class="prof-card-ident">
-            <i class="fa-solid fa-bag-shopping"></i>
-            <span>${_profEscapar(_profIdentPedido(p))}</span>
-            ${p._pedidoOrigemId ? `<button class="prof-card-ident-seta" onclick="profVerPedido('${p._pedidoOrigemId}')" title="Ver Pedido de origem"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>` : ''}
-        </div>
         ${tipoLabel ? `
         <div class="prof-card-modal">
             <span class="prof-card-tipo">${_profEscapar(tipoLabel)}</span>
@@ -261,6 +255,10 @@ function _profRenderCard(p) {
             <span class="prof-card-label">Destinatário:</span>
             <span class="prof-card-empresa-valor">${_profEscapar(destinatario)}</span>
         </div>
+        ${_profBotaoProcesso(p, status) ? `
+        <div class="prof-card-processo-linha">
+            ${_profBotaoProcesso(p, status)}
+        </div>` : ''}
         ${expandido ? `
         <div class="prof-card-valor"><i class="fa-solid fa-sack-dollar"></i><span>${_profEscapar(valorTexto)}</span></div>
         <div class="prof-card-datas">
@@ -270,10 +268,11 @@ function _profRenderCard(p) {
             <select class="prof-status-select prof-status-${status}" onchange="profAlterarStatus('${p.id}', this)">
                 ${optStatus}
             </select>
-            ${_profBotaoProcesso(p, status)}
             <div class="prof-card-btns">
+                ${_profBotaoContaReceber(p)}
                 <button class="btn-acao btn-ver"     onclick="profVisualizar('${p.id}')" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
                 <button class="btn-acao btn-pdf"     onclick="profGerarPDF('${p.id}')" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                <button class="btn-acao btn-duplicar" onclick="profDuplicar('${p.id}')" title="Duplicar Proforma"><i class="fa-solid fa-copy"></i></button>
                 <button class="btn-acao btn-editar"  onclick="profEditar('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-acao btn-excluir" onclick="profAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </div>
@@ -342,11 +341,15 @@ function profRenderizarLista(lista) {
             </td>
             <td class="col-acoes">
                 <div style="display:flex;align-items:center;gap:6px;">
+                    ${_profBotaoContaReceber(p)}
                     <button class="btn-acao btn-ver" onclick="profVisualizar('${p.id}')" title="Visualizar">
                         <i class="fa-solid fa-eye"></i>
                     </button>
                     <button class="btn-acao btn-pdf" onclick="profGerarPDF('${p.id}')" title="Gerar PDF">
                         <i class="fa-solid fa-file-pdf"></i>
+                    </button>
+                    <button class="btn-acao btn-duplicar" onclick="profDuplicar('${p.id}')" title="Duplicar Proforma">
+                        <i class="fa-solid fa-copy"></i>
                     </button>
                     <button class="btn-acao btn-editar" onclick="profEditar('${p.id}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
@@ -363,7 +366,6 @@ function profRenderizarLista(lista) {
                 </select>
             </td>
             <td class="col-gerar-processo">
-                ${_profBotaoPedido(p)}
                 ${_profBotaoProcesso(p, status)}
             </td>
         </tr>`;
@@ -424,9 +426,6 @@ function profFiltrar() {
         const s = document.getElementById('filtroStatus')?.value || '';
 
         let lista = _profTodos;
-        // Vindo de "Ver Proformas (N)" no Pedido — mostra só as proformas daquele pedido
-        const pedidoIdParam = new URLSearchParams(window.location.search).get('pedido_id');
-        if (pedidoIdParam) lista = lista.filter(p => p.pedido_id === pedidoIdParam);
         if (s) lista = lista.filter(p => _profGetColuna(p.status || 'enviado') === s);
         if (q) lista = lista.filter(p =>
             (p.codigo        || '').toLowerCase().includes(q) ||
@@ -481,10 +480,6 @@ function profSeguirProcesso(id) {
 
 function profVerProcesso(processoId) {
     window.open(`formularios.html?tab=processo&id=${processoId}&modo=visualizar`, '_blank');
-}
-
-function profVerPedido(pedidoId) {
-    window.open(`pedidos.html?editar=${pedidoId}&modo=visualizar`, '_blank');
 }
 
 // ── Excluir (soft delete) ─────────────────

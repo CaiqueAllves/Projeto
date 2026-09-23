@@ -130,10 +130,10 @@
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label>Vincular a Pedido</label>
-                    <input type="text" id="cpPedidoNome" placeholder="Buscar pedido por número..." autocomplete="off" oninput="cpBuscarPedido(this.value)" onfocus="cpMostrarPedido(this.value)">
-                    <input type="hidden" id="cpPedidoId">
-                    <div class="pl-autocomplete" id="cpAutoPedido"></div>
+                    <label>Vincular a Proforma</label>
+                    <input type="text" id="cpProformaNome" placeholder="Buscar proforma por código..." autocomplete="off" oninput="cpBuscarProforma(this.value)" onfocus="cpMostrarProforma(this.value)">
+                    <input type="hidden" id="cpProformaId">
+                    <div class="pl-autocomplete" id="cpAutoProforma"></div>
                 </div>
             </div>
             <div class="fin-form-row">
@@ -145,7 +145,7 @@
                 </div>
                 <div class="fin-form-group">
                     <label>Vincular a Processo</label>
-                    <input type="text" id="cpProcessoNome" placeholder="Escolha um Pedido primeiro" autocomplete="off" disabled oninput="cpBuscarProcesso(this.value)" onfocus="cpMostrarProcesso(this.value)">
+                    <input type="text" id="cpProcessoNome" placeholder="Escolha uma Proforma primeiro" autocomplete="off" disabled oninput="cpBuscarProcesso(this.value)" onfocus="cpMostrarProcesso(this.value)">
                     <input type="hidden" id="cpProcessoId">
                     <div class="pl-autocomplete" id="cpAutoProcesso"></div>
                 </div>

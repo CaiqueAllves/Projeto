@@ -761,7 +761,6 @@
                                         <div class="autocomplete-wrapper">
                                             <input type="text" id="proc-codigo" name="codigo" placeholder="Digite ou selecione uma proforma..." autocomplete="off">
                                             <input type="hidden" id="proc-proposta-id">
-                                            <input type="hidden" id="proc-pedido-id">
                                             <div class="autocomplete-list" id="proc-codigo-lista"></div>
                                         </div>
                                     </div>
@@ -1743,18 +1742,9 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
-                                    <!-- Linha 1: Pedido | Idioma | Tipo | Propósito -->
+                                    <!-- Linha 1: Idioma | Tipo | Propósito -->
                                     <div class="form-group full-width">
-                                        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
-
-                                            <!-- Pedido raiz — toda proforma nasce de um pedido -->
-                                            <div class="form-group" id="prop-pedido-origem-group" style="margin-bottom:0;">
-                                                <label for="prop-pedido-origem">Pedido <span class="required">*</span></label>
-                                                <div class="autocomplete-wrapper">
-                                                    <input type="text" id="prop-pedido-origem" placeholder="Digite ou selecione um pedido..." autocomplete="off">
-                                                    <div class="autocomplete-list" id="prop-pedido-origem-lista"></div>
-                                                </div>
-                                            </div>
+                                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
 
                                             <!-- Idioma -->
                                             <div class="form-group" style="margin-bottom:0;">
@@ -2038,7 +2028,6 @@
                                     <!-- Código da Proforma -->
                                     <div class="form-group full-width">
                                         <input type="hidden" id="prop-id">
-                                        <input type="hidden" id="prop-pedido-id">
                                         <input type="hidden" id="prop-codigo" name="codigo">
                                         <p class="prop-codigo-exibicao">Código da Proforma: <strong id="prop-codigo-display">—</strong></p>
                                     </div>
@@ -2691,7 +2680,7 @@
                                     <!-- Botão para abrir o formulário de uma nova Embalagem Unitária -->
                                     <div class="form-group full-width">
                                         <button type="button" id="btn-add-embalagem-unitaria" class="btn-add-idioma" onclick="prodAbrirFormEmbalagemUnitaria()">
-                                            <i class="fa-solid fa-plus"></i> Adicionar Embalagem Unitária
+                                            <i class="fa-solid fa-plus"></i> Dimensões do Produto
                                         </button>
                                     </div>
 
@@ -2954,7 +2943,7 @@
                                                     <input type="text" id="prod-comp-ingrediente" name="comp_ingrediente" placeholder="Ex: Cloreto de Sódio" data-no-caps>
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="prod-comp-nome-tecnico">Nome Técnico</label>
+                                                    <label for="prod-comp-nome-tecnico">Nome Técnico / Científico</label>
                                                     <input type="text" id="prod-comp-nome-tecnico" name="comp_nome_tecnico" placeholder="Ex: Sodium Chloride" data-no-caps>
                                                 </div>
                                                 <div class="form-group">

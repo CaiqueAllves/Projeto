@@ -1,11 +1,10 @@
 // ========================================
-// PIPELINE FINANCEIRO — status do pedido em relação ao financeiro
+// PIPELINE FINANCEIRO — status da proforma em relação ao financeiro
 // ========================================
 
-let _pfPedidos = [];
+let _pfProformas = [];
 let _pfFiltrados = [];
-let _pfContasPorPedido = {};
-let _pfProcessosPorProforma = {};
+let _pfContasPorProforma = {};
 let _pfTabAtiva = 'sem_cobranca';
 
 const PF_ETAPAS = ['sem_cobranca', 'aguardando', 'vencido', 'recebido'];
@@ -27,49 +26,77 @@ function _pfCarregarUsuario() {
     } catch (e) {}
 }
 
+function _pfEmissorNome(p) {
+    if (p.emissor_tipo === 'terceiro') {
+        return p.parceiro?.nome_fantasia || p.parceiro?.razao_social || p.parceiro_razao_social || '';
+    }
+    return '';
+}
+
+function _pfDestinatarioNome(p) {
+    if (p.destinatario_emp?.razao_social) {
+        return p.destinatario_emp.nome_fantasia || p.destinatario_emp.razao_social;
+    }
+    return p.destinatario_razao_social || '—';
+}
+
 // ── Carregar dados ─────────────────────────────────────────────────────────
 
 async function pfCarregar() {
     _pfSetLoading(true);
 
-    const res = await buscarPedidos();
-    if (!res.sucesso) {
+    const usuario = obterUsuarioLogado();
+    let query = supabaseClient.from('proformas').select('*').neq('status', 'excluido');
+    if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+    const { data, error } = await query;
+    if (error) {
         _pfSetLoading(false);
         return;
     }
-    _pfPedidos = (res.data || []).filter(p => p.status !== 'cancelado');
+    _pfProformas = data || [];
 
-    // Processos gerados a partir da proforma de cada pedido — Conta a Receber só
-    // pode ser gerada depois que o pedido virou processo (ver _pfPodeGerarConta)
-    _pfProcessosPorProforma = {};
-    const proformaIds = [...new Set(_pfPedidos.map(p => p.proforma_id).filter(Boolean))];
-    if (proformaIds.length > 0) {
-        const { data: procs } = await supabaseClient
-            .from('processos')
-            .select('id, proforma_id')
-            .in('proforma_id', proformaIds);
-        (procs || []).forEach(pr => {
-            (_pfProcessosPorProforma[pr.proforma_id] ||= []).push(pr);
-        });
+    // parceiro_id/destinatario_id são BIGINT — referenciam "parceiros".
+    const empresaIds = [...new Set([
+        ..._pfProformas.map(p => p.parceiro_id).filter(Boolean),
+        ..._pfProformas.map(p => p.destinatario_id).filter(Boolean),
+    ])];
+    let empresaMap = {};
+    if (empresaIds.length > 0) {
+        const { data: parc } = await supabaseClient
+            .from('parceiros').select('id, razao_social, nome_fantasia').in('id', empresaIds);
+        (parc || []).forEach(e => { empresaMap[e.id] = e; });
     }
 
-    // Contas a receber vinculadas aos pedidos
-    _pfContasPorPedido = {};
+    // Processos gerados a partir de cada proforma — Conta a Receber só pode
+    // ser gerada depois que a proforma já tem 1+ processo (ver _pfPodeGerarConta)
+    const proformaIds = _pfProformas.map(p => p.id);
+    let processosMap = {};
+    if (proformaIds.length > 0) {
+        const { data: procs } = await supabaseClient
+            .from('processos').select('id, proforma_id').in('proforma_id', proformaIds);
+        (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
+    }
+    _pfProformas.forEach(p => {
+        p.parceiro         = empresaMap[p.parceiro_id]     || null;
+        p.destinatario_emp = empresaMap[p.destinatario_id] || null;
+        p._processos       = processosMap[p.id] || [];
+    });
+
+    // Contas a receber vinculadas às proformas
+    _pfContasPorProforma = {};
     try {
-        const usuario = obterUsuarioLogado();
-        let query = supabaseClient
+        let queryContas = supabaseClient
             .from('contas_receber')
-            .select('id, pedido_id, status, valor, moeda, data_vencimento')
-            .not('pedido_id', 'is', null);
-        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-        const { data } = await query;
-        (data || []).forEach(c => {
-            if (!_pfContasPorPedido[c.pedido_id]) _pfContasPorPedido[c.pedido_id] = [];
-            _pfContasPorPedido[c.pedido_id].push(c);
+            .select('id, proforma_id, status, valor, moeda, data_vencimento')
+            .not('proforma_id', 'is', null);
+        if (usuario?.empresa_id) queryContas = queryContas.eq('empresa_id', usuario.empresa_id);
+        const { data: contas } = await queryContas;
+        (contas || []).forEach(c => {
+            (_pfContasPorProforma[c.proforma_id] ||= []).push(c);
         });
     } catch (e) {}
 
-    _pfFiltrados = [..._pfPedidos];
+    _pfFiltrados = [..._pfProformas];
     pfRenderizar();
 }
 
@@ -82,10 +109,10 @@ function _pfSetLoading(sim) {
     });
 }
 
-// ── Estágio financeiro do pedido ────────────────────────────────────────────
+// ── Estágio financeiro da proforma ──────────────────────────────────────────
 
-function _pfEstagio(pedidoId) {
-    const contas = (_pfContasPorPedido[pedidoId] || []).filter(c => c.status !== 'cancelado');
+function _pfEstagio(proformaId) {
+    const contas = (_pfContasPorProforma[proformaId] || []).filter(c => c.status !== 'cancelado');
     if (!contas.length) return 'sem_cobranca';
 
     const hoje = new Date().toISOString().split('T')[0];
@@ -110,7 +137,7 @@ function pfRenderizar() {
         if (tabCount) tabCount.textContent = cards.length;
 
         if (!cards.length) {
-            col.innerHTML = '<div class="pl-col-vazia"><i class="fa-regular fa-folder-open"></i><p>Nenhum pedido</p></div>';
+            col.innerHTML = '<div class="pl-col-vazia"><i class="fa-regular fa-folder-open"></i><p>Nenhuma proforma</p></div>';
             return;
         }
 
@@ -120,10 +147,9 @@ function pfRenderizar() {
     pfAtualizarMobileTab();
 }
 
-// Cards do Kanban começam recolhidos — mesmo esquema de Pedidos/Proposta
-// (_pedCardsExpandidos/pedToggleCard, _propCardsExpandidos/propToggleCard):
-// recolhido só o essencial (nº, valor, Remetente/Destino, Contas), expandir
-// revela Responsável/Data e as ações.
+// Cards do Kanban começam recolhidos — mesmo esquema de Proposta
+// (_propCardsExpandidos/propToggleCard): recolhido só o essencial (código,
+// valor, Remetente/Destino, Contas), expandir revela Data e as ações.
 let _pfCardsExpandidos = new Set();
 
 function pfToggleCard(id) {
@@ -133,16 +159,16 @@ function pfToggleCard(id) {
 }
 
 function _pfRenderCard(p, etapa) {
-    const remetenteRazao = p.remetente?.nome_fantasia || p.remetente?.razao_social || '';
-    const destinoRazao   = p.parceiros?.nome_fantasia || p.parceiros?.razao_social || '—';
+    const remetenteRazao = _pfEmissorNome(p);
+    const destinoRazao   = _pfDestinatarioNome(p);
     const valor   = p.valor_total
-        ? `${p.moeda || 'USD'} ${Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        ? `${p.moeda_principal || 'USD'} ${Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
         : null;
-    const dataFmt = p.data_pedido
-        ? new Date(p.data_pedido + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    const dataFmt = p.data_emissao
+        ? new Date(p.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
         : '—';
 
-    const contas = (_pfContasPorPedido[p.id] || []).filter(c => c.status !== 'cancelado');
+    const contas = (_pfContasPorProforma[p.id] || []).filter(c => c.status !== 'cancelado');
     const hoje   = new Date().toISOString().split('T')[0];
     const badgeMap = { pendente: 'pendente', vencido: 'vencido', recebido: 'recebido' };
 
@@ -164,7 +190,7 @@ function _pfRenderCard(p, etapa) {
     return `
         <div class="pf-kcard ${expandido ? 'pf-kcard-expandido' : ''}" data-etapa="${etapa}" data-id="${p.id}">
             <div class="pf-kcard-top">
-                <span class="pf-kcard-titulo"><i class="fa-solid fa-bag-shopping"></i> Pedido ${_pfEscapar(p.numero || '')}</span>
+                <span class="pf-kcard-titulo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_pfEscapar(p.codigo || '')}</span>
                 <button class="pf-kcard-toggle" onclick="pfToggleCard('${p.id}')" title="${expandido ? 'Recolher' : 'Expandir'}">
                     <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
                 </button>
@@ -185,19 +211,16 @@ function _pfRenderCard(p, etapa) {
 
             ${expandido ? `
             <div class="pf-kcard-meta">
-                <span class="pf-kcard-label">Responsável:</span> <span>${p.criado_por ? _pfEscapar(p.criado_por) : '—'}</span>
-            </div>
-            <div class="pf-kcard-meta">
-                <span class="pf-kcard-label">Data do Pedido:</span> <span>${dataFmt}</span>
+                <span class="pf-kcard-label">Data de Emissão:</span> <span>${dataFmt}</span>
             </div>
             <div class="pf-kcard-footer">
                 <div class="pf-kcard-btns">
                     ${etapa === 'sem_cobranca'
                         ? (_pfPodeGerarConta(p)
                             ? `<button class="btn-seguir-processo" onclick="pfGerarContaReceber('${p.id}')"><i class="fa-solid fa-sack-dollar"></i> Gerar Conta a Receber</button>`
-                            : `<span class="pf-aguardando-processo" title="Gere um Processo a partir da Proforma deste pedido antes de criar a Conta a Receber"><i class="fa-solid fa-hourglass-half"></i> Aguardando Processo</span>`)
+                            : `<span class="pf-aguardando-processo" title="Gere um Processo a partir desta Proforma antes de criar a Conta a Receber"><i class="fa-solid fa-hourglass-half"></i> Aguardando Processo</span>`)
                         : ''}
-                    <button class="pl-btn-acao pl-btn-editar" onclick="pfVerPedido('${p.id}')" title="Ver Pedido">
+                    <button class="pl-btn-acao pl-btn-editar" onclick="pfVerProforma('${p.id}')" title="Ver Proforma">
                         <i class="fa-solid fa-eye"></i>
                     </button>
                 </div>
@@ -209,20 +232,20 @@ function _pfLabelStatus(status) {
     return { pendente: 'Pendente', vencido: 'Vencido', recebido: 'Recebido' }[status] || status;
 }
 
-// Só libera gerar Conta a Receber depois que o pedido já virou 1+ processo
-// (via a proforma gerada pelo pedido) — confirmar o pedido sozinho não basta.
-function _pfPodeGerarConta(pedido) {
-    return !!(pedido.proforma_id && (_pfProcessosPorProforma[pedido.proforma_id] || []).length > 0);
+// Só libera gerar Conta a Receber depois que a proforma já tem 1+ processo —
+// gerá-la sozinha não basta.
+function _pfPodeGerarConta(proforma) {
+    return (proforma._processos || []).length > 0;
 }
 
 // ── Ações ──────────────────────────────────────────────────────────────────
 
-function pfVerPedido(id) {
-    window.open(`pedidos.html?editar=${id}`, '_blank');
+function pfVerProforma(id) {
+    window.open(`formularios.html?tab=proposta&id=${id}&modo=visualizar`, '_blank');
 }
 
 function pfGerarContaReceber(id) {
-    window.open(`contas-receber.html?gerar_pedido_id=${id}`, '_blank');
+    window.open(`contas-receber.html?gerar_proforma_id=${id}`, '_blank');
 }
 
 // ── Filtro ─────────────────────────────────────────────────────────────────
@@ -237,17 +260,17 @@ function pfFiltrar() {
         const termo = document.getElementById('filtroPipelineFinanceiro')?.value.toLowerCase().trim() || '';
         const campo = document.getElementById('filtroCampoPipelineFinanceiro')?.value || 'todos';
 
-        _pfFiltrados = _pfPedidos.filter(p => {
+        _pfFiltrados = _pfProformas.filter(p => {
             if (PF_ESTAGIOS_FILTRO.includes(campo) && _pfEstagio(p.id) !== campo) return false;
             if (!termo) return true;
 
-            if (campo === 'numero')  return (p.numero || '').toLowerCase().includes(termo);
-            if (campo === 'cliente') return (p.parceiros?.razao_social || '').toLowerCase().includes(termo);
-            if (campo === 'cnpj' || campo === 'cpf') return (p.parceiros?.documento || '').toLowerCase().includes(termo);
+            const destino = _pfDestinatarioNome(p);
+            if (campo === 'numero')  return (p.codigo || '').toLowerCase().includes(termo);
+            if (campo === 'cliente') return destino.toLowerCase().includes(termo);
+            if (campo === 'cnpj' || campo === 'cpf') return (p.destinatario_doc || '').toLowerCase().includes(termo);
 
             // 'todos' e filtros de estágio: busca em todos os campos
-            const txt = [p.numero, p.parceiros?.razao_social, p.parceiros?.nome_fantasia, p.parceiros?.documento]
-                .filter(Boolean).join(' ').toLowerCase();
+            const txt = [p.codigo, destino, p.destinatario_doc].filter(Boolean).join(' ').toLowerCase();
             return txt.includes(termo);
         });
         pfRenderizar();

@@ -27,6 +27,18 @@
 }
 .btn-pdf:hover { background: #e11d48; color: #fff; }
 
+.btn-duplicar { background: #f5f3ff; color: #7c3aed; }
+.btn-duplicar:hover { background: #7c3aed; color: #fff; }
+
+/* ── Linha do botão "Gerar Processo"/"Ver Processo" — sempre visível,
+   mesmo com o card recolhido (antes só aparecia expandido) ────────── */
+.prof-card-processo-linha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
 /* ── Botão "Seguir com Processo?" ────────── */
 .btn-seguir-processo {
     background: #f0fdf4;

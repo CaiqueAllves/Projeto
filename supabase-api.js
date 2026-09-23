@@ -1525,7 +1525,9 @@ async function salvarPropostaDB(dados) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        // Generate codigo server-side to avoid collisions from client-side caching
+        // Gerado de novo aqui (em vez de confiar no valor calculado quando o
+        // formulário abriu) pra evitar colisão se o usuário deixar a aba
+        // aberta por muito tempo enquanto outras proformas são criadas.
         const ano  = new Date().getFullYear();
         const cont = await contarPropostas();
         const codigo = `PRO${ano}${String(cont + 1).padStart(6, '0')}`;
@@ -1573,7 +1575,6 @@ async function salvarPropostaDB(dados) {
                 destinatario_doc_tipo:   dados.destinatario_doc_tipo    || null,
                 validade_dias:           dados.validade_dias            || null,
                 obs_status:              dados.obs_status               || null,
-                pedido_id:               dados.pedido_id                || null,
             })
             .select('*')
             .single();
@@ -1599,16 +1600,16 @@ async function buscarProformaDB(id) {
     }
 }
 
-// Proforma→Processo é 1:1 — ao gerar o processo, a proforma sai do kanban de
-// "aprovado" e vai pra "encerrado" (etapa "finalizado" foi removida do kanban)
-// e não pode gerar outro processo.
+// Proforma→Processo é 1:N — cada Processo gerado atualiza processo_gerado_id
+// (referência ao mais recente, só um atalho de exibição), mas não força mais
+// o status da Proforma pra "encerrado": ela pode gerar quantos Processos
+// precisar, e o status do kanban vira só manual (arrastar o card).
 async function marcarProformaFinalizadaDB(proformaId, processoId) {
     try {
         const { error } = await supabaseClient
             .from('proformas')
             .update({
                 processo_gerado_id:   processoId,
-                status:               'encerrado',
                 status_atualizado_em: new Date().toISOString(),
             })
             .eq('id', proformaId);
@@ -1719,7 +1720,7 @@ async function buscarContasPagar(filtros = {}) {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_pagar')
-            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
+            .select('*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         // Filtro de período (revisão de performance) — só se aplica a contas
@@ -1741,7 +1742,7 @@ async function buscarContasPagarPeriodo(inicio, fim) {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_pagar')
-            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo)')
+            .select('*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo)')
             .gte('data_vencimento', inicio)
             .lte('data_vencimento', fim)
             .order('data_vencimento', { ascending: true });
@@ -1759,7 +1760,7 @@ async function salvarContaPagar(dados, id = null) {
         const payload = {
             descricao:       dados.descricao,
             parceiro_id:     dados.parceiro_id || null,
-            pedido_id:       dados.pedido_id || null,
+            proforma_id:     dados.proforma_id || null,
             processo_id:     dados.processo_id || null,
             valor:           dados.valor,
             moeda:           dados.moeda || 'BRL',
@@ -1818,7 +1819,7 @@ async function buscarContasReceber(filtros = {}) {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
+            .select('*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
             .order('data_vencimento', { ascending: true });
         if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         // Filtro de período (revisão de performance) — mesma lógica de
@@ -1839,7 +1840,7 @@ async function buscarContasReceberPeriodo(inicio, fim) {
         if (!usuario) return { sucesso: false, data: [] };
         let query = supabaseClient
             .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia), pedidos(numero), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
+            .select('*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
             .gte('data_vencimento', inicio)
             .lte('data_vencimento', fim)
             .order('data_vencimento', { ascending: true });
@@ -1857,7 +1858,7 @@ async function salvarContaReceber(dados, id = null) {
         const payload = {
             descricao:        dados.descricao,
             parceiro_id:      dados.parceiro_id || null,
-            pedido_id:        dados.pedido_id || null,
+            proforma_id:      dados.proforma_id || null,
             processo_id:      dados.processo_id || null,
             valor:            dados.valor,
             moeda:            dados.moeda || 'BRL',
@@ -1983,15 +1984,12 @@ window.supabaseAPI = {
     buscarPedidos,
     salvarPedido,
     atualizarStatusPedido,
-    avancarStatusPedido,
     excluirPedido,
-    vincularProformaAoPedido,
-    buscarPedidoIdPorProforma,
-    buscarDocumentosPedidos,
+    buscarDocumentosProformas,
     marcarDocumentoAssinado,
-    anexarDocumentoPedido,
-    limparAnexoDocumentoPedido,
-    excluirDocumentoPedido,
+    anexarDocumentoProforma,
+    limparAnexoDocumentoProforma,
+    excluirDocumentoProforma,
     // Financeiro
     buscarContasPagar,
     buscarContasPagarPeriodo,
@@ -2367,54 +2365,6 @@ async function atualizarStatusPedido(id, status) {
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-const PED_STATUS_ORDEM_AVANCO = ['aguardando', 'confirmado', 'em_producao', 'embarcado', 'entregue'];
-
-// Avança o status do pedido automaticamente ao gerar Proforma/Processo — nunca
-// retrocede um status já mais avançado (ex: pedido Embarcado não volta pra
-// Confirmado só porque gerou uma 2ª proforma) e nunca mexe num pedido Cancelado.
-async function avancarStatusPedido(pedidoId, statusAlvo) {
-    try {
-        const { data: ped, error: errBusca } = await supabaseClient
-            .from('pedidos').select('status').eq('id', pedidoId).single();
-        if (errBusca || !ped) return { sucesso: false, mensagem: errBusca?.message };
-
-        const atual = ped.status || 'aguardando';
-        if (atual === 'cancelado') return { sucesso: true };
-
-        const iAtual = PED_STATUS_ORDEM_AVANCO.indexOf(atual);
-        const iAlvo  = PED_STATUS_ORDEM_AVANCO.indexOf(statusAlvo);
-        if (iAlvo <= iAtual) return { sucesso: true };
-
-        return await atualizarStatusPedido(pedidoId, statusAlvo);
-    } catch (err) { return { sucesso: false, mensagem: err.message }; }
-}
-
-// Marca o pedido como vinculado à proforma gerada a partir dele, e avança o
-// status pra "Confirmado" (se ainda não tiver ido além disso).
-async function vincularProformaAoPedido(pedidoId, proformaId) {
-    try {
-        const { error } = await supabaseClient.from('pedidos')
-            .update({ proforma_id: proformaId, updated_at: new Date().toISOString() }).eq('id', pedidoId);
-        if (error) return { sucesso: false, mensagem: error.message };
-        await avancarStatusPedido(pedidoId, 'confirmado');
-        return { sucesso: true };
-    } catch (err) { return { sucesso: false, mensagem: err.message }; }
-}
-
-// Busca o pedido de origem de uma proforma (proformas.pedido_id, 1:N — um
-// pedido pode ter várias proformas, cada proforma sabe de qual pedido nasceu),
-// usado para propagar pedido_id ao processo gerado a partir dessa proforma.
-async function buscarPedidoIdPorProforma(proformaId) {
-    try {
-        const { data, error } = await supabaseClient.from('proformas')
-            .select('pedido_id')
-            .eq('id', proformaId).maybeSingle();
-        if (error) return { sucesso: false, mensagem: error.message, data: null };
-        if (!data?.pedido_id) return { sucesso: true, data: null };
-        return { sucesso: true, data: { id: data.pedido_id } };
-    } catch (err) { return { sucesso: false, mensagem: err.message, data: null }; }
-}
-
 // Exclusão suave (soft delete) — mesmo padrão de proformas/processos:
 // o pedido some da listagem mas fica recuperável por 7 dias no painel Excluídos.
 async function excluirPedido(id) {
@@ -2441,13 +2391,13 @@ async function excluirPedido(id) {
 // DOCUMENTOS DO PEDIDO (tela Documentos)
 // ========================================
 
-async function buscarDocumentosPedidos(pedidoIds) {
+async function buscarDocumentosProformas(proformaIds) {
     try {
-        if (!pedidoIds || !pedidoIds.length) return { sucesso: true, data: [] };
+        if (!proformaIds || !proformaIds.length) return { sucesso: true, data: [] };
         const { data, error } = await supabaseClient
-            .from('pedido_documentos')
+            .from('proforma_documentos')
             .select('*')
-            .in('pedido_id', pedidoIds);
+            .in('proforma_id', proformaIds);
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
@@ -2461,11 +2411,11 @@ async function buscarDocumentosPedidos(pedidoIds) {
 // anexado antes (pelo formulário de Processo, ou por marcarAnexado), deixe
 // os dois de fora que o arquivo já salvo é preservado (nem o desmarcar
 // assinatura apaga o anexo — só a condição de "assinado" muda).
-async function marcarDocumentoAssinado(pedidoId, tipoDocumento, assinado, assinadoPor = null, tipoLabel = null, arquivoPath = null, arquivoNome = null) {
+async function marcarDocumentoAssinado(proformaId, tipoDocumento, assinado, assinadoPor = null, tipoLabel = null, arquivoPath = null, arquivoNome = null) {
     try {
         const usuario = obterUsuarioLogado();
         const payload = {
-            pedido_id:      pedidoId,
+            proforma_id:    proformaId,
             tipo_documento: tipoDocumento,
             tipo_label:     tipoLabel,
             assinado:       assinado,
@@ -2480,37 +2430,27 @@ async function marcarDocumentoAssinado(pedidoId, tipoDocumento, assinado, assina
             payload.enviado_por  = usuario?.nome || usuario?.email || null;
             payload.enviado_em   = new Date().toISOString();
         }
-        let { data, error } = await supabaseClient
-            .from('pedido_documentos')
-            .upsert(payload, { onConflict: 'pedido_id,tipo_documento' })
+        const { data, error } = await supabaseClient
+            .from('proforma_documentos')
+            .upsert(payload, { onConflict: 'proforma_id,tipo_documento' })
             .select()
             .single();
-        // Migração database-pedido-documentos-anexo-envio.sql (coluna
-        // enviado_em) pode não ter rodado ainda — tenta de novo sem ela.
-        if (error && String(error.message).includes('enviado_em')) {
-            delete payload.enviado_em;
-            ({ data, error } = await supabaseClient
-                .from('pedido_documentos')
-                .upsert(payload, { onConflict: 'pedido_id,tipo_documento' })
-                .select()
-                .single());
-        }
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-// Anexa um arquivo a um documento do pedido SEM assinar — usado pelo botão
+// Anexa um arquivo a um documento da proforma SEM assinar — usado pelo botão
 // "Anexar" da seção Documentos do formulário de Processo (upload real via
 // Storage, path/nome gravados aqui, feito pela página chamadora). Se o
 // documento já existir (linha já criada por uma assinatura anterior, ou
-// por outro processo do mesmo pedido), só atualiza o anexo — não mexe em
+// por outro processo da mesma proforma), só atualiza o anexo — não mexe em
 // assinado/assinado_por/assinado_em.
-async function anexarDocumentoPedido(pedidoId, tipoDocumento, tipoLabel, arquivoPath, arquivoNome) {
+async function anexarDocumentoProforma(proformaId, tipoDocumento, tipoLabel, arquivoPath, arquivoNome) {
     try {
         const usuario = obterUsuarioLogado();
         const payload = {
-            pedido_id:      pedidoId,
+            proforma_id:    proformaId,
             tipo_documento: tipoDocumento,
             tipo_label:     tipoLabel,
             arquivo_path:   arquivoPath,
@@ -2520,21 +2460,11 @@ async function anexarDocumentoPedido(pedidoId, tipoDocumento, tipoLabel, arquivo
             atualizado_em:  new Date().toISOString(),
             atualizado_por: usuario?.id || null,
         };
-        let { data, error } = await supabaseClient
-            .from('pedido_documentos')
-            .upsert(payload, { onConflict: 'pedido_id,tipo_documento' })
+        const { data, error } = await supabaseClient
+            .from('proforma_documentos')
+            .upsert(payload, { onConflict: 'proforma_id,tipo_documento' })
             .select()
             .single();
-        // Migração database-pedido-documentos-anexo-envio.sql (coluna
-        // enviado_em) pode não ter rodado ainda — tenta de novo sem ela.
-        if (error && String(error.message).includes('enviado_em')) {
-            delete payload.enviado_em;
-            ({ data, error } = await supabaseClient
-                .from('pedido_documentos')
-                .upsert(payload, { onConflict: 'pedido_id,tipo_documento' })
-                .select()
-                .single());
-        }
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
@@ -2543,37 +2473,26 @@ async function anexarDocumentoPedido(pedidoId, tipoDocumento, tipoLabel, arquivo
 // Remove só o anexo (arquivo em si já apagado do Storage pela página
 // chamadora) — cascata pra "não assinado" junto, já que não faz sentido
 // um documento continuar "assinado" sem nenhum arquivo por trás.
-async function limparAnexoDocumentoPedido(pedidoId, tipoDocumento) {
+async function limparAnexoDocumentoProforma(proformaId, tipoDocumento) {
     try {
         const payload = {
             arquivo_path: null, arquivo_nome: null, enviado_por: null, enviado_em: null,
             assinado: false, assinado_por: null, assinado_em: null,
         };
-        let { data, error } = await supabaseClient
-            .from('pedido_documentos')
+        const { data, error } = await supabaseClient
+            .from('proforma_documentos')
             .update(payload)
-            .eq('pedido_id', pedidoId).eq('tipo_documento', tipoDocumento)
+            .eq('proforma_id', proformaId).eq('tipo_documento', tipoDocumento)
             .select()
             .maybeSingle();
-        // Migração database-pedido-documentos-anexo-envio.sql (coluna
-        // enviado_em) pode não ter rodado ainda — tenta de novo sem ela.
-        if (error && String(error.message).includes('enviado_em')) {
-            delete payload.enviado_em;
-            ({ data, error } = await supabaseClient
-                .from('pedido_documentos')
-                .update(payload)
-                .eq('pedido_id', pedidoId).eq('tipo_documento', tipoDocumento)
-                .select()
-                .maybeSingle());
-        }
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-async function excluirDocumentoPedido(id) {
+async function excluirDocumentoProforma(id) {
     try {
-        const { error } = await supabaseClient.from('pedido_documentos').delete().eq('id', id);
+        const { error } = await supabaseClient.from('proforma_documentos').delete().eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
