@@ -219,15 +219,40 @@ async function solicitarEntradaEmpresa(chaveEmpresa) {
 // EMPRESAS CADASTRADAS
 // ========================================
 
+// Endereço de coleta (parceiros.coleta_*, ver database-parceiros-coleta.sql) —
+// separado do endereço fiscal da empresa. Devolve as colunas prontas pra gravar.
+function _colunasColetaParceiro(dadosEmpresa) {
+    const c = dadosEmpresa.coleta || {};
+    return {
+        codigo:              dadosEmpresa.codigo || null,
+        coleta_mesmo_fiscal: !!c.mesmo_fiscal,
+        coleta_cep:          c.cep ? String(c.cep).replace(/\D/g, '') : null,
+        coleta_estado:       c.estado      || null,
+        coleta_cidade:       c.cidade      || null,
+        coleta_bairro:       c.bairro      || null,
+        coleta_endereco:     c.endereco    || null,
+        coleta_numero:       c.numero      || null,
+        coleta_complemento:  c.complemento || null,
+        coleta_horario:      c.horario     || null,
+        coleta_intervalo:    c.intervalo   || null,
+    };
+}
+
+// A migração de coleta/código pode ainda não ter rodado: se o banco reclamar de
+// uma coluna coleta_*/codigo, repete a gravação sem elas em vez de perder o cadastro.
+function _semColunasColeta(payload) {
+    const p = { ...payload };
+    Object.keys(p).forEach(k => { if (k.startsWith('coleta_') || k === 'codigo') delete p[k]; });
+    return p;
+}
+
 async function salvarEmpresaCadastrada(dadosEmpresa) {
     try {
         const usuarioLogado = obterUsuarioLogado();
         if (!usuarioLogado) return { sucesso: false, mensagem: 'Usuário não autenticado' };
 
         // 1. Inserir na tabela principal
-        const { data: parceiro, error: errParceiro } = await supabaseClient
-            .from('parceiros')
-            .insert({
+        const payloadParceiro = {
                 created_by:           usuarioLogado.id,
                 empresa_id:           usuarioLogado.empresa_id || null,
                 is_fabricante:        dadosEmpresa.tipos.includes('fabricante'),
@@ -251,12 +276,18 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
                 endereco:             dadosEmpresa.endereco    || null,
                 numero:               dadosEmpresa.numero      || null,
                 complemento:          dadosEmpresa.complemento || null,
+                bairro:               dadosEmpresa.bairro      || null,
                 site:                 dadosEmpresa.site                 || null,
                 horario_atendimento:  dadosEmpresa.horario_atendimento  || null,
                 tags:                 dadosEmpresa.tags || [],
-            })
-            .select('id')
-            .single();
+            ..._colunasColetaParceiro(dadosEmpresa),
+        };
+        let { data: parceiro, error: errParceiro } = await supabaseClient
+            .from('parceiros').insert(payloadParceiro).select('id').single();
+        if (errParceiro && /coleta_|codigo/.test(errParceiro.message || '')) {
+            ({ data: parceiro, error: errParceiro } = await supabaseClient
+                .from('parceiros').insert(_semColunasColeta(payloadParceiro)).select('id').single());
+        }
 
         if (errParceiro) {
             console.error('Erro ao salvar parceiro:', errParceiro);
@@ -358,9 +389,7 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
         // 1. Atualizar tabela principal
-        let updateQuery = supabaseClient
-            .from('parceiros')
-            .update({
+        const payloadParceiro = {
                 is_fabricante:        dadosEmpresa.tipos.includes('fabricante'),
                 is_cliente:           dadosEmpresa.tipos.includes('cliente'),
                 is_fornecedor:        dadosEmpresa.tipos.includes('fornecedor'),
@@ -382,17 +411,17 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
                 endereco:             dadosEmpresa.endereco    || null,
                 numero:               dadosEmpresa.numero      || null,
                 complemento:          dadosEmpresa.complemento || null,
+                bairro:               dadosEmpresa.bairro      || null,
                 site:                 dadosEmpresa.site                || null,
                 horario_atendimento:  dadosEmpresa.horario_atendimento || null,
                 tags:                 dadosEmpresa.tags || [],
-            })
-            .eq('id', id);
-
-        updateQuery = usuario.empresa_id
-            ? updateQuery.eq('empresa_id', usuario.empresa_id)
-            : updateQuery.eq('created_by', usuario.id);
-
-        const { error: errParceiro } = await updateQuery;
+            ..._colunasColetaParceiro(dadosEmpresa),
+        };
+        const filtrarDono = q => usuario.empresa_id ? q.eq('empresa_id', usuario.empresa_id) : q.eq('created_by', usuario.id);
+        let { error: errParceiro } = await filtrarDono(supabaseClient.from('parceiros').update(payloadParceiro).eq('id', id));
+        if (errParceiro && /coleta_|codigo/.test(errParceiro.message || '')) {
+            ({ error: errParceiro } = await filtrarDono(supabaseClient.from('parceiros').update(_semColunasColeta(payloadParceiro)).eq('id', id)));
+        }
 
         if (errParceiro) return { sucesso: false, mensagem: 'Erro ao atualizar: ' + errParceiro.message };
 

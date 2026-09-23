@@ -3466,3 +3466,216 @@ form {
     color: #374151;
     vertical-align: middle;
 }
+
+/* Modelo e Tipo (Empresa) lado a lado; quebra de linha em telas estreitas */
+.emp-modelo-tipo-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px 48px;
+    padding-bottom: 8px;
+}
+.emp-modelo-tipo-row .modelo-selector-group--inside { padding-bottom: 8px; }
+.emp-modelo-tipo-row #emp-tipo-group { margin: 0; }
+/* Versão compacta pra caber na mesma linha */
+.emp-modelo-tipo-row { gap: 12px 32px; }
+.emp-modelo-tipo-row .modelo-cards-group,
+.emp-modelo-tipo-row .tipo-cards-group { gap: 8px; }
+.emp-modelo-tipo-row .modelo-card-inner { padding: 8px 10px; min-width: 0; }
+.emp-modelo-tipo-row .modelo-card-inner strong { font-size: 12px; }
+.emp-modelo-tipo-row .modelo-card-inner small { font-size: 10px; }
+.emp-modelo-tipo-row .modelo-card-inner i { font-size: 15px; }
+.emp-modelo-tipo-row .tipo-card-inner { padding: 8px 12px; gap: 6px; font-size: 13px; }
+.emp-modelo-tipo-row { gap: 12px 20px; }
+.emp-modelo-tipo-row .modelo-card-inner { padding: 8px 8px; }
+.emp-modelo-tipo-row .tipo-card-inner { padding: 8px 9px; gap: 5px; font-size: 12.5px; }
+.emp-modelo-tipo-row .modelo-cards-group,
+.emp-modelo-tipo-row .tipo-cards-group { gap: 6px; }
+.emp-modelo-tipo-row #emp-tipo-group { width: auto; flex: 0 1 auto; }
+.emp-modelo-tipo-row #emp-tipo-group .tipo-cards-group { width: auto; flex-wrap: nowrap; }
+
+/* Ajuste fino: Tipo em grade 2x2 com a mesma altura dos cards de Modelo, rótulos iguais */
+.emp-modelo-tipo-row { align-items: stretch; }
+.emp-modelo-tipo-row #emp-tipo-group { display: flex; flex-direction: column; }
+.emp-modelo-tipo-row #emp-tipo-group > label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto);
+    margin-bottom: 12px;
+}
+.emp-modelo-tipo-row #emp-tipo-group .tipo-cards-group {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 8px;
+}
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card,
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner { height: 100%; box-sizing: border-box; }
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner { justify-content: center; }
+.emp-modelo-tipo-row #emp-tipo-group { gap: 0; padding: 0; }
+.emp-modelo-tipo-row #emp-tipo-group > label { margin: 0 0 12px; }
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card { display: block; width: 100%; }
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner { width: 100%; }
+
+/* Tipo em uma linha só, no mesmo formato (ícone em cima) e altura dos cards de Modelo */
+.emp-modelo-tipo-row #emp-tipo-group .tipo-cards-group {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card { width: auto; }
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner {
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    width: auto;
+    min-width: 84px;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner i { font-size: 15px; }
+.emp-modelo-tipo-row .modelo-selector-group--inside { padding-bottom: 0; }
+.emp-modelo-tipo-row { padding-bottom: 16px; }
+.emp-modelo-tipo-row #emp-tipo-group .tipo-cards-group { align-items: flex-start; }
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card,
+.emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner { height: 95px; }
+
+/* Cards de Modelo todos com a largura do card "Transportadora" */
+.emp-modelo-tipo-row .modelo-cards-group {
+    display: grid;
+    grid-template-columns: repeat(4, 106px);
+    gap: 6px;
+}
+.emp-modelo-tipo-row .modelo-card,
+.emp-modelo-tipo-row .modelo-card-inner { width: 100%; height: 100%; box-sizing: border-box; }
+.emp-modelo-tipo-row .modelo-card-inner { justify-content: center; gap: 2px; }
+.emp-modelo-tipo-row .modelo-card-inner strong { line-height: 1.2; }
+.emp-modelo-tipo-row .modelo-cards-group { grid-auto-rows: 95px; }
+.emp-modelo-tipo-row .modelo-card,
+.emp-modelo-tipo-row .modelo-card-inner { height: 95px; }
+
+/* Identificação da empresa: tudo em uma linha (Identificação, Número, Código, IE, [IM], SUFRAMA) */
+.form-row-ident {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+.form-row-ident {
+    grid-template-columns: 1fr 1.25fr 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+}
+.form-row-ident > .form-group > label { white-space: nowrap; font-size: 12.5px; }
+@media (max-width: 1100px) {
+    .form-row-ident { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: start; }
+}
+
+/* Endereço fiscal da empresa em uma linha só (País → Complemento) */
+.form-row-endereco {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+.form-row-endereco > .form-group { flex: 1 1 110px; min-width: 0; margin: 0; }
+.form-row-endereco > .form-group:has(#emp-endereco) { flex-grow: 1.8; }
+.form-row-endereco > .form-group:has(#emp-numero),
+.form-row-endereco > .form-group:has(#emp-cep) { flex-grow: .7; }
+.form-row-endereco > .form-group:has(#emp-pais) { flex-grow: 1.2; }
+.form-row-endereco label { white-space: nowrap; font-size: 12.5px; }
+@media (max-width: 1300px) {
+    .form-row-endereco { flex-wrap: wrap; align-items: flex-start; }
+    .form-row-endereco > .form-group { flex-basis: 150px; }
+}
+.form-row-endereco > .form-group:has(#emp-coleta-endereco) { flex-grow: 1.8; }
+.form-row-endereco > .form-group:has(#emp-coleta-numero),
+.form-row-endereco > .form-group:has(#emp-coleta-cep) { flex-grow: .7; }
+
+/* Rótulos iguais aos de "Razão Social" (14px / 600 / cor padrão do formulário) */
+.form-row-ident > .form-group > label,
+.form-row-endereco > .form-group > label,
+.emp-modelo-tipo-row .modelo-selector-label,
+.emp-modelo-tipo-row #emp-tipo-group > label {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgb(71, 85, 105);
+}
+.form-row-endereco > .form-group > label { overflow: hidden; text-overflow: ellipsis; }
+
+/* CEP antes do Estado (endereço fiscal), Estado mais estreito; a mensagem do CEP
+   fica fora do fluxo pra não desalinhar os campos da linha. O CEP some sozinho fora do Brasil. */
+.form-row-endereco > .form-group:has(#emp-cep) { flex-grow: .75; position: relative; }
+.form-row-endereco > .form-group:has(#emp-estado) { flex-grow: .45; }
+.form-row-endereco #emp-cep-msg { position: absolute; top: 100%; left: 0; white-space: nowrap; }
+
+/* Linha de identificação sempre numa linha só, com 3 a 6 campos visíveis (Company, Fabricante/Fornecedor, Outros) */
+.form-row-ident {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+.form-row-ident > .form-group { flex: 1 1 0; min-width: 0; margin: 0; }
+.form-row-ident > .form-group:has(#emp-documento) { flex-grow: 1.3; }
+.form-row-ident > .form-group > label { overflow: visible; }
+@media (max-width: 1300px) {
+    .form-row-ident { flex-wrap: wrap; align-items: flex-start; }
+    .form-row-ident > .form-group { flex: 1 1 170px; }
+}
+
+/* Dados Financeiros (Pagamento/Recebimento): 4 campos por linha; Endereço do Banco ocupa a linha toda */
+.form-grid.form-grid-fin {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.form-grid.form-grid-fin > .form-group.full-width { grid-column: 1 / -1; }
+@media (max-width: 1100px) {
+    .form-grid.form-grid-fin { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Informações Extras: Site | Rede Social | Horário de Atendimento | Tags em uma linha */
+.form-grid.form-grid-extras {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+}
+@media (max-width: 1100px) {
+    .form-grid.form-grid-extras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Horário de Atendimento | Horário de Coleta | Horário de Intervalo. O wrapper dos de coleta
+   some (display:none via JS na Transportadora) sem afetar o Atendimento. */
+.form-row-horarios {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+.form-row-horarios > #emp-coleta-horarios { display: contents; }
+@media (max-width: 900px) {
+    .form-row-horarios { grid-template-columns: 1fr; }
+}
+/* Informações Extras agora com 3 campos na linha (Site | Rede Social | Tags) */
+.form-grid.form-grid-extras { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* Fundo amarelo bem suave atrás do Endereço de Coleta + horários */
+.emp-coleta-bloco {
+    background: #fffbeb;
+    border: 1px solid #fef3c7;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+/* Transportadora: a coleta some, sobra só o Horário de Atendimento — sem caixa amarela */
+.emp-coleta-bloco:has(#emp-coleta-group[style*="display: none"]) {
+    background: transparent;
+    border-color: transparent;
+    padding: 0;
+}
+
+/* Variante: tooltip alinhado à direita do ícone e abrindo pra esquerda (balões perto da borda direita) */
+.info-balao.esquerda::after { left: auto; right: -8px; transform: none; }
+.info-balao.esquerda::before { left: auto; right: 0; transform: none; }

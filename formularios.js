@@ -200,6 +200,19 @@ async function salvarEmpresa(e) {
         endereco:            document.getElementById('emp-endereco')?.value         || '',
         numero:              document.getElementById('emp-numero')?.value           || '',
         complemento:         document.getElementById('emp-complemento')?.value     || '',
+        codigo:              document.getElementById('emp-codigo')?.value           || '',
+        coleta: {
+            mesmo_fiscal: !!document.getElementById('emp-coleta-mesmo')?.checked,
+            cep:          document.getElementById('emp-coleta-cep')?.value          || '',
+            estado:       document.getElementById('emp-coleta-estado')?.value       || '',
+            cidade:       document.getElementById('emp-coleta-cidade')?.value       || '',
+            bairro:       document.getElementById('emp-coleta-bairro')?.value       || '',
+            endereco:     document.getElementById('emp-coleta-endereco')?.value     || '',
+            numero:       document.getElementById('emp-coleta-numero')?.value       || '',
+            complemento:  document.getElementById('emp-coleta-complemento')?.value  || '',
+            horario:      document.getElementById('emp-coleta-horario')?.value      || '',
+            intervalo:    document.getElementById('emp-coleta-intervalo')?.value    || '',
+        },
         site:                document.getElementById('emp-site')?.value             || '',
         horario_atendimento: document.getElementById('emp-horario')?.value         || '',
         tags:                _empTagsArray,
@@ -5644,6 +5657,26 @@ function _empPreencherEdicao(dados) {
     set('emp-endereco',    dados.endereco);
     set('emp-complemento', dados.complemento);
     set('emp-codigo',      dados.codigo);
+
+    // Endereço de coleta (colunas parceiros.coleta_*, separado do fiscal)
+    set('emp-coleta-cep',         dados.coleta_cep);
+    set('emp-coleta-estado',      dados.coleta_estado);
+    set('emp-coleta-cidade',      dados.coleta_cidade);
+    set('emp-coleta-bairro',      dados.coleta_bairro);
+    set('emp-coleta-endereco',    dados.coleta_endereco);
+    set('emp-coleta-numero',      dados.coleta_numero);
+    set('emp-coleta-complemento', dados.coleta_complemento);
+    set('emp-coleta-horario',     dados.coleta_horario);
+    set('emp-coleta-intervalo',   dados.coleta_intervalo);
+    if (String(dados.coleta_numero || '').toUpperCase() === 'S/N') {
+        const snColeta = document.getElementById('emp-coleta-numero')?.parentElement?.querySelector('.sn-toggle-inner');
+        if (snColeta && !snColeta.classList.contains('ativo')) snColeta.click();
+    }
+    const coletaMesmoEl = document.getElementById('emp-coleta-mesmo');
+    if (coletaMesmoEl) {
+        coletaMesmoEl.checked = !!dados.coleta_mesmo_fiscal;
+        if (typeof toggleDadosColeta === 'function') toggleDadosColeta(coletaMesmoEl.checked);
+    }
 
     // País estrangeiro
     if (dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase())) {

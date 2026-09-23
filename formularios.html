@@ -77,6 +77,7 @@
                             </div>
                             <div class="section-content">
 
+                                <div class="emp-modelo-tipo-row">
                                 <!-- MODELO -->
                                 <div class="modelo-selector-group modelo-selector-group--inside">
                                     <label class="modelo-selector-label">Modelo <span class="required">*</span></label>
@@ -116,8 +117,6 @@
                                     </div>
                                 </div>
 
-                                <div class="form-rows">
-
                                     <!-- TIPO -->
                                     <div class="form-group" id="emp-tipo-group">
                                         <label>Tipo <span class="required">*</span></label>
@@ -152,9 +151,12 @@
                                             </label>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- LINHA 1: Identificação | Número de Identificação | Código Interno -->
-                                    <div class="form-row-3">
+                                <div class="form-rows">
+
+                                    <!-- LINHA 1: Identificação | Número | Código Interno | Inscrição Estadual | (Municipal) | SUFRAMA -->
+                                    <div class="form-row-ident">
                                             <div class="form-group">
                                                 <label for="emp-tipo-cadastro">Identificação da Empresa <span class="required">*</span></label>
                                                 <select id="emp-tipo-cadastro" name="tipo_cadastro">
@@ -187,10 +189,7 @@
                                                 </label>
                                                 <input type="text" id="emp-rntrc" name="rntrc" placeholder="00000000" maxlength="8" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                             </div>
-                                        </div>
 
-                                    <!-- LINHA 2: Inscrição Estadual | Inscrição Municipal | SUFRAMA -->
-                                    <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="emp-ie">Inscrição Estadual <span class="required">*</span></label>
                                                 <input type="text" id="emp-ie" name="inscricao_estadual" placeholder="000.000.00-0" inputmode="numeric" maxlength="15" oninput="this.value=_mascaraIE(this.value)">
@@ -204,6 +203,9 @@
                                                     <button type="button" class="btn-suframa-link" id="btn-suframa" onclick="toggleSuframa()">
                                                         <i class="fa-solid fa-plus" id="suframa-btn-icon"></i> SUFRAMA (Zona Franca)
                                                     </button>
+                                                    <span class="info-balao esquerda" data-tooltip="SUFRAMA — Superintendência da Zona Franca de Manaus. Informe o número de inscrição quando a empresa atua na Zona Franca de Manaus ou em Áreas de Livre Comércio (benefícios fiscais)." onclick="event.preventDefault();event.stopPropagation();">
+                                                        <i class="fa-solid fa-circle-info"></i>
+                                                    </span>
                                                 </label>
                                                 <input type="text" id="emp-suframa" name="suframa" placeholder="00000000" maxlength="11" style="display:none;" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                             </div>
@@ -221,8 +223,9 @@
                                         </div>
                                     </div>
 
-                                    <!-- País (oculto para empresa/transportadora) -->
-                                    <div class="form-group">
+                                    <!-- ENDEREÇO FISCAL (uma linha): País | CEP | Estado | Cidade | Bairro | Endereço | Número | Complemento -->
+                                    <div class="form-row-endereco">
+<div class="form-group">
                                         <label for="emp-pais">País <span class="required">*</span></label>
                                         <div class="autocomplete-wrapper">
                                             <input type="text" id="emp-pais" name="pais" placeholder="Digite para filtrar países..." autocomplete="off">
@@ -231,12 +234,8 @@
                                         </div>
                                     </div>
 
-                                    <!-- DIVISOR -->
-                                    <div class="coleta-divider"></div>
-
-                                    <!-- LINHA 4: CEP | Estado | Cidade | Bairro -->
-                                    <div class="form-row-4">
-                                            <div class="form-group">
+                                            <!-- CEP da empresa (endereço fiscal): preenche Estado/Cidade/Bairro/Endereço/Complemento da empresa, nunca os da coleta -->
+                                            <div class="form-group form-group-cep-empresa">
                                                 <label for="emp-cep">CEP <span class="required">*</span></label>
                                                 <input type="text" id="emp-cep" name="cep" placeholder="00000-000">
                                             </div>
@@ -252,10 +251,7 @@
                                                 <label for="emp-bairro">Bairro <span class="required">*</span></label>
                                                 <input type="text" id="emp-bairro" name="bairro" placeholder="Bairro">
                                             </div>
-                                        </div>
-
-                                    <!-- LINHA 5: Endereço | Número | Complemento -->
-                                    <div class="form-row-3">
+                                        
                                             <div class="form-group">
                                                 <label for="emp-endereco">Endereço <span class="required">*</span></label>
                                                 <input type="text" id="emp-endereco" name="endereco" placeholder="Rua, Av., etc.">
@@ -271,71 +267,81 @@
                                                 <label for="emp-complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
                                                 <input type="text" id="emp-complemento" name="complemento" placeholder="Sala, Andar, Bloco...">
                                             </div>
-                                        </div>
+                                        
+                                    </div>
 
                                     <!-- DIVISOR COLETA -->
                                     <div class="coleta-divider" id="emp-coleta-divider-wrapper"></div>
 
-                                    <!-- ENDEREÇO DE COLETA -->
-                                    <div id="emp-coleta-group">
-                                        <div class="coleta-label-row">
-                                            <label>Endereço de Coleta</label>
-                                            <label class="sn-toggle">
-                                                <input type="checkbox" id="emp-coleta-mesmo" onchange="toggleDadosColeta(this.checked)">
-                                                <span>Mesmo endereço Fiscal</span>
-                                            </label>
-                                        </div>
-                                        <!-- Resumo quando "Mesmo endereço fiscal" está ativo -->
-                                        <input type="text" id="emp-coleta" name="dados_coleta" placeholder="Endereço de coleta" readonly style="display:none; background:#f8faff;">
-                                        <!-- Linhas 6 e 7: campos expandidos -->
-                                        <div id="emp-coleta-campos" style="margin-top:10px; display:flex; flex-direction:column; gap:24px;">
-                                            <!-- LINHA 6: CEP | Estado | Cidade | Bairro -->
-                                            <div class="form-row-4">
-                                                <div class="form-group">
-                                                    <label for="emp-coleta-cep">CEP</label>
-                                                    <input type="text" id="emp-coleta-cep" name="coleta_cep" placeholder="00000-000" maxlength="9">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label for="emp-coleta-estado">Estado</label>
-                                                    <input type="text" id="emp-coleta-estado" name="coleta_estado" placeholder="Estado">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label for="emp-coleta-cidade">Cidade</label>
-                                                    <input type="text" id="emp-coleta-cidade" name="coleta_cidade" placeholder="Cidade">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label for="emp-coleta-bairro">Bairro</label>
-                                                    <input type="text" id="emp-coleta-bairro" name="coleta_bairro" placeholder="Bairro">
-                                                </div>
+                                    <!-- Bloco amarelo suave: Endereço de Coleta + horários -->
+                                    <div class="emp-coleta-bloco">
+                                        <!-- ENDEREÇO DE COLETA -->
+                                        <div id="emp-coleta-group">
+                                            <div class="coleta-label-row">
+                                                <label>Endereço de Coleta</label>
+                                                <label class="sn-toggle">
+                                                    <input type="checkbox" id="emp-coleta-mesmo" onchange="toggleDadosColeta(this.checked)">
+                                                    <span>Mesmo endereço Fiscal</span>
+                                                </label>
                                             </div>
-                                            <!-- LINHA 7: Endereço | Número | Complemento -->
-                                            <div class="form-row-3">
-                                                <div class="form-group">
-                                                    <label for="emp-coleta-endereco">Endereço</label>
-                                                    <input type="text" id="emp-coleta-endereco" name="coleta_endereco" placeholder="Rua, Av., etc.">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label for="emp-coleta-numero">Número</label>
-                                                    <div class="input-com-sn">
-                                                        <input type="text" id="emp-coleta-numero" name="coleta_numero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')">
-                                                        <span class="sn-toggle-inner" onclick="const n=document.getElementById('emp-coleta-numero');this.classList.toggle('ativo');const a=this.classList.contains('ativo');n.disabled=a;n.value=a?'S/N':'';n.placeholder=a?'':'Nº';">S/N</span>
+                                            <!-- Resumo quando "Mesmo endereço fiscal" está ativo -->
+                                            <input type="text" id="emp-coleta" name="dados_coleta" placeholder="Endereço de coleta" readonly style="display:none; background:#f8faff;">
+                                            <!-- Linhas 6 e 7: campos expandidos -->
+                                            <div id="emp-coleta-campos" style="margin-top:10px; display:flex; flex-direction:column; gap:24px;">
+                                                <!-- ENDEREÇO DE COLETA (uma linha): CEP | Estado | Cidade | Bairro | Endereço | Número | Complemento -->
+                                                <div class="form-row-endereco">
+                                                    <div class="form-group">
+                                                        <label for="emp-coleta-cep">CEP</label>
+                                                        <input type="text" id="emp-coleta-cep" name="coleta_cep" placeholder="00000-000" maxlength="9">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="emp-coleta-estado">Estado</label>
+                                                        <input type="text" id="emp-coleta-estado" name="coleta_estado" placeholder="Estado">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="emp-coleta-cidade">Cidade</label>
+                                                        <input type="text" id="emp-coleta-cidade" name="coleta_cidade" placeholder="Cidade">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="emp-coleta-bairro">Bairro</label>
+                                                        <input type="text" id="emp-coleta-bairro" name="coleta_bairro" placeholder="Bairro">
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label for="emp-coleta-endereco">Endereço</label>
+                                                        <input type="text" id="emp-coleta-endereco" name="coleta_endereco" placeholder="Rua, Av., etc.">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="emp-coleta-numero">Número</label>
+                                                        <div class="input-com-sn">
+                                                            <input type="text" id="emp-coleta-numero" name="coleta_numero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')">
+                                                            <span class="sn-toggle-inner" onclick="const n=document.getElementById('emp-coleta-numero');this.classList.toggle('ativo');const a=this.classList.contains('ativo');n.disabled=a;n.value=a?'S/N':'';n.placeholder=a?'':'Nº';">S/N</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="emp-coleta-complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
+                                                        <input type="text" id="emp-coleta-complemento" name="coleta_complemento" placeholder="Sala, Andar, Bloco...">
                                                     </div>
                                                 </div>
-                                                <div class="form-group">
-                                                    <label for="emp-coleta-complemento">Complemento <span class="campo-opcional">(opcional)</span></label>
-                                                    <input type="text" id="emp-coleta-complemento" name="coleta_complemento" placeholder="Sala, Andar, Bloco...">
-                                                </div>
                                             </div>
                                         </div>
-                                        <!-- LINHA 8: Horário de Coleta | Horário de Intervalo (sempre visível) -->
-                                        <div class="form-row-3" id="emp-coleta-horarios" style="margin-top:16px;">
+
+                                        <!-- LINHA: Horário de Atendimento | Horário de Coleta | Horário de Intervalo
+                                             (Atendimento sempre visível; os de coleta somem junto com a coleta na Transportadora via #emp-coleta-horarios) -->
+                                        <div class="form-row-horarios">
                                             <div class="form-group">
-                                                <label for="emp-coleta-horario">Horário de Coleta</label>
-                                                <input type="text" id="emp-coleta-horario" name="coleta_horario" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" oninput="const v=this.value.replace(/\D/g,'').slice(0,8);let o=v.slice(0,2);if(v.length>2)o+=':'+v.slice(2,4);if(v.length>4)o+=' às '+v.slice(4,6);if(v.length>6)o+=':'+v.slice(6,8);this.value=o;">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="emp-coleta-intervalo">Horário de Intervalo</label>
-                                                <input type="text" id="emp-coleta-intervalo" name="coleta_intervalo" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" oninput="const v=this.value.replace(/\D/g,'').slice(0,8);let o=v.slice(0,2);if(v.length>2)o+=':'+v.slice(2,4);if(v.length>4)o+=' às '+v.slice(4,6);if(v.length>6)o+=':'+v.slice(6,8);this.value=o;">
+                                            <label for="emp-horario">Horário de Atendimento</label>
+                                            <input type="text" id="emp-horario" name="horario_atendimento" placeholder="Ex: Seg–Sex, 08h às 18h">
+                                        </div>
+                                            <div id="emp-coleta-horarios">
+                                                <div class="form-group">
+                                                    <label for="emp-coleta-horario">Horário de Coleta</label>
+                                                    <input type="text" id="emp-coleta-horario" data-no-caps name="coleta_horario" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" oninput="const v=this.value.replace(/\D/g,'').slice(0,8);let o=v.slice(0,2);if(v.length>2)o+=':'+v.slice(2,4);if(v.length>4)o+=' às '+v.slice(4,6);if(v.length>6)o+=':'+v.slice(6,8);this.value=o;">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="emp-coleta-intervalo">Horário de Intervalo</label>
+                                                    <input type="text" id="emp-coleta-intervalo" data-no-caps name="coleta_intervalo" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" oninput="const v=this.value.replace(/\D/g,'').slice(0,8);let o=v.slice(0,2);if(v.length>2)o+=':'+v.slice(2,4);if(v.length>4)o+=' às '+v.slice(4,6);if(v.length>6)o+=':'+v.slice(6,8);this.value=o;">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -486,7 +492,7 @@
                                     <div class="fin-bloco-titulo">
                                         <i class="fa-solid fa-arrow-up-from-bracket"></i> Pagamento
                                     </div>
-                                    <div class="form-grid">
+                                    <div class="form-grid form-grid-fin">
 
                                         <div class="form-group">
                                             <label for="fin-pag-forma">Forma de Pagamento</label>
@@ -517,11 +523,6 @@
                                         </div>
 
                                         <div class="form-group">
-                                            <label for="fin-pag-banco">Banco</label>
-                                            <input type="text" id="fin-pag-banco" name="fin_pag_banco" placeholder="Nome ou código do banco">
-                                        </div>
-
-                                        <div class="form-group">
                                             <label for="fin-pag-tipo-conta">Tipo de Conta</label>
                                             <select id="fin-pag-tipo-conta" name="fin_pag_tipo_conta">
                                                 <option value="">Selecione</option>
@@ -529,6 +530,11 @@
                                                 <option value="poupanca">Conta Poupança</option>
                                                 <option value="pagamento">Conta de Pagamento</option>
                                             </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-pag-banco">Banco</label>
+                                            <input type="text" id="fin-pag-banco" name="fin_pag_banco" placeholder="Nome ou código do banco">
                                         </div>
 
                                         <div class="form-group">
@@ -563,7 +569,7 @@
                                     <div class="fin-bloco-titulo">
                                         <i class="fa-solid fa-arrow-down-to-bracket"></i> Recebimento
                                     </div>
-                                    <div class="form-grid">
+                                    <div class="form-grid form-grid-fin">
 
                                         <div class="form-group">
                                             <label for="fin-rec-forma">Forma de Recebimento</label>
@@ -586,11 +592,6 @@
                                         </div>
 
                                         <div class="form-group">
-                                            <label for="fin-rec-banco">Banco</label>
-                                            <input type="text" id="fin-rec-banco" name="fin_rec_banco" placeholder="Nome ou código do banco">
-                                        </div>
-
-                                        <div class="form-group">
                                             <label for="fin-rec-tipo-conta">Tipo de Conta</label>
                                             <select id="fin-rec-tipo-conta" name="fin_rec_tipo_conta">
                                                 <option value="">Selecione</option>
@@ -598,6 +599,11 @@
                                                 <option value="poupanca">Conta Poupança</option>
                                                 <option value="pagamento">Conta de Pagamento</option>
                                             </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="fin-rec-banco">Banco</label>
+                                            <input type="text" id="fin-rec-banco" name="fin_rec_banco" placeholder="Nome ou código do banco">
                                         </div>
 
                                         <div class="form-group">
@@ -639,7 +645,7 @@
                                 <i class="fa-solid fa-chevron-down section-arrow"></i>
                             </div>
                             <div class="section-content">
-                                <div class="form-grid">
+                                <div class="form-grid form-grid-extras">
 
                                     <div class="form-group">
                                         <label for="emp-site">Site</label>
@@ -651,12 +657,8 @@
                                         <input type="text" id="emp-rede-social" name="rede_social" placeholder="@empresa ou URL do perfil">
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="emp-horario">Horário de Atendimento</label>
-                                        <input type="text" id="emp-horario" name="horario_atendimento" placeholder="Ex: Seg–Sex, 08h às 18h">
-                                    </div>
 
-                                    <div class="form-group full-width">
+                                    <div class="form-group">
                                         <label>Tags</label>
                                         <div class="tags-input-wrapper">
                                             <input type="text" id="emp-tags-input" placeholder="Digite e pressione Enter ou clique em +" autocomplete="off">
@@ -904,7 +906,7 @@
 
                                     <!-- ORIGEM -->
 
-                                    <!-- Linha 1: País | CEP | Estado | Cidade -->
+                                    <!-- Linha 1: País | Estado | Cidade -->
                                     <div class="form-group full-width">
                                         <div class="form-row-4">
                                             <div class="form-group">
@@ -1126,7 +1128,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 1: País | CEP | Estado | Cidade -->
+                                    <!-- Linha 1: País | Estado | Cidade -->
                                     <div class="form-group full-width">
                                         <div class="form-row-4">
                                             <div class="form-group">
