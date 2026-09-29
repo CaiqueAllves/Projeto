@@ -217,18 +217,25 @@ function verificarAutoLogin() {
 // Ex.: if (!(await confirmarAcao('Excluir este item?', { perigo: true, confirmar: 'Excluir' }))) return;
 function confirmarAcao(mensagem, opcoes = {}) {
     return new Promise(resolve => {
-        const { titulo = 'Confirmar ação', confirmar = 'Confirmar', cancelar = 'Cancelar', perigo = false } = opcoes;
+        // aceite: texto de uma caixa "li e aceito" — quando informado, o botão de
+        // confirmar só libera depois de marcada (Enter também não passa por cima).
+        // link: { texto, acao } — terceira opção só em texto, abaixo dos botões;
+        // executa a ação (no próprio clique, pra window.open não virar popup
+        // bloqueado) e fecha o aviso como "não confirmado".
+        const { titulo = 'Confirmar ação', confirmar = 'Confirmar', cancelar = 'Cancelar', perigo = false, aceite = null, link = null } = opcoes;
         const overlay = document.createElement('div');
         overlay.className = 'confirmar-overlay';
         overlay.innerHTML = `
             <div class="confirmar-caixa" role="alertdialog" aria-modal="true">
-                <div class="confirmar-icone ${perigo ? 'confirmar-icone--perigo' : ''}"><i class="fa-solid ${perigo ? 'fa-triangle-exclamation' : 'fa-circle-question'}"></i></div>
+                <div class="confirmar-icone ${perigo ? 'confirmar-icone--perigo' : aceite ? 'confirmar-icone--aviso' : ''}"><i class="fa-solid ${perigo || aceite ? 'fa-triangle-exclamation' : 'fa-circle-question'}"></i></div>
                 <h3 class="confirmar-titulo"></h3>
                 <p class="confirmar-msg"></p>
+                ${aceite ? '<label class="confirmar-aceite"><input type="checkbox"><span></span></label>' : ''}
                 <div class="confirmar-acoes">
                     <button type="button" class="confirmar-btn confirmar-btn--cancelar"></button>
                     <button type="button" class="confirmar-btn ${perigo ? 'confirmar-btn--perigo' : 'confirmar-btn--ok'}"></button>
                 </div>
+                ${link ? '<button type="button" class="confirmar-link"></button>' : ''}
             </div>`;
         overlay.querySelector('.confirmar-titulo').textContent = titulo;
         overlay.querySelector('.confirmar-msg').textContent = mensagem;
@@ -236,6 +243,12 @@ function confirmarAcao(mensagem, opcoes = {}) {
         const btnOk = overlay.querySelector('.confirmar-btn:not(.confirmar-btn--cancelar)');
         btnCancelar.textContent = cancelar;
         btnOk.textContent = confirmar;
+        const caixaAceite = overlay.querySelector('.confirmar-aceite input');
+        if (caixaAceite) {
+            overlay.querySelector('.confirmar-aceite span').textContent = aceite;
+            btnOk.disabled = true;
+            caixaAceite.addEventListener('change', () => { btnOk.disabled = !caixaAceite.checked; });
+        }
 
         const fechar = resultado => {
             document.removeEventListener('keydown', teclas, true);
@@ -245,14 +258,19 @@ function confirmarAcao(mensagem, opcoes = {}) {
         };
         const teclas = e => {
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fechar(false); }
-            else if (e.key === 'Enter' && document.activeElement !== btnCancelar) { e.preventDefault(); e.stopPropagation(); fechar(true); }
+            else if (e.key === 'Enter' && document.activeElement !== btnCancelar && document.activeElement !== caixaAceite && !btnOk.disabled) { e.preventDefault(); e.stopPropagation(); fechar(true); }
         };
         btnCancelar.addEventListener('click', () => fechar(false));
-        btnOk.addEventListener('click', () => fechar(true));
+        btnOk.addEventListener('click', () => { if (!btnOk.disabled) fechar(true); });
+        const btnLink = overlay.querySelector('.confirmar-link');
+        if (btnLink) {
+            btnLink.textContent = link.texto;
+            btnLink.addEventListener('click', () => { try { link.acao?.(); } finally { fechar(false); } });
+        }
         overlay.addEventListener('mousedown', e => { if (e.target === overlay) fechar(false); });
         document.addEventListener('keydown', teclas, true);
         document.body.appendChild(overlay);
-        (perigo ? btnCancelar : btnOk).focus(); // ação destrutiva: foco começa no Cancelar
+        (perigo || caixaAceite ? btnCancelar : btnOk).focus(); // ação destrutiva/com aceite: foco começa no Cancelar
     });
 }
 

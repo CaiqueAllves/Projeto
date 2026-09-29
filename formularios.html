@@ -727,6 +727,14 @@
                 <div class="form-card">
                     <form id="form-processo" onsubmit="salvarProcesso(event)">
                     <input type="hidden" id="proc-id">
+                    <!-- Aceite de início sem a Proforma assinada (ver database-processos-sem-assinatura.sql) -->
+                    <input type="hidden" id="proc-sem-assinatura" value="">
+                    <input type="hidden" id="proc-sem-assinatura-por" value="">
+                    <input type="hidden" id="proc-sem-assinatura-em" value="">
+                    <div class="proc-sem-assinatura-faixa" id="proc-sem-assinatura-faixa" style="display:none;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span id="proc-sem-assinatura-texto"></span>
+                    </div>
 
                         <!-- RESUMO DO PROCESSO -->
                         <div class="processo-resumo" id="processo-resumo">
@@ -755,128 +763,130 @@
                                 <i class="fa-solid fa-chevron-down section-arrow"></i>
                             </div>
                             <div class="section-content">
-                                <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+                                <div class="form-grid">
 
-                                    <!-- Linha 1: Código da Proforma | Tipo | Propósito -->
-                                    <div class="form-group">
-                                        <label for="proc-codigo">Código da Proforma</label>
-                                        <div class="autocomplete-wrapper">
-                                            <input type="text" id="proc-codigo" name="codigo" placeholder="Digite ou selecione uma proforma..." autocomplete="off">
-                                            <input type="hidden" id="proc-proposta-id">
-                                            <div class="autocomplete-list" id="proc-codigo-lista"></div>
+                                    <!-- Linha 1: Código da Proforma -->
+                                    <div class="form-group full-width">
+                                        <div class="prop-linha-4">
+                                            <div class="form-group">
+                                                <label for="proc-codigo">Código da Proforma</label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="proc-codigo" name="codigo" placeholder="Digite ou selecione uma proforma..." autocomplete="off">
+                                                    <input type="hidden" id="proc-proposta-id">
+                                                    <div class="autocomplete-list" id="proc-codigo-lista"></div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label for="proc-tipo">Tipo <span class="required">*</span></label>
-                                        <select id="proc-tipo" name="tipo">
-                                            <option value="">Selecione...</option>
-                                            <option value="exportacao_direta">Exportação Direta</option>
-                                            <option value="exportacao_indireta">Exportação Indireta</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="proc-proposito">Propósito</label>
-                                        <select id="proc-proposito" name="proposito">
-                                            <option value="">Selecione...</option>
-                                            <option value="vendas">Vendas</option>
-                                            <option value="amostra">Amostra</option>
-                                            <option value="troca">Troca</option>
-                                            <option value="doacao">Doação</option>
-                                            <option value="conserto">Conserto / Reparo</option>
-                                            <option value="retorno">Retorno</option>
-                                            <option value="exposicao">Exposição / Feira</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- Linha 2: Emissor | Identificação da Empresa | Número de Identificação -->
-                                    <div class="form-group">
-                                        <label>Emissor <span class="required">*</span></label>
-                                        <div class="emissor-toggle">
-                                            <label class="emissor-opcao" id="emissor-opcao-usuario">
-                                                <input type="radio" name="proc-emissor-tipo" value="usuario" id="proc-emissor-usuario" checked>
-                                                <i class="fa-solid fa-user"></i> Usuário
-                                            </label>
-                                            <label class="emissor-opcao" id="emissor-opcao-terceiro">
-                                                <input type="radio" name="proc-emissor-tipo" value="terceiro" id="proc-emissor-terceiro">
-                                                <i class="fa-solid fa-building"></i> Terceiro
-                                            </label>
+                                    <!-- Linha 2: Emissor | Remetente | Identificação da Empresa | Número de Identificação -->
+                                    <div class="form-group full-width">
+                                        <div class="prop-linha-4">
+                                            <div class="form-group">
+                                                <label>Emissor <span class="required">*</span></label>
+                                                <div class="emissor-toggle">
+                                                    <label class="emissor-opcao" id="emissor-opcao-usuario">
+                                                        <input type="radio" name="proc-emissor-tipo" value="usuario" id="proc-emissor-usuario">
+                                                        <i class="fa-solid fa-user"></i> Usuário
+                                                    </label>
+                                                    <label class="emissor-opcao" id="emissor-opcao-terceiro">
+                                                        <input type="radio" name="proc-emissor-tipo" value="terceiro" id="proc-emissor-terceiro">
+                                                        <i class="fa-solid fa-building"></i> Terceiro
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <!-- Remetente = empresa cadastrada (quando Emissor = Terceiro) -->
+                                            <div class="form-group" id="proc-emissor-empresa-group" style="display:none;">
+                                                <label for="proc-cliente">Remetente <span class="required">*</span></label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="proc-cliente" name="cliente" placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
+                                                    <input type="hidden" id="proc-cliente-id">
+                                                    <div class="autocomplete-list" id="proc-cliente-lista"></div>
+                                                </div>
+                                            </div>
+                                            <!-- Remetente = vindo da Proforma de origem (quando Emissor = Usuário) -->
+                                            <div class="form-group" id="proc-emissor-pedido-remetente-group" style="display:none;">
+                                                <label for="proc-emissor-pedido-remetente">Remetente</label>
+                                                <input type="text" id="proc-emissor-pedido-remetente" name="pedido_remetente" placeholder="Remetente" readonly>
+                                            </div>
+                                            <div class="form-group" id="proc-documento-tipo-group">
+                                                <label for="proc-documento-tipo">Identificação da Empresa</label>
+                                                <select id="proc-documento-tipo" name="documento_tipo" disabled title="Preenchido automaticamente a partir da empresa">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="cnpj">CNPJ</option>
+                                                    <option value="cpf">CPF</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-documento">
+                                                    Número de Identificação
+                                                    <span class="info-tooltip" data-tooltip="Documento de identificação da empresa: CNPJ (Cadastro Nacional de Pessoa Jurídica) e CPF (Cadastro de Pessoa Física)">
+                                                        <i class="fa-solid fa-circle-info"></i>
+                                                    </span>
+                                                </label>
+                                                <input type="text" id="proc-documento" name="documento" placeholder="Preenchido automaticamente" readonly>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-group" id="proc-documento-tipo-group">
-                                        <label for="proc-documento-tipo">Identificação da Empresa</label>
-                                        <select id="proc-documento-tipo" name="documento_tipo">
-                                            <option value="cnpj">CNPJ</option>
-                                            <option value="cpf">CPF</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- Empresa vinculada — visível apenas quando Terceiro, ocupa o slot de Identificação da Empresa -->
-                                    <div class="form-group" id="proc-emissor-empresa-group" style="display:none;">
-                                        <label for="proc-cliente">Remetente <span class="required">*</span></label>
-                                        <div class="autocomplete-wrapper">
-                                            <input type="text" id="proc-cliente" name="cliente" placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
-                                            <input type="hidden" id="proc-cliente-id">
-                                            <div class="autocomplete-list" id="proc-cliente-lista"></div>
+                                    <!-- Linha 3: Tipo | Propósito | Modal | Incoterm -->
+                                    <div class="form-group full-width">
+                                        <div class="prop-linha-4">
+                                            <div class="form-group">
+                                                <label for="proc-tipo">Tipo <span class="required">*</span></label>
+                                                <select id="proc-tipo" name="tipo">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="exportacao_direta">Exportação Direta</option>
+                                                    <option value="exportacao_indireta">Exportação Indireta</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-proposito">Propósito</label>
+                                                <select id="proc-proposito" name="proposito">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="vendas">Vendas</option>
+                                                    <option value="amostra">Amostra</option>
+                                                    <option value="troca">Troca</option>
+                                                    <option value="doacao">Doação</option>
+                                                    <option value="conserto">Conserto / Reparo</option>
+                                                    <option value="retorno">Retorno</option>
+                                                    <option value="exposicao">Exposição / Feira</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-modal">Modal</label>
+                                                <select id="proc-modal" name="modal">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="aereo">Aéreo</option>
+                                                    <option value="maritimo">Marítimo</option>
+                                                    <option value="terrestre">Terrestre</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-incoterm">Incoterm</label>
+                                                <div class="incoterm-field-row">
+                                                <select id="proc-incoterm" name="incoterm" disabled title="Selecione o modal primeiro">
+                                                    <option value="">Selecione...</option>
+                                                    <optgroup label="Todos os modais">
+                                                        <option>EXW</option>
+                                                        <option>FCA</option>
+                                                        <option>CPT</option>
+                                                        <option>CIP</option>
+                                                        <option>DAP</option>
+                                                        <option>DPU</option>
+                                                        <option>DDP</option>
+                                                    </optgroup>
+                                                    <optgroup label="Exclusivo Marítimo">
+                                                        <option>FAS</option>
+                                                        <option>FOB</option>
+                                                        <option>CFR</option>
+                                                        <option>CIF</option>
+                                                    </optgroup>
+                                                </select>
+                                                <span class="incoterm-balao" id="proc-incoterm-info" style="display:none;"><i class="fa-solid fa-circle-info"></i></span>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    <!-- Remetente do Pedido de origem — visível apenas quando Usuário, ocupa o slot de Identificação da Empresa -->
-                                    <div class="form-group" id="proc-emissor-pedido-remetente-group" style="display:none;">
-                                        <label for="proc-emissor-pedido-remetente">Remetente</label>
-                                        <input type="text" id="proc-emissor-pedido-remetente" name="pedido_remetente" placeholder="Remetente do pedido de origem" readonly>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="proc-documento">
-                                            Número de Identificação
-                                            <span class="info-tooltip" data-tooltip="Documento de identificação da empresa: CNPJ (Cadastro Nacional de Pessoa Jurídica) e CPF (Cadastro de Pessoa Física)">
-                                                <i class="fa-solid fa-circle-info"></i>
-                                            </span>
-                                        </label>
-                                        <input type="text" id="proc-documento" name="documento" placeholder="Preenchido automaticamente" readonly>
-                                    </div>
-
-                                    <!-- Linha 3: Incoterm | Modal -->
-                                    <div class="form-group">
-                                        <label for="proc-incoterm">
-                                            Incoterm
-                                            <span class="info-tooltip" data-tooltip="Incoterms são termos internacionais de comércio que definem as responsabilidades entre comprador e vendedor: quem paga o frete, seguro, desembaraço e até onde vai a responsabilidade de cada parte.">
-                                                <i class="fa-solid fa-circle-info"></i>
-                                            </span>
-                                        </label>
-                                        <select id="proc-incoterm" name="incoterm">
-                                            <option value="">Selecione...</option>
-                                            <optgroup label="Todos os modais">
-                                                <option>EXW</option>
-                                                <option>FCA</option>
-                                                <option>CPT</option>
-                                                <option>CIP</option>
-                                                <option>DAP</option>
-                                                <option>DPU</option>
-                                                <option>DDP</option>
-                                            </optgroup>
-                                            <optgroup label="Exclusivo Marítimo">
-                                                <option>FAS</option>
-                                                <option>FOB</option>
-                                                <option>CFR</option>
-                                                <option>CIF</option>
-                                            </optgroup>
-                                        </select>
-                                        <div class="incoterm-info" id="incoterm-info"></div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="proc-modal">Modal</label>
-                                        <select id="proc-modal" name="modal" disabled title="Selecione um Incoterm primeiro">
-                                            <option value="">Selecione...</option>
-                                            <option value="aereo">Aéreo</option>
-                                            <option value="maritimo">Marítimo</option>
-                                            <option value="terrestre">Terrestre</option>
-                                        </select>
-                                        <div class="incoterm-info" id="modal-info"></div>
                                     </div>
 
                                     <!-- Linha 4: Observações (largura total) -->
@@ -1197,6 +1207,27 @@
                                         </div>
                                     </div>
 
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO: Produtos do Processo -->
+                        <div class="form-section active">
+                            <div class="section-title" onclick="toggleSection(this)">
+                                <i class="fa-solid fa-list-ul"></i>
+                                Produtos do Processo
+                                <i class="fa-solid fa-chevron-down section-arrow"></i>
+                            </div>
+                            <div class="section-content">
+                                <div class="prop-itens-wrapper">
+                                    <div id="proc-itens-body"></div>
+                                    <div class="prop-itens-footer">
+                                        <span class="prop-total-label">Total Geral</span>
+                                        <span class="prop-total-valor" id="proc-total-geral">—</span>
+                                    </div>
+                                    <button type="button" class="btn-add-item" onclick="itemAdicionar('proc')">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Produto
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1744,29 +1775,71 @@
                             <div class="section-content">
                                 <div class="form-grid">
 
-                                    <!-- Linha 1: Idioma | Tipo | Propósito -->
+                                    <!-- Linha 1: Código da Proforma -->
                                     <div class="form-group full-width">
-                                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-
-                                            <!-- Idioma -->
+                                        <div class="prop-linha-4">
                                             <div class="form-group" style="margin-bottom:0;">
-                                                <label for="prop-idioma">Idioma
-                                                    <span class="info-balao" data-tooltip="Idioma em que esta Proforma será gerada/documentada."><i class="fa-solid fa-circle-info"></i></span>
-                                                </label>
-                                                <div style="display:flex; flex-direction:row; gap:12px;">
-                                                    <select id="prop-idioma" name="idioma" onchange="prodToggleIdiomaOutro(this)" style="flex:1;">
-                                                        <option value="de">Alemão</option>
-                                                        <option value="zh">Chinês</option>
-                                                        <option value="es">Espanhol</option>
-                                                        <option value="fr">Francês</option>
-                                                        <option value="en">Inglês</option>
-                                                        <option value="pt" selected>Português</option>
-                                                        <option value="outro">Outro</option>
-                                                    </select>
-                                                    <input type="text" id="prop-idioma-outro" name="idioma_outro" placeholder="Qual idioma?" style="display:none; flex:1;">
-                                                </div>
+                                                <label>Código da Proforma</label>
+                                                <input type="hidden" id="prop-id">
+                                                <input type="hidden" id="prop-codigo" name="codigo">
+                                                <div class="prop-codigo-campo" id="prop-codigo-display" title="Gerado automaticamente pelo sistema">—</div>
                                             </div>
+                                        </div>
+                                    </div>
 
+                                    <!-- Linha 2: Emissor | Remetente | Identificação da Empresa | Número de Identificação -->
+                                    <div class="form-group full-width">
+                                        <div class="prop-linha-4">
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label>Emissor <span class="required">*</span></label>
+                                        <div class="emissor-toggle">
+                                            <label class="emissor-opcao" id="prop-emissor-opcao-usuario">
+                                                <input type="radio" name="prop-emissor-tipo" value="usuario" id="prop-emissor-usuario">
+                                                <i class="fa-solid fa-user"></i> Usuário
+                                            </label>
+                                            <label class="emissor-opcao" id="prop-emissor-opcao-terceiro">
+                                                <input type="radio" name="prop-emissor-tipo" value="terceiro" id="prop-emissor-terceiro">
+                                                <i class="fa-solid fa-building"></i> Terceiro
+                                            </label>
+                                        </div>
+                                            </div>
+                                    <!-- Remetente = própria empresa (quando Emissor = Usuário) -->
+                                    <div class="form-group" id="prop-usuario-empresa-group">
+                                        <label for="prop-usuario-empresa">Remetente</label>
+                                        <input type="text" id="prop-usuario-empresa" name="usuario_empresa" placeholder="Empresa do usuário" readonly>
+                                    </div>
+                                    <!-- Remetente = empresa cadastrada (quando Emissor = Terceiro) -->
+                                    <div class="form-group" id="prop-emissor-empresa-group" style="display:none;">
+                                        <label for="prop-cliente">Remetente <span class="required">*</span></label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-cliente" name="cliente" placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
+                                            <input type="hidden" id="prop-cliente-id">
+                                            <div class="autocomplete-list" id="prop-cliente-lista"></div>
+                                        </div>
+                                    </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-documento-tipo">Identificação da Empresa <span class="required">*</span></label>
+                                                <select id="prop-documento-tipo" name="documento_tipo" disabled title="Preenchido automaticamente a partir da empresa">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="cnpj">CNPJ</option>
+                                                    <option value="cpf">CPF</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group" id="prop-documento-group" style="margin-bottom:0;">
+                                                <label for="prop-documento">
+                                                    Número de Identificação <span class="required">*</span>
+                                                    <span class="info-balao" data-tooltip="Documento de identificação fiscal da empresa: CNPJ (Cadastro Nacional de Pessoa Jurídica) ou CPF (Cadastro Pessoa Física).">
+                                                        <i class="fa-solid fa-circle-info"></i>
+                                                    </span>
+                                                </label>
+                                                <input type="text" id="prop-documento" name="documento" placeholder="Digite o número do documento" maxlength="18" autocomplete="off">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha 3: Tipo | Propósito | Modal | Incoterm -->
+                                    <div class="form-group full-width">
+                                        <div class="prop-linha-4">
                                             <!-- Tipo -->
                                             <div class="form-group" style="margin-bottom:0;">
                                                 <label for="prop-tipo">Tipo <span class="required">*</span></label>
@@ -1776,7 +1849,6 @@
                                                     <option value="exportacao_indireta">Exportação Indireta</option>
                                                 </select>
                                             </div>
-
                                             <!-- Propósito -->
                                             <div class="form-group" style="margin-bottom:0;">
                                                 <label for="prop-proposito">Propósito <span class="required">*</span></label>
@@ -1791,53 +1863,6 @@
                                                     <option value="exposicao">Exposição / Feira</option>
                                                 </select>
                                             </div>
-
-                                        </div>
-                                    </div>
-
-                                    <!-- Emissor -->
-                                    <div class="form-group full-width">
-                                        <label>Emissor <span class="required">*</span></label>
-                                        <div class="emissor-toggle">
-                                            <label class="emissor-opcao" id="prop-emissor-opcao-usuario">
-                                                <input type="radio" name="prop-emissor-tipo" value="usuario" id="prop-emissor-usuario" checked>
-                                                <i class="fa-solid fa-user"></i> Usuário
-                                            </label>
-                                            <label class="emissor-opcao" id="prop-emissor-opcao-terceiro">
-                                                <input type="radio" name="prop-emissor-tipo" value="terceiro" id="prop-emissor-terceiro">
-                                                <i class="fa-solid fa-building"></i> Terceiro
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <!-- Empresa do Usuário (somente quando Usuário) -->
-                                    <div class="form-group" id="prop-usuario-empresa-group">
-                                        <label for="prop-usuario-empresa">Empresa</label>
-                                        <input type="text" id="prop-usuario-empresa" name="usuario_empresa" placeholder="Empresa do usuário" readonly>
-                                    </div>
-
-                                    <!-- Remetente (somente quando Terceiro) -->
-                                    <div class="form-group" id="prop-emissor-empresa-group" style="display:none;">
-                                        <label for="prop-cliente">Remetente <span class="required">*</span></label>
-                                        <div class="autocomplete-wrapper">
-                                            <input type="text" id="prop-cliente" name="cliente" placeholder="Digite para filtrar empresas cadastradas..." autocomplete="off">
-                                            <input type="hidden" id="prop-cliente-id">
-                                            <div class="autocomplete-list" id="prop-cliente-lista"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Número TIN -->
-                                    <div class="form-group" id="prop-documento-group">
-                                        <label for="prop-documento">
-                                            Número de Identificação <span class="required">*</span>
-                                            <span class="info-balao" data-tooltip="Documento de identificação fiscal da empresa: CNPJ (Cadastro Nacional de Pessoa Jurídica) ou CPF (Cadastro Pessoa Física).">
-                                                <i class="fa-solid fa-circle-info"></i>
-                                            </span>
-                                        </label>
-                                        <input type="text" id="prop-documento" name="documento" placeholder="Digite o número do documento" maxlength="18" autocomplete="off">
-                                        <input type="hidden" id="prop-documento-tipo" name="documento_tipo">
-                                    </div>
-
                                     <!-- Modal (primeiro) -->
                                     <div class="form-group">
                                         <label for="prop-modal">Modal <span class="required">*</span></label>
@@ -1848,7 +1873,6 @@
                                             <option value="terrestre">Terrestre</option>
                                         </select>
                                     </div>
-
                                     <!-- Incoterm (bloqueado até Modal) -->
                                     <div class="form-group">
                                         <label for="prop-incoterm">Incoterm <span class="required">*</span></label>
@@ -1867,6 +1891,64 @@
                                                 </optgroup>
                                             </select>
                                             <span class="incoterm-balao" id="prop-incoterm-info" style="display:none;"><i class="fa-solid fa-circle-info"></i></span>
+                                        </div>
+                                    </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Destinatário -->
+                                    <div class="form-group full-width">
+                                        <div class="empresa-destino-header">
+                                            <div class="empresa-destino-toggle">
+                                                <button type="button" class="emp-dest-btn ativo" id="prop-btn-emp-dest-cadastrada" onclick="propToggleEmpresaDestino('cadastrada')">
+                                                    <i class="fa-solid fa-magnifying-glass"></i> Buscar cadastrado
+                                                </button>
+                                                <button type="button" class="emp-dest-btn" id="prop-btn-emp-dest-manual" onclick="propAbrirCadastroNovaEmpresa()">
+                                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Cadastrar novo
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="emp-dest-redirect-msg" id="prop-emp-dest-redirect-msg" style="display:none;">
+                                        <i class="fa-solid fa-circle-info"></i>
+                                        <div>Uma nova aba foi aberta com a tela de <a href="cadastros.html" target="_blank" rel="opener">cadastro de empresas</a>. Após realizar o cadastro, retorne aqui e use <strong>Buscar cadastrado</strong> para localizar a empresa.</div>
+                                    </div>
+
+                                    <div class="form-group full-width emp-dest-aviso" id="prop-emp-dest-aviso-mesmo-cnpj" style="display:none;">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        A empresa de destino não pode ser a mesma do remetente da proposta.
+                                    </div>
+
+                                    <!-- Linha 4: Destinatário | Identificação da Empresa | Número de Identificação -->
+                                    <div class="form-group full-width">
+                                        <div class="prop-linha-4 prop-linha-dest">
+                                    <div class="form-group" id="prop-emp-dest-busca-group">
+                                        <label for="prop-emp-dest-busca">Destinatário <span class="required">*</span></label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-emp-dest-busca" name="emp_dest_busca" placeholder="Buscar empresa cadastrada..." autocomplete="off">
+                                            <input type="hidden" id="prop-emp-dest-id">
+                                            <div class="autocomplete-list" id="prop-emp-dest-lista"></div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" id="prop-emp-dest-razao-group" style="display:none;">
+                                        <label for="prop-emp-dest-razao">Razão Social <span class="required">*</span></label>
+                                        <input type="text" id="prop-emp-dest-razao" name="emp_dest_razao" placeholder="Razão social da empresa">
+                                    </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-emp-dest-doc-tipo">Identificação da Empresa</label>
+                                                <select id="prop-emp-dest-doc-tipo" disabled title="Preenchido automaticamente a partir da empresa">
+                                                    <option value="cnpj">CNPJ</option>
+                                                    <option value="cpf">CPF</option>
+                                                    <option value="tin">TIN</option>
+                                                    <option value="ein">EIN</option>
+                                                    <option value="vat">VAT</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group" id="prop-emp-dest-doc-group" style="margin-bottom:0;">
+                                                <label for="prop-emp-dest-doc">Número de Identificação</label>
+                                                <input type="text" id="prop-emp-dest-doc" name="emp_dest_doc" placeholder="Número de identificação fiscal">
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1944,77 +2026,48 @@
                                         <input type="text" id="prop-fronteira-entrada" name="fronteira_entrada" placeholder="Ex: Ciudad del Este...">
                                     </div>
 
-                                    <!-- DIVISOR: Destinatário -->
-                                    <div class="form-group full-width origem-destino-divisor"></div>
-
-                                    <!-- Destinatário -->
-                                    <div class="form-group full-width">
-                                        <div class="empresa-destino-header">
-                                            <div class="empresa-destino-toggle">
-                                                <button type="button" class="emp-dest-btn ativo" id="prop-btn-emp-dest-cadastrada" onclick="propToggleEmpresaDestino('cadastrada')">
-                                                    <i class="fa-solid fa-magnifying-glass"></i> Buscar cadastrado
-                                                </button>
-                                                <button type="button" class="emp-dest-btn" id="prop-btn-emp-dest-manual" onclick="propAbrirCadastroNovaEmpresa()">
-                                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Cadastrar novo
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="emp-dest-redirect-msg" id="prop-emp-dest-redirect-msg" style="display:none;">
-                                        <i class="fa-solid fa-circle-info"></i>
-                                        <div>Uma nova aba foi aberta com a tela de <a href="cadastros.html" target="_blank">cadastro de empresas</a>. Após realizar o cadastro, retorne aqui e use <strong>Buscar cadastrado</strong> para localizar a empresa.</div>
-                                    </div>
-
-                                    <div class="form-group full-width emp-dest-aviso" id="prop-emp-dest-aviso-mesmo-cnpj" style="display:none;">
-                                        <i class="fa-solid fa-triangle-exclamation"></i>
-                                        A empresa de destino não pode ser a mesma do remetente da proposta.
-                                    </div>
-
-                                    <div class="form-group" id="prop-emp-dest-busca-group">
-                                        <label for="prop-emp-dest-busca">Destinatário <span class="required">*</span></label>
-                                        <div class="autocomplete-wrapper">
-                                            <input type="text" id="prop-emp-dest-busca" name="emp_dest_busca" placeholder="Buscar empresa cadastrada..." autocomplete="off">
-                                            <input type="hidden" id="prop-emp-dest-id">
-                                            <div class="autocomplete-list" id="prop-emp-dest-lista"></div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group" id="prop-emp-dest-razao-group" style="display:none;">
-                                        <label for="prop-emp-dest-razao">Razão Social <span class="required">*</span></label>
-                                        <input type="text" id="prop-emp-dest-razao" name="emp_dest_razao" placeholder="Razão social da empresa">
-                                    </div>
-                                    <div class="form-group" id="prop-emp-dest-doc-group" style="display:none;">
-                                        <label for="prop-emp-dest-doc">Número TIN <span class="required">*</span></label>
-                                        <div class="doc-tipo-wrapper">
-                                            <select id="prop-emp-dest-doc-tipo">
-                                                <option value="cnpj">CNPJ</option>
-                                                <option value="cpf">CPF</option>
-                                                <option value="tin">TIN</option>
-                                                <option value="ein">EIN</option>
-                                                <option value="vat">VAT</option>
-                                            </select>
-                                            <input type="text" id="prop-emp-dest-doc" name="emp_dest_doc" placeholder="Número de identificação fiscal">
-                                        </div>
-                                    </div>
-
                                     <!-- DIVISOR: Datas -->
                                     <div class="form-group full-width origem-destino-divisor"></div>
-                                    <div class="form-group">
-                                        <label for="prop-data-emissao">Data de Criação</label>
-                                        <input type="date" id="prop-data-emissao" name="data_emissao" readonly>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="prop-validade-dias">Validade da Proposta <span class="required">*</span></label>
-                                        <div class="validade-wrapper">
-                                            <select id="prop-validade-dias" name="validade_dias">
-                                                <option value="">Selecione...</option>
-                                                <option value="2">2 dias</option>
-                                                <option value="5">5 dias</option>
-                                                <option value="7">7 dias</option>
-                                                <option value="15">15 dias</option>
-                                                <option value="custom">Escolher</option>
-                                            </select>
-                                            <input type="date" id="prop-data-validade" name="data_validade" readonly placeholder="Data de vencimento">
+                                    <!-- Linha: Idioma | Data de Criação | Validade da Proposta | Data de Validade -->
+                                    <div class="form-group full-width">
+                                        <div class="prop-linha-4">
+                                            <!-- Idioma -->
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-idioma">Idioma
+                                                    <span class="info-balao baixo" data-tooltip="Idioma em que esta Proforma será gerada/documentada."><i class="fa-solid fa-circle-info"></i></span>
+                                                </label>
+                                                <div style="display:flex; flex-direction:row; gap:12px;">
+                                                    <select id="prop-idioma" name="idioma" onchange="prodToggleIdiomaOutro(this)" style="flex:1;">
+                                                        <option value="de">Alemão</option>
+                                                        <option value="zh">Chinês</option>
+                                                        <option value="es">Espanhol</option>
+                                                        <option value="fr">Francês</option>
+                                                        <option value="en">Inglês</option>
+                                                        <option value="pt" selected>Português</option>
+                                                        <option value="outro">Outro</option>
+                                                    </select>
+                                                    <input type="text" id="prop-idioma-outro" name="idioma_outro" placeholder="Qual idioma?" style="display:none; flex:1;">
+                                                </div>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-data-emissao">Data de Criação</label>
+                                                <input type="date" id="prop-data-emissao" name="data_emissao" readonly>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-validade-dias">Validade da Proposta <span class="required">*</span></label>
+                                                <select id="prop-validade-dias" name="validade_dias">
+                                                    <option value="">Selecione...</option>
+                                                    <option value="2">2 dias</option>
+                                                    <option value="5">5 dias</option>
+                                                    <option value="7">7 dias</option>
+                                                    <option value="15">15 dias</option>
+                                                    <option value="custom">Escolher</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="prop-data-validade">Data de Validade</label>
+                                                <input type="date" id="prop-data-validade" name="data_validade" readonly placeholder="Data de vencimento">
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="form-group full-width prod-obs-wrapper">
@@ -2027,22 +2080,15 @@
                                         </div>
                                     </div>
 
-                                    <!-- Código da Proforma -->
-                                    <div class="form-group full-width">
-                                        <input type="hidden" id="prop-id">
-                                        <input type="hidden" id="prop-codigo" name="codigo">
-                                        <p class="prop-codigo-exibicao">Código da Proforma: <strong id="prop-codigo-display">—</strong></p>
-                                    </div>
-
                                 </div>
                             </div>
                         </div>
 
-                        <!-- SEÇÃO: Itens da Proforma -->
+                        <!-- SEÇÃO: Produtos da Proforma -->
                         <div class="form-section active">
                             <div class="section-title" onclick="toggleSection(this)">
                                 <i class="fa-solid fa-list-ul"></i>
-                                Itens da Proforma <span class="required" style="font-size:13px;">*</span>
+                                Produtos da Proforma <span class="required" style="font-size:13px;">*</span>
                                 <i class="fa-solid fa-chevron-down section-arrow"></i>
                             </div>
                             <div class="section-content">
@@ -2052,8 +2098,8 @@
                                         <span class="prop-total-label">Total Geral</span>
                                         <span class="prop-total-valor" id="prop-total-geral">—</span>
                                     </div>
-                                    <button type="button" class="btn-add-item" onclick="propAdicionarItem()">
-                                        <i class="fa-solid fa-plus"></i> Adicionar Item
+                                    <button type="button" class="btn-add-item" onclick="itemAdicionar('prop')">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Produto
                                     </button>
                                 </div>
                             </div>
@@ -2409,7 +2455,7 @@
                                                     <label for="prod-ncm">
                                                         Código NCM
                                                         <span class="info-balao" data-tooltip="Nomenclatura Comum do Mercosul, é um código numérico de 8 dígitos que identifica a natureza de uma mercadoria e serve para determinar exatamente os impostos, exigências administrativas e estatísticas de cada operação."><i class="fa-solid fa-circle-info"></i></span>
-                                                        <a href="apoio.html?tab=ncm" target="_blank" title="Consultar tabela NCM" style="margin-left:4px; color:#4776ec; font-size:13px; text-decoration:none; vertical-align:middle;">
+                                                        <a href="apoio.html?tab=ncm" target="_blank" rel="opener" title="Consultar tabela NCM" style="margin-left:4px; color:#4776ec; font-size:13px; text-decoration:none; vertical-align:middle;">
                                                             <i class="fa-solid fa-book-open"></i>
                                                         </a>
                                                     </label>

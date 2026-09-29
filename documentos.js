@@ -84,7 +84,24 @@ async function docCarregar() {
         (_docSalvos[d.proforma_id] ||= {})[d.tipo_documento] = d;
     });
 
+    // Vindo do aviso "Proforma não assinada" (link "Assinar Proposta"):
+    // já abre com a proforma expandida e rola até ela.
+    const alvo = new URLSearchParams(window.location.search).get('proforma_id');
+    if (alvo && _docProformas.some(p => String(p.id) === alvo)) {
+        _docExpandidos.add(alvo);
+        _docRecolhidos.delete(alvo);
+    }
+
     docRenderizar();
+
+    if (alvo) {
+        const linha = document.getElementById('doc-linha-' + alvo);
+        if (linha) {
+            linha.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            linha.classList.add('doc-linha-destaque');
+            setTimeout(() => linha.classList.remove('doc-linha-destaque'), 2500);
+        }
+    }
 }
 
 function _docColunaProcesso(p) {
@@ -124,8 +141,14 @@ function _docUrlArquivo(path) {
     } catch { return null; }
 }
 
+// Telas do próprio sistema (formularios.html) abrem com rel="opener": a sessão
+// de login fica no sessionStorage, que só é copiado pra aba nova quando ela
+// mantém o vínculo com a aba que abriu (o Chrome trata target=_blank como
+// noopener por padrão, e aí a aba nova caía no login). Arquivos (Storage,
+// outro domínio) continuam com noopener.
 function _docLink(href, texto, titulo, icone) {
-    return `<a class="doc-link" href="${_docEsc(href)}" target="_blank" rel="noopener" title="${_docEsc(titulo)}" onclick="event.stopPropagation()">${icone ? `<i class="fa-solid ${icone}"></i> ` : ''}${_docEsc(texto)}</a>`;
+    const interno = /^formularios\.html/i.test(href || '');
+    return `<a class="doc-link" href="${_docEsc(href)}" target="_blank" rel="${interno ? 'opener' : 'noopener'}" title="${_docEsc(titulo)}" onclick="event.stopPropagation()">${icone ? `<i class="fa-solid ${icone}"></i> ` : ''}${_docEsc(texto)}</a>`;
 }
 
 // Nome do documento: link pro arquivo anexado (upload/assinado) ou, se não houver,
@@ -296,7 +319,7 @@ function _docRenderLinhaProforma({ proforma, remetente, destinatario, docRowsFil
     const proc = _docColunaProcesso(proforma);
 
     const linhaResumo = `
-        <tr class="doc-linha-pedido">
+        <tr class="doc-linha-pedido" id="doc-linha-${proforma.id}">
             <td class="doc-col-seta">
                 <button class="doc-toggle" onclick="docToggleLinha('${proforma.id}', ${expandido})" title="${expandido ? 'Recolher' : 'Expandir'}">
                     <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>

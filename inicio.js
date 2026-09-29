@@ -385,10 +385,10 @@ function _pendRenderLinha(item) {
 
     const detalhes = [];
     if (item.proformaPendente) {
-        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-invoice"></i> Proforma está <strong>pendente</strong>. <a href="formularios.html?tab=proposta&id=${proformaId}" target="_blank">Abrir proforma</a></div>`);
+        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-invoice"></i> Proforma está <strong>pendente</strong>. <a href="formularios.html?tab=proposta&id=${proformaId}" target="_blank" rel="opener">Abrir proforma</a></div>`);
     }
     item.processosAbertos.forEach(pr => {
-        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-diagram-project"></i> Processo <strong>${pr.numero_processo || '—'}</strong> está aberto. <a href="formularios.html?tab=processo&id=${pr.id}" target="_blank">Abrir processo</a></div>`);
+        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-diagram-project"></i> Processo <strong>${pr.numero_processo || '—'}</strong> está aberto. <a href="formularios.html?tab=processo&id=${pr.id}" target="_blank" rel="opener">Abrir processo</a></div>`);
     });
     if (item.temDocPendente) {
         detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-signature"></i> Documentos: <strong>${item.docsAssinados}/${item.docsFeitos}</strong> assinados. <a href="documentos.html">Abrir documentos</a></div>`);

@@ -1770,6 +1770,13 @@ form small {
 .confirmar-btn--ok { background:linear-gradient(135deg,#4776ec,#7c3aed); color:#fff; }
 .confirmar-btn--perigo { background:#dc2626; color:#fff; }
 .confirmar-btn:hover { filter:brightness(.95); }
+.confirmar-btn:disabled { opacity:.45; cursor:not-allowed; filter:none; }
+.confirmar-aceite { display:flex; align-items:flex-start; gap:8px; margin:-6px 0 18px; padding:10px 12px; border:1px solid #fde68a; border-radius:10px; background:#fffbeb; text-align:left; font-size:12.5px; line-height:1.45; color:#78350f; cursor:pointer; }
+.confirmar-aceite input { margin-top:2px; flex-shrink:0; width:15px; height:15px; accent-color:#4776ec; cursor:pointer; }
+.confirmar-link { display:inline-block; margin-top:14px; padding:2px 4px; border:none; background:none; color:#4776ec; font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.confirmar-link:hover { color:#3659c9; }
+.confirmar-link:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(71,118,236,.35); border-radius:4px; }
+.confirmar-icone--aviso { background:#fffbeb; color:#d97706; }
 .confirmar-saindo { opacity:0; transition:opacity .14s; }
 @keyframes confirmarFundo { from { opacity:0; } to { opacity:1; } }
 @keyframes confirmarEntra { from { transform:translateY(12px) scale(.96); opacity:0; } to { transform:none; opacity:1; } }

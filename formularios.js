@@ -776,6 +776,11 @@ function salvarProcesso(e) {
     }
 
     const emissorTipo = document.querySelector('input[name="proc-emissor-tipo"]:checked')?.value;
+    if (!emissorTipo) {
+        mostrarNotificacao('Selecione o Emissor (Usuário ou Terceiro) antes de salvar.', 'warning');
+        document.getElementById('proc-emissor-usuario')?.closest('.emissor-toggle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
     if (emissorTipo === 'terceiro' && !document.getElementById('proc-cliente-id')?.value) {
         mostrarNotificacao('Selecione o Remetente antes de salvar.', 'warning');
         document.getElementById('proc-cliente')?.focus();
@@ -895,6 +900,32 @@ async function confirmarSalvar() {
     }
 }
 
+// Aceite de início sem a Proforma assinada: preenche os campos ocultos
+// (enviados no salvamento) e mostra a faixa de aviso no topo do formulário.
+function _procAplicarSemAssinatura(p, codigoProforma) {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+    const faixa = document.getElementById('proc-sem-assinatura-faixa');
+    if (!p?.sem_assinatura) {
+        set('proc-sem-assinatura', ''); set('proc-sem-assinatura-por', ''); set('proc-sem-assinatura-em', '');
+        if (faixa) faixa.style.display = 'none';
+        return;
+    }
+    set('proc-sem-assinatura',     '1');
+    set('proc-sem-assinatura-por', p.sem_assinatura_confirmado_por);
+    set('proc-sem-assinatura-em',  p.sem_assinatura_confirmado_em);
+    const quando = p.sem_assinatura_confirmado_em
+        ? new Date(p.sem_assinatura_confirmado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '—';
+    const texto = document.getElementById('proc-sem-assinatura-texto');
+    if (texto) {
+        texto.innerHTML = '';
+        const b = document.createElement('strong');
+        b.textContent = `Processo iniciado sem a Proforma ${codigoProforma || ''} assinada.`.replace('  ', ' ');
+        texto.append(b, ` Aceite confirmado por ${p.sem_assinatura_confirmado_por || '—'} em ${quando}.`);
+    }
+    if (faixa) faixa.style.display = '';
+}
+
 async function procCarregarEdicao(id) {
     const res = await window.supabaseAPI.buscarProcessoPorId(id);
     if (!res.sucesso || !res.data) {
@@ -912,13 +943,17 @@ async function procCarregarEdicao(id) {
     set('proc-proposito',       p.proposito);
     set('proc-documento-tipo',  p.documento_tipo);
     set('proc-documento',       p.documento);
-    set('proc-incoterm',        p.incoterm);
-    fire('proc-incoterm', 'change');
+    if (!p.documento_tipo) _procSincronizarTipoDoc();
     set('proc-modal',           p.modal);
     fire('proc-modal', 'change');
+    set('proc-incoterm',        p.incoterm);
+    fire('proc-incoterm', 'change');
     set('proc-observacoes',     p.observacoes);
-    set('proc-codigo',          p.numero_processo);
 
+    if (p.emissor_tipo !== 'terceiro') {
+        const radioU = document.getElementById('proc-emissor-usuario');
+        if (radioU) { radioU.checked = true; fire('proc-emissor-usuario', 'change'); }
+    }
     if (p.emissor_tipo === 'terceiro') {
         const radio = document.getElementById('proc-emissor-terceiro');
         if (radio) { radio.checked = true; fire('proc-emissor-terceiro', 'change'); }
@@ -1033,6 +1068,25 @@ async function procCarregarEdicao(id) {
     // Proforma de origem
     set('proc-proposta-id', p.proforma_id);
 
+    // "Código da Proforma" mostra o código da proforma de origem (antes mostrava,
+    // por engano, o número do próprio processo).
+    let codigoProf = '';
+    if (p.proforma_id) {
+        const { data: pf } = await supabaseClient.from('proformas').select('codigo').eq('id', p.proforma_id).maybeSingle();
+        codigoProf = pf?.codigo || '';
+    }
+    set('proc-codigo', codigoProf);
+
+    // Faixa "iniciado sem a Proforma assinada" (se foi o caso)
+    if (p.sem_assinatura) _procAplicarSemAssinatura(p, codigoProf);
+
+    // Produtos do Processo
+    if (Array.isArray(p.itens) && p.itens.length > 0) {
+        await Promise.all([_carregarMoedas(), _carregarUnidades()]);
+        _procItens = _itensNormalizar(p.itens);
+        itensRenderizar('proc');
+    }
+
     // Documentos: anexos reais já existentes pra proforma (pode ter vindo
     // deste processo ou de outro processo da mesma proforma).
     if (p.proforma_id) await _docCarregarAnexosProcesso(p.proforma_id);
@@ -1071,6 +1125,9 @@ function _coletarDadosProcesso() {
     return {
         // Dados do Processo
         proforma_id:            document.getElementById('proc-proposta-id')?.value || null,
+        sem_assinatura:                document.getElementById('proc-sem-assinatura')?.value === '1',
+        sem_assinatura_confirmado_por: document.getElementById('proc-sem-assinatura-por')?.value || null,
+        sem_assinatura_confirmado_em:  document.getElementById('proc-sem-assinatura-em')?.value  || null,
         tipo:                   v('proc-tipo'),
         proposito:              v('proc-proposito'),
         emissor_tipo:            document.querySelector('input[name="proc-emissor-tipo"]:checked')?.value || 'usuario',
@@ -1147,6 +1204,14 @@ function _coletarDadosProcesso() {
 
         // Etapas
         etapas: (typeof _etapas !== 'undefined') ? _etapas : [],
+        // Produtos do Processo (exige database-processos-itens.sql; ver supabase-api.js)
+        itens:       _procItens.filter(it => (it.produto || '').trim()),
+        valor_total: _procItens.reduce((t, it) => t + (it.qtd * it.preco || 0), 0) || null,
+        moeda:       (() => {
+            const desc = _procItens.find(it => it.moeda)?.moeda;
+            const m = _acMoedas.find(x => x.descricao === desc);
+            return m?.sigla || 'USD';
+        })(),
 
         // Documentos (numeração — sem arquivos anexados)
         documentos: {
@@ -1276,7 +1341,11 @@ function salvarProposta(e) {
     checar('prop-tipo',      'Selecione o Tipo da proforma.');
     checar('prop-proposito', 'Selecione o Propósito da proforma.');
 
-    const emissorTipo = document.querySelector('input[name="prop-emissor-tipo"]:checked')?.value || 'usuario';
+    const emissorTipo = document.querySelector('input[name="prop-emissor-tipo"]:checked')?.value;
+    if (!emissorTipo) {
+        erros.push('Selecione o Emissor (Usuário ou Terceiro).');
+        if (!primeiroEl) primeiroEl = document.getElementById('prop-emissor-usuario')?.closest('.emissor-toggle');
+    }
     if (emissorTipo === 'terceiro') {
         checar('prop-cliente', 'Selecione o Remetente (Terceiro).');
     }
@@ -1514,12 +1583,6 @@ let _acAeroportos  = [];
 let _acPortos      = [];
 let _acMoedas      = [];
 let _acUnidades    = [];
-
-const MODAL_INFO = {
-    aereo:     'Transporte por via aérea. Mais rápido e seguro, indicado para cargas urgentes, de alto valor ou perecíveis. Custo mais elevado. Utiliza aeroportos como ponto de embarque e desembarque.',
-    maritimo:  'Transporte por via marítima. Ideal para grandes volumes e cargas pesadas. Geralmente mais lento, porém com menor custo por tonelada. Utiliza navios e portos.',
-    terrestre: 'Transporte por estradas em caminhões ou carretas. Flexível e com ampla cobertura territorial. Muito utilizado em operações domésticas e no Mercosul.',
-};
 
 const INCOTERMS_INFO = {
     EXW: 'O vendedor disponibiliza a mercadoria em seu estabelecimento. Toda a responsabilidade de transporte e custos é do comprador.',
@@ -3110,13 +3173,36 @@ async function _procCarregarEmpresaPropria() {
     return _procEmpresaPropria;
 }
 
+// Endereço (Origem/Destino) do Processo a partir da empresa escolhida —
+// sempre sobrescreve: trocar de empresa implica trocar de endereço.
+function _procPreencherEndereco(lado, emp) {
+    if (!emp) return;
+    const cepDig = String(emp.cep || '').replace(/\D/g, '');
+    const valores = {
+        cep:         cepDig.length === 8 ? cepDig.replace(/^(\d{5})(\d{3})$/, '$1-$2') : (emp.cep || ''),
+        estado:      emp.estado      || '',
+        cidade:      emp.cidade      || '',
+        bairro:      emp.bairro      || '',
+        endereco:    emp.endereco    || '',
+        numero:      emp.numero      || '',
+        complemento: emp.complemento || '',
+    };
+    Object.entries(valores).forEach(([campo, v]) => {
+        const el = document.getElementById(`proc-${lado}-${campo}`);
+        if (el) el.value = v;
+    });
+}
+
 function iniciarEmissor() {
     const radios      = document.querySelectorAll('input[name="proc-emissor-tipo"]');
     const grupoEmp    = document.getElementById('proc-emissor-empresa-group');
     const docInput    = document.getElementById('proc-documento');
     const origemPais  = document.getElementById('proc-origem-pais');
 
-    async function atualizar() {
+    // e.isTrusted = troca feita pelo usuário (clique). Na carga/edição a troca é
+    // programática e não pode apagar o endereço já salvo.
+    async function atualizar(e) {
+        const trocaManual = !!e?.isTrusted;
         const val = document.querySelector('input[name="proc-emissor-tipo"]:checked')?.value;
 
         document.querySelectorAll('.emissor-opcao').forEach(l => l.classList.remove('ativo'));
@@ -3126,9 +3212,22 @@ function iniciarEmissor() {
         const grupoTipoDoc     = document.getElementById('proc-documento-tipo-group');
         const grupoPedidoRem   = document.getElementById('proc-emissor-pedido-remetente-group');
 
+        // Formulário abre sem emissor escolhido: nada é preenchido até o usuário escolher
+        if (!val) {
+            if (grupoEmp)       grupoEmp.style.display       = 'none';
+            if (grupoTipoDoc)   grupoTipoDoc.style.display   = '';
+            if (grupoPedidoRem) grupoPedidoRem.style.display = '';
+            const remEl = document.getElementById('proc-emissor-pedido-remetente');
+            if (remEl) { remEl.value = ''; remEl.placeholder = 'Selecione o emissor'; }
+            if (docInput) { docInput.readOnly = true; docInput.placeholder = 'Selecione o emissor'; }
+            atualizarResumoProcesso();
+            return;
+        }
+        document.getElementById('proc-emissor-pedido-remetente')?.setAttribute('placeholder', 'Remetente');
+
         if (val === 'usuario') {
             if (grupoEmp)      grupoEmp.style.display      = 'none';
-            if (grupoTipoDoc)  grupoTipoDoc.style.display  = 'none';
+            if (grupoTipoDoc)  grupoTipoDoc.style.display  = '';
             if (grupoPedidoRem) grupoPedidoRem.style.display = '';
             const remetentePedidoEl = document.getElementById('proc-emissor-pedido-remetente');
             if (remetentePedidoEl) remetentePedidoEl.value = _procPedidoRemetenteNome || '';
@@ -3144,7 +3243,7 @@ function iniciarEmissor() {
                 if (!origemPais.value) await _preencherPaisPorPrefixo('proc-origem', 'Brasil');
             }
             // Endereço de Origem = endereço registrado da própria empresa
-            const _setSeVazio = (id, val) => { const el = document.getElementById(id); if (el && !el.value) el.value = val || ''; };
+            const _setSeVazio = (id, val) => { const el = document.getElementById(id); if (el && (trocaManual || !el.value)) el.value = val || ''; };
             _setSeVazio('proc-origem-cep',         emp?.cep);
             _setSeVazio('proc-origem-estado',      emp?.estado);
             _setSeVazio('proc-origem-cidade',      emp?.cidade);
@@ -3153,7 +3252,7 @@ function iniciarEmissor() {
             _setSeVazio('proc-origem-complemento', emp?.complemento);
         } else {
             if (grupoEmp)      grupoEmp.style.display      = '';
-            if (grupoTipoDoc)  grupoTipoDoc.style.display  = 'none';
+            if (grupoTipoDoc)  grupoTipoDoc.style.display  = '';
             if (grupoPedidoRem) grupoPedidoRem.style.display = 'none';
             if (docInput) {
                 docInput.readOnly    = true;
@@ -3166,11 +3265,21 @@ function iniciarEmissor() {
             }
         }
 
+        _procSincronizarTipoDoc();
         atualizarResumoProcesso();
     }
 
     radios.forEach(r => r.addEventListener('change', atualizar));
+    docInput?.addEventListener('input', _procSincronizarTipoDoc);
     atualizar();
+}
+
+// Identificação da Empresa (CNPJ/CPF) do Processo: automática e só leitura —
+// sempre deduzida do Número de Identificação preenchido (mesma regra da Proforma).
+function _procSincronizarTipoDoc() {
+    const tipoEl = document.getElementById('proc-documento-tipo');
+    const digitos = (document.getElementById('proc-documento')?.value || '').replace(/\D/g, '');
+    if (tipoEl && digitos) tipoEl.value = _tipoDocBR(digitos);
 }
 
 // ========================================
@@ -3373,7 +3482,7 @@ function iniciarAutocompleteProcCliente() {
     lista.addEventListener('mousedown', e => {
         const item = e.target.closest('.autocomplete-item');
         if (!item) return;
-        const empresa = _acEmpresas.find(x => x.id === item.getAttribute('data-id'));
+        const empresa = _acEmpresas.find(x => String(x.id) === String(item.getAttribute('data-id')));
         input.value    = item.getAttribute('data-nome');
         idOculto.value = item.getAttribute('data-id');
 
@@ -3384,6 +3493,8 @@ function iniciarAutocompleteProcCliente() {
 
             if (origemPais) { origemPais.value = empresa.pais || ''; origemPais.readOnly = true; }
             if (documento)    documento.value   = empresa.documento || '';
+            _procSincronizarTipoDoc();
+            _procPreencherEndereco('origem', empresa);
             if (chkPais)      chkPais.checked   = false;
         }
 
@@ -3432,6 +3543,13 @@ async function _procPreencherDaProforma(id) {
         _docLimparAnexosVisuais();
         await _docCarregarAnexosProcesso(id);
 
+        // Produtos do Processo começam iguais aos da Proforma (editáveis).
+        if (Array.isArray(data.itens) && data.itens.length > 0) {
+            await Promise.all([_carregarMoedas(), _carregarUnidades()]);
+            _procItens = _itensNormalizar(data.itens);
+            itensRenderizar('proc');
+        }
+
         // Tipo
         const tipoEl = document.getElementById('proc-tipo');
         if (tipoEl && data.tipo) { tipoEl.value = data.tipo; tipoEl.dispatchEvent(new Event('change')); }
@@ -3440,18 +3558,16 @@ async function _procPreencherDaProforma(id) {
         const propositoEl = document.getElementById('proc-proposito');
         if (propositoEl && data.proposito) propositoEl.value = data.proposito;
 
-        // Incoterm → dispara o handler que habilita/bloqueia Modal
-        const incotermEl = document.getElementById('proc-incoterm');
-        if (incotermEl && data.incoterm) {
-            incotermEl.value = data.incoterm;
-            incotermEl.dispatchEvent(new Event('change'));
-        }
-
-        // Modal (define depois do incoterm para não ser sobrescrito)
+        // Modal primeiro (libera o Incoterm), depois o Incoterm — mesma ordem da tela
         const modalEl = document.getElementById('proc-modal');
         if (modalEl && data.modal) {
             modalEl.value = data.modal;
             modalEl.dispatchEvent(new Event('change'));
+        }
+        const incotermEl = document.getElementById('proc-incoterm');
+        if (incotermEl && data.incoterm) {
+            incotermEl.value = data.incoterm;
+            incotermEl.dispatchEvent(new Event('change'));
         }
 
         // País de Origem / Destino
@@ -3471,18 +3587,28 @@ async function _procPreencherDaProforma(id) {
 
         // Emissor / parceiro (terceiro) — parceiro_id referencia "parceiros" (bigint),
         // não uma tabela "empresas_cadastradas" (que nem existe ao vivo).
+        if (data.emissor_tipo !== 'terceiro') {
+            const radioUsuario = document.getElementById('proc-emissor-usuario');
+            if (radioUsuario && !radioUsuario.checked) {
+                radioUsuario.checked = true;
+                radioUsuario.dispatchEvent(new Event('change'));
+            }
+        }
         if (data.emissor_tipo === 'terceiro' && data.parceiro_id) {
             const radioTerceiro = document.getElementById('proc-emissor-terceiro');
             if (radioTerceiro) {
                 radioTerceiro.checked = true;
                 radioTerceiro.dispatchEvent(new Event('change'));
             }
-            const { data: emp } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia').eq('id', data.parceiro_id).single();
+            const { data: emp } = await supabaseClient.from('parceiros')
+                .select('id, razao_social, nome_fantasia, cep, estado, cidade, bairro, endereco, numero, complemento')
+                .eq('id', data.parceiro_id).single();
             if (emp) {
                 const clienteEl = document.getElementById('proc-cliente');
                 const clienteIdEl = document.getElementById('proc-cliente-id');
                 if (clienteEl) clienteEl.value = emp.nome_fantasia || emp.razao_social;
                 if (clienteIdEl) clienteIdEl.value = emp.id;
+                _procPreencherEndereco('origem', emp);
             }
         }
 
@@ -3500,13 +3626,7 @@ async function _procPreencherDaProforma(id) {
                 if (buscaEl) buscaEl.value = destParceiro.nome_fantasia || destParceiro.razao_social || '';
                 if (idEl)    idEl.value    = destParceiro.id;
 
-                _set('proc-destino-cep',         destParceiro.cep);
-                _set('proc-destino-estado',      destParceiro.estado);
-                _set('proc-destino-cidade',      destParceiro.cidade);
-                _set('proc-destino-bairro',      destParceiro.bairro);
-                _set('proc-destino-endereco',    destParceiro.endereco);
-                _set('proc-destino-numero',      destParceiro.numero);
-                _set('proc-destino-complemento', destParceiro.complemento);
+                _procPreencherEndereco('destino', destParceiro);
             }
         } else if (data.destinatario_razao_social) {
             // Proforma nasceu de um Pedido em modo texto-livre (sem destinatario_id) — só o nome
@@ -3738,6 +3858,7 @@ function iniciarAutocompleteEmpresaDestino() {
         if (idInput) idInput.value = item.dataset.id || '';
         lista.classList.remove('aberta');
         preencherCamposAuto(item);
+        _procPreencherEndereco('destino', _acEmpresas.find(x => String(x.id) === String(item.dataset.id)));
     });
 
     document.addEventListener('click', e => {
@@ -4038,68 +4159,64 @@ async function docExcluir(id) {
 
 const INCOTERMS_MARITIMOS = ['FAS', 'FOB', 'CFR', 'CIF'];
 
+// Processo: mesma regra da Proforma — escolhe o Modal primeiro, aí o Incoterm é
+// liberado; os Incoterms exclusivos do Marítimo (FAS/FOB/CFR/CIF) só ficam
+// disponíveis com Modal = Marítimo e pedem confirmação ao serem escolhidos.
 function iniciarIncotermModal() {
     const incotermSelect  = document.getElementById('proc-incoterm');
     const modalSelect     = document.getElementById('proc-modal');
     if (!incotermSelect || !modalSelect) return;
 
-    const infoEl      = document.getElementById('incoterm-info');
-    const optMaritimo = modalSelect.querySelector('option[value="maritimo"]');
-    let   _avisoMaritimoJaMostrado = false;
+    // Explicação do incoterm num ícone dentro do campo (mesmo padrão da Proforma)
+    const balao = document.getElementById('proc-incoterm-info');
+    let incotermAnterior = incotermSelect.value;
+    const opcaoIncoterm = code => [...incotermSelect.options].find(o => o.value === code);
 
-    // Modal bloqueado até o usuário escolher um incoterm
-    modalSelect.disabled = true;
-    modalSelect.title    = 'Selecione um Incoterm primeiro';
+    function atualizarBalao() {
+        if (!balao) return;
+        const val = incotermSelect.value;
+        if (!val) { balao.style.display = 'none'; balao.removeAttribute('data-tooltip'); return; }
+        const descricao = INCOTERMS_INFO[val] || '';
+        const sufixo = INCOTERMS_MARITIMOS.includes(val) ? ' — Exclusivo Marítimo' : '';
+        balao.setAttribute('data-tooltip', `${val}: ${descricao}${sufixo}`);
+        balao.style.display = '';
+    }
 
-    incotermSelect.addEventListener('change', function () {
-        // Sem incoterm → reseta tudo
-        if (!this.value) {
-            modalSelect.disabled           = true;
-            modalSelect.value              = '';
-            modalSelect.title              = 'Selecione um Incoterm primeiro';
-            _avisoMaritimoJaMostrado       = false;
-            if (optMaritimo) optMaritimo.disabled = false;
-            modalSelect.dispatchEvent(new Event('change'));
-            if (infoEl) { infoEl.classList.remove('visivel', 'incoterm-aviso-maritimo'); infoEl.innerHTML = ''; }
-            return;
-        }
-
-        const descricao = INCOTERMS_INFO[this.value] || '';
-
-        if (INCOTERMS_MARITIMOS.includes(this.value)) {
-            // FAS / FOB / CFR / CIF → força Marítimo e bloqueia o select inteiro
-            if (optMaritimo) optMaritimo.disabled = false;
-            modalSelect.value    = 'maritimo';
-            modalSelect.disabled = true;
-            modalSelect.title    = 'Modal fixo em Marítimo para o Incoterm ' + this.value;
-            modalSelect.dispatchEvent(new Event('change'));
-
-            if (infoEl) {
-                const aviso = !_avisoMaritimoJaMostrado
-                    ? `<div class="aviso-maritimo-linha"><i class="fa-solid fa-triangle-exclamation"></i> Os Incoterms <strong>FAS, FOB, CFR e CIF</strong> são exclusivos para o modal <strong>Marítimo</strong>.</div>`
-                    : '';
-                infoEl.innerHTML = aviso + `<strong>${this.value}</strong> — ${descricao}`;
-                infoEl.classList.add('visivel', 'incoterm-aviso-maritimo');
-                _avisoMaritimoJaMostrado = true;
-            }
+    function aplicarModal() {
+        const modal = modalSelect.value;
+        if (!modal) {
+            incotermSelect.disabled = true;
+            incotermSelect.value    = '';
+            incotermSelect.title    = 'Selecione o modal primeiro';
         } else {
-            // Qualquer outro incoterm → todos os modais disponíveis
-            if (optMaritimo) optMaritimo.disabled = false;
-            modalSelect.disabled = false;
-            modalSelect.title    = '';
-
-            if (infoEl) {
-                infoEl.classList.remove('incoterm-aviso-maritimo');
-                if (descricao) {
-                    infoEl.innerHTML = `<strong>${this.value}</strong> — ${descricao}`;
-                    infoEl.classList.add('visivel');
-                } else {
-                    infoEl.classList.remove('visivel');
-                    infoEl.innerHTML = '';
-                }
-            }
+            incotermSelect.disabled = false;
+            incotermSelect.title    = '';
+            const ehMaritimo = modal === 'maritimo';
+            INCOTERMS_MARITIMOS.forEach(code => { const o = opcaoIncoterm(code); if (o) o.disabled = !ehMaritimo; });
+            if (!ehMaritimo && INCOTERMS_MARITIMOS.includes(incotermSelect.value)) incotermSelect.value = '';
         }
+        incotermAnterior = incotermSelect.value;
+        atualizarBalao();
+    }
+
+    modalSelect.addEventListener('change', aplicarModal);
+
+    incotermSelect.addEventListener('change', async function (e) {
+        const val = this.value;
+        // Confirmação só em escolha feita pelo usuário — carregar um processo salvo
+        // ou vir de uma Proforma (troca programática) não abre o aviso.
+        if (e.isTrusted && INCOTERMS_MARITIMOS.includes(val)) {
+            const ok = await confirmarAcao(
+                `O Incoterm ${val} é exclusivo do modal Marítimo. Deseja confirmar essa escolha?`,
+                { titulo: 'Incoterm exclusivo Marítimo', confirmar: 'Confirmar', cancelar: 'Cancelar' }
+            );
+            if (!ok) this.value = incotermAnterior || '';
+        }
+        incotermAnterior = this.value;
+        atualizarBalao();
     });
+
+    aplicarModal();
 }
 
 // ========================================
@@ -5937,6 +6054,19 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (codigoEl)   codigoEl.value   = proformaAc?.nome || '';
         if (idOcultoEl) idOcultoEl.value = _procProformaIdParam;
         await _procPreencherDaProforma(_procProformaIdParam);
+
+        // Veio do aviso "Proforma não assinada" (proforma.js/profSeguirProcesso)
+        // com o aceite confirmado: registra quem aceitou e quando.
+        const _urlProc = new URLSearchParams(window.location.search);
+        if (_urlProc.get('sem_assinatura') === '1') {
+            const aceiteEm = new Date(_urlProc.get('aceite_em') || '');
+            const usuario  = obterUsuarioLogado();
+            _procAplicarSemAssinatura({
+                sem_assinatura: true,
+                sem_assinatura_confirmado_por: usuario?.nome || usuario?.email || null,
+                sem_assinatura_confirmado_em:  isNaN(aceiteEm) ? new Date().toISOString() : aceiteEm.toISOString(),
+            }, proformaAc?.nome || '');
+        }
     }
 
     // Produto
@@ -6021,19 +6151,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    // Modal info
-    document.getElementById('proc-modal')?.addEventListener('change', function () {
-        const info = document.getElementById('modal-info');
-        if (!info) return;
-        const val = this.value;
-        if (val && MODAL_INFO[val]) {
-            const label = this.options[this.selectedIndex].text;
-            info.innerHTML = `<strong>${label}</strong> — ${MODAL_INFO[val]}`;
-            info.classList.add('visivel');
-        } else {
-            info.classList.remove('visivel');
-        }
-    });
 });
 
 // ========================================
@@ -6393,6 +6510,16 @@ function iniciarEmissorProposta() {
         const usuarioEmpGrupo = document.getElementById('prop-usuario-empresa-group');
         const usuarioEmpInput = document.getElementById('prop-usuario-empresa');
 
+        // Formulário abre sem emissor escolhido: nada é preenchido até o usuário escolher
+        if (!val) {
+            if (usuarioEmpGrupo) usuarioEmpGrupo.style.display = '';
+            if (usuarioEmpInput) { usuarioEmpInput.value = ''; usuarioEmpInput.placeholder = 'Selecione o emissor'; }
+            if (grupoEmp) grupoEmp.style.display = 'none';
+            if (docInput) { docInput.readOnly = true; docInput.placeholder = 'Selecione o emissor'; }
+            return;
+        }
+        if (usuarioEmpInput) usuarioEmpInput.placeholder = 'Empresa do usuário';
+
         if (val === 'usuario') {
             if (usuarioEmpGrupo) usuarioEmpGrupo.style.display = '';
             if (usuarioEmpInput) usuarioEmpInput.value = window._usuarioLogado?.empresa || window._usuarioLogado?.nome_empresa || '';
@@ -6442,6 +6569,7 @@ function iniciarModalIncotermProposta() {
     if (!modalSelect || !incotermSelect) return;
 
     const infoEl = document.getElementById('prop-incoterm-info');
+    let incotermAnterior = incotermSelect.value;
 
     const grupos = {
         maritimo:  ['prop-porto-origem-group',     'prop-porto-destino-group'],
@@ -6484,6 +6612,7 @@ function iniciarModalIncotermProposta() {
             incotermSelect.disabled = true;
             incotermSelect.value    = '';
             incotermSelect.title    = 'Selecione o modal primeiro';
+            incotermAnterior        = '';
             ocultarGruposModal();
             atualizarInfoIncoterm();
             return;
@@ -6503,10 +6632,24 @@ function iniciarModalIncotermProposta() {
         }
 
         mostrarGruposModal(modal);
+        incotermAnterior = incotermSelect.value;
         atualizarInfoIncoterm();
     });
 
-    incotermSelect.addEventListener('change', atualizarInfoIncoterm);
+    // Incoterms exclusivos do Marítimo pedem confirmação (mesma regra do Processo).
+    // Só em escolha feita pelo usuário — editar/duplicar (troca programática) não abre o aviso.
+    incotermSelect.addEventListener('change', async function (e) {
+        const val = this.value;
+        if (e.isTrusted && INCOTERMS_MARITIMOS.includes(val)) {
+            const ok = await confirmarAcao(
+                `O Incoterm ${val} é exclusivo do modal Marítimo. Deseja confirmar essa escolha?`,
+                { titulo: 'Incoterm exclusivo Marítimo', confirmar: 'Confirmar', cancelar: 'Cancelar' }
+            );
+            if (!ok) this.value = incotermAnterior || '';
+        }
+        incotermAnterior = this.value;
+        atualizarInfoIncoterm();
+    });
 }
 
 // ========================================
@@ -6568,6 +6711,7 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
                      data-razao="${(e.razao_social  || '').replace(/"/g,'&quot;')}"
                      data-fantasia="${(e.nome_fantasia || '').replace(/"/g,'&quot;')}"
                      data-doc="${e.documento || ''}"
+                     data-tipo="${e.tipo_cadastro || ''}"
                      data-idint="${(e.identificacao_empresa || '').replace(/"/g,'&quot;')}">
                     <span class="ac-nome">${e.razao_social || ''}</span>
                     ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
@@ -6605,10 +6749,25 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
         }
 
         if (docEl) docEl.value = doc ? _mascaraDocBR(doc) : '';
+        const tipoDestEl = document.getElementById('prop-emp-dest-doc-tipo');
+        const tipoCad = (item.dataset.tipo || '').toLowerCase();
+        if (tipoDestEl && doc) tipoDestEl.value = ['cnpj', 'cpf', 'tin', 'ein', 'vat'].includes(tipoCad) ? tipoCad : _tipoDocBR(doc);
         if (idEl && idGrp) { idEl.value = idInt; idGrp.style.display = idInt ? '' : 'none'; }
     }
 
-    input.addEventListener('input', () => { validarDocDestino(''); renderLista(input.value); });
+    input.addEventListener('input', () => {
+        // Trocando de empresa: a identificação da anterior não vale mais
+        if (idInput) idInput.value = '';
+        const docEl = document.getElementById('prop-emp-dest-doc');
+        if (docEl) docEl.value = '';
+        validarDocDestino('');
+        renderLista(input.value);
+    });
+    document.getElementById('prop-emp-dest-doc')?.addEventListener('input', function () {
+        const tipoDestEl = document.getElementById('prop-emp-dest-doc-tipo');
+        const digitos = this.value.replace(/\D/g, '');
+        if (tipoDestEl && ['cnpj', 'cpf'].includes(tipoDestEl.value) && digitos) tipoDestEl.value = _tipoDocBR(digitos);
+    });
     input.addEventListener('focus', () => renderLista(input.value));
 
     lista.addEventListener('mousedown', e => {
@@ -6760,6 +6919,19 @@ async function propCarregarEdicao(id) {
     // Destinatário
     if (d.destinatario_id) {
         g('prop-emp-dest-id', d.destinatario_id);
+        // Destinatário cadastrado: o nome não fica salvo na proforma (só o id,
+        // BIGINT em "parceiros") — busca pra exibir no campo Destinatário.
+        if (!d.destinatario_razao_social) {
+            const { data: parc } = await supabaseClient.from('parceiros')
+                .select('razao_social, tipo_cadastro, documento').eq('id', d.destinatario_id).maybeSingle();
+            if (parc) {
+                g('prop-emp-dest-busca', parc.razao_social);
+                if (!d.destinatario_doc && parc.documento) {
+                    g('prop-emp-dest-doc', _mascaraDocBR(parc.documento));
+                    g('prop-emp-dest-doc-tipo', parc.tipo_cadastro || _tipoDocBR(parc.documento));
+                }
+            }
+        }
     }
     if (d.destinatario_razao_social) {
         g('prop-emp-dest-razao', d.destinatario_razao_social);
@@ -6859,6 +7031,19 @@ async function propCarregarDuplicar(id) {
     // Destinatário
     if (d.destinatario_id) {
         g('prop-emp-dest-id', d.destinatario_id);
+        // Destinatário cadastrado: o nome não fica salvo na proforma (só o id,
+        // BIGINT em "parceiros") — busca pra exibir no campo Destinatário.
+        if (!d.destinatario_razao_social) {
+            const { data: parc } = await supabaseClient.from('parceiros')
+                .select('razao_social, tipo_cadastro, documento').eq('id', d.destinatario_id).maybeSingle();
+            if (parc) {
+                g('prop-emp-dest-busca', parc.razao_social);
+                if (!d.destinatario_doc && parc.documento) {
+                    g('prop-emp-dest-doc', _mascaraDocBR(parc.documento));
+                    g('prop-emp-dest-doc-tipo', parc.tipo_cadastro || _tipoDocBR(parc.documento));
+                }
+            }
+        }
     }
     if (d.destinatario_razao_social) {
         g('prop-emp-dest-razao', d.destinatario_razao_social);
@@ -7031,46 +7216,76 @@ function iniciarAutocompletePropCliente() {
 }
 
 // ========================================
-// PROPOSTA — ITENS
+// PRODUTOS — PROFORMA (pfx 'prop') E PROCESSO (pfx 'proc')
 // ========================================
+// Mesma UI nos dois formulários. O nome do item tem autocomplete que lista
+// SÓ os produtos da empresa remetente escolhida (produtos.empresa_parceira_id):
+//   - Emissor Terceiro → o parceiro escolhido em "Remetente" (<pfx>-cliente-id)
+//   - Emissor Usuário  → o(s) parceiro(s) cujo documento = CNPJ da própria
+//     empresa (tenant), já que todo produto pertence a um parceiro.
 
 let _propItens = [];
+let _procItens = [];
+
+function _itensDe(pfx) { return pfx === 'proc' ? _procItens : _propItens; }
+
+function _itensNormalizar(lista) {
+    return (lista || []).map(it => ({
+        produto_id: it.produto_id || null,
+        produto:  it.produto  || '',
+        qtd:      it.qtd      ?? it.quantidade ?? 1,
+        unidade:  it.unidade  || (_acUnidades[0]?.unidade || 'UN'),
+        preco:    it.preco    ?? it.preco_unit ?? 0,
+        moeda:    it.moeda    || (_acMoedas[0]?.descricao || 'USD'),
+    }));
+}
 
 async function propIniciarItens() {
     if (!document.getElementById('prop-itens-body')) return;
-    await propAdicionarItem();
+    await itemAdicionar('prop');
 }
 
-async function propAdicionarItem() {
+async function itemAdicionar(pfx) {
     await Promise.all([_carregarMoedas(), _carregarUnidades()]);
     const _moedaDefault   = _acMoedas.length   > 0 ? _acMoedas[0].descricao   : '';
     const _unidadeDefault = _acUnidades.length  > 0 ? _acUnidades[0].unidade   : 'un';
-    _propItens.push({ produto_id: null, produto: '', qtd: 1, unidade: _unidadeDefault, preco: 0, moeda: _moedaDefault });
-    propRenderizarItens();
+    _itensDe(pfx).push({ produto_id: null, produto: '', qtd: 1, unidade: _unidadeDefault, preco: 0, moeda: _moedaDefault });
+    itensRenderizar(pfx);
 }
 
-function propRemoverItem(idx) {
-    _propItens.splice(idx, 1);
-    propRenderizarItens();
+function itemRemover(pfx, idx) {
+    _itensDe(pfx).splice(idx, 1);
+    itensRenderizar(pfx);
 }
 
-function propAtualizarItem(idx, campo, valor) {
-    if (!_propItens[idx]) return;
-    _propItens[idx][campo] = valor;
-    propRecalcularTotais();
+function itemAtualizar(pfx, idx, campo, valor) {
+    const itens = _itensDe(pfx);
+    if (!itens[idx]) return;
+    itens[idx][campo] = valor;
+    itensRecalcular(pfx);
 }
 
-function propMascaraPreco(input, idx) {
+function itemMascaraPreco(pfx, input, idx) {
     let raw = input.value.replace(/\D/g, '');
-    if (!raw) { propAtualizarItem(idx, 'preco', 0); return; }
+    if (!raw) { itemAtualizar(pfx, idx, 'preco', 0); return; }
     const num = parseInt(raw, 10) / 100;
     input.value = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    propAtualizarItem(idx, 'preco', num);
+    itemAtualizar(pfx, idx, 'preco', num);
 }
 
-function propRenderizarItens() {
-    const tbody = document.getElementById('prop-itens-body');
+// Compatibilidade com os chamadores antigos da Proforma.
+function propAdicionarItem()   { return itemAdicionar('prop'); }
+function propRenderizarItens() { itensRenderizar('prop'); }
+function propRecalcularTotais() { itensRecalcular('prop'); }
+
+function _itemEsc(v) {
+    return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function itensRenderizar(pfx) {
+    const tbody = document.getElementById(`${pfx}-itens-body`);
     if (!tbody) return;
+    const itens = _itensDe(pfx);
 
     const unidades = _acUnidades.length > 0
         ? _acUnidades
@@ -7079,14 +7294,19 @@ function propRenderizarItens() {
         ? _acMoedas
         : [{descricao:'Dólar Americano'},{descricao:'Euro'},{descricao:'Real Brasileiro'}];
 
-    tbody.innerHTML = _propItens.map((item, i) => `
+    tbody.innerHTML = itens.map((item, i) => `
         <div class="prop-item-card">
             <div class="prop-item-top">
                 <span class="prop-item-badge">${i + 1}</span>
-                <input type="text" class="prop-item-input" value="${(item.produto || '').replace(/"/g,'&quot;')}"
-                    oninput="propAtualizarItem(${i}, 'produto', this.value)"
-                    placeholder="Produto ou descrição...">
-                <button type="button" class="prop-item-del" onclick="propRemoverItem(${i})" title="Remover">
+                <div class="autocomplete-wrapper prop-item-produto-wrap">
+                    <input type="text" class="prop-item-input" id="${pfx}-item-produto-${i}" value="${_itemEsc(item.produto)}"
+                        autocomplete="off"
+                        onfocus="itemBuscarProduto('${pfx}', ${i}, this.value)"
+                        oninput="itemAtualizar('${pfx}', ${i}, 'produto', this.value); itemAtualizar('${pfx}', ${i}, 'produto_id', null); itemBuscarProduto('${pfx}', ${i}, this.value)"
+                        placeholder="Buscar produto da empresa remetente ou digitar descrição...">
+                    <div class="autocomplete-list" id="${pfx}-item-lista-${i}"></div>
+                </div>
+                <button type="button" class="prop-item-del" onclick="itemRemover('${pfx}', ${i})" title="Remover">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
@@ -7094,11 +7314,11 @@ function propRenderizarItens() {
                 <div class="prop-item-field prop-item-field--qtd">
                     <label>Qtd</label>
                     <input type="number" class="prop-item-input prop-item-num" min="0" step="1" value="${item.qtd}"
-                        oninput="propAtualizarItem(${i}, 'qtd', parseInt(this.value)||0)">
+                        oninput="itemAtualizar('${pfx}', ${i}, 'qtd', parseInt(this.value)||0)">
                 </div>
                 <div class="prop-item-field prop-item-field--un">
                     <label>Un.</label>
-                    <select class="prop-item-select" onchange="propAtualizarItem(${i}, 'unidade', this.value)">
+                    <select class="prop-item-select" onchange="itemAtualizar('${pfx}', ${i}, 'unidade', this.value)">
                         ${unidades.map(u => `<option value="${u.unidade}"${item.unidade===u.unidade?' selected':''}>${u.unidade}</option>`).join('')}
                     </select>
                 </div>
@@ -7107,35 +7327,36 @@ function propRenderizarItens() {
                     <input type="text" inputmode="decimal" class="prop-item-input prop-item-num"
                         value="${item.preco ? item.preco.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : ''}"
                         placeholder="0,00"
-                        oninput="propMascaraPreco(this, ${i})">
+                        oninput="itemMascaraPreco('${pfx}', this, ${i})">
                 </div>
                 <div class="prop-item-field prop-item-field--moeda">
                     <label>Moeda</label>
-                    <select class="prop-item-select" onchange="propAtualizarItem(${i}, 'moeda', this.value)">
+                    <select class="prop-item-select" onchange="itemAtualizar('${pfx}', ${i}, 'moeda', this.value)">
                         ${moedas.map(m => `<option value="${m.descricao}"${item.moeda===m.descricao?' selected':''}>${m.descricao}</option>`).join('')}
                     </select>
                 </div>
                 <div class="prop-item-field prop-item-field--total">
                     <label>Total</label>
-                    <span class="prop-item-total-val" id="prop-item-total-${i}">${propFormatarValor(item.qtd * item.preco, item.moeda)}</span>
+                    <span class="prop-item-total-val" id="${pfx}-item-total-${i}">${propFormatarValor(item.qtd * item.preco, item.moeda)}</span>
                 </div>
             </div>
         </div>`).join('');
 
-    propRecalcularTotais();
+    itensRecalcular(pfx);
 }
 
-function propRecalcularTotais() {
-    _propItens.forEach((item, i) => {
-        const el = document.getElementById(`prop-item-total-${i}`);
+function itensRecalcular(pfx) {
+    const itens = _itensDe(pfx);
+    itens.forEach((item, i) => {
+        const el = document.getElementById(`${pfx}-item-total-${i}`);
         if (el) el.textContent = propFormatarValor(item.qtd * item.preco, item.moeda);
     });
 
-    const totalEl = document.getElementById('prop-total-geral');
+    const totalEl = document.getElementById(`${pfx}-total-geral`);
     if (!totalEl) return;
 
     const totais = {};
-    _propItens.forEach(item => {
+    itens.forEach(item => {
         const val = item.qtd * item.preco;
         if (val) totais[item.moeda] = (totais[item.moeda] || 0) + val;
     });
@@ -7145,6 +7366,113 @@ function propRecalcularTotais() {
         ? keys.map(m => propFormatarValor(totais[m], m)).join(' + ')
         : '—';
 }
+
+// ── Autocomplete de produto (filtrado pelo remetente) ─────────────
+
+let _itemProdutosCache = {};   // chave: ids de parceiro ordenados → lista de produtos
+let _itemPropriosIds   = null; // parceiros que representam a própria empresa
+let _itemBuscaTimers   = {};
+
+async function _itemIdsParceirosProprios() {
+    if (_itemPropriosIds) return _itemPropriosIds;
+    try {
+        const usuario = obterUsuarioLogado();
+        const { data: emp } = await supabaseClient
+            .from('empresas').select('cnpj').eq('id', usuario.empresa_id).maybeSingle();
+        const cnpj = String(emp?.cnpj || '').replace(/\D/g, '');
+        let parceiros = [];
+        if (cnpj) {
+            const { data } = await supabaseClient.from('parceiros').select('id, documento').eq('empresa_id', usuario.empresa_id);
+            parceiros = data || [];
+        }
+        _itemPropriosIds = parceiros
+            .filter(e => String(e.documento || '').replace(/\D/g, '') === cnpj)
+            .map(e => String(e.id));
+    } catch { _itemPropriosIds = []; }
+    return _itemPropriosIds;
+}
+
+// null = remetente ainda não definido; [] = remetente sem parceiro correspondente.
+async function _itemIdsRemetente(pfx) {
+    const tipo = document.querySelector(`input[name="${pfx}-emissor-tipo"]:checked`)?.value;
+    if (tipo === 'terceiro') {
+        const id = document.getElementById(`${pfx}-cliente-id`)?.value;
+        return id ? [String(id)] : null;
+    }
+    if (tipo === 'usuario') return _itemIdsParceirosProprios();
+    return null;
+}
+
+async function _itemProdutosDoRemetente(ids) {
+    const chave = [...ids].sort().join(',');
+    if (_itemProdutosCache[chave]) return _itemProdutosCache[chave];
+    const usuario = obterUsuarioLogado();
+    const { data, error } = await supabaseClient
+        .from('produtos')
+        .select('id, nome, sku, unidade_medida, preco_venda, moeda, status')
+        .eq('empresa_id', usuario.empresa_id)
+        .in('empresa_parceira_id', ids)
+        .order('nome', { ascending: true });
+    if (error) return [];
+    const lista = (data || []).filter(p => p.status !== 'inativo' && p.status !== 'excluido');
+    _itemProdutosCache[chave] = lista;
+    return lista;
+}
+
+function itemBuscarProduto(pfx, idx, termo) {
+    const lista = document.getElementById(`${pfx}-item-lista-${idx}`);
+    if (!lista) return;
+    clearTimeout(_itemBuscaTimers[pfx + idx]);
+    _itemBuscaTimers[pfx + idx] = setTimeout(async () => {
+        const ids = await _itemIdsRemetente(pfx);
+        let html;
+        if (ids === null) {
+            html = '<div class="autocomplete-vazio">Escolha o Emissor/Remetente para listar os produtos dele</div>';
+        } else if (ids.length === 0) {
+            html = '<div class="autocomplete-vazio">A própria empresa não está cadastrada como parceira — sem produtos vinculados</div>';
+        } else {
+            const t = String(termo || '').trim().toLowerCase();
+            const produtos = (await _itemProdutosDoRemetente(ids))
+                .filter(p => !t || (p.nome || '').toLowerCase().includes(t) || (p.sku || '').toLowerCase().includes(t))
+                .slice(0, 30);
+            html = produtos.length
+                ? produtos.map(p => `
+                    <div class="autocomplete-item" onmousedown="itemSelecionarProduto('${pfx}', ${idx}, '${p.id}')">
+                        <span class="ac-nome">${_itemEsc(p.nome)}</span>
+                        ${p.sku ? `<span class="ac-fantasia">SKU ${_itemEsc(p.sku)}</span>` : ''}
+                    </div>`).join('')
+                : '<div class="autocomplete-vazio">Nenhum produto desta empresa encontrado — usando o texto digitado</div>';
+        }
+        lista.innerHTML = html;
+        const input = document.getElementById(`${pfx}-item-produto-${idx}`);
+        if (input) _acPosicionar(input, lista);
+        lista.classList.add('aberta');
+    }, 200);
+}
+
+function itemSelecionarProduto(pfx, idx, produtoId) {
+    const todos = Object.values(_itemProdutosCache).flat();
+    const p = todos.find(x => String(x.id) === String(produtoId));
+    const item = _itensDe(pfx)[idx];
+    if (!p || !item) return;
+    item.produto_id = p.id;
+    item.produto    = p.nome || '';
+    if (p.unidade_medida) {
+        const un = _acUnidades.find(u => String(u.unidade).toLowerCase() === String(p.unidade_medida).toLowerCase());
+        item.unidade = un ? un.unidade : p.unidade_medida;
+    }
+    if (p.preco_venda) item.preco = Number(p.preco_venda) || 0;
+    if (p.moeda) {
+        const m = _acMoedas.find(x => [x.sigla, x.codigo, x.descricao].map(v => String(v ?? '')).includes(String(p.moeda)));
+        if (m) item.moeda = m.descricao;
+    }
+    itensRenderizar(pfx);
+}
+
+document.addEventListener('mousedown', e => {
+    if (e.target.closest('.prop-item-produto-wrap')) return;
+    document.querySelectorAll('[id*="-item-lista-"]').forEach(l => l.classList.remove('aberta'));
+});
 
 function propFormatarValor(valor, moeda) {
     if (!valor) return '—';

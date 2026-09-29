@@ -474,8 +474,35 @@ async function profGerarPDF(id) {
 }
 
 // ── Seguir com Processo ───────────────────
-function profSeguirProcesso(id) {
-    window.open(`formularios.html?tab=processo&proforma_id=${id}`, '_blank');
+// "Assinada" = documento "Nº Proforma Invoice" (tipo 'proforma') marcado como
+// Assinado na tela Documentos. Sem assinatura, o Processo ainda pode ser
+// iniciado, mas só depois do aceite explícito — que viaja pela URL e é
+// gravado no Processo (colunas sem_assinatura_*, ver database-processos-sem-assinatura.sql).
+async function profSeguirProcesso(id) {
+    const p = _profTodos.find(x => x.id === id);
+    const res = await window.supabaseAPI.buscarDocumentosProformas([id]);
+    const assinada = (res.data || []).some(d => d.tipo_documento === 'proforma' && d.assinado);
+    if (assinada) {
+        window.open(`formularios.html?tab=processo&proforma_id=${id}`, '_blank');
+        return;
+    }
+    // A aba nova abre logo após o clique no "Sim" (clique novo do usuário), então
+    // o navegador não trata como popup.
+    const ok = await confirmarAcao(
+        `A Proforma ${p?.codigo || ''} não foi assinada. Mesmo assim deseja iniciar um processo?`,
+        {
+            titulo: 'Proforma não assinada',
+            confirmar: 'Sim',
+            cancelar: 'Não',
+            aceite: 'Estou ciente de que a proforma não foi assinada e aceito os termos para iniciar o processo.',
+            link: {
+                texto: 'Assinar Proposta',
+                acao: () => window.open(`documentos.html?proforma_id=${encodeURIComponent(id)}`, '_blank'),
+            },
+        }
+    );
+    if (!ok) return;
+    window.open(`formularios.html?tab=processo&proforma_id=${id}&sem_assinatura=1&aceite_em=${encodeURIComponent(new Date().toISOString())}`, '_blank');
 }
 
 function profVerProcesso(processoId) {

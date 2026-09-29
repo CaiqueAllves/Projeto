@@ -888,6 +888,9 @@ async function _gerarNumeroProcesso(empresaId) {
 function _payloadProcesso(dados) {
     return {
         proforma_id:            dados.proforma_id || null,
+        sem_assinatura:                !!dados.sem_assinatura,
+        sem_assinatura_confirmado_por: dados.sem_assinatura ? (dados.sem_assinatura_confirmado_por || null) : null,
+        sem_assinatura_confirmado_em:  dados.sem_assinatura ? (dados.sem_assinatura_confirmado_em  || null) : null,
         pedido_id:               dados.pedido_id || null,
         tipo:                    dados.tipo || null,
         proposito:               dados.proposito || null,
@@ -930,7 +933,18 @@ function _payloadProcesso(dados) {
         etapas:                  dados.etapas || [],
         documentos:              dados.documentos || {},
         transporte:              dados.transporte || {},
+        itens:                   dados.itens || [],
     };
+}
+
+// Migração database-processos-sem-assinatura.sql pode não ter rodado ainda:
+// se o banco reclamar de sem_assinatura*, repete sem essas colunas em vez de
+// impedir o salvamento do Processo.
+// Idem para database-processos-itens.sql (coluna itens).
+function _semColunasSemAssinatura(payload) {
+    const p = { ...payload };
+    Object.keys(p).forEach(k => { if (k.startsWith('sem_assinatura') || k === 'itens') delete p[k]; });
+    return p;
 }
 
 async function salvarProcesso(dados) {
@@ -940,16 +954,16 @@ async function salvarProcesso(dados) {
 
         const numero_processo = await _gerarNumeroProcesso(usuario.empresa_id);
 
-        const { data, error } = await supabaseClient
-            .from('processos')
-            .insert({
-                ..._payloadProcesso(dados),
-                numero_processo:         numero_processo,
-                empresa_proprietaria_id: usuario.empresa_id,
-                data_abertura:           dados.data_abertura || new Date().toISOString().split('T')[0],
-            })
-            .select()
-            .single();
+        const payload = {
+            ..._payloadProcesso(dados),
+            numero_processo:         numero_processo,
+            empresa_proprietaria_id: usuario.empresa_id,
+            data_abertura:           dados.data_abertura || new Date().toISOString().split('T')[0],
+        };
+        let { data, error } = await supabaseClient.from('processos').insert(payload).select().single();
+        if (error && /sem_assinatura|itens/.test(error.message || '')) {
+            ({ data, error } = await supabaseClient.from('processos').insert(_semColunasSemAssinatura(payload)).select().single());
+        }
 
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
@@ -969,11 +983,15 @@ async function atualizarProcesso(id, dados) {
         // sempre inclui a chave `tipo`, mesmo que vazia).
         const payload = ('tipo' in dados) ? _payloadProcesso(dados) : dados;
 
-        const { error } = await supabaseClient
+        const atualizar = p => supabaseClient
             .from('processos')
-            .update({ ...payload, atualizado_em: new Date().toISOString() })
+            .update({ ...p, atualizado_em: new Date().toISOString() })
             .eq('id', id)
             .eq('empresa_proprietaria_id', usuario.empresa_id);
+        let { error } = await atualizar(payload);
+        if (error && /sem_assinatura|itens/.test(error.message || '')) {
+            ({ error } = await atualizar(_semColunasSemAssinatura(payload)));
+        }
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {

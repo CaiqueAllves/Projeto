@@ -398,3 +398,6 @@
 .doc-anexo-cell { display:inline-flex; align-items:center; gap:4px; max-width:100%; }
 .doc-anexo-cell .doc-anexo-ver { max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-decoration:none; }
 label.doc-row-excluir { cursor:pointer; display:inline-flex; align-items:center; }
+
+/* Proforma aberta pelo link "Assinar Proposta" — destaque rápido */
+.doc-linha-pedido.doc-linha-destaque > td { background: #fef9c3; transition: background .6s ease; }
