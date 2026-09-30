@@ -374,6 +374,262 @@
         order: 6 !important;
     }
 
+    /* ── Menu de ações (⋮) ao lado da busca — navegador.js/_montarMenuAcoes.
+       Quando existe, a busca divide a 1ª linha só com ele e os botões
+       originais somem (continuam no DOM: o menu dispara o .click() deles). ── */
+    .page-header.pg-menu-ativo .view-toggle,
+    .page-header.pg-menu-ativo .header-right > button,
+    .page-header.pg-menu-ativo .header-right > [id$="ExcluidosWrapper"] > button {
+        display: none !important;
+    }
+    .page-header.pg-menu-ativo .filter-wrapper {
+        flex: 1 1 0 !important;
+        width: auto !important;
+    }
+    .page-header.pg-menu-ativo [id$="ExcluidosWrapper"] {
+        display: contents !important;
+    }
+    .pg-acoes-wrap {
+        display: block !important;
+        position: relative !important;
+        order: 2 !important;
+        flex: 0 0 44px !important;
+    }
+    .pg-acoes-btn {
+        width: 44px !important;
+        height: 44px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 8px !important;
+        border: 1px solid #d1d5db !important;
+        background: #fff !important;
+        color: #374151 !important;
+        font-size: 18px !important;
+        padding: 0 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        cursor: pointer;
+    }
+    .pg-acoes-btn[aria-expanded="true"] {
+        border-color: #4776ec !important;
+        color: #4776ec !important;
+        background: #eef3ff !important;
+    }
+    .pg-acoes-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        width: 230px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 10px 28px rgba(15,23,42,0.16);
+        padding: 6px;
+        z-index: 300;
+    }
+    .pg-acoes-menu.aberto { display: block; }
+    .pg-acoes-titulo {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        padding: 6px 10px 4px;
+    }
+    .pg-acoes-sep { height: 1px; background: #f1f5f9; margin: 6px 4px; }
+    .pg-acoes-item {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 10px;
+        width: 100%;
+        min-height: 42px;
+        padding: 8px 10px !important;
+        border: none !important;
+        background: none !important;
+        border-radius: 8px !important;
+        color: #334155 !important;
+        font-size: 14px !important;
+        font-weight: 500;
+        text-align: left;
+        cursor: pointer;
+    }
+    .pg-acoes-item i { width: 18px; text-align: center; color: #64748b; font-size: 15px; }
+    .pg-acoes-item:active,
+    .pg-acoes-item:hover { background: #f1f5f9 !important; }
+    .pg-acoes-item.ativo { color: #4776ec !important; font-weight: 600; }
+    .pg-acoes-item.ativo i { color: #4776ec; }
+    .pg-acoes-item .pg-acoes-check { margin-left: auto; font-size: 12px; }
+    .pg-acoes-item--primario { color: #4776ec !important; font-weight: 600; }
+    .pg-acoes-item--primario i { color: #4776ec; }
+
+    /* Painel de Excluídos: o botão dele agora mora no menu, então o painel
+       abre fixo logo abaixo do cabeçalho, na largura da tela. */
+    .page-header.pg-menu-ativo .prof-excluidos-panel {
+        position: fixed !important;
+        top: 150px !important;
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        max-height: 70vh !important;
+        overflow-y: auto !important;
+    }
+
+    /* ── Cabeçalho com uma ação só: busca + botão na mesma linha ── */
+    .page-header.pg-acao-unica .filter-wrapper {
+        flex: 1 1 calc(100% - 52px) !important;
+        width: auto !important;
+    }
+    .page-header.pg-acao-unica .btn-cadastrar {
+        order: 2 !important;
+        margin-left: 0 !important;
+    }
+    /* Telas sem os chips de status (ex: Contas a Pagar/Receber): os selects
+       de filtro são a única forma de filtrar — ficam visíveis, lado a lado
+       numa linha própria abaixo da busca. */
+    .page-header:not(:has(~ .kanban-tabs)) .filter-select {
+        display: block !important;
+        order: 3 !important;
+        flex: 1 1 calc(50% - 4px) !important;
+        min-width: 0 !important;
+        width: auto !important;
+        margin: 0 !important;
+        height: 40px !important;
+        line-height: 20px !important;
+        font-size: 13px !important;
+    }
+
+    /* ── Financeiro: cards de resumo em 2 colunas que cabem na tela; se a
+       quantidade for ímpar, o último ocupa a linha inteira. ── */
+    .fin-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        padding: 12px !important;
+        gap: 10px !important;
+    }
+    .fin-summary > .fin-card:last-child:nth-child(odd) { grid-column: 1 / -1 !important; }
+    .fin-card { min-width: 0 !important; padding: 12px !important; gap: 10px !important; }
+    .fin-card-icon { width: 38px !important; height: 38px !important; font-size: 16px !important; border-radius: 10px !important; }
+    .fin-card-valor { font-size: 15px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Seletor de período: campos esticam e dividem a linha */
+    .fin-periodo-wrap {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+        margin: 4px 12px 0 !important;
+    }
+    .fin-periodo-wrap label { flex: 0 0 100% !important; }
+    .fin-periodo-wrap input[type="month"],
+    .fin-periodo-wrap select {
+        flex: 1 1 100% !important;
+        min-width: 0 !important;
+        width: auto !important;
+        height: 42px !important;
+        font-family: inherit !important;
+        font-size: 14px !important;
+    }
+    .fin-periodo-wrap > span { flex: 0 0 100% !important; text-align: center !important; font-size: 12px !important; margin: -4px 0 !important; }
+
+    /* Tabelas financeiras viram cards (rótulos vindos de navegador.js) */
+    .fin-table-wrap {
+        overflow: visible !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        margin: 10px 12px 12px !important;
+    }
+    .fin-table, .fin-table tbody { display: block !important; width: 100% !important; }
+    .fin-table { background: transparent !important; box-shadow: none !important; border: none !important; border-radius: 0 !important; overflow: visible !important; }
+    .fin-table thead { display: none !important; }
+    .fin-table tbody tr {
+        display: block !important;
+        background: #fff !important;
+        border: 1px solid #e8edf5 !important;
+        border-radius: 12px !important;
+        padding: 10px 12px !important;
+        margin-bottom: 10px !important;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
+    }
+    .fin-table tbody td {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        gap: 4px 8px !important;
+        padding: 5px 0 !important;
+        border: none !important;
+        font-size: 13px !important;
+        text-align: right !important;
+        white-space: normal !important;
+        min-width: 0 !important;
+    }
+    .fin-table tbody td::before {
+        content: attr(data-label);
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #94a3b8;
+        text-align: left;
+        margin-right: auto;
+    }
+    .fin-table tbody td:not([data-label])::before,
+    .fin-table tbody td[data-label=""]::before { display: none; }
+    .fin-table tbody td:first-child {
+        justify-content: flex-start !important;
+        text-align: left !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 4px !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+    .fin-table tbody td:first-child::before { display: none; }
+    .fin-table tbody td.fin-td-vazio { justify-content: center !important; align-items: center !important; text-align: center !important; border-bottom: none !important; margin: 0 !important; padding: 10px 0 !important; }
+    .fin-table tbody td.fin-td-vazio::before { display: none; }
+    .fin-table tbody tr:hover { background: #fff !important; }
+
+    /* ── Relatórios: seletor de módulo em grade 2×2, todos do mesmo tamanho ── */
+    .rel-modulo-tabs {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        margin-bottom: 16px !important;
+    }
+    .rel-modulo-tab { justify-content: center !important; padding: 10px 8px !important; min-width: 0 !important; }
+
+    /* ── Termos: abas numa linha só, rolando para o lado (sem cortar texto) ── */
+    .termos-tabs {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        min-height: 44px !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-top: 2px !important;
+        padding-bottom: 10px !important;
+        margin-left: -12px !important;
+        margin-right: -12px !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    .termos-tabs::-webkit-scrollbar { display: none; }
+    .termos-tabs .tab-btn {
+        flex: 0 0 auto !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
+        padding: 9px 14px !important;
+        font-size: 13px !important;
+    }
+
     /* ── Lista de itens (cantos completos no mobile) ── */
     .empresas-lista {
         border-radius: 10px !important;

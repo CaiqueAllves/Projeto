@@ -516,3 +516,142 @@ document.addEventListener('mousedown', function(e) {
         caixa.style.removeProperty('display');
     });
 });
+
+// ========================================
+// MENU DE AÇÕES DO CABEÇALHO (mobile)
+// ========================================
+// No mobile os botões do .page-header (Kanban/Lista, Excluídos, Novo...,
+// Upload...) viravam uma fileira de quadradinhos só com ícone. Aqui eles são
+// reunidos num botão ⋮ ao lado da busca; cada item só dispara o botão
+// original (.click()), então nenhuma lógica de página muda. No desktop o
+// botão ⋮ fica escondido (CSS) e o cabeçalho continua como sempre.
+// Roda também dentro do iframe do app.html (não depende de _initNavegador).
+
+function _acoesBotoes(header) {
+    return [...header.querySelectorAll(
+        '.view-toggle .view-btn, .header-right > button, .header-right > [id$="ExcluidosWrapper"] > button'
+    )];
+}
+
+function _acoesMontarItens(header, menu) {
+    const botoes = _acoesBotoes(header);
+    const visao  = botoes.filter(b => b.classList.contains('view-btn'));
+    const outros = botoes.filter(b => !b.classList.contains('view-btn'));
+    const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+    const item = (b, i) => {
+        const icone  = b.querySelector('i')?.className || 'fa-solid fa-circle';
+        const texto  = b.textContent.trim() || b.title || 'Ação';
+        const ativo  = b.classList.contains('active');
+        const classe = b.classList.contains('btn-cadastrar') ? ' pg-acoes-item--primario' : '';
+        return `<button type="button" class="pg-acoes-item${classe}${ativo ? ' ativo' : ''}" data-i="${i}" role="menuitem">
+                    <i class="${icone}"></i><span>${esc(texto)}</span>${ativo ? '<i class="fa-solid fa-check pg-acoes-check"></i>' : ''}
+                </button>`;
+    };
+
+    let html = '';
+    if (visao.length) {
+        html += '<div class="pg-acoes-titulo">Visualização</div>';
+        html += visao.map(b => item(b, botoes.indexOf(b))).join('');
+        if (outros.length) html += '<div class="pg-acoes-sep"></div>';
+    }
+    html += outros.map(b => item(b, botoes.indexOf(b))).join('');
+    menu.innerHTML = html;
+}
+
+function _acoesFecharTodos() {
+    document.querySelectorAll('.pg-acoes-menu.aberto').forEach(m => {
+        m.classList.remove('aberto');
+        m.previousElementSibling?.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function _montarMenuAcoes() {
+    document.querySelectorAll('.page-header').forEach(header => {
+        if (header.querySelector('.pg-acoes-wrap')) return;
+        const filtro = header.querySelector('.filter-wrapper');
+        if (!filtro) return;
+        // Uma ação só (ex: Contas a Pagar "+"): fica ao lado da busca, sem menu.
+        if (_acoesBotoes(header).length === 1) { header.classList.add('pg-acao-unica'); return; }
+        if (_acoesBotoes(header).length < 2) return;
+
+        header.classList.add('pg-menu-ativo');
+        const wrap = document.createElement('div');
+        wrap.className = 'pg-acoes-wrap';
+        wrap.innerHTML = `
+            <button type="button" class="pg-acoes-btn" aria-label="Ações" aria-haspopup="true" aria-expanded="false">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+            <div class="pg-acoes-menu" role="menu"></div>`;
+        filtro.after(wrap);
+
+        const btn  = wrap.querySelector('.pg-acoes-btn');
+        const menu = wrap.querySelector('.pg-acoes-menu');
+
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const abrir = !menu.classList.contains('aberto');
+            _acoesFecharTodos();
+            if (!abrir) return;
+            _acoesMontarItens(header, menu);
+            menu.classList.add('aberto');
+            btn.setAttribute('aria-expanded', 'true');
+        });
+
+        menu.addEventListener('click', e => {
+            const it = e.target.closest('.pg-acoes-item');
+            if (!it) return;
+            // Não deixa este clique chegar no document: os painéis (ex:
+            // Excluídos) fecham em "clique fora", e fechariam na hora.
+            e.stopPropagation();
+            _acoesFecharTodos();
+            _acoesBotoes(header)[Number(it.dataset.i)]?.click();
+        });
+    });
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('.pg-acoes-wrap')) _acoesFecharTodos();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') _acoesFecharTodos(); });
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _montarMenuAcoes);
+} else {
+    _montarMenuAcoes();
+}
+
+// ========================================
+// TABELAS FINANCEIRAS → CARDS (mobile)
+// ========================================
+// No mobile (style-mobile.css) cada linha de .fin-table vira um card e cada
+// célula mostra o nome da coluna ao lado do valor. Aqui só copiamos o texto
+// do <th> pra data-label de cada <td> — as linhas são renderizadas pelo JS
+// de cada tela, então um MutationObserver reaplica sempre que o tbody muda.
+
+function _rotularTabelasFin(raiz = document) {
+    raiz.querySelectorAll('table.fin-table').forEach(tabela => {
+        const titulos = [...tabela.querySelectorAll('thead th')].map(th => th.textContent.trim());
+        tabela.querySelectorAll('tbody tr').forEach(tr => {
+            [...tr.children].forEach((td, i) => {
+                if (td.colSpan > 1) { td.classList.add('fin-td-vazio'); return; }
+                if (titulos[i] && td.dataset.label !== titulos[i]) td.dataset.label = titulos[i];
+            });
+        });
+    });
+}
+
+(function _observarTabelasFin() {
+    const iniciar = () => {
+        if (!document.querySelector('table.fin-table')) return;
+        _rotularTabelasFin();
+        let pendente = false;
+        new MutationObserver(() => {
+            if (pendente) return;
+            pendente = true;
+            requestAnimationFrame(() => { pendente = false; _rotularTabelasFin(); });
+        }).observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
+    else iniciar();
+})();
