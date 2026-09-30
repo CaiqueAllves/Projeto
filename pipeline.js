@@ -185,11 +185,11 @@ function _plRenderCard(o) {
         </div>
 
         <div class="pl-kcard-empresa-linha">
-            <span class="pl-kcard-label">Remetente:</span>
+            <span class="pl-kcard-label">Exportador:</span>
             <span class="pl-kcard-empresa-valor">${remetenteRazao ? _plEscapar(remetenteRazao) : 'Própria empresa'}</span>
         </div>
         <div class="pl-kcard-empresa-linha">
-            <span class="pl-kcard-label">Destino:</span>
+            <span class="pl-kcard-label">Importador:</span>
             <span class="pl-kcard-empresa-valor">${_plEscapar(destinoRazao)}</span>
         </div>
 

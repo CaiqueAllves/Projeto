@@ -147,8 +147,8 @@
                     <thead>
                         <tr>
                             <th>Nº Proposta</th>
-                            <th>Remetente</th>
-                            <th>Destinatário</th>
+                            <th>Exportador</th>
+                            <th>Importador</th>
                             <th>Valor</th>
                             <th>Etapa</th>
                             <th>Responsável</th>
@@ -185,7 +185,7 @@
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label>Remetente</label>
+                    <label>Exportador</label>
                     <input type="text" id="propRemetenteNome" placeholder="Buscar empresa..." autocomplete="off" oninput="propBuscarEmpresa('remetente', this.value)" onfocus="propMostrarEmpresas('remetente', this.value)">
                     <input type="hidden" id="propRemetenteId">
                     <div class="pl-autocomplete" id="propAutoRemetente"></div>
@@ -198,7 +198,7 @@
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label>Destinatário</label>
+                    <label>Importador</label>
                     <input type="text" id="propDestinatarioNome" placeholder="Buscar empresa..." autocomplete="off" oninput="propBuscarEmpresa('destinatario', this.value)" onfocus="propMostrarEmpresas('destinatario', this.value)">
                     <input type="hidden" id="propDestinatarioId">
                     <div class="pl-autocomplete" id="propAutoDestinatario"></div>

@@ -251,11 +251,11 @@ function _renderCard(p) {
             ${p.incoterm ? `<span class="tag-badge">${escapeHtml(p.incoterm)}</span>` : ''}
         </div>` : ''}
         <div class="proc-card-empresa-linha">
-            <span class="proc-card-label">Remetente:</span>
+            <span class="proc-card-label">Exportador:</span>
             <span class="proc-card-empresa-valor">${escapeHtml(exp)}</span>
         </div>
         <div class="proc-card-empresa-linha">
-            <span class="proc-card-label">Destinatário:</span>
+            <span class="proc-card-label">Importador:</span>
             <span class="proc-card-empresa-valor">${imp ? escapeHtml(_primeiroNome(imp)) : '—'}</span>
         </div>
         ${expandido ? `

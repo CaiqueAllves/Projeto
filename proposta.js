@@ -231,11 +231,11 @@ function _propRenderCard(o) {
             </button>
         </div>
         <div class="prop-kcard-empresa-linha">
-            <span class="prop-kcard-label">Remetente:</span>
+            <span class="prop-kcard-label">Exportador:</span>
             <span class="prop-kcard-empresa-valor">${remetenteRazao ? _propEscapar(remetenteRazao) : 'Própria empresa'}</span>
         </div>
         <div class="prop-kcard-empresa-linha">
-            <span class="prop-kcard-label">Destino:</span>
+            <span class="prop-kcard-label">Importador:</span>
             <span class="prop-kcard-empresa-valor">${_propEscapar(destinoRazao)}</span>
         </div>
         <div class="prop-kcard-valor"><i class="fa-solid fa-coins"></i> <span>${valor}</span></div>
@@ -278,7 +278,7 @@ function _propRenderCard(o) {
 async function propEnviarWhatsapp(id) {
     const o = _propTodas.find(x => x.id === id);
     if (!o) return;
-    if (!o.cliente_id) { mostrarNotificacao('Essa proposta não tem um Destinatário definido.', 'aviso'); return; }
+    if (!o.cliente_id) { mostrarNotificacao('Essa proposta não tem um Importador definido.', 'aviso'); return; }
 
     const { data: contato } = await supabaseClient
         .from('parceiro_contatos')

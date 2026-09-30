@@ -327,8 +327,8 @@ function _docRenderLinhaProforma({ proforma, remetente, destinatario, docRowsFil
             </td>
             <td>
                 <div class="doc-pedido-numero">${_docLink(_docUrlProforma(proforma.id), proforma.codigo || '—', 'Abrir a Proforma')}</div>
-                <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Remetente:</span> <span class="doc-parceiro-valor">${remetente}</span></div>
-                <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Destinatário:</span> <span class="doc-parceiro-valor">${destinatario}</span></div>
+                <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Exportador:</span> <span class="doc-parceiro-valor">${remetente}</span></div>
+                <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Importador:</span> <span class="doc-parceiro-valor">${destinatario}</span></div>
             </td>
             <td class="doc-col-status"><span class="doc-badge doc-badge-neutro">${DOC_LABELS_PROFORMA[proforma.status] || proforma.status || '—'}</span></td>
             <td class="doc-col-progresso">${_docRenderProgresso(totalDocs, assinadosDocs)}</td>

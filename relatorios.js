@@ -748,7 +748,7 @@ function baixarPDF() {
         totalRegistros   = lista.length;
         conteudoTabela = `
             <table>
-                <thead><tr><th>Código</th><th>Destinatário</th><th>Status</th><th>Valor</th><th>Data</th></tr></thead>
+                <thead><tr><th>Código</th><th>Importador</th><th>Status</th><th>Valor</th><th>Data</th></tr></thead>
                 <tbody>
                     ${lista.map(p => `
                         <tr>

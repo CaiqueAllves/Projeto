@@ -248,11 +248,11 @@ function _profRenderCard(p) {
             ${p.incoterm ? `<span class="tag-badge">${_profEscapar(p.incoterm)}</span>` : ''}
         </div>` : ''}
         <div class="prof-card-empresa-linha">
-            <span class="prof-card-label">Remetente:</span>
+            <span class="prof-card-label">Exportador:</span>
             <span class="prof-card-empresa-valor">${_profEscapar(emissor)}</span>
         </div>
         <div class="prof-card-empresa-linha">
-            <span class="prof-card-label">Destinatário:</span>
+            <span class="prof-card-label">Importador:</span>
             <span class="prof-card-empresa-valor">${_profEscapar(destinatario)}</span>
         </div>
         ${_profBotaoProcesso(p, status) ? `

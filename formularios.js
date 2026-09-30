@@ -782,7 +782,7 @@ function salvarProcesso(e) {
         return;
     }
     if (emissorTipo === 'terceiro' && !document.getElementById('proc-cliente-id')?.value) {
-        mostrarNotificacao('Selecione o Remetente antes de salvar.', 'warning');
+        mostrarNotificacao('Selecione o Exportador antes de salvar.', 'warning');
         document.getElementById('proc-cliente')?.focus();
         return;
     }
@@ -1347,7 +1347,7 @@ function salvarProposta(e) {
         if (!primeiroEl) primeiroEl = document.getElementById('prop-emissor-usuario')?.closest('.emissor-toggle');
     }
     if (emissorTipo === 'terceiro') {
-        checar('prop-cliente', 'Selecione o Remetente (Terceiro).');
+        checar('prop-cliente', 'Selecione o Exportador (Terceiro).');
     }
 
     checar('prop-documento', 'Informe o Número de Identificação do emissor.');
@@ -1374,12 +1374,12 @@ function salvarProposta(e) {
     // ── Destinatário ──────────────────────
     const btnCad = document.getElementById('prop-btn-emp-dest-cadastrada');
     if (btnCad?.classList.contains('ativo')) {
-        checar('prop-emp-dest-busca', 'Selecione o Destinatário.');
+        checar('prop-emp-dest-busca', 'Selecione o Importador.');
     } else {
-        checar('prop-emp-dest-razao', 'Informe a Razão Social do Destinatário.');
+        checar('prop-emp-dest-razao', 'Informe a Razão Social do Importador.');
     }
     if (!btnCad?.classList.contains('ativo')) {
-        checar('prop-emp-dest-doc', 'Informe a identificação fiscal do Destinatário.');
+        checar('prop-emp-dest-doc', 'Informe a identificação fiscal do Importador.');
     }
 
     // ── Datas ─────────────────────────────
@@ -3223,7 +3223,7 @@ function iniciarEmissor() {
             atualizarResumoProcesso();
             return;
         }
-        document.getElementById('proc-emissor-pedido-remetente')?.setAttribute('placeholder', 'Remetente');
+        document.getElementById('proc-emissor-pedido-remetente')?.setAttribute('placeholder', 'Exportador');
 
         if (val === 'usuario') {
             if (grupoEmp)      grupoEmp.style.display      = 'none';
@@ -7303,7 +7303,7 @@ function itensRenderizar(pfx) {
                         autocomplete="off"
                         onfocus="itemBuscarProduto('${pfx}', ${i}, this.value)"
                         oninput="itemAtualizar('${pfx}', ${i}, 'produto', this.value); itemAtualizar('${pfx}', ${i}, 'produto_id', null); itemBuscarProduto('${pfx}', ${i}, this.value)"
-                        placeholder="Buscar produto da empresa remetente ou digitar descrição...">
+                        placeholder="Buscar produto do Exportador ou digitar descrição...">
                     <div class="autocomplete-list" id="${pfx}-item-lista-${i}"></div>
                 </div>
                 <button type="button" class="prop-item-del" onclick="itemRemover('${pfx}', ${i})" title="Remover">
@@ -7427,7 +7427,7 @@ function itemBuscarProduto(pfx, idx, termo) {
         const ids = await _itemIdsRemetente(pfx);
         let html;
         if (ids === null) {
-            html = '<div class="autocomplete-vazio">Escolha o Emissor/Remetente para listar os produtos dele</div>';
+            html = '<div class="autocomplete-vazio">Escolha o Emissor/Exportador para listar os produtos dele</div>';
         } else if (ids.length === 0) {
             html = '<div class="autocomplete-vazio">A própria empresa não está cadastrada como parceira — sem produtos vinculados</div>';
         } else {

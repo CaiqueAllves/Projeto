@@ -122,8 +122,8 @@ async function gerarPDFProformaDados(d) {
         rx(cx,bY,colW,bandHdr,NAVY); rx(cx,bY,3,bandHdr,AZUL_MED);
     });
     sf('bold',6.5,BRANCO);
-    doc.text('EMISSOR',col1+colW/2,bY+4.8,{align:'center'});
-    doc.text('DESTINATÁRIO',col2+colW/2,bY+4.8,{align:'center'});
+    doc.text('EXPORTADOR',col1+colW/2,bY+4.8,{align:'center'});
+    doc.text('IMPORTADOR',col2+colW/2,bY+4.8,{align:'center'});
     doc.text('ROTA DE EXPORTAÇÃO',col3+colW/2,bY+4.8,{align:'center'});
     doc.text('CONDIÇÕES COMERCIAIS',col4+colW/2,bY+4.8,{align:'center'});
 

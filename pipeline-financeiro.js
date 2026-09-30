@@ -197,11 +197,11 @@ function _pfRenderCard(p, etapa) {
             </div>
 
             <div class="pf-kcard-empresa-linha">
-                <span class="pf-kcard-label">Remetente:</span>
+                <span class="pf-kcard-label">Exportador:</span>
                 <span class="pf-kcard-empresa-valor">${remetenteRazao ? _pfEscapar(remetenteRazao) : 'Própria empresa'}</span>
             </div>
             <div class="pf-kcard-empresa-linha">
-                <span class="pf-kcard-label">Destino:</span>
+                <span class="pf-kcard-label">Importador:</span>
                 <span class="pf-kcard-empresa-valor">${_pfEscapar(destinoRazao)}</span>
             </div>
 

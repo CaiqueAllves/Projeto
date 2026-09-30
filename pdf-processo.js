@@ -142,20 +142,20 @@ function gerarPDFProcesso() {
 
     pg(38);
     const bY1 = Y;
-    [[col1, 'EMISSOR'], [col2, 'EMPRESA DE DESTINO']].forEach(([cx, titulo]) => {
+    [[col1, 'EXPORTADOR'], [col2, 'IMPORTADOR']].forEach(([cx, titulo]) => {
         doc.setFillColor(...BRANCO); doc.setDrawColor(...BORDA); doc.setLineWidth(0.25);
         doc.rect(cx, bY1, colW2, 34, 'FD');
         rect(cx, bY1, colW2, bandHdr, NAVY); rect(cx, bY1, 3, bandHdr, AZUL_MED);
         setFont('bold', 6.5, BRANCO); doc.text(titulo, cx + colW2 / 2, bY1 + 4.8, { align: 'center' });
     });
 
-    bandRow('Emissor', emissorNome, col1, bY1 + bandHdr + 0, colW2);
+    bandRow('Empresa', emissorNome, col1, bY1 + bandHdr + 0, colW2);
     bandRow('Tipo', emissorLabel, col1, bY1 + bandHdr + 5, colW2);
     bandRow('Identificação', val('proc-documento-tipo') !== '—' ? val('proc-documento-tipo') : '—', col1, bY1 + bandHdr + 10, colW2);
     bandRow('Documento', val('proc-documento'), col1, bY1 + bandHdr + 15, colW2);
     bandRow('Propósito', propositoTxt, col1, bY1 + bandHdr + 20, colW2);
 
-    bandRow('Destinatário', val('proc-emp-dest-busca'), col2, bY1 + bandHdr + 0, colW2);
+    bandRow('Empresa', val('proc-emp-dest-busca'), col2, bY1 + bandHdr + 0, colW2);
     bandRow('Documento', val('proc-emp-dest-auto-doc'), col2, bY1 + bandHdr + 5, colW2);
     bandRow('Código Interno', val('proc-emp-dest-auto-id'), col2, bY1 + bandHdr + 10, colW2);
     bandRow('Responsável', val('proc-destino-responsavel'), col2, bY1 + bandHdr + 15, colW2);

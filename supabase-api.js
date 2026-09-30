@@ -2483,6 +2483,16 @@ async function marcarDocumentoAssinado(proformaId, tipoDocumento, assinado, assi
             .select()
             .single();
         if (error) return { sucesso: false, mensagem: error.message };
+
+        // Proforma assinada → status "Aprovado" automático (só avança a partir
+        // de Pendente/Enviado; não mexe em Encerrado nem volta atrás ao desmarcar).
+        if (tipoDocumento === 'proforma' && assinado) {
+            await supabaseClient
+                .from('proformas')
+                .update({ status: 'aprovado', status_atualizado_em: new Date().toISOString() })
+                .eq('id', proformaId)
+                .in('status', ['pendente', 'enviado']);
+        }
         return { sucesso: true, data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }

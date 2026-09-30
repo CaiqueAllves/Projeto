@@ -177,7 +177,6 @@ function salvarTarefas() {
 
 let _pendProformas          = []; // proformas com pelo menos 1 pendência, já com o detalhe calculado
 let _pendProdutosPendentes  = [];
-let _pendExpandidos         = new Set();
 
 function _pendEmissorNome(p) {
     if (p.emissor_tipo === 'terceiro') {
@@ -231,7 +230,7 @@ async function carregarPendenciasSistema() {
         const processosDaProforma = processosMap[p.id] || [];
         const docsSalvos          = docsMap[p.id] || {};
 
-        const proformaPendente  = p.status === 'pendente';
+        const proformaPendente  = p.status === 'pendente' && !docsSalvos.proforma?.assinado;
         const processosAbertos  = processosDaProforma.filter(pr => pr.status === 'aberto');
 
         // Só conta documentos "feitos" pra saber quantos ainda faltam assinar
@@ -282,122 +281,112 @@ function renderizarTarefas() {
 
     // Grupo 1: Minhas Tarefas
     if (tarefas.length > 0) {
-        const group = document.createElement('div');
-        group.className = 'tasks-group';
-        group.innerHTML = `<div class="tasks-group-header"><i class="fa-solid fa-list-check"></i> Minhas Tarefas</div>`;
+        container.appendChild(_pendGrupo(
+            '<div class="tasks-group-header"><i class="fa-solid fa-list-check"></i> Minhas Tarefas</div>',
+            tarefas.map(_pendCardTarefa).join('')));
+    }
 
-        tarefas.forEach(tarefa => {
-            const prazoTexto = tarefa.prazo ? `<br><small style="color:#64748b;">📅 Prazo: ${formatarDataPrazo(tarefa.prazo)}</small>` : '';
-            const item = document.createElement('div');
-            item.className = 'task-item';
-            item.innerHTML = `
+    // Grupo 2: Pendências do Sistema — 1 card por Proforma
+    if (_pendProformas.length > 0) {
+        container.appendChild(_pendGrupo(
+            `<div class="tasks-group-header pendencias-header"><i class="fa-solid fa-triangle-exclamation"></i> Pendências do Sistema <span class="pendencias-count">${_pendProformas.length}</span></div>`,
+            _pendProformas.map(_pendCardProforma).join('')));
+    }
+
+    // Grupo 3: Produtos Pendentes — não pertencem a uma Proforma
+    if (_pendProdutosPendentes.length > 0) {
+        container.appendChild(_pendGrupo(
+            `<div class="tasks-group-header pendencias-header"><i class="fa-solid fa-box"></i> Produtos Pendentes <span class="pendencias-count">${_pendProdutosPendentes.length}</span></div>`,
+            _pendProdutosPendentes.map(_pendCardProduto).join('')));
+    }
+}
+
+function _pendGrupo(cabecalho, cards) {
+    const group = document.createElement('div');
+    group.className = 'tasks-group';
+    group.innerHTML = `${cabecalho}<div class="pend-cards">${cards}</div>`;
+    return group;
+}
+
+function _pendEsc(v) {
+    return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _pendCardTarefa(tarefa) {
+    return `
+        <div class="pend-card pend-card-tarefa ${tarefa.concluida ? 'pend-card-concluida' : ''}">
+            <div class="pend-card-topo">
                 <div class="task-checkbox ${tarefa.concluida ? 'checked' : ''}" onclick="toggleTarefa(${tarefa.id})">
                     ${tarefa.concluida ? '<i class="fa-solid fa-check"></i>' : ''}
                 </div>
-                <div class="task-content">
-                    <div class="task-title ${tarefa.concluida ? 'completed' : ''}">${tarefa.titulo}${prazoTexto}</div>
-                    <div class="task-meta">${formatarDataTarefa(tarefa.data)}</div>
+                <div class="pend-card-titulo-wrap">
+                    <div class="pend-card-titulo task-title ${tarefa.concluida ? 'completed' : ''}" title="${_pendEsc(tarefa.titulo)}">${_pendEsc(tarefa.titulo)}</div>
+                    <div class="pend-card-sub">${formatarDataTarefa(tarefa.data)}</div>
                 </div>
-                <div class="task-priority priority-${tarefa.prioridade}">${getPrioridadeTexto(tarefa.prioridade)}</div>
-                <div class="task-delete" onclick="confirmarExclusaoTarefa(this, ${tarefa.id})"><i class="fa-solid fa-trash"></i></div>
+                <div class="task-delete" onclick="confirmarExclusaoTarefa(this, ${tarefa.id})" title="Excluir"><i class="fa-solid fa-trash"></i></div>
+            </div>
+            <div class="pend-card-corpo">
+                ${tarefa.prazo ? `<div class="pend-card-linha"><i class="fa-regular fa-calendar"></i> Prazo: <strong>${formatarDataPrazo(tarefa.prazo)}</strong></div>` : ''}
+            </div>
+            <div class="pend-card-rodape">
+                <span class="task-priority priority-${tarefa.prioridade}">${getPrioridadeTexto(tarefa.prioridade)}</span>
                 <div class="task-confirm-delete" id="confirm-del-${tarefa.id}" style="display:none;">
                     <span>Excluir?</span>
                     <button class="btn-confirm-sim" onclick="deletarTarefa(${tarefa.id})">Sim</button>
                     <button class="btn-confirm-nao" onclick="cancelarExclusaoTarefa(${tarefa.id})">Não</button>
                 </div>
-            `;
-            group.appendChild(item);
-        });
-
-        container.appendChild(group);
-    }
-
-    // Grupo 2: Pendências do Sistema — 1 linha por Proforma, com expandir
-    if (_pendProformas.length > 0) {
-        const group = document.createElement('div');
-        group.className = 'tasks-group';
-        group.innerHTML = `
-            <div class="tasks-group-header pendencias-header"><i class="fa-solid fa-triangle-exclamation"></i> Pendências do Sistema <span class="pendencias-count">${_pendProformas.length}</span></div>
-            <table class="pend-tabela">
-                <thead><tr><th class="pend-col-seta"></th><th>Proforma</th><th>Pendências</th></tr></thead>
-                <tbody>${_pendProformas.map(_pendRenderLinha).join('')}</tbody>
-            </table>`;
-        container.appendChild(group);
-    }
-
-    // Grupo 3: Produtos Pendentes — lista simples, não pertence a uma Proforma
-    if (_pendProdutosPendentes.length > 0) {
-        const group = document.createElement('div');
-        group.className = 'tasks-group';
-        group.innerHTML = `<div class="tasks-group-header pendencias-header"><i class="fa-solid fa-box"></i> Produtos Pendentes <span class="pendencias-count">${_pendProdutosPendentes.length}</span></div>`;
-
-        _pendProdutosPendentes.forEach(produto => {
-            const item = document.createElement('div');
-            item.className = 'task-item pendencia-item';
-            item.onclick = () => window.open(`formularios.html?tab=produto&id=${produto.id}`, '_blank');
-            item.innerHTML = `
-                <div class="pendencia-icon" style="background:#0891b218; color:#0891b2;">
-                    <i class="fa-solid fa-box"></i>
-                </div>
-                <div class="task-content">
-                    <div class="task-title">${produto.nome || 'Sem nome'}</div>
-                    <div class="task-meta">SKU: ${produto.sku || '—'} · Cadastro pendente</div>
-                </div>
-                <i class="fa-solid fa-chevron-right pendencia-arrow"></i>
-            `;
-            group.appendChild(item);
-        });
-
-        container.appendChild(group);
-    }
+            </div>
+        </div>`;
 }
 
-function pendToggleLinha(proformaId) {
-    if (_pendExpandidos.has(proformaId)) _pendExpandidos.delete(proformaId);
-    else _pendExpandidos.add(proformaId);
-    renderizarTarefas();
-}
-
-function _pendRenderLinha(item) {
+function _pendCardProforma(item) {
     const proformaId = item.proforma.id;
-    const expandido   = _pendExpandidos.has(proformaId);
 
     const tags = [];
     if (item.proformaPendente) tags.push(`<span class="pend-tag pend-tag-proforma">Proforma Pendente</span>`);
     if (item.processosAbertos.length) tags.push(`<span class="pend-tag pend-tag-processo">Processo Aberto${item.processosAbertos.length > 1 ? ` (${item.processosAbertos.length})` : ''}</span>`);
     if (item.temDocPendente) tags.push(`<span class="pend-tag pend-tag-doc">${item.docsAssinados}/${item.docsFeitos} assinados</span>`);
 
-    const linhaResumo = `
-        <tr class="pend-linha">
-            <td class="pend-col-seta">
-                <button class="pend-toggle" onclick="pendToggleLinha('${proformaId}')" title="${expandido ? 'Recolher' : 'Expandir'}">
-                    <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
-                </button>
-            </td>
-            <td>
-                <div class="pend-pedido-numero">${item.proforma.codigo || '—'}</div>
-                <div class="pend-pedido-parceiro">${item.destinatario}</div>
-            </td>
-            <td class="pend-tags">${tags.join('')}</td>
-        </tr>`;
-
-    if (!expandido) return linhaResumo;
-
-    const detalhes = [];
+    const linhas = [];
     if (item.proformaPendente) {
-        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-invoice"></i> Proforma está <strong>pendente</strong>. <a href="formularios.html?tab=proposta&id=${proformaId}" target="_blank" rel="opener">Abrir proforma</a></div>`);
+        linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-file-invoice"></i> <span>Proforma <strong>pendente</strong></span> <a href="formularios.html?tab=proposta&id=${proformaId}" target="_blank" rel="opener">Abrir</a></div>`);
     }
     item.processosAbertos.forEach(pr => {
-        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-diagram-project"></i> Processo <strong>${pr.numero_processo || '—'}</strong> está aberto. <a href="formularios.html?tab=processo&id=${pr.id}" target="_blank" rel="opener">Abrir processo</a></div>`);
+        linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-diagram-project"></i> <span>Processo <strong>${_pendEsc(pr.numero_processo || '—')}</strong> aberto</span> <a href="formularios.html?tab=processo&id=${pr.id}" target="_blank" rel="opener">Abrir</a></div>`);
     });
     if (item.temDocPendente) {
-        detalhes.push(`<div class="pend-detalhe-linha"><i class="fa-solid fa-file-signature"></i> Documentos: <strong>${item.docsAssinados}/${item.docsFeitos}</strong> assinados. <a href="documentos.html">Abrir documentos</a></div>`);
+        linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-file-signature"></i> <span>Documentos: <strong>${item.docsAssinados}/${item.docsFeitos}</strong> assinados</span> <a href="documentos.html?proforma_id=${proformaId}" target="_blank" rel="opener">Abrir</a></div>`);
     }
 
-    return linhaResumo + `
-        <tr class="pend-linha-detalhe">
-            <td colspan="3"><div class="pend-detalhe-wrap">${detalhes.join('')}</div></td>
-        </tr>`;
+    return `
+        <div class="pend-card pend-card-proforma">
+            <div class="pend-card-topo">
+                <div class="pendencia-icon" style="background:#f59e0b18; color:#d97706;"><i class="fa-solid fa-file-invoice"></i></div>
+                <div class="pend-card-titulo-wrap">
+                    <div class="pend-card-titulo">${_pendEsc(item.proforma.codigo || '—')}</div>
+                    <div class="pend-card-sub" title="${_pendEsc(item.destinatario)}">Importador: ${_pendEsc(item.destinatario)}</div>
+                </div>
+            </div>
+            <div class="pend-card-corpo">${linhas.join('')}</div>
+            <div class="pend-card-rodape pend-tags">${tags.join('')}</div>
+        </div>`;
+}
+
+function _pendCardProduto(produto) {
+    return `
+        <div class="pend-card pend-card-produto pend-card-clicavel" onclick="window.open('formularios.html?tab=produto&id=${produto.id}', '_blank')">
+            <div class="pend-card-topo">
+                <div class="pendencia-icon" style="background:#0891b218; color:#0891b2;"><i class="fa-solid fa-box"></i></div>
+                <div class="pend-card-titulo-wrap">
+                    <div class="pend-card-titulo" title="${_pendEsc(produto.nome || 'Sem nome')}">${_pendEsc(produto.nome || 'Sem nome')}</div>
+                    <div class="pend-card-sub">SKU: ${_pendEsc(produto.sku || '—')}</div>
+                </div>
+            </div>
+            <div class="pend-card-corpo">
+                <div class="pend-card-linha"><i class="fa-solid fa-circle-exclamation"></i> <span>Cadastro pendente</span></div>
+            </div>
+            <div class="pend-card-rodape"><span class="pend-card-abrir">Abrir produto <i class="fa-solid fa-arrow-right"></i></span></div>
+        </div>`;
 }
 
 function adicionarTarefa() {
