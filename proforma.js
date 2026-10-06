@@ -54,11 +54,23 @@ function _profBotaoProcesso(p, status) {
             <i class="fa-solid fa-eye"></i> ${processos.length > 1 ? `Processo ${i + 1}` : 'Ver Processo'}
         </button>`).join('');
 
-    const botaoGerar = PROF_STATUS_PODE_GERAR_PROCESSO.includes(status)
-        ? `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar Processo</button>`
+    // Embarque parcial: com processo(s) já gerado(s), mostra quanto dos produtos
+    // já foi pra Processos; com tudo embarcado o botão vira "Totalmente embarcada"
+    // (continua clicável — gerar mais um pede confirmação).
+    const saldo = processos.length ? calcularSaldoProforma(p.itens, processos) : null;
+    const resumo = saldo
+        ? `<span class="prof-embarque-resumo${saldo.esgotado ? ' completo' : ''}" title="Quanto dos produtos da proforma já foi para processos">
+               <i class="fa-solid fa-boxes-packing"></i> ${processos.length} processo${processos.length > 1 ? 's' : ''} · ${saldo.percentual}% embarcado
+           </span>`
         : '';
 
-    return botoesVer + botaoGerar;
+    const botaoGerar = PROF_STATUS_PODE_GERAR_PROCESSO.includes(status)
+        ? (saldo?.esgotado
+            ? `<button class="btn-seguir-processo btn-seguir-processo--completo" onclick="profSeguirProcesso('${p.id}')" title="Todos os produtos já estão em processos — clique para gerar outro mesmo assim"><i class="fa-solid fa-check"></i> Totalmente embarcada</button>`
+            : `<button class="btn-seguir-processo" onclick="profSeguirProcesso('${p.id}')">Gerar Processo</button>`)
+        : '';
+
+    return resumo + botoesVer + botaoGerar;
 }
 
 // Só habilitado depois de gerar pelo menos 1 Processo (mesmo critério que o
@@ -159,7 +171,7 @@ async function profCarregarLista() {
         if (proformaIds.length > 0) {
             const { data: procs } = await supabaseClient
                 .from('processos')
-                .select('id, proforma_id, numero_processo')
+                .select('id, proforma_id, numero_processo, status, itens')
                 .in('proforma_id', proformaIds);
             (procs || []).forEach(pr => {
                 (processosMap[pr.proforma_id] ||= []).push(pr);
@@ -480,6 +492,21 @@ async function profGerarPDF(id) {
 // gravado no Processo (colunas sem_assinatura_*, ver database-processos-sem-assinatura.sql).
 async function profSeguirProcesso(id) {
     const p = _profTodos.find(x => x.id === id);
+
+    // Já tem processo: um novo é um embarque parcial — só com a confirmação do usuário.
+    const processos = p?._processos || [];
+    if (processos.length) {
+        const saldo = calcularSaldoProforma(p.itens, processos);
+        const lista = processos.map(pr => pr.numero_processo || '—').join(', ');
+        const okParcial = await confirmarAcao(
+            saldo.esgotado
+                ? `Todos os produtos da Proforma ${p.codigo || ''} já estão em processos (${lista}). Deseja criar outro processo mesmo assim?`
+                : `A Proforma ${p.codigo || ''} já tem ${processos.length > 1 ? 'os processos' : 'o processo'} ${lista} (${saldo.percentual}% embarcado). Deseja criar outro processo para um embarque parcial?`,
+            { titulo: 'Novo embarque parcial', confirmar: 'Sim, criar processo', cancelar: 'Não' }
+        );
+        if (!okParcial) return;
+    }
+
     const res = await window.supabaseAPI.buscarDocumentosProformas([id]);
     const assinada = (res.data || []).some(d => d.tipo_documento === 'proforma' && d.assinado);
     if (assinada) {

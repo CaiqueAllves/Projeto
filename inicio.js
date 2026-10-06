@@ -223,7 +223,7 @@ async function carregarPendenciasSistema() {
         (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
 
         const resDocs = await window.supabaseAPI.buscarDocumentosProformas(proformaIds);
-        (resDocs.data || []).forEach(d => { (docsMap[d.proforma_id] ||= {})[d.tipo_documento] = d; });
+        (resDocs.data || []).forEach(d => { (docsMap[d.proforma_id] ||= {})[docChaveRegistro(d)] = d; });
     }
 
     _pendProformas = proformas.map(p => {
@@ -237,10 +237,10 @@ async function carregarPendenciasSistema() {
         // — um tipo que nunca foi gerado não é uma pendência de assinatura.
         let docsFeitos = 0, docsAssinados = 0;
         docTiposDaProforma(processosDaProforma, docsSalvos).forEach(tipo => {
-            if (tipo.custom) return;
-            const reg = docsSalvos[tipo.id];
+            if (tipo.custom || tipo.semProcesso) return;
+            const reg = docRegistroDaLinha(docsSalvos, tipo, processosDaProforma);
             const assinado = !!reg?.assinado;
-            const feito = assinado || docFeitoAutomatico(processosDaProforma, tipo.id);
+            const feito = assinado || !!reg?.arquivo_path || docFeitoAutomatico(processosDaProforma, tipo.id, tipo.processoId);
             if (feito) { docsFeitos++; if (assinado) docsAssinados++; }
         });
         const temDocPendente = docsFeitos > docsAssinados;

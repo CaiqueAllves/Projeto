@@ -1350,6 +1350,7 @@
                                         <div class="doc-label-row">
                                             <label for="doc-num-commercial">Nº Commercial Invoice</label>
                                             <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-gerar" title="Gerar o PDF do Commercial Invoice (com os dados salvos do Processo) — o sistema já anexa o arquivo" onclick="docGerarPdfProcesso('commercial')"><i class="fa-solid fa-file-pdf"></i></button>
                                                 <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('commercial')"><i class="fa-solid fa-upload"></i></button>
                                                 <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('commercial')"   ><i class="fa-solid fa-eye"></i></button>
                                                 <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('commercial')"><i class="fa-solid fa-trash"></i></button>
@@ -1365,6 +1366,7 @@
                                         <div class="doc-label-row">
                                             <label for="doc-num-packing">Nº Packing List</label>
                                             <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-gerar" title="Gerar o PDF do Packing List (com os dados salvos do Processo) — o sistema já anexa o arquivo" onclick="docGerarPdfProcesso('packing')"><i class="fa-solid fa-file-pdf"></i></button>
                                                 <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('packing')"><i class="fa-solid fa-upload"></i></button>
                                                 <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('packing')"   ><i class="fa-solid fa-eye"></i></button>
                                                 <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('packing')"><i class="fa-solid fa-trash"></i></button>
@@ -3216,10 +3218,12 @@
 <script src="supabase-api.js"></script>
 <script src="auth.js"></script>
 <script src="navegador.js"></script>
+<script src="doc-tipos.js"></script>
 <script src="formularios.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="pdf-processo.js"></script>
 <script src="pdf-proforma.js"></script>
+<script src="pdf-documentos.js"></script>
 
 <script src="suporte.js"></script>
 </body>

@@ -947,6 +947,21 @@ function _semColunasSemAssinatura(payload) {
     return p;
 }
 
+// Proforma que virou Processo sai de "Pendente" e vai pra "Aprovado"
+// automaticamente (outros status — Enviado, Encerrado... — ficam como estão).
+async function _aprovarProformaDoProcesso(proformaId) {
+    if (!proformaId) return;
+    try {
+        await supabaseClient
+            .from('proformas')
+            .update({ status: 'aprovado', status_atualizado_em: new Date().toISOString() })
+            .eq('id', proformaId)
+            .eq('status', 'pendente');
+    } catch (err) {
+        console.warn('[Processo] Não foi possível aprovar a proforma de origem:', err);
+    }
+}
+
 async function salvarProcesso(dados) {
     try {
         const usuario = obterUsuarioLogado();
@@ -958,6 +973,7 @@ async function salvarProcesso(dados) {
             ..._payloadProcesso(dados),
             numero_processo:         numero_processo,
             empresa_proprietaria_id: usuario.empresa_id,
+            criado_por:              usuario.id,
             data_abertura:           dados.data_abertura || new Date().toISOString().split('T')[0],
         };
         let { data, error } = await supabaseClient.from('processos').insert(payload).select().single();
@@ -966,6 +982,7 @@ async function salvarProcesso(dados) {
         }
 
         if (error) return { sucesso: false, mensagem: error.message };
+        await _aprovarProformaDoProcesso(payload.proforma_id);
         return { sucesso: true, data };
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
@@ -993,6 +1010,8 @@ async function atualizarProcesso(id, dados) {
             ({ error } = await atualizar(_semColunasSemAssinatura(payload)));
         }
         if (error) return { sucesso: false, mensagem: error.message };
+        // Processo editado e vinculado a uma Proforma (pelo formulário) também aprova
+        if ('tipo' in dados) await _aprovarProformaDoProcesso(payload.proforma_id);
         return { sucesso: true };
     } catch (err) {
         return { sucesso: false, mensagem: err.message };
@@ -1973,7 +1992,74 @@ async function excluirContaReceber(id) {
 // EXPORTAR API
 // ========================================
 
+// ========================================
+// NOMES DE USUÁRIO (criado por / enviado por)
+// ========================================
+// id → nome_completo dos usuários (cache por página). Usado no "Criado por"
+// dos PDFs e da tela Documentos.
+const _nomesUsuariosCache = {};
+
+async function buscarNomesUsuarios(ids) {
+    const faltam = [...new Set((ids || []).filter(Boolean).map(String))].filter(id => !(id in _nomesUsuariosCache));
+    if (faltam.length) {
+        try {
+            const { data } = await supabaseClient.from('usuarios').select('id, nome_completo, email').in('id', faltam);
+            faltam.forEach(id => { _nomesUsuariosCache[id] = null; });
+            (data || []).forEach(u => { _nomesUsuariosCache[String(u.id)] = u.nome_completo || u.email || null; });
+        } catch {}
+    }
+    const r = {};
+    (ids || []).filter(Boolean).forEach(id => { r[id] = _nomesUsuariosCache[String(id)] || null; });
+    return r;
+}
+
+// ========================================
+// SALDO DA PROFORMA (embarque parcial)
+// ========================================
+// 1 Proforma pode virar N Processos (embarques parciais). O saldo de cada
+// produto é: quantidade na Proforma − quantidade já colocada nos outros
+// Processos dela (cancelados/excluídos não contam). Item casa por produto_id
+// ou, sem ele, pelo nome. Usado por proforma.js (card / Gerar Processo) e
+// formularios.js (Produtos do Processo + validação ao salvar).
+
+function chaveItemProforma(it) {
+    return it?.produto_id ? 'id:' + it.produto_id : 'nome:' + String(it?.produto || '').trim().toLowerCase();
+}
+
+function calcularSaldoProforma(itensProforma, processos, processoIgnorarId = null) {
+    const saldo = {};
+    (Array.isArray(itensProforma) ? itensProforma : []).forEach(it => {
+        const k = chaveItemProforma(it);
+        if (k === 'nome:') return;
+        (saldo[k] ||= { chave: k, produto: it.produto || '', unidade: it.unidade || '', total: 0, usado: 0, item: it });
+        saldo[k].total += Number(it.qtd ?? it.quantidade) || 0;
+    });
+    (processos || [])
+        .filter(pr => pr && String(pr.id) !== String(processoIgnorarId) && !['cancelado', 'excluido'].includes(pr.status))
+        .forEach(pr => (Array.isArray(pr.itens) ? pr.itens : []).forEach(it => {
+            const k = chaveItemProforma(it);
+            if (saldo[k]) saldo[k].usado += Number(it.qtd ?? it.quantidade) || 0;
+        }));
+    let total = 0, usado = 0;
+    Object.values(saldo).forEach(s => {
+        s.saldo = Math.max(0, s.total - s.usado);
+        total += s.total;
+        usado += Math.min(s.usado, s.total);
+    });
+    return { itens: saldo, percentual: total ? Math.round(usado / total * 100) : 0, esgotado: total > 0 && usado >= total };
+}
+
+async function buscarSaldoProforma(proformaId, processoIgnorarId = null) {
+    const [{ data: prof }, { data: procs }] = await Promise.all([
+        supabaseClient.from('proformas').select('id, codigo, itens').eq('id', proformaId).maybeSingle(),
+        supabaseClient.from('processos').select('id, numero_processo, status, itens').eq('proforma_id', proformaId),
+    ]);
+    return { proforma: prof, processos: procs || [], ...calcularSaldoProforma(prof?.itens, procs, processoIgnorarId) };
+}
+
 window.supabaseAPI = {
+    buscarSaldoProforma,
+    buscarNomesUsuarios,
     login: loginSupabase,
     atualizarUsuarioLogado,
     cadastrar: cadastrarContaSupabase,
@@ -2458,7 +2544,26 @@ async function buscarDocumentosProformas(proformaIds) {
 // anexado antes (pelo formulário de Processo, ou por marcarAnexado), deixe
 // os dois de fora que o arquivo já salvo é preservado (nem o desmarcar
 // assinatura apaga o anexo — só a condição de "assinado" muda).
-async function marcarDocumentoAssinado(proformaId, tipoDocumento, assinado, assinadoPor = null, tipoLabel = null, arquivoPath = null, arquivoNome = null) {
+// Documentos por Processo (database-proforma-documentos-por-processo.sql):
+// Commercial Invoice / Packing List / DUE ficam por Processo (processo_id);
+// os demais por Proforma (processo_id NULL). Antes da migração rodar, a coluna
+// e a constraint nova não existem — cai no modelo antigo (1 por Proforma).
+function _docErroSemProcessoId(error) {
+    return /processo_id|no unique or exclusion constraint/i.test(error?.message || '');
+}
+
+async function _upsertDocumentoProforma(payload, processoId) {
+    const novo = { ...payload, processo_id: processoId || null };
+    let r = await supabaseClient.from('proforma_documentos')
+        .upsert(novo, { onConflict: 'proforma_id,tipo_documento,processo_id' }).select().single();
+    if (r.error && _docErroSemProcessoId(r.error)) {
+        r = await supabaseClient.from('proforma_documentos')
+            .upsert(payload, { onConflict: 'proforma_id,tipo_documento' }).select().single();
+    }
+    return r;
+}
+
+async function marcarDocumentoAssinado(proformaId, tipoDocumento, assinado, assinadoPor = null, tipoLabel = null, arquivoPath = null, arquivoNome = null, processoId = null) {
     try {
         const usuario = obterUsuarioLogado();
         const payload = {
@@ -2477,11 +2582,7 @@ async function marcarDocumentoAssinado(proformaId, tipoDocumento, assinado, assi
             payload.enviado_por  = usuario?.nome || usuario?.email || null;
             payload.enviado_em   = new Date().toISOString();
         }
-        const { data, error } = await supabaseClient
-            .from('proforma_documentos')
-            .upsert(payload, { onConflict: 'proforma_id,tipo_documento' })
-            .select()
-            .single();
+        const { data, error } = await _upsertDocumentoProforma(payload, processoId);
         if (error) return { sucesso: false, mensagem: error.message };
 
         // Proforma assinada → status "Aprovado" automático (só avança a partir
@@ -2503,7 +2604,7 @@ async function marcarDocumentoAssinado(proformaId, tipoDocumento, assinado, assi
 // documento já existir (linha já criada por uma assinatura anterior, ou
 // por outro processo da mesma proforma), só atualiza o anexo — não mexe em
 // assinado/assinado_por/assinado_em.
-async function anexarDocumentoProforma(proformaId, tipoDocumento, tipoLabel, arquivoPath, arquivoNome) {
+async function anexarDocumentoProforma(proformaId, tipoDocumento, tipoLabel, arquivoPath, arquivoNome, processoId = null) {
     try {
         const usuario = obterUsuarioLogado();
         const payload = {
@@ -2517,11 +2618,7 @@ async function anexarDocumentoProforma(proformaId, tipoDocumento, tipoLabel, arq
             atualizado_em:  new Date().toISOString(),
             atualizado_por: usuario?.id || null,
         };
-        const { data, error } = await supabaseClient
-            .from('proforma_documentos')
-            .upsert(payload, { onConflict: 'proforma_id,tipo_documento' })
-            .select()
-            .single();
+        const { data, error } = await _upsertDocumentoProforma(payload, processoId);
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
@@ -2530,18 +2627,17 @@ async function anexarDocumentoProforma(proformaId, tipoDocumento, tipoLabel, arq
 // Remove só o anexo (arquivo em si já apagado do Storage pela página
 // chamadora) — cascata pra "não assinado" junto, já que não faz sentido
 // um documento continuar "assinado" sem nenhum arquivo por trás.
-async function limparAnexoDocumentoProforma(proformaId, tipoDocumento) {
+async function limparAnexoDocumentoProforma(proformaId, tipoDocumento, processoId = null) {
     try {
         const payload = {
             arquivo_path: null, arquivo_nome: null, enviado_por: null, enviado_em: null,
             assinado: false, assinado_por: null, assinado_em: null,
         };
-        const { data, error } = await supabaseClient
-            .from('proforma_documentos')
-            .update(payload)
-            .eq('proforma_id', proformaId).eq('tipo_documento', tipoDocumento)
-            .select()
-            .maybeSingle();
+        const base = () => supabaseClient.from('proforma_documentos').update(payload)
+            .eq('proforma_id', proformaId).eq('tipo_documento', tipoDocumento);
+        let { data, error } = await (processoId ? base().eq('processo_id', processoId) : base().is('processo_id', null))
+            .select().maybeSingle();
+        if (error && _docErroSemProcessoId(error)) ({ data, error } = await base().select().maybeSingle());
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }

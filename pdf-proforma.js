@@ -20,10 +20,19 @@ function carregarJsPDFSobDemanda() {
     return _jspdfCarregado;
 }
 
-async function gerarPDFProformaDados(d) {
+// opcoes.retornarBlob: em vez de baixar, devolve o PDF (Blob) — usado pelo
+// anexo automático do documento "Nº Proforma Invoice" (ver mais abaixo).
+async function gerarPDFProformaDados(d, opcoes = {}) {
     try {
         await carregarJsPDFSobDemanda();
-    } catch (e) { alert('Não foi possível carregar o gerador de PDF. Tente novamente.'); return; }
+    } catch (e) { if (!opcoes.retornarBlob) alert('Não foi possível carregar o gerador de PDF. Tente novamente.'); return null; }
+
+    // "Criado por": quem cadastrou a proforma (proformas.criado_por)
+    let criadoPor = null;
+    if (d.criado_por && window.supabaseAPI?.buscarNomesUsuarios) {
+        criadoPor = (await window.supabaseAPI.buscarNomesUsuarios([d.criado_por]))[d.criado_por];
+    }
+    if (!criadoPor) { const u = obterUsuarioLogado?.(); criadoPor = (!d.criado_por || d.criado_por === u?.id) ? (u?.nome || u?.email || null) : null; }
 
     const jsPDFLib = window.jspdf;
     if (!jsPDFLib) { alert('jsPDF não carregado. Recarregue a página.'); return; }
@@ -61,10 +70,11 @@ async function gerarPDFProformaDados(d) {
     // ── CABEÇALHO (20mm) ─────────────────────
     rx(0,0,W,20,NAVY); rx(0,0,4,20,AZUL_MED);
     sf('bold',13,BRANCO); doc.text('MARPEX',ML+3,8.5);
-    sf('normal',6.5,[160,190,240]); doc.text('Gestão de Comércio Exterior',ML+3,14);
+    sf('normal',6.5,[160,190,240]); doc.text('Gestão de Comércio Exterior',ML+3,13);
     sf('bold',11,BRANCO); doc.text('PROFORMA INVOICE',W-ML,8.5,{align:'right'});
     sf('normal',8,[160,190,240]); doc.text(codigo,W-ML,14,{align:'right'});
     sf('normal',6,[120,160,220]); doc.text('Gerado em: '+dataGeracao,W-ML,17.5,{align:'right'});
+    sf('normal',6,[120,160,220]); doc.text('Criado por: '+(criadoPor||'—'),ML+3,17.5);
     Y=23;
 
     // ── BARRA INFO (6 campos, 10mm) ──────────
@@ -286,5 +296,44 @@ async function gerarPDFProformaDados(d) {
         sf('normal',7,[160,190,240]); doc.text(dataGeracao,W-ML,202,{align:'right'});
     }
 
+    if (opcoes.retornarBlob) return doc.output('blob');
     doc.save(`proforma_${codigo}_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ========================================
+// ANEXO AUTOMÁTICO — "Nº Proforma Invoice"
+// ========================================
+// O PDF da Proforma é gerado pelo próprio sistema, então ele mesmo anexa o
+// arquivo ao documento "Nº Proforma Invoice" (tela Documentos), registrando
+// quem criou e quando. Nunca sobrescreve um arquivo enviado pelo usuário nem
+// um documento já assinado — só substitui a versão anterior gerada pelo sistema.
+const PDF_PROFORMA_PREFIXO_SISTEMA = 'proforma_sistema_';
+
+async function anexarPDFProformaAutomatico(d, registroAtual) {
+    if (!d?.id) return null;
+    try {
+        if (registroAtual === undefined) {
+            const { data } = await supabaseClient.from('proforma_documentos')
+                .select('*').eq('proforma_id', d.id).eq('tipo_documento', 'proforma').maybeSingle();
+            registroAtual = data || null;
+        }
+        const anterior = registroAtual?.arquivo_path || '';
+        const doSistema = anterior.split('/').pop().startsWith(PDF_PROFORMA_PREFIXO_SISTEMA);
+        if (registroAtual?.assinado || (anterior && !doSistema)) return null;
+
+        const blob = await gerarPDFProformaDados(d, { retornarBlob: true });
+        if (!blob) return null;
+        const path = `${d.id}/${PDF_PROFORMA_PREFIXO_SISTEMA}${Date.now()}.pdf`;
+        const { error } = await supabaseClient.storage.from('proforma-documentos-assinados')
+            .upload(path, blob, { contentType: 'application/pdf' });
+        if (error) { console.warn('[Proforma] anexo automático:', error.message); return null; }
+
+        const res = await window.supabaseAPI.anexarDocumentoProforma(d.id, 'proforma', null, path, `Proforma_${d.codigo || d.id}.pdf`);
+        if (!res.sucesso) { supabaseClient.storage.from('proforma-documentos-assinados').remove([path]).catch(() => {}); return null; }
+        if (anterior) supabaseClient.storage.from('proforma-documentos-assinados').remove([anterior]).catch(() => {});
+        return res.data;
+    } catch (e) {
+        console.warn('[Proforma] anexo automático falhou:', e);
+        return null;
+    }
 }

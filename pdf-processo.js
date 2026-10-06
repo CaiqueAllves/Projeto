@@ -67,7 +67,8 @@ function gerarPDFProcesso() {
     function val(id) {
         const el = document.getElementById(id);
         if (!el) return '—';
-        if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '—';
+        // Select sem escolha mostraria o texto do placeholder ("Selecione...")
+        if (el.tagName === 'SELECT') return el.value ? (el.options[el.selectedIndex]?.text || '—') : '—';
         return el.value?.trim() || '—';
     }
 
@@ -89,10 +90,20 @@ function gerarPDFProcesso() {
     rect(0, 0, W, 20, NAVY);
     rect(0, 0, 4, 20, AZUL_MED);
     setFont('bold', 13, BRANCO); doc.text('MARPEX', ML + 3, 8.5);
-    setFont('normal', 6.5, [160, 190, 240]); doc.text('Gestão de Comércio Exterior', ML + 3, 14);
+    setFont('normal', 6.5, [160, 190, 240]); doc.text('Gestão de Comércio Exterior', ML + 3, 13);
     setFont('bold', 11, BRANCO); doc.text('PROCESSO DE EXPORTAÇÃO', W - ML, 8.5, { align: 'right' });
-    setFont('normal', 8, [160, 190, 240]); doc.text(codigo !== '—' ? codigo : 'Sem código', W - ML, 14, { align: 'right' });
+    // Número do processo + Proforma de origem (o campo "Código" do form é o da Proforma)
+    const numeroProc = window._procNumero || null;
+    const linhaCodigo = numeroProc
+        ? `${numeroProc}${codigo !== '—' ? '  ·  Proforma ' + codigo : ''}`
+        : (codigo !== '—' ? 'Proforma ' + codigo : 'Sem código');
+    setFont('normal', 8, [160, 190, 240]); doc.text(linhaCodigo, W - ML, 14, { align: 'right' });
     setFont('normal', 6, [120, 160, 220]); doc.text('Gerado em: ' + dataGeracao, W - ML, 17.5, { align: 'right' });
+    // Quem cadastrou o processo (formularios.js → procCarregarEdicao); processo
+    // ainda não salvo = usuário logado.
+    const _u = (typeof obterUsuarioLogado === 'function') ? obterUsuarioLogado() : null;
+    const criadoPor = window._procCriadoPorNome || _u?.nome || _u?.email || '—';
+    setFont('normal', 6, [120, 160, 220]); doc.text('Criado por: ' + criadoPor, ML + 3, 17.5);
     Y = 23;
 
     // ════════════════════════════════════════
@@ -247,14 +258,64 @@ function gerarPDFProcesso() {
     // ════════════════════════════════════════
     // DATAS & CONTAINER
     // ════════════════════════════════════════
-    secHeader('Datas & Container');
+    // Container só existe no modal Marítimo
+    const ehMaritimo = modalVal === 'maritimo';
+    secHeader(ehMaritimo ? 'Datas & Container' : 'Datas');
     campo('Data de Abertura', fmtData(raw('proc-data-abertura')), ML, Y, 42);
     campo('Data de Embarque', fmtData(raw('proc-data-embarque')), ML + 46, Y, 42);
     campo('Data de Chegada', fmtData(raw('proc-data-chegada')), ML + 92, Y, 42);
     campo('Data de Cancelamento', fmtData(raw('proc-data-cancelamento')), ML + 138, Y, 45);
-    campo('Container', val('proc-container-tipo'), ML + 187, Y, 30);
-    campo('Nº do Container', val('proc-container-num'), ML + 221, Y, 62);
+    if (ehMaritimo) {
+        campo('Container', val('proc-container-tipo'), ML + 187, Y, 30);
+        campo('Nº do Container', val('proc-container-num'), ML + 221, Y, 62);
+    }
     Y += 14;
+
+    // ════════════════════════════════════════
+    // PRODUTOS DO PROCESSO
+    // ════════════════════════════════════════
+    const itensProc = (typeof _procItens !== 'undefined' ? _procItens : []).filter(it => (it.produto || '').trim());
+    if (itensProc.length) {
+        secHeader('Produtos do Processo');
+        const fmtNum = n => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const ncmDe = it => {
+            const pr = (window._procProdutosInfo || {})[it.produto_id];
+            return pr?.ncm || pr?.hscode || '—';
+        };
+        const cQtd = 22, cUn = 18, cNcm = 30, cPreco = 38, cTot = 42;
+        const cProd = W - ML * 2 - cQtd - cUn - cNcm - cPreco - cTot;
+        const xs = [ML, ML + cProd, ML + cProd + cNcm, ML + cProd + cNcm + cQtd, ML + cProd + cNcm + cQtd + cUn, ML + cProd + cNcm + cQtd + cUn + cPreco];
+        rect(ML, Y, W - ML * 2, 7, AZUL);
+        setFont('bold', 6, BRANCO);
+        doc.text('PRODUTO', xs[0] + 2, Y + 4.8);
+        doc.text('NCM', xs[1] + 2, Y + 4.8);
+        doc.text('QTD', xs[2] + cQtd - 2, Y + 4.8, { align: 'right' });
+        doc.text('UN.', xs[3] + 2, Y + 4.8);
+        doc.text('PREÇO UNIT.', xs[4] + cPreco - 2, Y + 4.8, { align: 'right' });
+        doc.text('TOTAL', W - ML - 2, Y + 4.8, { align: 'right' });
+        Y += 7;
+        const totais = {};
+        itensProc.forEach((it, i) => {
+            pg(8);
+            if (i % 2 === 0) rect(ML, Y, W - ML * 2, 7, CINZA_BG);
+            const tot = (Number(it.qtd) || 0) * (Number(it.preco) || 0);
+            totais[it.moeda || '—'] = (totais[it.moeda || '—'] || 0) + tot;
+            setFont('normal', 7.5, PRETO);
+            doc.text(doc.splitTextToSize(it.produto, cProd - 4)[0], xs[0] + 2, Y + 4.8);
+            doc.text(ncmDe(it), xs[1] + 2, Y + 4.8);
+            doc.text(Number(it.qtd || 0).toLocaleString('pt-BR'), xs[2] + cQtd - 2, Y + 4.8, { align: 'right' });
+            doc.text(String(it.unidade || '—'), xs[3] + 2, Y + 4.8);
+            doc.text(fmtNum(it.preco), xs[4] + cPreco - 2, Y + 4.8, { align: 'right' });
+            doc.text(`${fmtNum(tot)} ${it.moeda || ''}`.trim(), W - ML - 2, Y + 4.8, { align: 'right' });
+            Y += 7;
+        });
+        pg(9);
+        rect(ML, Y, W - ML * 2, 8, NAVY);
+        setFont('bold', 7, [160, 190, 240]); doc.text('TOTAL GERAL', ML + 3, Y + 5.3);
+        setFont('bold', 8, BRANCO);
+        doc.text(Object.entries(totais).map(([m, v]) => `${fmtNum(v)} ${m}`).join('  +  '), W - ML - 2, Y + 5.3, { align: 'right' });
+        Y += 12;
+    }
 
     // ════════════════════════════════════════
     // TRANSPORTADORA

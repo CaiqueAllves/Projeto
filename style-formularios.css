@@ -3732,3 +3732,26 @@ form {
 #prop-documento-tipo:disabled,
 #prop-emp-dest-doc-tipo:disabled { background: #f1f5f9; color: #1e293b; cursor: not-allowed; opacity: 1; }
 #proc-documento-tipo:disabled { background: #f1f5f9; color: #1e293b; cursor: not-allowed; opacity: 1; }
+
+/* Produtos do Processo — saldo da Proforma (embarque parcial) */
+.item-saldo:empty { display: none; }
+.item-saldo {
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.item-saldo i { color: #94a3b8; }
+.prop-item-card.item-saldo-excedido { border-color: #fca5a5 !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.10); }
+.prop-item-card.item-saldo-excedido .item-saldo { background: #fef2f2; color: #b91c1c; }
+.prop-item-card.item-saldo-excedido .item-saldo i { color: #dc2626; }
+
+/* Gerar PDF do documento (Commercial Invoice / Packing List) */
+.doc-btn-gerar { color: #dc2626; }
+.doc-btn-gerar:hover { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }

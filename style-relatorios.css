@@ -796,3 +796,26 @@ main {
 .rel-btn-pdf:hover { opacity: .88; transform: translateY(-1px); }
 
 /* RODAPÉ — definido em style-base.css */
+
+
+/* "Mostrar mais" dos cards de relatório (relatorios.js → _relIniciarMostrarMais) */
+.report-grid.rel-recolhido .report-card:nth-child(n+6) { display: none; }
+
+.rel-mostrar-mais {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 9px;
+    background: #fff;
+    color: #4776ec;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+.rel-mostrar-mais i { font-size: 11px; }
+.rel-mostrar-mais:hover { border-color: #4776ec; background: #f0f5ff; }

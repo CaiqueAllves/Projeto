@@ -764,7 +764,7 @@ async function _prodPreencherDoUpload(dados) {
 // SALVAR — PROCESSO
 // ========================================
 
-function salvarProcesso(e) {
+async function salvarProcesso(e) {
     e.preventDefault();
     if (!exigirEmpresaVinculada()) return;
 
@@ -785,6 +785,35 @@ function salvarProcesso(e) {
         mostrarNotificacao('Selecione o Exportador antes de salvar.', 'warning');
         document.getElementById('proc-cliente')?.focus();
         return;
+    }
+    const procModal    = document.getElementById('proc-modal')?.value;
+    const procIncoterm = document.getElementById('proc-incoterm')?.value;
+    if (procModal && procModal !== 'maritimo' && INCOTERMS_MARITIMOS.includes(procIncoterm)) {
+        mostrarNotificacao(`O Incoterm ${procIncoterm} é exclusivo do modal Marítimo — escolha outro Incoterm ou mude o modal.`, 'warning');
+        document.getElementById('proc-incoterm')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
+    // Embarque parcial: nenhum produto pode passar do saldo da Proforma. Recalcula
+    // na hora (outro processo pode ter sido salvo enquanto este estava aberto).
+    // Bloqueia sem fechar a tela — o usuário ajusta as quantidades e salva de novo.
+    const proformaId = document.getElementById('proc-proposta-id')?.value;
+    if (proformaId) {
+        _procSaldo = await window.supabaseAPI.buscarSaldoProforma(proformaId, document.getElementById('proc-id')?.value || null);
+        itensRecalcular('proc');
+        const excedidos = _procExcedentes();
+        if (excedidos.length) {
+            const e1 = excedidos[0];
+            const fmt = n => Number(n).toLocaleString('pt-BR');
+            await confirmarAcao(
+                `"${e1.produto}" está com ${fmt(e1.pedido)} ${e1.unidade} neste processo, mas o saldo da Proforma ${_procSaldo.proforma?.codigo || ''} é de ${fmt(e1.saldo)} ${e1.unidade}`
+                + (e1.usado ? ` (${fmt(e1.usado)} de ${fmt(e1.total)} já estão em outros processos)` : '')
+                + `.${excedidos.length > 1 ? ` Outros ${excedidos.length - 1} produto(s) também passam do saldo.` : ''} Ajuste as quantidades para salvar.`,
+                { titulo: 'Quantidade acima do saldo', confirmar: 'Ajustar quantidades', cancelar: null, perigo: true }
+            );
+            document.getElementById(`proc-item-card-${e1.idx[0]}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
     }
 
     const modal = document.getElementById('modal-confirmar-salvar');
@@ -838,11 +867,11 @@ async function confirmarSalvar() {
             // Cadastrar uma nova continua aberto por padrão.
             if (editandoId) _agendarFechamentoAutomatico();
 
-            // Auto-gerar PDF ao salvar (layout unificado — precisa do registro
-            // completo, não só id/codigo, por isso salvarProposta/atualizarProforma
-            // agora retornam a linha inteira)
+            // Não baixa o PDF sozinho: o aviso mostra as ações (botão "PDF" usa
+            // o registro completo guardado aqui). Só o anexo no documento
+            // "Nº Proforma Invoice" continua automático.
             _propUltimoSalvo = res.data;
-            gerarPDFProposta();
+            anexarPDFProformaAutomatico(res.data);
         } else {
             mostrarNotificacao('Erro ao salvar proposta: ' + (res.mensagem || 'Tente novamente.'), 'erro');
         }
@@ -878,6 +907,7 @@ async function confirmarSalvar() {
         const pdfBtn     = document.getElementById('pos-salvo-pdf-btn');
 
         const numeroProcesso = resProc.data?.numero_processo || '—';
+        if (resProc.data?.numero_processo) window._procNumero = resProc.data.numero_processo;
 
         if (tituloEl)   tituloEl.textContent = editandoIdProc ? 'Processo atualizado!' : 'Processo salvo!';
         if (msgEl)      msgEl.textContent    = 'O que deseja fazer agora?';
@@ -1008,11 +1038,12 @@ async function procCarregarEdicao(id) {
 
     // Destino
     if (p.empresa_parceira_id) {
-        const { data: dest } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento').eq('id', p.empresa_parceira_id).single();
+        const { data: dest } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento, codigo').eq('id', p.empresa_parceira_id).single();
         if (dest) {
             set('proc-emp-dest-busca',    dest.nome_fantasia || dest.razao_social);
             set('proc-emp-dest-id',       dest.id);
             set('proc-emp-dest-auto-doc', dest.documento);
+            set('proc-emp-dest-auto-id',  dest.codigo);
         }
     }
     set('proc-destino-pais',        p.pais_destino);
@@ -1080,16 +1111,33 @@ async function procCarregarEdicao(id) {
     // Faixa "iniciado sem a Proforma assinada" (se foi o caso)
     if (p.sem_assinatura) _procAplicarSemAssinatura(p, codigoProf);
 
-    // Produtos do Processo
+    // Número do processo (cabeçalho do PDF — o campo "Código" mostra o da Proforma)
+    window._procNumero = p.numero_processo || null;
+
+    // NCM dos produtos (tabela de produtos do PDF do Processo)
+    const idsProd = (Array.isArray(p.itens) ? p.itens : []).map(it => it.produto_id).filter(Boolean);
+    window._procProdutosInfo = {};
+    if (idsProd.length) {
+        const { data: prods } = await supabaseClient.from('produtos').select('id, ncm, hscode').in('id', idsProd);
+        (prods || []).forEach(pr => { window._procProdutosInfo[pr.id] = pr; });
+    }
+
+    // "Criado por" do PDF do Processo
+    window._procCriadoPorNome = p.criado_por
+        ? (await window.supabaseAPI.buscarNomesUsuarios([p.criado_por]))[p.criado_por]
+        : null;
+
+    // Produtos do Processo (+ saldo da proforma, sem contar este processo)
+    _procSaldo = p.proforma_id ? await window.supabaseAPI.buscarSaldoProforma(p.proforma_id, p.id) : null;
     if (Array.isArray(p.itens) && p.itens.length > 0) {
         await Promise.all([_carregarMoedas(), _carregarUnidades()]);
         _procItens = _itensNormalizar(p.itens);
-        itensRenderizar('proc');
     }
+    itensRenderizar('proc');
 
     // Documentos: anexos reais já existentes pra proforma (pode ter vindo
     // deste processo ou de outro processo da mesma proforma).
-    if (p.proforma_id) await _docCarregarAnexosProcesso(p.proforma_id);
+    if (p.proforma_id) await _docCarregarAnexosProcesso(p.proforma_id, p.id);
 
     // Guarda ID para atualização
     const idEl = document.getElementById('proc-id');
@@ -1355,6 +1403,9 @@ function salvarProposta(e) {
 
     const modal = document.getElementById('prop-modal')?.value;
     checar('prop-incoterm',  'Selecione o Incoterm.');
+    if (modal && modal !== 'maritimo' && INCOTERMS_MARITIMOS.includes(document.getElementById('prop-incoterm')?.value)) {
+        marcar('prop-incoterm', `O Incoterm ${document.getElementById('prop-incoterm').value} é exclusivo do modal Marítimo — escolha outro Incoterm ou mude o modal.`);
+    }
 
     // ── Rota ──────────────────────────────
     checar('prop-origem-pais',  'Informe o País de Origem.');
@@ -3541,13 +3592,20 @@ async function _procPreencherDaProforma(id) {
         // Carrega anexos já existentes pra proforma (podem vir de outro
         // processo dela, ou de uma assinatura feita direto na tela Documentos).
         _docLimparAnexosVisuais();
-        await _docCarregarAnexosProcesso(id);
+        await _docCarregarAnexosProcesso(id, document.getElementById('proc-id')?.value || null);
 
-        // Produtos do Processo começam iguais aos da Proforma (editáveis).
+        // Produtos do Processo começam com o SALDO da Proforma (o que ainda não
+        // foi para outros processos dela — embarque parcial). Editáveis, mas
+        // não podem passar do saldo (validado ao salvar).
+        const procIdAtual = document.getElementById('proc-id')?.value || null;
+        _procSaldo = await window.supabaseAPI.buscarSaldoProforma(id, procIdAtual);
         if (Array.isArray(data.itens) && data.itens.length > 0) {
             await Promise.all([_carregarMoedas(), _carregarUnidades()]);
-            _procItens = _itensNormalizar(data.itens);
+            _procItens = _itensNormalizar(data.itens)
+                .map(it => ({ ...it, qtd: _procSaldo.itens[chaveItemProforma(it)]?.saldo ?? it.qtd }))
+                .filter(it => it.qtd > 0);
             itensRenderizar('proc');
+            if (!_procItens.length) mostrarNotificacao('Todos os produtos desta proforma já estão em outros processos.', 'warning');
         }
 
         // Tipo
@@ -3593,6 +3651,8 @@ async function _procPreencherDaProforma(id) {
                 radioUsuario.checked = true;
                 radioUsuario.dispatchEvent(new Event('change'));
             }
+            const docEl = document.getElementById('proc-documento');
+            if (docEl && data.documento) { docEl.value = data.documento; _procSincronizarTipoDoc(); }
         }
         if (data.emissor_tipo === 'terceiro' && data.parceiro_id) {
             const radioTerceiro = document.getElementById('proc-emissor-terceiro');
@@ -3601,13 +3661,16 @@ async function _procPreencherDaProforma(id) {
                 radioTerceiro.dispatchEvent(new Event('change'));
             }
             const { data: emp } = await supabaseClient.from('parceiros')
-                .select('id, razao_social, nome_fantasia, cep, estado, cidade, bairro, endereco, numero, complemento')
+                .select('id, razao_social, nome_fantasia, documento, cep, estado, cidade, bairro, endereco, numero, complemento')
                 .eq('id', data.parceiro_id).single();
             if (emp) {
                 const clienteEl = document.getElementById('proc-cliente');
                 const clienteIdEl = document.getElementById('proc-cliente-id');
                 if (clienteEl) clienteEl.value = emp.nome_fantasia || emp.razao_social;
                 if (clienteIdEl) clienteIdEl.value = emp.id;
+                const docEl = document.getElementById('proc-documento');
+                if (docEl) docEl.value = emp.documento || data.documento || '';
+                _procSincronizarTipoDoc();
                 _procPreencherEndereco('origem', emp);
             }
         }
@@ -3618,13 +3681,17 @@ async function _procPreencherDaProforma(id) {
         if (data.destinatario_id) {
             const { data: destParceiro } = await supabaseClient
                 .from('parceiros')
-                .select('id, razao_social, nome_fantasia, cep, estado, cidade, bairro, endereco, numero, complemento')
+                .select('id, razao_social, nome_fantasia, documento, codigo, cep, estado, cidade, bairro, endereco, numero, complemento')
                 .eq('id', data.destinatario_id).single();
             if (destParceiro) {
                 const buscaEl = document.getElementById('proc-emp-dest-busca');
                 const idEl    = document.getElementById('proc-emp-dest-id');
                 if (buscaEl) buscaEl.value = destParceiro.nome_fantasia || destParceiro.razao_social || '';
                 if (idEl)    idEl.value    = destParceiro.id;
+                const autoDoc = document.getElementById('proc-emp-dest-auto-doc');
+                const autoId  = document.getElementById('proc-emp-dest-auto-id');
+                if (autoDoc) autoDoc.value = destParceiro.documento || '';
+                if (autoId)  autoId.value  = destParceiro.codigo || '';
 
                 _procPreencherEndereco('destino', destParceiro);
             }
@@ -3802,7 +3869,7 @@ function iniciarAutocompleteEmpresaDestino() {
                      data-razao="${(e.razao_social  || '').replace(/"/g,'&quot;')}"
                      data-fantasia="${(e.nome_fantasia || '').replace(/"/g,'&quot;')}"
                      data-doc="${e.documento || ''}"
-                     data-idint="${(e.identificacao_empresa || '').replace(/"/g,'&quot;')}">
+                     data-idint="${(e.codigo || '').replace(/"/g,'&quot;')}">
                     <span class="ac-nome">${e.razao_social || ''}</span>
                     ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
                 </div>`).join('');
@@ -4062,12 +4129,18 @@ function _docAtualizarCampoVisual(id, nomeArquivo) {
 // processo dela, ou de uma assinatura feita direto na tela Documentos) —
 // chamado ao editar um processo e ao selecionar a Proforma de origem num
 // processo novo.
-async function _docCarregarAnexosProcesso(proformaId) {
+// Commercial Invoice / Packing List / DUE são deste Processo (processo_id);
+// os demais são da Proforma toda. Registro sem processo_id (antes da migração)
+// continua valendo como antes.
+function _docProcessoAtual() { return document.getElementById('proc-id')?.value || null; }
+
+async function _docCarregarAnexosProcesso(proformaId, processoId = null) {
     _docAnexosProcesso = {};
     if (!proformaId) return;
     const res = await window.supabaseAPI.buscarDocumentosProformas([proformaId]);
     (res.data || []).forEach(reg => {
         if (!reg.arquivo_path) return;
+        if (DOC_TIPOS_POR_PROCESSO.includes(reg.tipo_documento) && reg.processo_id && String(reg.processo_id) !== String(processoId)) return;
         _docAnexosProcesso[reg.tipo_documento] = { path: reg.arquivo_path, nome: reg.arquivo_nome };
         _docAtualizarCampoVisual(reg.tipo_documento, reg.arquivo_nome);
     });
@@ -4091,6 +4164,11 @@ function docUpload(id) {
         mostrarNotificacao('Selecione a Proforma de origem antes de anexar documentos.', 'erro');
         return;
     }
+    const porProcesso = DOC_TIPOS_POR_PROCESSO.includes(id);
+    if (porProcesso && !_docProcessoAtual()) {
+        mostrarNotificacao('Este documento é deste embarque — salve o Processo antes de anexá-lo.', 'warning');
+        return;
+    }
     const fileInput = document.getElementById('doc-file-' + id);
     if (!fileInput) return;
     fileInput.click();
@@ -4112,7 +4190,7 @@ function docUpload(id) {
             return;
         }
 
-        const res = await window.supabaseAPI.anexarDocumentoProforma(proformaId, id, null, path, file.name);
+        const res = await window.supabaseAPI.anexarDocumentoProforma(proformaId, id, null, path, file.name, porProcesso ? _docProcessoAtual() : null);
         if (btnUp) { btnUp.disabled = false; btnUp.innerHTML = iconeOriginal; }
         if (!res.sucesso) {
             mostrarNotificacao('Erro ao registrar anexo: ' + res.mensagem, 'erro');
@@ -4124,6 +4202,36 @@ function docUpload(id) {
         _docAtualizarCampoVisual(id, file.name);
         mostrarNotificacao('Documento anexado.', 'sucesso');
     };
+}
+
+// Commercial Invoice / Packing List gerados pelo sistema (pdf-documentos.js)
+// a partir dos dados SALVOS do Processo — baixa e já anexa ao documento.
+async function docGerarPdfProcesso(tipo) {
+    const processoId = _docProcessoAtual();
+    if (!processoId) {
+        mostrarNotificacao('Salve o Processo antes de gerar este documento.', 'warning');
+        return;
+    }
+    const btn = document.querySelector(`.doc-btn-gerar[onclick*="'${tipo}'"]`);
+    const html = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
+    try {
+        const r = await gerarEAnexarDocumentoProcesso(tipo, processoId);
+        if (!r) return;
+        const numEl = document.getElementById('doc-num-' + tipo);
+        if (numEl && !numEl.value.trim()) numEl.value = r.numero;
+        if (r.anexado) {
+            _docAnexosProcesso[tipo] = { path: r.path, nome: r.nomeArquivo };
+            _docAtualizarCampoVisual(tipo, r.nomeArquivo);
+            mostrarNotificacao(r.substituiu ? 'Novo PDF gerado — arquivo anterior substituído.' : `${r.nomeArquivo.replace(/_/g, ' ').replace(/\.pdf$/, '')} gerado e anexado.`, 'sucesso');
+        } else {
+            mostrarNotificacao(`PDF gerado. Não foi anexado: ${r.motivo}.`, 'warning');
+        }
+    } catch (e) {
+        mostrarNotificacao('Erro ao gerar o PDF: ' + e.message, 'erro');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = html; }
+    }
 }
 
 function docVer(id) {
@@ -4143,7 +4251,7 @@ async function docExcluir(id) {
     if (!(await confirmarAcao('Remover o arquivo anexado a este documento? Isso também desfaz a assinatura, se houver.', { titulo: 'Remover anexo', confirmar: 'Remover', perigo: true }))) return;
 
     await supabaseClient.storage.from(BUCKET_DOC_PROFORMA).remove([anexo.path]);
-    const res = await window.supabaseAPI.limparAnexoDocumentoProforma(proformaId, id);
+    const res = await window.supabaseAPI.limparAnexoDocumentoProforma(proformaId, id, DOC_TIPOS_POR_PROCESSO.includes(id) ? _docProcessoAtual() : null);
     if (!res.sucesso) { mostrarNotificacao('Erro ao remover anexo: ' + res.mensagem, 'erro'); return; }
 
     delete _docAnexosProcesso[id];
@@ -4158,6 +4266,26 @@ async function docExcluir(id) {
 // ========================================
 
 const INCOTERMS_MARITIMOS = ['FAS', 'FOB', 'CFR', 'CIF'];
+
+// Incoterm exclusivo Marítimo escolhido com outro modal: avisa e RECUSA (o
+// select volta pro valor anterior). Com Modal = Marítimo, só pede confirmação.
+// Retorna o valor que deve ficar no select.
+async function _incotermValidarEscolha(val, modal, anterior) {
+    if (!INCOTERMS_MARITIMOS.includes(val)) return val;
+    if (modal !== 'maritimo') {
+        const nomeModal = { aereo: 'Aéreo', terrestre: 'Terrestre' }[modal] || 'escolhido';
+        await confirmarAcao(
+            `O Incoterm ${val} é exclusivo do modal Marítimo e não pode ser usado com o modal ${nomeModal}. Escolha outro Incoterm ou mude o modal para Marítimo.`,
+            { titulo: 'Incoterm não permitido', confirmar: 'Escolher outro', cancelar: null, perigo: true }
+        );
+        return INCOTERMS_MARITIMOS.includes(anterior) ? '' : (anterior || '');
+    }
+    const ok = await confirmarAcao(
+        `O Incoterm ${val} é exclusivo do modal Marítimo. Deseja confirmar essa escolha?`,
+        { titulo: 'Incoterm exclusivo Marítimo', confirmar: 'Confirmar', cancelar: 'Cancelar' }
+    );
+    return ok ? val : (anterior || '');
+}
 
 // Processo: mesma regra da Proforma — escolhe o Modal primeiro, aí o Incoterm é
 // liberado; os Incoterms exclusivos do Marítimo (FAS/FOB/CFR/CIF) só ficam
@@ -4205,13 +4333,7 @@ function iniciarIncotermModal() {
         const val = this.value;
         // Confirmação só em escolha feita pelo usuário — carregar um processo salvo
         // ou vir de uma Proforma (troca programática) não abre o aviso.
-        if (e.isTrusted && INCOTERMS_MARITIMOS.includes(val)) {
-            const ok = await confirmarAcao(
-                `O Incoterm ${val} é exclusivo do modal Marítimo. Deseja confirmar essa escolha?`,
-                { titulo: 'Incoterm exclusivo Marítimo', confirmar: 'Confirmar', cancelar: 'Cancelar' }
-            );
-            if (!ok) this.value = incotermAnterior || '';
-        }
+        if (e.isTrusted) this.value = await _incotermValidarEscolha(val, modalSelect.value, incotermAnterior);
         incotermAnterior = this.value;
         atualizarBalao();
     });
@@ -6640,13 +6762,7 @@ function iniciarModalIncotermProposta() {
     // Só em escolha feita pelo usuário — editar/duplicar (troca programática) não abre o aviso.
     incotermSelect.addEventListener('change', async function (e) {
         const val = this.value;
-        if (e.isTrusted && INCOTERMS_MARITIMOS.includes(val)) {
-            const ok = await confirmarAcao(
-                `O Incoterm ${val} é exclusivo do modal Marítimo. Deseja confirmar essa escolha?`,
-                { titulo: 'Incoterm exclusivo Marítimo', confirmar: 'Confirmar', cancelar: 'Cancelar' }
-            );
-            if (!ok) this.value = incotermAnterior || '';
-        }
+        if (e.isTrusted) this.value = await _incotermValidarEscolha(val, modalSelect.value, incotermAnterior);
         incotermAnterior = this.value;
         atualizarInfoIncoterm();
     });
@@ -6712,7 +6828,7 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
                      data-fantasia="${(e.nome_fantasia || '').replace(/"/g,'&quot;')}"
                      data-doc="${e.documento || ''}"
                      data-tipo="${e.tipo_cadastro || ''}"
-                     data-idint="${(e.identificacao_empresa || '').replace(/"/g,'&quot;')}">
+                     data-idint="${(e.codigo || '').replace(/"/g,'&quot;')}">
                     <span class="ac-nome">${e.razao_social || ''}</span>
                     ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
                 </div>`).join('')
@@ -7227,6 +7343,42 @@ function iniciarAutocompletePropCliente() {
 let _propItens = [];
 let _procItens = [];
 
+// ── Embarque parcial: saldo da Proforma no Processo ─────────────
+// _procSaldo = resultado de supabaseAPI → buscarSaldoProforma (itens por chave,
+// já descontando os OUTROS processos da proforma). null = processo sem proforma.
+let _procSaldo = null;
+
+function _procExcedentes() {
+    if (!_procSaldo) return [];
+    const usado = {};
+    _procItens.forEach((it, i) => {
+        const k = chaveItemProforma(it);
+        if (!_procSaldo.itens[k]) return;
+        (usado[k] ||= { qtd: 0, idx: [] });
+        usado[k].qtd += Number(it.qtd) || 0;
+        usado[k].idx.push(i);
+    });
+    return Object.entries(usado)
+        .filter(([k, u]) => u.qtd > _procSaldo.itens[k].saldo)
+        .map(([k, u]) => ({ ..._procSaldo.itens[k], pedido: u.qtd, idx: u.idx }));
+}
+
+function _procAtualizarSaldoVisual() {
+    const excedidos = new Set(_procExcedentes().flatMap(e => e.idx));
+    _procItens.forEach((it, i) => {
+        const el   = document.getElementById(`proc-item-saldo-${i}`);
+        const card = document.getElementById(`proc-item-card-${i}`);
+        const s    = _procSaldo?.itens[chaveItemProforma(it)];
+        if (card) card.classList.toggle('item-saldo-excedido', excedidos.has(i));
+        if (!el) return;
+        if (!s) { el.innerHTML = ''; return; }
+        const fmt = n => Number(n).toLocaleString('pt-BR');
+        el.innerHTML = excedidos.has(i)
+            ? `<i class="fa-solid fa-triangle-exclamation"></i> Acima do saldo da proforma: disponível <strong>${fmt(s.saldo)}</strong> de ${fmt(s.total)} ${_itemEsc(s.unidade)}`
+            : `<i class="fa-solid fa-boxes-packing"></i> Saldo da proforma: <strong>${fmt(s.saldo)}</strong> de ${fmt(s.total)} ${_itemEsc(s.unidade)}${s.usado ? ` (${fmt(s.usado)} já em outros processos)` : ''}`;
+    });
+}
+
 function _itensDe(pfx) { return pfx === 'proc' ? _procItens : _propItens; }
 
 function _itensNormalizar(lista) {
@@ -7295,7 +7447,7 @@ function itensRenderizar(pfx) {
         : [{descricao:'Dólar Americano'},{descricao:'Euro'},{descricao:'Real Brasileiro'}];
 
     tbody.innerHTML = itens.map((item, i) => `
-        <div class="prop-item-card">
+        <div class="prop-item-card" id="${pfx}-item-card-${i}">
             <div class="prop-item-top">
                 <span class="prop-item-badge">${i + 1}</span>
                 <div class="autocomplete-wrapper prop-item-produto-wrap">
@@ -7340,6 +7492,7 @@ function itensRenderizar(pfx) {
                     <span class="prop-item-total-val" id="${pfx}-item-total-${i}">${propFormatarValor(item.qtd * item.preco, item.moeda)}</span>
                 </div>
             </div>
+            ${pfx === 'proc' ? `<div class="item-saldo" id="proc-item-saldo-${i}"></div>` : ''}
         </div>`).join('');
 
     itensRecalcular(pfx);
@@ -7347,6 +7500,7 @@ function itensRenderizar(pfx) {
 
 function itensRecalcular(pfx) {
     const itens = _itensDe(pfx);
+    if (pfx === 'proc') _procAtualizarSaldoVisual();
     itens.forEach((item, i) => {
         const el = document.getElementById(`${pfx}-item-total-${i}`);
         if (el) el.textContent = propFormatarValor(item.qtd * item.preco, item.moeda);

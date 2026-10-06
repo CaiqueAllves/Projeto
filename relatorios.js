@@ -38,6 +38,7 @@ const _modeloEmpresa = e => {
 
 document.addEventListener('DOMContentLoaded', async function () {
     verificarPermissoes();
+    _relIniciarMostrarMais();
 
     const resultado = await window.supabaseAPI.buscarEmpresas();
     todasEmpresas = resultado.sucesso ? resultado.data : [];
@@ -59,7 +60,7 @@ async function carregarStatsProformas() {
         const usuario = obterUsuarioLogado();
         let query = supabaseClient
             .from('proformas')
-            .select('id, codigo, status, created_at, valor_total, moeda_principal, destinatario_id, destinatario_razao_social, processo_gerado_id')
+            .select('*')
             .neq('status', 'excluido');
         if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
 
@@ -127,15 +128,44 @@ async function carregarStatsProdutos() {
 }
 
 // ========================================
+// GERAR RELATÓRIO — "Mostrar mais"
+// ========================================
+// Cada aba mostra só os 5 primeiros cards; o botão no canto direito do título
+// "Gerar Relatório" expande/recolhe o resto (só aparece se houver mais de 5).
+
+const REL_CARDS_VISIVEIS = 5;
+
+function _relIniciarMostrarMais() {
+    document.querySelectorAll('.report-grid').forEach(grid => {
+        if (grid.querySelectorAll('.report-card').length <= REL_CARDS_VISIVEIS) return;
+        const header = grid.previousElementSibling;
+        if (!header?.classList.contains('section-header')) return;
+        grid.classList.add('rel-recolhido');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rel-mostrar-mais';
+        btn.innerHTML = 'Mostrar mais <i class="fa-solid fa-chevron-down"></i>';
+        btn.addEventListener('click', () => {
+            const recolher = !grid.classList.contains('rel-recolhido');
+            grid.classList.toggle('rel-recolhido', recolher);
+            btn.innerHTML = recolher
+                ? 'Mostrar mais <i class="fa-solid fa-chevron-down"></i>'
+                : 'Mostrar menos <i class="fa-solid fa-chevron-up"></i>';
+        });
+        header.appendChild(btn);
+    });
+}
+
+// ========================================
 // SELETOR DE MÓDULO
 // ========================================
 
 function relSwitchModulo(modulo, btn) {
     document.querySelectorAll('.rel-secao').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.rel-modulo-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
     const sec = document.getElementById('rel-sec-' + modulo);
     if (sec) sec.style.display = 'block';
-    if (btn) btn.classList.add('active');
 }
 
 // ========================================
@@ -329,7 +359,8 @@ const CONFIG_REL = {
         params: ''
     },
     'produtos-listagem': {
-        nome:  'Listagem Geral de Produtos',
+        nome:  'Relatório Completo de Produtos',
+        semPeriodo: true,
         cor:   'linear-gradient(135deg,#9333ea,#6366f1)',
         icone: 'fa-solid fa-list',
         params: `
@@ -370,7 +401,8 @@ function gerarRelatorio(tipo) {
     document.getElementById('modalRelNome').textContent = cfg.nome;
 
     // Parâmetros específicos
-    document.getElementById('relParamsEspecificos').innerHTML = cfg.params;
+    document.getElementById('relParamsEspecificos').innerHTML =
+        EXT_REL[tipo] ? _extParams(tipo) : cfg.params;
 
     // Datas padrão: últimos 365 dias (mesmo padrão "Anual" já usado nos cards
     // de estatística — evita a prévia abrir zerada quando não há registros
@@ -382,6 +414,14 @@ function gerarRelatorio(tipo) {
     document.getElementById('relDataFim').value     = hoje.toISOString().split('T')[0];
     document.querySelectorAll('#modalRelatorio .period-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('#modalRelatorio .period-btn[onclick*="anual"]')?.classList.add('active');
+
+    // Relatórios "Completo" pegam tudo: sem período (datas vazias = sem filtro).
+    const semPeriodo = !!cfg.semPeriodo;
+    document.querySelectorAll('#modalRelatorio .rel-bloco-periodo').forEach(b => b.style.display = semPeriodo ? 'none' : '');
+    if (semPeriodo) {
+        document.getElementById('relDataInicio').value = '';
+        document.getElementById('relDataFim').value    = '';
+    }
 
     // Popular select de países se for o card de país
     if (tipo === 'pais') {
@@ -468,6 +508,8 @@ function filtrarProdutosPorDatas() {
 function atualizarPreviewModal() {
     const el = document.getElementById('relPreviewConteudo');
     if (!el || !tipoRelatorioAtual) return;
+
+    if (EXT_REL[tipoRelatorioAtual]) { el.innerHTML = _extPreview(tipoRelatorioAtual); return; }
 
     const empresas = filtrarEmpresasPorDatas();
 
@@ -634,7 +676,7 @@ function atualizarPreviewModal() {
         const lista      = filtrarProdutosPorDatas().filter(p => statusSel.includes(p.status || 'ativo'));
 
         el.innerHTML = `
-            <div class="prev-linha"><span>Total no período</span><strong>${lista.length}</strong></div>
+            <div class="prev-linha"><span>Total de produtos</span><strong>${lista.length}</strong></div>
             ${statusSel.map(st => `<div class="prev-linha"><span>${labelsProd[st]}</span><strong>${lista.filter(p => (p.status || 'ativo') === st).length}</strong></div>`).join('')}
         `;
 
@@ -675,7 +717,11 @@ function baixarPDF() {
 
     const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora', outros: 'Outro' }[m] || m);
 
-    if (tipoRelatorioAtual === 'periodo') {
+    if (EXT_REL[tipoRelatorioAtual]) {
+        const r = _extConteudoPDF(tipoRelatorioAtual);
+        conteudoTabela = r.html;
+        totalRegistros = r.total;
+    } else if (tipoRelatorioAtual === 'periodo') {
         const tiposSel   = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-tipo"]:checked')].map(c => c.value);
         const modelosSel = [...document.querySelectorAll('#relParamsEspecificos input[name="rel-modelo"]:checked')].map(c => c.value);
         let lista = empresas.filter(e => {
@@ -910,6 +956,9 @@ function baixarPDF() {
             thead th { background:#f8fafc; padding:10px 14px; text-align:left; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.04em; border-bottom:2px solid #e2e8f0; }
             tbody td { padding:10px 14px; border-bottom:1px solid #f1f5f9; color:#374151; }
             tbody tr:last-child td { border-bottom:none; }
+            h2.pdf-grupo { font-size:14px; color:#1e293b; margin:26px 0 8px; padding:8px 12px; background:#f1f5f9; border-left:4px solid #4776ec; border-radius:4px; display:flex; justify-content:space-between; }
+            h2.pdf-grupo span { font-weight:500; color:#64748b; font-size:12px; }
+            .pdf-resumo { margin-bottom:8px; }
             .pdf-footer { margin-top:32px; padding-top:16px; border-top:1px solid #e2e8f0; font-size:11px; color:#94a3b8; display:flex; justify-content:space-between; }
             @media print { body { padding:20px; } }
         </style>
@@ -922,7 +971,7 @@ function baixarPDF() {
             </div>
         </div>
         <div class="pdf-meta">
-            <div class="pdf-meta-item"><strong>Período</strong>${di} até ${df}</div>
+            <div class="pdf-meta-item"><strong>Período</strong>${di === '—' && df === '—' ? 'Todos os registros' : `${di} até ${df}`}</div>
             <div class="pdf-meta-item"><strong>Total de registros</strong>${totalRegistros}</div>
             <div class="pdf-meta-item"><strong>Solicitante</strong>${usuario.nome || '—'}</div>
         </div>
@@ -1021,4 +1070,421 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     n.style.cssText = `position:fixed;top:100px;right:20px;background:white;color:${cores[tipo]};padding:14px 22px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;font-weight:600;z-index:99999;border-left:4px solid ${cores[tipo]};font-size:14px;`;
     document.body.appendChild(n);
     setTimeout(() => n.remove(), 5000);
+}
+
+// ========================================
+// RELATÓRIOS EXTRAS (cards novos por aba)
+// ========================================
+// Empresas:  Completo / Comprador / Exportador / Importador / Status / Fornecedor
+// Produtos:  Período / Status
+// Proformas e Processos: Comprador / Exportador / Importador / Fornecedor
+//
+// Quem é quem numa operação (Proforma ou Processo):
+//   - Exportador: parceiro escolhido como Exportador (emissor "Terceiro") ou
+//     a própria empresa (emissor "Usuário");
+//   - Importador: destinatário da Proforma / do Processo;
+//   - Comprador: Exportador/Importador marcado como "Comprador" no cadastro;
+//   - Fornecedor: empresa dona de cada produto dos itens (produtos.empresa_parceira_id).
+
+const REL_STATUS_PROF = { pendente: 'Pendente', enviado: 'Enviado', aprovado: 'Aprovado', encerrado: 'Encerrado' };
+const REL_STATUS_PROC = { aberto: 'Aberto', em_andamento: 'Em Andamento', aguardando_documentos: 'Aguard. Documentos', concluido: 'Concluído', cancelado: 'Cancelado' };
+const REL_STATUS_EMP  = { ativo: 'Ativo', inativo: 'Inativo' };
+const REL_STATUS_PROD = { ativo: 'Ativo', pendente: 'Pendente', pausado: 'Pausado', inativo: 'Inativo' };
+const REL_MODAL       = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre', rodoviario: 'Rodoviário', ferroviario: 'Ferroviário' };
+const REL_PAPEL       = { comprador: 'Comprador', exportador: 'Exportador', importador: 'Importador', fornecedor: 'Fornecedor', status: 'Status' };
+
+const EXT_REL = {
+    'emp-completo':    { base: 'emp',  modo: 'completo',   nome: 'Relatório Completo de Empresas',   icone: 'fa-solid fa-layer-group',     cor: 'linear-gradient(135deg,#334155,#0f172a)', semPeriodo: true },
+    'emp-comprador':   { base: 'emp',  modo: 'comprador',  nome: 'Empresas — Compradores',           icone: 'fa-solid fa-cart-shopping',   cor: 'linear-gradient(135deg,#0891b2,#0e7490)' },
+    'emp-exportador':  { base: 'emp',  modo: 'exportador', nome: 'Empresas — Exportadores',          icone: 'fa-solid fa-plane-departure', cor: 'linear-gradient(135deg,#4776ec,#6366f1)' },
+    'emp-importador':  { base: 'emp',  modo: 'importador', nome: 'Empresas — Importadores',          icone: 'fa-solid fa-plane-arrival',   cor: 'linear-gradient(135deg,#22c55e,#16a34a)' },
+    'emp-status':      { base: 'emp',  modo: 'status',     nome: 'Empresas por Status',              icone: 'fa-solid fa-signal',          cor: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', semPeriodo: true },
+    'emp-fornecedor':  { base: 'emp',  modo: 'fornecedor', nome: 'Empresas — Fornecedores',          icone: 'fa-solid fa-industry',        cor: 'linear-gradient(135deg,#d97706,#b45309)' },
+    'produtos-periodo':{ base: 'prod', modo: 'periodo',    nome: 'Produtos por Período',             icone: 'fa-solid fa-calendar',        cor: 'linear-gradient(135deg,#4776ec,#6366f1)' },
+    'produtos-status': { base: 'prod', modo: 'status',     nome: 'Produtos por Status',              icone: 'fa-solid fa-signal',          cor: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', semPeriodo: true },
+    'prof-comprador':  { base: 'prof', modo: 'comprador',  nome: 'Proformas por Comprador',          icone: 'fa-solid fa-cart-shopping',   cor: 'linear-gradient(135deg,#0891b2,#0e7490)' },
+    'prof-exportador': { base: 'prof', modo: 'exportador', nome: 'Proformas por Exportador',         icone: 'fa-solid fa-plane-departure', cor: 'linear-gradient(135deg,#4776ec,#6366f1)' },
+    'prof-importador': { base: 'prof', modo: 'importador', nome: 'Proformas por Importador',         icone: 'fa-solid fa-plane-arrival',   cor: 'linear-gradient(135deg,#22c55e,#16a34a)' },
+    'prof-fornecedor': { base: 'prof', modo: 'fornecedor', nome: 'Proformas por Fornecedor',         icone: 'fa-solid fa-industry',        cor: 'linear-gradient(135deg,#d97706,#b45309)' },
+    'proc-comprador':  { base: 'proc', modo: 'comprador',  nome: 'Processos por Comprador',          icone: 'fa-solid fa-cart-shopping',   cor: 'linear-gradient(135deg,#0891b2,#0e7490)' },
+    'proc-exportador': { base: 'proc', modo: 'exportador', nome: 'Processos por Exportador',         icone: 'fa-solid fa-plane-departure', cor: 'linear-gradient(135deg,#9333ea,#6366f1)' },
+    'proc-importador': { base: 'proc', modo: 'importador', nome: 'Processos por Importador',         icone: 'fa-solid fa-plane-arrival',   cor: 'linear-gradient(135deg,#22c55e,#16a34a)' },
+    'proc-fornecedor': { base: 'proc', modo: 'fornecedor', nome: 'Processos por Fornecedor',         icone: 'fa-solid fa-industry',        cor: 'linear-gradient(135deg,#d97706,#b45309)' },
+};
+Object.entries(EXT_REL).forEach(([k, c]) => {
+    CONFIG_REL[k] = { nome: c.nome, cor: c.cor, icone: c.icone, params: '', semPeriodo: !!c.semPeriodo };
+});
+
+// ── Utilitários ─────────────────────────────────
+
+let _extPropriaEmpresa = 'Própria empresa';
+(async () => {
+    try {
+        const usuario = obterUsuarioLogado();
+        const { data } = await supabaseClient.from('empresas').select('razao_social, nome_fantasia').eq('id', usuario.empresa_id).maybeSingle();
+        if (data) _extPropriaEmpresa = data.nome_fantasia || data.razao_social || _extPropriaEmpresa;
+    } catch {}
+})();
+
+function _extEsc(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function _extNome(e) { return e ? (e.nome_fantasia || e.razao_social || '—') : null; }
+function _extEmp(id) { return id ? todasEmpresas.find(x => String(x.id) === String(id)) : null; }
+function _extData(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR') : '—'; }
+function _extValores(v) {
+    const ks = Object.keys(v || {}).filter(m => v[m]);
+    return ks.length ? ks.map(m => `${m} ${v[m].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join(' + ') : '—';
+}
+function _extSomar(linhas) {
+    const v = {};
+    linhas.forEach(l => { v[l.moeda] = (v[l.moeda] || 0) + l.valor; });
+    return v;
+}
+function _extMarcados(nome) {
+    const cbs = [...document.querySelectorAll(`#relParamsEspecificos input[name="${nome}"]`)];
+    return cbs.length ? cbs.filter(c => c.checked).map(c => c.value) : null;
+}
+function _extChecks(nome, labels) {
+    return `<div class="rel-check-row">${Object.entries(labels).map(([v, l]) =>
+        `<label class="rel-check"><input type="checkbox" name="${nome}" value="${v}" checked> ${l}</label>`).join('')}</div>`;
+}
+function _extSemDatas(fn) {
+    const di = document.getElementById('relDataInicio'), df = document.getElementById('relDataFim');
+    const salvo = [di?.value, df?.value];
+    if (di) di.value = ''; if (df) df.value = '';
+    try { return fn(); } finally { if (di) di.value = salvo[0]; if (df) df.value = salvo[1]; }
+}
+
+// ── Operações (Proformas / Processos) ───────────
+
+function _extLinhasOps(base) {
+    const prodPorId = {};
+    todasProdutos.forEach(p => { prodPorId[String(p.id)] = p; });
+    const fornecedoresDe = itens => [...new Set((Array.isArray(itens) ? itens : [])
+        .map(it => prodPorId[String(it.produto_id)]?.empresa_parceira_id)
+        .filter(Boolean).map(String))];
+    const compradoresDe = ids => ids.filter(id => id && _extEmp(id)?.is_comprador).map(String);
+
+    if (base === 'prof') {
+        const procPorProf = {};
+        todasProcessos.forEach(pr => { if (pr.proforma_id) (procPorProf[pr.proforma_id] ||= []).push(pr); });
+        return filtrarProformasPorDatas().map(p => {
+            const expId = p.emissor_tipo === 'terceiro' ? p.parceiro_id : null;
+            return {
+                codigo: p.codigo || '—', data: p.created_at,
+                status: p.status || 'enviado', statusLabel: REL_STATUS_PROF[p.status] || p.status || '—',
+                expId: expId ? String(expId) : 'propria',
+                exportador: expId ? (_extNome(_extEmp(expId)) || p.parceiro_razao_social || 'Não informado') : _extPropriaEmpresa,
+                impId: p.destinatario_id ? String(p.destinatario_id) : null,
+                importador: _extNome(_extEmp(p.destinatario_id)) || p.destinatario_razao_social || 'Não informado',
+                compradores: compradoresDe([expId, p.destinatario_id]),
+                fornecedores: fornecedoresDe(p.itens),
+                moeda: p.moeda_principal || 'USD', valor: Number(p.valor_total) || 0,
+                extra: (procPorProf[p.id] || []).map(pr => pr.numero_processo || '—').join(', ') || '—',
+            };
+        });
+    }
+    const codProf = {};
+    todasProformas.forEach(p => { codProf[p.id] = p.codigo; });
+    return filtrarProcessosPorDatas().map(pr => {
+        const expId = pr.emissor_tipo === 'terceiro' ? pr.remetente_parceiro_id : null;
+        return {
+            codigo: pr.numero_processo || '—', data: pr.criado_em,
+            status: pr.status || 'aberto', statusLabel: REL_STATUS_PROC[pr.status] || pr.status || '—',
+            expId: expId ? String(expId) : 'propria',
+            exportador: expId ? (_extNome(_extEmp(expId)) || 'Não informado') : _extPropriaEmpresa,
+            impId: pr.empresa_parceira_id ? String(pr.empresa_parceira_id) : null,
+            importador: _extNome(_extEmp(pr.empresa_parceira_id)) || 'Não informado',
+            compradores: compradoresDe([expId, pr.empresa_parceira_id]),
+            fornecedores: fornecedoresDe(pr.itens),
+            moeda: pr.moeda || 'USD', valor: Number(pr.valor_total) || 0,
+            extra: codProf[pr.proforma_id] || '—',
+            modal: REL_MODAL[pr.modal] || pr.modal || '—',
+        };
+    });
+}
+
+// Chaves (ids) do agrupamento de uma linha; nomes resolvidos em _extNomeChave
+function _extChaves(modo, l) {
+    switch (modo) {
+        case 'comprador':  return l.compradores.length ? l.compradores : ['__sem'];
+        case 'exportador': return [l.expId];
+        case 'importador': return [l.impId || '__sem'];
+        case 'fornecedor': return l.fornecedores.length ? l.fornecedores : ['__sem'];
+    }
+    return [];
+}
+function _extNomeChave(modo, chave, l) {
+    if (chave === '__sem') return { comprador: 'Sem comprador identificado', importador: 'Sem importador', fornecedor: 'Sem fornecedor (itens sem produto cadastrado)' }[modo];
+    if (chave === 'propria') return _extPropriaEmpresa;
+    if (modo === 'exportador' && l) return l.exportador;
+    if (modo === 'importador' && l) return l.importador;
+    return _extNome(_extEmp(chave)) || 'Não informado';
+}
+
+function _extAgruparOps(modo, linhas) {
+    const g = {};
+    linhas.forEach(l => _extChaves(modo, l).forEach(k => {
+        (g[k] ||= { chave: k, nome: _extNomeChave(modo, k, l), linhas: [] }).linhas.push(l);
+    }));
+    return Object.values(g).map(x => ({ ...x, valores: _extSomar(x.linhas) }))
+        .sort((a, b) => (a.chave === '__sem') - (b.chave === '__sem') || b.linhas.length - a.linhas.length || a.nome.localeCompare(b.nome));
+}
+
+// ── Empresas ────────────────────────────────────
+
+// Empresa entra no relatório do papel se estiver marcada no cadastro OU (para
+// Exportador/Importador) já tiver aparecido nesse papel em alguma operação.
+function _extEmpresasDoPapel(modo) {
+    const ops = _extSemDatas(() => [..._extLinhasOps('prof'), ..._extLinhasOps('proc')]);
+    const usadosExp = new Set(ops.map(l => l.expId));
+    const usadosImp = new Set(ops.map(l => l.impId).filter(Boolean));
+    return todasEmpresas.filter(e => {
+        const id = String(e.id);
+        switch (modo) {
+            case 'comprador':  return !!e.is_comprador;
+            case 'exportador': return !!e.is_remetente || usadosExp.has(id);
+            case 'importador': return !!e.is_importador || usadosImp.has(id);
+            case 'fornecedor': return !!e.is_fornecedor || !!e.is_fabricante;
+            default:           return true;
+        }
+    });
+}
+
+// Operações (Proformas, no período) em que a empresa aparece naquele papel
+function _extOpsDaEmpresa(modo, e, linhasProf) {
+    const id = String(e.id);
+    return linhasProf.filter(l => {
+        if (modo === 'exportador') return l.expId === id;
+        if (modo === 'importador') return l.impId === id;
+        if (modo === 'comprador')  return l.compradores.includes(id);
+        if (modo === 'fornecedor') return l.fornecedores.includes(id);
+        return l.expId === id || l.impId === id;
+    });
+}
+
+function _extLinhasEmp(modo) {
+    const statusSel = _extMarcados('rel-ext-emp-status');
+    const alvo      = document.getElementById('relExtAlvo')?.value || '';
+    const linhasProf = _extLinhasOps('prof');
+    const nProdutos = {};
+    todasProdutos.forEach(p => { if (p.empresa_parceira_id) nProdutos[p.empresa_parceira_id] = (nProdutos[p.empresa_parceira_id] || 0) + 1; });
+    return _extEmpresasDoPapel(modo)
+        .filter(e => !statusSel || statusSel.includes(e.status || 'ativo'))
+        .filter(e => !alvo || String(e.id) === alvo)
+        .map(e => {
+            const ops = _extOpsDaEmpresa(modo, e, linhasProf);
+            return { e, nome: _extNome(e), ops, valores: _extSomar(ops), produtos: nProdutos[e.id] || 0 };
+        })
+        .sort((a, b) => b.ops.length - a.ops.length || a.nome.localeCompare(b.nome));
+}
+
+// ── Parâmetros do modal ─────────────────────────
+
+function _extParams(tipo) {
+    const c = EXT_REL[tipo];
+    const grupo = (rotulo, icone, corpo) => `
+        <div class="rel-param-group">
+            <label class="rel-param-label"><i class="${icone}"></i> ${rotulo}</label>
+            ${corpo}
+        </div>`;
+    const selectAlvo = (rotulo, icone, opcoes) => grupo(rotulo, icone, `
+        <select id="relExtAlvo" class="rel-select" onchange="atualizarPreviewModal()">
+            <option value="">Todos</option>
+            ${opcoes.map(([v, n]) => `<option value="${_extEsc(v)}">${_extEsc(n)}</option>`).join('')}
+        </select>`);
+
+    if (c.base === 'emp') {
+        let html = c.modo === 'status' ? '' : grupo('Status do cadastro', 'fa-solid fa-filter', _extChecks('rel-ext-emp-status', REL_STATUS_EMP));
+        if (!['completo', 'status'].includes(c.modo)) {
+            const lista = _extEmpresasDoPapel(c.modo).map(e => [String(e.id), _extNome(e)]).sort((a, b) => a[1].localeCompare(b[1]));
+            html += selectAlvo(REL_PAPEL[c.modo], 'fa-solid fa-building', lista);
+        }
+        return html;
+    }
+    if (c.base === 'prod') {
+        return c.modo === 'periodo' ? grupo('Status', 'fa-solid fa-filter', _extChecks('rel-ext-prod-status', REL_STATUS_PROD)) : '';
+    }
+    // prof / proc
+    const labels = c.base === 'prof' ? REL_STATUS_PROF : REL_STATUS_PROC;
+    const grupos = _extSemDatas(() => _extAgruparOps(c.modo, _extLinhasOps(c.base)));
+    return grupo(c.base === 'prof' ? 'Status da Proforma' : 'Status do Processo', 'fa-solid fa-filter', _extChecks('rel-ext-status', labels))
+         + selectAlvo(REL_PAPEL[c.modo], 'fa-solid fa-building', grupos.map(g => [g.chave, g.nome]));
+}
+
+// ── Dados filtrados pelo modal ──────────────────
+
+function _extOpsFiltradas(tipo) {
+    const c = EXT_REL[tipo];
+    let linhas = _extLinhasOps(c.base);
+    const st = _extMarcados('rel-ext-status');
+    if (st) linhas = linhas.filter(l => st.includes(l.status));
+    let grupos = _extAgruparOps(c.modo, linhas);
+    const alvo = document.getElementById('relExtAlvo')?.value;
+    if (alvo) grupos = grupos.filter(g => g.chave === alvo);
+    return grupos;
+}
+
+function _extProdutos(tipo) {
+    const c = EXT_REL[tipo];
+    let lista = filtrarProdutosPorDatas();
+    const st = _extMarcados('rel-ext-prod-status');
+    if (st) lista = lista.filter(p => st.includes(p.status || 'ativo'));
+    return lista;
+}
+
+// ── Prévia ──────────────────────────────────────
+
+function _extPreview(tipo) {
+    const c = EXT_REL[tipo];
+    const vazio = `<div class="prev-vazio">Nenhum resultado encontrado</div>`;
+    const linha = (a, b) => `<div class="prev-linha"><span>${a}</span><strong>${b}</strong></div>`;
+
+    if (c.base === 'emp') {
+        const lista = _extLinhasEmp(c.modo);
+        if (!lista.length) return vazio;
+        if (c.modo === 'status') {
+            const total = lista.length || 1;
+            return Object.entries(REL_STATUS_EMP).map(([v, l]) => {
+                const n = lista.filter(x => (x.e.status || 'ativo') === v).length;
+                return linha(l, `${n} (${Math.round(n / total * 100)}%)`);
+            }).join('');
+        }
+        if (c.modo === 'completo') {
+            return linha('Empresas', lista.length)
+                + Object.entries(REL_STATUS_EMP).map(([v, l]) => linha(l, lista.filter(x => (x.e.status || 'ativo') === v).length)).join('')
+                + linha('Países distintos', new Set(lista.map(x => x.e.pais).filter(Boolean)).size);
+        }
+        return linha(REL_PAPEL[c.modo] + (c.modo.endsWith('r') ? 'es' : 's'), lista.length)
+            + lista.slice(0, 8).map((x, i) => linha(`<b>${i + 1}.</b> ${_extEsc(x.nome)}`, `${x.ops.length} prof.`)).join('');
+    }
+
+    if (c.base === 'prod') {
+        const lista = _extProdutos(tipo);
+        if (!lista.length) return vazio;
+        const total = lista.length || 1;
+        return (c.modo === 'periodo' ? linha('Total no período', lista.length) : '')
+            + Object.entries(REL_STATUS_PROD).map(([v, l]) => {
+                const n = lista.filter(p => (p.status || 'ativo') === v).length;
+                return linha(l, c.modo === 'status' ? `${n} (${Math.round(n / total * 100)}%)` : n);
+            }).join('');
+    }
+
+    const grupos = _extOpsFiltradas(tipo);
+    if (!grupos.length) return vazio;
+    const un = c.base === 'prof' ? 'prof.' : 'proc.';
+    return grupos.slice(0, 10).map((g, i) => linha(`<b>${i + 1}.</b> ${_extEsc(g.nome)}`, `${g.linhas.length} ${un}`)).join('')
+        + (grupos.length > 10 ? linha(`… e mais ${grupos.length - 10}`, '') : '');
+}
+
+// ── PDF ─────────────────────────────────────────
+
+const _EXT_PDF_PAISAGEM = `
+    <style>
+        @page { size: A4 landscape; }
+        table { font-size: 11px; }
+        thead th, tbody td { padding: 7px 8px; }
+    </style>`;
+
+function _extTabelaOps(base, linhas) {
+    const procs = base === 'prof';
+    return `
+        <table>
+            <thead><tr>
+                <th>${procs ? 'Proforma' : 'Processo'}</th><th>Data</th><th>Exportador</th><th>Importador</th><th>Status</th>
+                ${procs ? '<th>Processos</th>' : '<th>Proforma</th><th>Modal</th>'}<th>Valor</th>
+            </tr></thead>
+            <tbody>
+                ${linhas.map(l => `
+                    <tr>
+                        <td>${_extEsc(l.codigo)}</td>
+                        <td style="white-space:nowrap;">${_extData(l.data)}</td>
+                        <td>${_extEsc(l.exportador)}</td>
+                        <td>${_extEsc(l.importador)}</td>
+                        <td style="white-space:nowrap;">${_extEsc(l.statusLabel)}</td>
+                        <td>${_extEsc(l.extra)}</td>
+                        ${procs ? '' : `<td>${_extEsc(l.modal)}</td>`}
+                        <td style="white-space:nowrap;">${l.moeda} ${l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>`).join('')}
+            </tbody>
+        </table>`;
+}
+
+function _extConteudoPDF(tipo) {
+    const c = EXT_REL[tipo];
+    const nada = msg => ({ total: 0, html: `<p style="color:#64748b;">${msg}</p>` });
+
+    // ── Empresas ──
+    if (c.base === 'emp') {
+        const lista = _extLinhasEmp(c.modo);
+        if (!lista.length) return nada('Nenhuma empresa encontrada para os filtros escolhidos.');
+        const status = e => REL_STATUS_EMP[e.status || 'ativo'] || e.status;
+        const local  = e => [e.cidade, e.estado, e.pais].filter(Boolean).join(' / ') || '—';
+
+        if (c.modo === 'completo' || c.modo === 'status') {
+            const tabela = itens => `
+                <table>
+                    <thead><tr><th>Empresa</th><th>Documento</th><th>Tipos</th><th>Localização</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Proformas</th></tr></thead>
+                    <tbody>${itens.map(x => `
+                        <tr><td>${_extEsc(x.e.razao_social || x.nome)}</td><td>${_extEsc(x.e.documento || '—')}</td><td>${_extEsc(_tiposStr(x.e))}</td>
+                        <td>${_extEsc(local(x.e))}</td><td>${_extEsc(x.e.email || '—')}</td><td>${_extEsc(x.e.telefone || '—')}</td>
+                        <td>${status(x.e)}</td><td>${x.ops.length}</td></tr>`).join('')}
+                    </tbody>
+                </table>`;
+            if (c.modo === 'completo') return { total: lista.length, html: _EXT_PDF_PAISAGEM + tabela(lista) };
+            return { total: lista.length, html: _EXT_PDF_PAISAGEM + Object.entries(REL_STATUS_EMP).map(([v, l]) => {
+                const itens = lista.filter(x => (x.e.status || 'ativo') === v);
+                return itens.length ? `<h2 class="pdf-grupo">${l} <span>${itens.length} empresa${itens.length !== 1 ? 's' : ''}</span></h2>${tabela(itens)}` : '';
+            }).join('') };
+        }
+
+        const fornecedor = c.modo === 'fornecedor';
+        const resumo = `
+            <table class="pdf-resumo">
+                <thead><tr><th>#</th><th>Empresa</th><th>Documento</th><th>País</th><th>Status</th>${fornecedor ? '<th>Produtos</th>' : ''}<th>Proformas</th><th>Valor</th></tr></thead>
+                <tbody>${lista.map((x, i) => `
+                    <tr><td>${i + 1}</td><td>${_extEsc(x.nome)}</td><td>${_extEsc(x.e.documento || '—')}</td><td>${_extEsc(x.e.pais || '—')}</td>
+                    <td>${status(x.e)}</td>${fornecedor ? `<td>${x.produtos}</td>` : ''}<td>${x.ops.length}</td><td>${_extValores(x.valores)}</td></tr>`).join('')}
+                </tbody>
+            </table>`;
+        const detalhes = lista.filter(x => x.ops.length).map(x => `
+            <h2 class="pdf-grupo">${_extEsc(x.nome)} <span>${x.ops.length} proforma${x.ops.length !== 1 ? 's' : ''} · ${_extValores(x.valores)}</span></h2>
+            ${_extTabelaOps('prof', x.ops)}`).join('');
+        return { total: lista.length, html: resumo + detalhes };
+    }
+
+    // ── Produtos ──
+    if (c.base === 'prod') {
+        const lista = _extProdutos(tipo);
+        if (!lista.length) return nada('Nenhum produto encontrado para os filtros escolhidos.');
+        const tabela = itens => `
+            <table>
+                <thead><tr><th>SKU</th><th>Nome</th><th>NCM</th><th>Unidade</th><th>Fornecedor</th><th>Status</th><th>Cadastro</th></tr></thead>
+                <tbody>${itens.map(p => `
+                    <tr><td>${_extEsc(p.sku || '—')}</td><td>${_extEsc(p.nome || '—')}</td><td>${_extEsc(p.ncm || '—')}</td><td>${_extEsc(p.unidade_medida || '—')}</td>
+                    <td>${_extEsc(_extNome(_extEmp(p.empresa_parceira_id)) || '—')}</td><td>${REL_STATUS_PROD[p.status || 'ativo'] || _extEsc(p.status)}</td><td>${_extData(p.criado_em)}</td></tr>`).join('')}
+                </tbody>
+            </table>`;
+        if (c.modo === 'periodo') return { total: lista.length, html: tabela(lista) };
+        return { total: lista.length, html: Object.entries(REL_STATUS_PROD).map(([v, l]) => {
+            const itens = lista.filter(p => (p.status || 'ativo') === v);
+            return itens.length ? `<h2 class="pdf-grupo">${l} <span>${itens.length} produto${itens.length !== 1 ? 's' : ''}</span></h2>${tabela(itens)}` : '';
+        }).join('') };
+    }
+
+    // ── Proformas / Processos ──
+    const grupos = _extOpsFiltradas(tipo);
+    if (!grupos.length) return nada(`Nenhum${c.base === 'prof' ? 'a proforma encontrada' : ' processo encontrado'} para os filtros escolhidos.`);
+    const unid  = c.base === 'prof' ? ['proforma', 'proformas'] : ['processo', 'processos'];
+    const total = new Set(grupos.flatMap(g => g.linhas)).size;
+    const resumo = `
+        <table class="pdf-resumo">
+            <thead><tr><th>#</th><th>${REL_PAPEL[c.modo]}</th><th>${unid[1][0].toUpperCase() + unid[1].slice(1)}</th><th>Valor</th></tr></thead>
+            <tbody>${grupos.map((g, i) => `<tr><td>${i + 1}</td><td>${_extEsc(g.nome)}</td><td>${g.linhas.length}</td><td>${_extValores(g.valores)}</td></tr>`).join('')}</tbody>
+        </table>`;
+    const detalhes = grupos.map(g => `
+        <h2 class="pdf-grupo">${_extEsc(g.nome)} <span>${g.linhas.length} ${unid[g.linhas.length !== 1 ? 1 : 0]} · ${_extValores(g.valores)}</span></h2>
+        ${_extTabelaOps(c.base, g.linhas)}`).join('');
+    return { total, html: resumo + detalhes };
 }

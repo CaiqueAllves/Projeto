@@ -242,6 +242,8 @@ function confirmarAcao(mensagem, opcoes = {}) {
         const btnCancelar = overlay.querySelector('.confirmar-btn--cancelar');
         const btnOk = overlay.querySelector('.confirmar-btn:not(.confirmar-btn--cancelar)');
         btnCancelar.textContent = cancelar;
+        // cancelar: null → aviso só informativo, com um botão (o OK)
+        if (cancelar === null) btnCancelar.style.display = 'none';
         btnOk.textContent = confirmar;
         const caixaAceite = overlay.querySelector('.confirmar-aceite input');
         if (caixaAceite) {
