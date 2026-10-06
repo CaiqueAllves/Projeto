@@ -1993,6 +1993,63 @@ async function excluirContaReceber(id) {
 // ========================================
 
 // ========================================
+// REMOÇÃO DEFINITIVA DOS EXCLUÍDOS (7 dias)
+// ========================================
+// Proformas/Processos excluídos há mais de 7 dias corridos sem restaurar são
+// apagados de vez pela função do banco purgar_excluidos_vencidos()
+// (database-purga-excluidos.sql, também agendada no pg_cron). Aqui o sistema
+// junta os arquivos anexados desses registros ANTES, chama a função e só
+// então remove os arquivos do Storage (se a função falhar, nada é apagado).
+const PURGA_DIAS = 7;
+const PURGA_CHAVE = 'purgaExcluidosEm';
+
+async function purgarExcluidosVencidos({ forcar = false } = {}) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id) return null;
+        const hoje = new Date().toISOString().slice(0, 10);
+        if (!forcar) { try { if (localStorage.getItem(PURGA_CHAVE) === hoje) return null; } catch {} }
+
+        const limite = new Date(Date.now() - PURGA_DIAS * 86400000).toISOString();
+        const [{ data: profs }, { data: procsVenc }] = await Promise.all([
+            supabaseClient.from('proformas').select('id').eq('status', 'excluido').lt('excluido_em', limite),
+            supabaseClient.from('processos').select('id').eq('status', 'excluido').lt('excluido_em', limite),
+        ]);
+        const profIds = (profs || []).map(p => p.id);
+        let procIds = (procsVenc || []).map(p => p.id);
+        if (profIds.length) {
+            const { data: procsDasProfs } = await supabaseClient.from('processos').select('id').in('proforma_id', profIds);
+            procIds = [...new Set([...procIds, ...(procsDasProfs || []).map(p => p.id)])];
+        }
+        if (!profIds.length && !procIds.length) { try { localStorage.setItem(PURGA_CHAVE, hoje); } catch {} return { proformas: 0, processos: 0 }; }
+
+        // Arquivos anexados desses registros (somem do banco junto, por CASCADE)
+        const paths = [];
+        if (profIds.length) {
+            const { data } = await supabaseClient.from('proforma_documentos').select('arquivo_path').in('proforma_id', profIds);
+            (data || []).forEach(d => d.arquivo_path && paths.push(d.arquivo_path));
+        }
+        if (procIds.length) {
+            const { data } = await supabaseClient.from('proforma_documentos').select('arquivo_path').in('processo_id', procIds);
+            (data || []).forEach(d => d.arquivo_path && paths.push(d.arquivo_path));
+        }
+
+        const { data: res, error } = await supabaseClient.rpc('purgar_excluidos_vencidos');
+        if (error) { console.warn('[Purga] função do banco indisponível:', error.message); return null; }
+
+        const unicos = [...new Set(paths)];
+        for (let i = 0; i < unicos.length; i += 100) {
+            await supabaseClient.storage.from('proforma-documentos-assinados').remove(unicos.slice(i, i + 100)).catch(() => {});
+        }
+        try { localStorage.setItem(PURGA_CHAVE, hoje); } catch {}
+        return res;
+    } catch (e) {
+        console.warn('[Purga] falhou:', e);
+        return null;
+    }
+}
+
+// ========================================
 // NOMES DE USUÁRIO (criado por / enviado por)
 // ========================================
 // id → nome_completo dos usuários (cache por página). Usado no "Criado por"
@@ -2058,6 +2115,7 @@ async function buscarSaldoProforma(proformaId, processoIgnorarId = null) {
 }
 
 window.supabaseAPI = {
+    purgarExcluidosVencidos,
     buscarSaldoProforma,
     buscarNomesUsuarios,
     login: loginSupabase,

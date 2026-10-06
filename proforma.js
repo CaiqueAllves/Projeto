@@ -173,7 +173,7 @@ async function profCarregarLista() {
                 .from('processos')
                 .select('id, proforma_id, numero_processo, status, itens')
                 .in('proforma_id', proformaIds);
-            (procs || []).forEach(pr => {
+            (procs || []).filter(pr => pr.status !== 'excluido').forEach(pr => {
                 (processosMap[pr.proforma_id] ||= []).push(pr);
             });
         }
@@ -541,12 +541,22 @@ function profAbrirModalExcluir(id) {
     _profExcluirId = id;
     const p    = _profTodos.find(x => x.id === id);
     const info = document.getElementById('excluirProformaInfo');
+    // Processos ligados vão junto para os excluídos (mesmo prazo de 7 dias)
+    const procs = (p?._processos || []).filter(pr => pr.status !== 'excluido');
     if (info && p) {
         info.innerHTML = `
             <strong>${p.codigo || '—'}</strong><br>
             <span style="font-size:13px;color:#6b7280;">
                 ${_profEmissorNome(p)} → ${_profDestinatarioNome(p)}
-            </span>`;
+            </span>
+            ${procs.length ? `
+            <div class="prof-excluir-processos">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>
+                    <strong>${procs.length > 1 ? `${procs.length} processos ligados` : '1 processo ligado'} a esta proforma também ${procs.length > 1 ? 'serão excluídos' : 'será excluído'}:</strong>
+                    <div class="prof-excluir-processos-lista">${procs.map(pr => _profEscapar(pr.numero_processo || '—')).join(', ')}</div>
+                </div>
+            </div>` : ''}`;
     }
     document.getElementById('modalExcluirProforma').style.display = 'flex';
 }
@@ -562,15 +572,19 @@ async function profConfirmarExcluir() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Excluindo...'; }
     try {
         const usuario = obterUsuarioLogado();
-        const { error } = await supabaseClient
-            .from('proformas')
-            .update({
-                status:      'excluido',
-                excluido_em: new Date().toISOString(),
-                excluido_por: usuario?.nome || usuario?.email || 'Desconhecido',
-            })
-            .eq('id', _profExcluirId);
+        // Mesmo instante na Proforma e nos Processos dela: contam o mesmo prazo
+        // de 7 dias e, ao restaurar a Proforma, os Processos excluídos junto
+        // (mesmo excluido_em) voltam também.
+        const marca = {
+            status:       'excluido',
+            excluido_em:  new Date().toISOString(),
+            excluido_por: usuario?.nome || usuario?.email || 'Desconhecido',
+        };
+        const { error } = await supabaseClient.from('proformas').update(marca).eq('id', _profExcluirId);
         if (error) throw error;
+        const { error: erroProc } = await supabaseClient.from('processos').update(marca)
+            .eq('proforma_id', _profExcluirId).neq('status', 'excluido');
+        if (erroProc) alert('A proforma foi excluída, mas houve erro ao excluir os processos ligados: ' + erroProc.message);
         profFecharModalExcluir();
         await profCarregarLista();
     } catch (err) {
@@ -594,6 +608,8 @@ async function profToggleExcluidos() {
 }
 
 async function profCarregarExcluidos() {
+    // Apaga de vez o que já passou dos 7 dias antes de listar
+    await window.supabaseAPI?.purgarExcluidosVencidos?.({ forcar: true });
     const container = document.getElementById('profExcluidosContainer');
     if (!container) return;
     container.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
@@ -653,11 +669,17 @@ async function profCarregarExcluidos() {
 
 async function profRestaurar(id) {
     try {
+        const { data: prof } = await supabaseClient.from('proformas').select('excluido_em').eq('id', id).maybeSingle();
         const { error } = await supabaseClient
             .from('proformas')
             .update({ status: 'enviado' })
             .eq('id', id);
         if (error) throw error;
+        // Processos excluídos junto com a Proforma (mesmo excluido_em) voltam também
+        if (prof?.excluido_em) {
+            await supabaseClient.from('processos').update({ status: 'aberto' })
+                .eq('proforma_id', id).eq('status', 'excluido').eq('excluido_em', prof.excluido_em);
+        }
         await profCarregarExcluidos();
         await profCarregarLista();
     } catch (err) {

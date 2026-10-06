@@ -655,3 +655,7 @@ function _rotularTabelasFin(raiz = document) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
     else iniciar();
 })();
+
+// Remoção definitiva dos excluídos há mais de 7 dias (1x por dia, em segundo
+// plano, alguns segundos depois de abrir qualquer tela) — ver supabase-api.js.
+setTimeout(() => { window.supabaseAPI?.purgarExcluidosVencidos?.(); }, 6000);

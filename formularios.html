@@ -1608,7 +1608,7 @@
                                     <div class="form-group full-width">
                                         <div class="form-row-4">
                                             <div class="form-group">
-                                                <label for="transp-tipo">Transportadora</label>
+                                                <label for="transp-tipo">Transportadora <span class="required">*</span></label>
                                                 <select id="transp-tipo" name="transp_tipo">
                                                     <option value="solicitada">Solicitada</option>
                                                     <option value="propria">Própria do Cliente</option>
@@ -1616,15 +1616,15 @@
                                                 <input type="hidden" id="transp-nome" name="transp_nome">
                                             </div>
                                             <div class="form-group">
-                                                <label for="transp-razao">Razão Social</label>
+                                                <label for="transp-razao">Razão Social <span class="required">*</span></label>
                                                 <div class="autocomplete-wrapper">
                                                     <input type="text" id="transp-razao" name="transp_razao" placeholder="Nome da transportadora" autocomplete="off">
                                                     <div class="autocomplete-list" id="transp-nome-lista"></div>
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label for="transp-cnpj">Documento Fiscal da Transportadora</label>
-                                                <input type="text" id="transp-cnpj" name="transp_cnpj" placeholder="00.000.000/0000-00" maxlength="18">
+                                                <label for="transp-cnpj">Documento Fiscal <span class="required">*</span></label>
+                                                <input type="text" id="transp-cnpj" name="transp_cnpj" placeholder="Automático ao escolher" readonly tabindex="-1" title="Preenchido automaticamente ao escolher a transportadora cadastrada">
                                             </div>
                                             <div class="form-group">
                                                 <label for="transp-num-coleta">Nº de Coleta <span class="campo-opcional">(se houver)</span></label>
@@ -1633,11 +1633,11 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 2: Tipo de Veículo | Placa -->
+                                    <!-- Linha 2: Tipo de Veículo | Placa | Motorista | CNH | Contato -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-3" style="grid-template-columns: repeat(2, 1fr);">
+                                        <div class="form-row-transp-veiculo">
                                             <div class="form-group">
-                                                <label for="transp-tipo-veiculo">Tipo de Veículo</label>
+                                                <label for="transp-tipo-veiculo">Tipo de Veículo <span class="required">*</span></label>
                                                 <select id="transp-tipo-veiculo" name="transp_tipo_veiculo">
                                                     <option value="">Selecione...</option>
                                                     <option value="caminhao_bau">Caminhão Baú</option>
@@ -1651,14 +1651,8 @@
                                             </div>
                                             <div class="form-group">
                                                 <label for="transp-placa">Placa do Veículo</label>
-                                                <input type="text" id="transp-placa" name="transp_placa" placeholder="AAA-0000 ou AAA0A00" maxlength="8">
+                                                <input type="text" id="transp-placa" name="transp_placa" placeholder="ABC-1D23" title="Placa no formato antigo (AAA-0000) ou Mercosul (AAA0A00)" maxlength="8">
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Linha 3: Motorista | CNH | Contato -->
-                                    <div class="form-group full-width">
-                                        <div class="form-row-3">
                                             <div class="form-group">
                                                 <label for="transp-motorista">Motorista</label>
                                                 <input type="text" id="transp-motorista" name="transp_motorista" placeholder="Nome do motorista">
@@ -1674,33 +1668,32 @@
                                         </div>
                                     </div>
 
-                                    <!-- Linha 4: Data de Coleta | Entrega Prevista -->
+                                    <!-- Linha 3: Data de Coleta | Entrega Prevista | Moeda | Valor do Frete | Apólice de Seguro -->
                                     <div class="form-group full-width">
-                                        <div class="form-row-3" style="grid-template-columns: repeat(2, 1fr);">
+                                        <div class="form-row-transp-frete">
                                             <div class="form-group">
-                                                <label for="transp-data-coleta">Data de Coleta</label>
+                                                <label for="transp-data-coleta">Data de Coleta <span class="required">*</span></label>
                                                 <input type="date" id="transp-data-coleta" name="transp_data_coleta">
                                             </div>
                                             <div class="form-group">
-                                                <label for="transp-data-entrega">Entrega Prevista</label>
+                                                <label for="transp-data-entrega">Entrega Prevista <span class="required">*</span></label>
                                                 <input type="date" id="transp-data-entrega" name="transp_data_entrega">
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Linha 5: Valor do Frete (com Seguro) -->
-                                    <div class="form-group full-width">
-                                        <div class="form-group">
-                                            <label for="transp-frete-valor">Valor do Frete</label>
-                                            <div class="doc-tipo-wrapper" style="align-items:flex-end;">
-                                                <div class="autocomplete-wrapper" style="width:140px;flex-shrink:0;">
-                                                    <input type="text" id="transp-frete-moeda-display" placeholder="Moeda..." autocomplete="off">
+                                            <div class="form-group">
+                                                <label for="transp-frete-moeda-display">Moeda <span class="required">*</span></label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="transp-frete-moeda-display" placeholder="Buscar moeda..." autocomplete="off">
                                                     <input type="hidden" id="transp-frete-moeda" name="transp_frete_moeda">
                                                     <div class="autocomplete-dropdown" id="transp-frete-moeda-list" style="display:none;"></div>
                                                 </div>
-                                                <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00">
-                                                <input type="text" id="transp-frete-incoterm" name="transp_frete_incoterm" class="transp-incoterm-tag" placeholder="—" readonly tabindex="-1" style="width:70px;flex-shrink:0;">
-                                                <input type="text" id="transp-seguro" name="transp_seguro" placeholder="Nº apólice ou seguro" title="Seguro de Transporte (se houver)" style="flex:1;">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-frete-valor">Valor do Frete <span class="required">*</span></label>
+                                                <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00" inputmode="numeric" autocomplete="off">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transp-seguro">Apólice de Seguro <span class="campo-opcional">(se houver)</span></label>
+                                                <input type="text" id="transp-seguro" name="transp_seguro" placeholder="Nº da apólice">
                                             </div>
                                         </div>
                                     </div>

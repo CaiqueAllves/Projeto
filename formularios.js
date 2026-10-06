@@ -794,6 +794,44 @@ async function salvarProcesso(e) {
         return;
     }
 
+    if (document.getElementById('transp-tipo')?.value === 'propria') window._transpAplicarPropriaCliente?.();
+    // Transporte: campos obrigatórios (Documento Fiscal vem da transportadora escolhida)
+    const transpObrig = [
+        ['transp-tipo',               'Selecione a Transportadora (Solicitada / Própria do Cliente).'],
+        ['transp-razao',              'Informe a Razão Social da transportadora.'],
+        ['transp-cnpj',               document.getElementById('transp-tipo')?.value === 'propria'
+            ? 'Coleta pelo próprio Importador: escolha o Importador do processo (com documento cadastrado).'
+            : 'Escolha a transportadora na lista para preencher o Documento Fiscal (cadastre-a em Empresas › Modelo Transportadora).'],
+        ['transp-tipo-veiculo',       'Selecione o Tipo de Veículo.'],
+        ['transp-data-coleta',        'Informe a Data de Coleta.'],
+        ['transp-data-entrega',       'Informe a Entrega Prevista.'],
+        ['transp-frete-moeda',        'Escolha a Moeda do frete na lista.', 'transp-frete-moeda-display'],
+        ['transp-frete-valor',        'Informe o Valor do Frete.'],
+    ];
+    const faltando = transpObrig.filter(([id]) => !(document.getElementById(id)?.value || '').trim());
+    if (faltando.length) {
+        const secTransp = document.getElementById('transp-tipo')?.closest('.form-section');
+        if (secTransp && !secTransp.classList.contains('active')) secTransp.querySelector('.section-title')?.click();
+        faltando.forEach(([id, , visivel]) => {
+            const el = document.getElementById(visivel || id);
+            if (!el) return;
+            el.style.borderColor = '#dc2626';
+            const limpar = () => { el.style.borderColor = ''; };
+            el.addEventListener('input', limpar, { once: true });
+            el.addEventListener('change', limpar, { once: true });
+        });
+        const primeiro = document.getElementById(faltando[0][2] || faltando[0][0]);
+        mostrarNotificacao(faltando[0][1] + (faltando.length > 1 ? ` (+${faltando.length - 1} campo(s) obrigatório(s) do Transporte)` : ''), 'warning');
+        setTimeout(() => primeiro?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+        return;
+    }
+    const dColeta = document.getElementById('transp-data-coleta').value, dEntrega = document.getElementById('transp-data-entrega').value;
+    if (dEntrega < dColeta) {
+        mostrarNotificacao('A Entrega Prevista não pode ser antes da Data de Coleta.', 'warning');
+        document.getElementById('transp-data-entrega')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
     // Embarque parcial: nenhum produto pode passar do saldo da Proforma. Recalcula
     // na hora (outro processo pode ter sido salvo enquanto este estava aberto).
     // Bloqueia sem fechar a tela — o usuário ajusta as quantidades e salva de novo.
@@ -1079,6 +1117,7 @@ async function procCarregarEdicao(id) {
     // Transporte
     const t = p.transporte || {};
     set('transp-tipo',              t.tipo);
+    setTimeout(() => { if (t.tipo === 'propria') window._transpAplicarPropriaCliente?.(); }, 0);
     set('transp-nome',              t.nome);
     set('transp-razao',             t.razao);
     set('transp-cnpj',              t.cnpj);
@@ -1091,6 +1130,7 @@ async function procCarregarEdicao(id) {
     set('transp-data-coleta',       t.data_coleta);
     set('transp-data-entrega',      t.data_entrega);
     set('transp-frete-moeda',       t.frete_moeda);
+    set('transp-frete-moeda-display', t.frete_moeda);
     set('transp-frete-valor',       t.frete_valor);
     set('transp-frete-incoterm',    t.frete_incoterm);
     set('transp-seguro',            t.seguro);
@@ -1163,6 +1203,13 @@ function procAplicarModoVisualizacao() {
     banner.style.cssText = 'position:sticky;top:0;z-index:100;background:#1e40af;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;letter-spacing:0.3px;border-radius:8px;margin-bottom:12px;';
     banner.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:6px;"></i>Modo Visualização — somente leitura';
     form.insertBefore(banner, form.firstChild);
+}
+
+// Número do documento (não o nome do arquivo que o campo mostra com anexo)
+function _docNumero(id) {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    return (el.dataset.anexo ? (el.dataset.numero || '') : (el.value || '')).trim() || null;
 }
 
 function _coletarDadosProcesso() {
@@ -1263,22 +1310,22 @@ function _coletarDadosProcesso() {
 
         // Documentos (numeração — sem arquivos anexados)
         documentos: {
-            proforma:   v('doc-num-proforma'),
-            commercial: v('doc-num-commercial'),
-            packing:    v('doc-num-packing'),
-            due:        v('doc-num-due'),
-            le:         v('doc-num-le'),
-            certorigem: v('doc-num-certorigem'),
-            ctn:        v('doc-num-ctn'),
-            nfe:        v('doc-num-nfe'),
-            awb:        v('doc-num-awb'),
-            manifesto:  v('doc-num-manifesto'),
-            fcl:        v('doc-num-fcl'),
-            lcl:        v('doc-num-lcl'),
-            bl:         v('doc-num-bl'),
-            apolice:    v('doc-num-apolice'),
-            crt:        v('doc-num-crt'),
-            micdta:     v('doc-num-micdta'),
+            proforma:   _docNumero('doc-num-proforma'),
+            commercial: _docNumero('doc-num-commercial'),
+            packing:    _docNumero('doc-num-packing'),
+            due:        _docNumero('doc-num-due'),
+            le:         _docNumero('doc-num-le'),
+            certorigem: _docNumero('doc-num-certorigem'),
+            ctn:        _docNumero('doc-num-ctn'),
+            nfe:        _docNumero('doc-num-nfe'),
+            awb:        _docNumero('doc-num-awb'),
+            manifesto:  _docNumero('doc-num-manifesto'),
+            fcl:        _docNumero('doc-num-fcl'),
+            lcl:        _docNumero('doc-num-lcl'),
+            bl:         _docNumero('doc-num-bl'),
+            apolice:    _docNumero('doc-num-apolice'),
+            crt:        _docNumero('doc-num-crt'),
+            micdta:     _docNumero('doc-num-micdta'),
         },
 
         // Transporte
@@ -1297,7 +1344,7 @@ function _coletarDadosProcesso() {
             data_entrega:       document.getElementById('transp-data-entrega')?.value || null,
             frete_moeda:        v('transp-frete-moeda'),
             frete_valor:        v('transp-frete-valor'),
-            frete_incoterm:     v('transp-frete-incoterm'),
+            frete_incoterm:     v('proc-incoterm'),
             seguro:             v('transp-seguro'),
             obs:                v('transp-obs'),
         },
@@ -3899,6 +3946,8 @@ function iniciarAutocompleteEmpresaDestino() {
 
         if (docEl) docEl.value = doc;
         if (idEl) idEl.value = idInt;
+        // Transporte "Própria do Cliente": a coleta é do Importador escolhido
+        if (document.getElementById('transp-tipo')?.value === 'propria') setTimeout(() => window._transpAplicarPropriaCliente?.(), 0);
 
         if (validarDocDestino(doc)) {
             input.value = '';
@@ -4114,11 +4163,30 @@ function _docProformaIdAtual() {
     return document.getElementById('proc-proposta-id')?.value || null;
 }
 
+// Com arquivo anexado (upload ou gerado pelo sistema), o campo "Nº ..." mostra
+// o nome do arquivo (somente leitura). O número digitado continua guardado em
+// data-numero e é ele que vai pro banco (_docNumero) — removendo o anexo, o
+// campo volta a mostrar o número e fica editável.
 function _docAtualizarCampoVisual(id, nomeArquivo) {
     const span = document.getElementById('doc-filename-' + id);
-    if (span) {
-        span.innerHTML = nomeArquivo ? `<i class="fa-solid fa-paperclip"></i> ${nomeArquivo}` : '';
-        span.classList.toggle('doc-filename-ativo', !!nomeArquivo);
+    if (span) { span.innerHTML = ''; span.classList.remove('doc-filename-ativo'); }
+    const input = document.getElementById('doc-num-' + id);
+    if (input) {
+        if (nomeArquivo) {
+            if (!input.dataset.anexo) input.dataset.numero = input.value.trim();
+            input.dataset.anexo = '1';
+            input.value    = nomeArquivo;
+            input.readOnly = true;
+            input.title    = `Arquivo anexado: ${nomeArquivo}${input.dataset.numero ? ` — Nº ${input.dataset.numero}` : ''}`;
+            input.classList.add('doc-input-anexo');
+        } else if (input.dataset.anexo) {
+            input.value    = input.dataset.numero || '';
+            input.readOnly = false;
+            input.title    = '';
+            delete input.dataset.anexo;
+            delete input.dataset.numero;
+            input.classList.remove('doc-input-anexo');
+        }
     }
     const campo = document.getElementById('doc-file-' + id)?.closest('.doc-campo');
     campo?.querySelector('.doc-btn-ver')?.classList.toggle('ativo', !!nomeArquivo);
@@ -4153,6 +4221,8 @@ function _docLimparAnexosVisuais() {
         if (fileInput) fileInput.value = '';
         const span = campo.querySelector('.doc-filename');
         if (span) { span.innerHTML = ''; span.classList.remove('doc-filename-ativo'); }
+        const num = campo.querySelector('input[id^="doc-num-"]');
+        if (num?.dataset.anexo) _docAtualizarCampoVisual(num.id.replace('doc-num-', ''), null);
         campo.querySelector('.doc-btn-ver')?.classList.remove('ativo');
         campo.querySelector('.doc-btn-del')?.classList.remove('ativo');
     });
@@ -4219,7 +4289,8 @@ async function docGerarPdfProcesso(tipo) {
         const r = await gerarEAnexarDocumentoProcesso(tipo, processoId);
         if (!r) return;
         const numEl = document.getElementById('doc-num-' + tipo);
-        if (numEl && !numEl.value.trim()) numEl.value = r.numero;
+        if (numEl?.dataset.anexo) { if (!numEl.dataset.numero) numEl.dataset.numero = r.numero; }
+        else if (numEl && !numEl.value.trim()) numEl.value = r.numero;
         if (r.anexado) {
             _docAnexosProcesso[tipo] = { path: r.path, nome: r.nomeArquivo };
             _docAtualizarCampoVisual(tipo, r.nomeArquivo);
@@ -6290,17 +6361,16 @@ function iniciarTransportadoraPropria() {
 
     let _transpCache = null;
 
+    // Transportadoras = empresas cadastradas com Modelo "Transportadora" (ou
+    // marcadas como transportadora). Antes lia "empresas_cadastradas", tabela
+    // que não existe — a lista vinha sempre vazia.
     async function _carregarTransps() {
         if (_transpCache) return _transpCache;
-        const usuario = obterUsuarioLogado();
-        if (!usuario) return [];
         try {
-            const { data } = await supabaseClient
-                .from('empresas_cadastradas')
-                .select('id, nome_empresa, nome_fantasia, documento')
-                .eq('empresa_proprietaria_id', usuario.empresa_id)
-                .contains('tipos', ['transportadora']);
-            _transpCache = data || [];
+            await _acCarregarEmpresas();
+            _transpCache = _acEmpresas
+                .filter(e => e.modelo === 'transportadora' || e.is_transportadora)
+                .map(e => ({ id: e.id, nome_empresa: e.razao_social, nome_fantasia: e.nome_fantasia, documento: e.documento }));
         } catch { _transpCache = []; }
         return _transpCache;
     }
@@ -6309,67 +6379,102 @@ function iniciarTransportadoraPropria() {
         const nome = item.nome_empresa || item.nome_fantasia || '';
         nomeInput.value = nome;
         if (nomeHidden) nomeHidden.value = nome;
-        if (cnpjInput) cnpjInput.value = item.documento || '';
+        if (cnpjInput) { cnpjInput.value = item.documento || ''; cnpjInput.style.borderColor = ''; }
+        nomeInput.style.borderColor = '';
         if (nomeLista) nomeLista.classList.remove('aberta');
     }
 
-    async function _mostrarSugestoes() {
+    // Mesma lista de sugestões pra Razão Social (busca por nome) e pro
+    // Documento Fiscal (busca pelos números do documento).
+    let _campoAtivo = nomeInput;
+    async function _mostrarSugestoes(e) {
         if (tipoSelect.value !== 'solicitada') return;
+        _campoAtivo = e?.target === cnpjInput ? cnpjInput : nomeInput;
         const lista = await _carregarTransps();
-        if (!lista.length || !nomeLista) return;
-        const q = nomeInput.value.trim().toLowerCase();
-        const filtradas = q
-            ? lista.filter(t => (t.nome_empresa || t.nome_fantasia || '').toLowerCase().includes(q))
-            : lista;
+        if (!nomeLista) return;
+        if (!lista.length) {
+            nomeLista.innerHTML = '<div class="autocomplete-vazio">Nenhuma transportadora cadastrada (Empresas › Modelo Transportadora)</div>';
+            _acPosicionar(_campoAtivo, nomeLista);
+            nomeLista.classList.add('aberta');
+            return;
+        }
+        let filtradas;
+        if (_campoAtivo === cnpjInput) {
+            const dig = cnpjInput.value.replace(/\D/g, '');
+            filtradas = dig ? lista.filter(t => String(t.documento || '').replace(/\D/g, '').includes(dig)) : lista;
+        } else {
+            const q = nomeInput.value.trim().toLowerCase();
+            filtradas = q
+                ? lista.filter(t => (t.nome_empresa || '').toLowerCase().includes(q) || (t.nome_fantasia || '').toLowerCase().includes(q))
+                : lista;
+        }
         if (!filtradas.length) { nomeLista.classList.remove('aberta'); return; }
         nomeLista.innerHTML = filtradas.slice(0, 20).map(t => `
             <div class="autocomplete-item"
                  data-nome="${(t.nome_empresa || t.nome_fantasia || '').replace(/"/g,'&quot;')}"
                  data-doc="${t.documento || ''}">
                 <span class="ac-nome">${t.nome_empresa || t.nome_fantasia || '—'}</span>
-                ${t.nome_fantasia && t.nome_empresa ? `<span class="ac-fantasia">${t.nome_fantasia}</span>` : ''}
+                <span class="ac-fantasia">${[t.nome_fantasia && t.nome_empresa ? t.nome_fantasia : '', t.documento || ''].filter(Boolean).join(' · ')}</span>
             </div>`).join('');
-        _acPosicionar(nomeInput, nomeLista);
+        _acPosicionar(_campoAtivo, nomeLista);
         nomeLista.classList.add('aberta');
     }
 
     if (nomeLista) {
         nomeInput.addEventListener('focus', _mostrarSugestoes);
         nomeInput.addEventListener('input', _mostrarSugestoes);
+        // Documento Fiscal é preenchido só pelo sistema (ao escolher da lista):
+        // digitar/alterar a Razão Social desfaz a escolha anterior.
+        nomeInput.addEventListener('input', () => { if (cnpjInput) cnpjInput.value = ''; });
         nomeLista.addEventListener('mousedown', e => {
             const item = e.target.closest('.autocomplete-item');
             if (!item) return;
             _selecionarTransp({ nome_empresa: item.dataset.nome, documento: item.dataset.doc });
         });
         document.addEventListener('click', e => {
-            if (!nomeInput.contains(e.target) && !nomeLista.contains(e.target))
+            if (!nomeInput.contains(e.target) && !cnpjInput?.contains(e.target) && !nomeLista.contains(e.target))
                 nomeLista.classList.remove('aberta');
         });
     }
 
-    tipoSelect.addEventListener('change', async function () {
+    // "Própria do Cliente" = o próprio Importador coleta a carga: Razão Social
+    // e Documento Fiscal vêm do Importador do Processo (somente leitura) —
+    // não é uma transportadora cadastrada.
+    function _aplicarPropriaCliente() {
+        const propria = tipoSelect.value === 'propria';
+        nomeInput.readOnly = propria;
+        nomeInput.placeholder = propria ? 'Importador do processo' : 'Nome da transportadora';
+        nomeInput.classList.toggle('transp-campo-auto', propria);
+        if (!propria) return;
+        if (nomeLista) nomeLista.classList.remove('aberta');
+        const imp    = document.getElementById('proc-emp-dest-busca')?.value.trim() || '';
+        const impDoc = document.getElementById('proc-emp-dest-auto-doc')?.value.trim() || '';
+        nomeInput.value = imp;
+        if (nomeHidden) nomeHidden.value = imp;
+        if (cnpjInput) cnpjInput.value = impDoc;
+        [nomeInput, cnpjInput].forEach(el => { if (el && el.value) el.style.borderColor = ''; });
+        aviso.className = 'transp-aviso' + (imp ? ' transp-aviso-ok' : '');
+        aviso.textContent = imp
+            ? 'Coleta pelo próprio Importador — dados preenchidos a partir do Importador do processo.'
+            : 'Escolha o Importador do processo (Origem / Destino) — a coleta será feita por ele.';
+        aviso.style.display = 'block';
+    }
+    window._transpAplicarPropriaCliente = _aplicarPropriaCliente;
+
+    tipoSelect.addEventListener('change', function () {
         aviso.style.display = 'none';
         if (nomeLista) nomeLista.classList.remove('aberta');
         nomeInput.value = '';
         if (nomeHidden) nomeHidden.value = '';
         if (cnpjInput) cnpjInput.value = '';
+        _aplicarPropriaCliente();
+    });
 
-        if (this.value !== 'propria') return;
-
-        const lista = await _carregarTransps();
-        if (!lista.length) {
-            aviso.textContent = 'Nenhuma transportadora cadastrada encontrada.';
-            aviso.style.display = 'block';
-            return;
-        }
-        if (lista.length === 1) {
-            _selecionarTransp(lista[0]);
-            aviso.textContent = 'Transportadora preenchida automaticamente.';
-            aviso.className = 'transp-aviso transp-aviso-ok';
-            aviso.style.display = 'block';
-            return;
-        }
-        _mostrarDropdownTransp(lista, nomeInput, cnpjInput);
+    // Importador trocado depois: atualiza a coleta própria
+    ['proc-emp-dest-busca', 'proc-emp-dest-auto-doc'].forEach(id => {
+        const el = document.getElementById(id);
+        el?.addEventListener('change', () => { if (tipoSelect.value === 'propria') _aplicarPropriaCliente(); });
+        el?.addEventListener('input',  () => { if (tipoSelect.value === 'propria') _aplicarPropriaCliente(); });
     });
 }
 
@@ -6380,32 +6485,10 @@ function _criarAvisoTransp() {
         el.id        = 'transp-aviso-propria';
         el.className = 'transp-aviso';
         el.style.display = 'none';
-        document.getElementById('transp-nome')?.closest('.form-grid')?.after(el);
+        // logo abaixo da 1ª linha (Transportadora | Razão Social | Documento | Nº de Coleta)
+        document.getElementById('transp-tipo')?.closest('.form-group.full-width')?.after(el);
     }
     return el;
-}
-
-function _mostrarDropdownTransp(lista, nomeInput, cnpjInput) {
-    let dropdown = document.getElementById('transp-propria-dropdown');
-    if (!dropdown) {
-        dropdown = document.createElement('div');
-        dropdown.id        = 'transp-propria-dropdown';
-        dropdown.className = 'transp-propria-dropdown';
-        nomeInput.closest('.form-grid')?.after(dropdown);
-    }
-    dropdown.innerHTML = '<p class="transp-dropdown-titulo">Selecione a transportadora:</p>';
-    lista.forEach(t => {
-        const item = document.createElement('div');
-        item.className   = 'transp-dropdown-item';
-        item.textContent = t.nome_empresa || t.nome_fantasia || '—';
-        item.addEventListener('click', () => {
-            nomeInput.value = t.nome_empresa || t.nome_fantasia || '';
-            if (cnpjInput) cnpjInput.value = t.documento || '';
-            dropdown.style.display = 'none';
-        });
-        dropdown.appendChild(item);
-    });
-    dropdown.style.display = 'block';
 }
 
 // ========================================
@@ -6572,6 +6655,31 @@ function _mascaraDocBR(valor) {
         if (d.length > 2)  return d.slice(0,2) + '.' + d.slice(2);
         return d;
     }
+}
+
+// Editar/Duplicar Proforma: marcar o Emissor (evento change) limpa o
+// documento e o País de Origem quando é Terceiro — então, depois de marcar,
+// reaplica o que veio salvo. Proforma antiga sem documento/nome do Exportador
+// Terceiro busca do cadastro do parceiro.
+async function _propReaplicarEmissor(d) {
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null && v !== '') el.value = v; };
+    let documento = d.documento, nome = d.parceiro_razao_social;
+    if (d.emissor_tipo === 'terceiro' && d.parceiro_id && (!documento || !nome)) {
+        const { data: parc } = await supabaseClient.from('parceiros')
+            .select('razao_social, nome_fantasia, documento').eq('id', d.parceiro_id).maybeSingle();
+        if (parc) {
+            documento ||= parc.documento;
+            nome      ||= parc.nome_fantasia || parc.razao_social;
+        }
+    }
+    if (d.emissor_tipo === 'terceiro' && nome) set('prop-cliente', nome);
+    if (documento) {
+        const digitos = String(documento).replace(/\D/g, '');
+        set('prop-documento', [11, 14].includes(digitos.length) ? _mascaraDocBR(documento) : documento);
+        set('prop-documento-tipo', d.documento_tipo || _tipoDocBR(documento));
+    }
+    set('prop-origem-pais', d.origem_pais);
+    set('prop-origem-pais-codigo', d.origem_pais_codigo);
 }
 
 function _tipoDocBR(valor) {
@@ -7031,6 +7139,7 @@ async function propCarregarEdicao(id) {
         // busca, então sem isso o campo ficava em branco na edição.
         if (d.parceiro_razao_social) g('prop-cliente', d.parceiro_razao_social);
     }
+    await _propReaplicarEmissor(d);
 
     // Destinatário
     if (d.destinatario_id) {
@@ -7143,6 +7252,7 @@ async function propCarregarDuplicar(id) {
         if (d.parceiro_id) g('prop-cliente-id', d.parceiro_id);
         if (d.parceiro_razao_social) g('prop-cliente', d.parceiro_razao_social);
     }
+    await _propReaplicarEmissor(d);
 
     // Destinatário
     if (d.destinatario_id) {
@@ -7363,20 +7473,64 @@ function _procExcedentes() {
         .map(([k, u]) => ({ ..._procSaldo.itens[k], pedido: u.qtd, idx: u.idx }));
 }
 
+// Avisos SÓ de tela (o PDF lê apenas as quantidades): saldo de cada produto,
+// quantidade acima do saldo (bloqueia ao salvar) e embarque parcial — quando
+// o processo leva menos do que ainda resta da Proforma.
 function _procAtualizarSaldoVisual() {
     const excedidos = new Set(_procExcedentes().flatMap(e => e.idx));
+    const fmt = n => Number(n).toLocaleString('pt-BR');
+
+    // quantidade deste processo por produto da proforma
+    const noProcesso = {};
+    _procItens.forEach(it => {
+        const k = chaveItemProforma(it);
+        if (_procSaldo?.itens[k]) noProcesso[k] = (noProcesso[k] || 0) + (Number(it.qtd) || 0);
+    });
+
     _procItens.forEach((it, i) => {
         const el   = document.getElementById(`proc-item-saldo-${i}`);
         const card = document.getElementById(`proc-item-card-${i}`);
-        const s    = _procSaldo?.itens[chaveItemProforma(it)];
-        if (card) card.classList.toggle('item-saldo-excedido', excedidos.has(i));
+        const k    = chaveItemProforma(it);
+        const s    = _procSaldo?.itens[k];
+        const resta = s ? s.saldo - (noProcesso[k] || 0) : 0;
+        const parcial = !!s && !excedidos.has(i) && resta > 0 && (noProcesso[k] || 0) > 0;
+        if (card) {
+            card.classList.toggle('item-saldo-excedido', excedidos.has(i));
+            card.classList.toggle('item-saldo-parcial', parcial);
+        }
         if (!el) return;
         if (!s) { el.innerHTML = ''; return; }
-        const fmt = n => Number(n).toLocaleString('pt-BR');
-        el.innerHTML = excedidos.has(i)
-            ? `<i class="fa-solid fa-triangle-exclamation"></i> Acima do saldo da proforma: disponível <strong>${fmt(s.saldo)}</strong> de ${fmt(s.total)} ${_itemEsc(s.unidade)}`
-            : `<i class="fa-solid fa-boxes-packing"></i> Saldo da proforma: <strong>${fmt(s.saldo)}</strong> de ${fmt(s.total)} ${_itemEsc(s.unidade)}${s.usado ? ` (${fmt(s.usado)} já em outros processos)` : ''}`;
+        const un = _itemEsc(s.unidade);
+        if (excedidos.has(i)) {
+            el.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Acima do saldo da proforma: disponível <strong>${fmt(s.saldo)}</strong> de ${fmt(s.total)} ${un}`;
+        } else if (parcial) {
+            el.innerHTML = `<i class="fa-solid fa-scissors"></i> Embarque parcial: este processo leva <strong>${fmt(noProcesso[k])}</strong> de ${fmt(s.saldo)} ${un} disponíveis — ficam <strong>${fmt(resta)} ${un}</strong> para outro processo`
+                + (s.usado ? ` · ${fmt(s.usado)} já em outros processos` : '');
+        } else {
+            el.innerHTML = `<i class="fa-solid fa-boxes-packing"></i> Saldo da proforma: <strong>${fmt(s.saldo)}</strong> de ${fmt(s.total)} ${un}${s.usado ? ` (${fmt(s.usado)} já em outros processos)` : ''}`;
+        }
     });
+
+    // Faixa no topo da seção: o processo não leva tudo o que resta da Proforma
+    // (quantidade menor ou produto da proforma que ficou de fora)
+    const body = document.getElementById('proc-itens-body');
+    if (!body) return;
+    let faixa = document.getElementById('proc-itens-aviso-parcial');
+    const pendentes = _procSaldo
+        ? Object.values(_procSaldo.itens).filter(s => s.saldo - (noProcesso[s.chave] || 0) > 0)
+        : [];
+    if (!pendentes.length || !_procItens.length) { faixa?.remove(); return; }
+    if (!faixa) {
+        faixa = document.createElement('div');
+        faixa.id = 'proc-itens-aviso-parcial';
+        faixa.className = 'proc-aviso-parcial';
+        body.before(faixa);
+    }
+    const lista = pendentes.slice(0, 4).map(s => `${_itemEsc(s.produto)}: ${fmt(s.saldo - (noProcesso[s.chave] || 0))} ${_itemEsc(s.unidade)}`).join(' · ');
+    faixa.innerHTML = `<i class="fa-solid fa-circle-info"></i>
+        <div><strong>Embarque parcial da Proforma ${_itemEsc(_procSaldo.proforma?.codigo || '')}</strong> — este processo não leva todo o saldo.
+        Ficam para outro processo: ${lista}${pendentes.length > 4 ? ` e mais ${pendentes.length - 4}` : ''}.
+        <span class="proc-aviso-parcial-nota">Aviso só desta tela — não aparece nos documentos.</span></div>`;
 }
 
 function _itensDe(pfx) { return pfx === 'proc' ? _procItens : _propItens; }
@@ -7663,11 +7817,12 @@ function iniciarMascarasTransporte() {
         });
     }
 
+    // Máscara contábil: digita só números, centavos à direita (1234567 → 12.345,67)
     const freteInput = document.getElementById('transp-frete-valor');
     if (freteInput) {
-        freteInput.addEventListener('blur', function () {
-            const n = parseFloat(this.value.replace(',', '.'));
-            if (!isNaN(n)) this.value = n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        freteInput.addEventListener('input', function () {
+            const raw = this.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+            this.value = raw ? (parseInt(raw, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
         });
     }
 

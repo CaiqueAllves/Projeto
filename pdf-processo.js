@@ -340,7 +340,7 @@ function gerarPDFProcesso() {
         const freteValor = val('transp-frete-valor');
         const freteTxt = freteValor !== '—' ? `${freteMoeda !== '—' ? freteMoeda + ' ' : ''}${freteValor}` : '—';
         campo('Valor do Frete', freteTxt, ML + 88, Y, 45);
-        campo('Incoterm do Frete', val('transp-frete-incoterm'), ML + 137, Y, 30);
+        campo('Incoterm do Frete', val('proc-incoterm'), ML + 137, Y, 30);
         campo('Seguro', val('transp-seguro'), ML + 171, Y, 112);
         Y += 12;
         if (val('transp-obs') !== '—') {
@@ -408,7 +408,10 @@ function gerarPDFProcesso() {
         { id: 'doc-num-crt',        label: 'CRT' },
         { id: 'doc-num-micdta',     label: 'MIC/DTA — TIF' },
     ];
-    const docsPreenchidos = docsIds.filter(d => (document.getElementById(d.id)?.value || '').trim());
+    // Número do documento — com arquivo anexado, o campo mostra o nome do arquivo
+    // e o número fica em data-numero (formularios.js → _docAtualizarCampoVisual)
+    const numeroDoc = id => { const el = document.getElementById(id); if (!el) return ''; return (el.dataset.anexo ? (el.dataset.numero || '') : (el.value || '')).trim(); };
+    const docsPreenchidos = docsIds.filter(d => numeroDoc(d.id));
 
     if (docsPreenchidos.length > 0) {
         secHeader('Numeração de Documentos');
@@ -418,7 +421,7 @@ function gerarPDFProcesso() {
             const col = i % cols, row = Math.floor(i / cols);
             const x = ML + col * colW, yy = Y + row * 12;
             pg(12);
-            campo(d.label, document.getElementById(d.id).value.trim(), x, yy, colW - 4);
+            campo(d.label, numeroDoc(d.id), x, yy, colW - 4);
         });
         Y += Math.ceil(docsPreenchidos.length / cols) * 12 + 4;
     }

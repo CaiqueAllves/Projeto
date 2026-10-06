@@ -3755,3 +3755,75 @@ form {
 /* Gerar PDF do documento (Commercial Invoice / Packing List) */
 .doc-btn-gerar { color: #dc2626; }
 .doc-btn-gerar:hover { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+
+/* Campo "Nº ..." com arquivo anexado: mostra o nome do arquivo (somente leitura) */
+input.doc-input-anexo {
+    background: #f0fdf4 !important;
+    border-color: #bbf7d0 !important;
+    color: #15803d !important;
+    font-weight: 500;
+    cursor: default;
+}
+
+/* Embarque parcial — avisos só de tela (Produtos do Processo) */
+.prop-item-card.item-saldo-parcial .item-saldo { background: #fffbeb; color: #92400e; }
+.prop-item-card.item-saldo-parcial .item-saldo i { color: #d97706; }
+.proc-aviso-parcial {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    color: #92400e;
+    font-size: 13px;
+    line-height: 1.45;
+}
+.proc-aviso-parcial > i { color: #d97706; margin-top: 2px; }
+.proc-aviso-parcial-nota { display: block; font-size: 11.5px; color: #b45309; opacity: .85; margin-top: 2px; }
+
+/* Transporte — 2ª linha: Tipo de Veículo | Placa | Motorista | CNH | Contato */
+.form-row-transp-veiculo {
+    display: grid;
+    grid-template-columns: 1.3fr 0.8fr 1.3fr 1fr 1.1fr;
+    gap: 16px;
+}
+.form-row-transp-veiculo > .form-group { min-width: 0; }
+@media (max-width: 1100px) {
+    .form-row-transp-veiculo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Transporte — 3ª linha: Data de Coleta | Entrega Prevista | Moeda | Valor do Frete | Apólice */
+.form-row-transp-frete {
+    display: grid;
+    grid-template-columns: 1.1fr 1.1fr 1fr 1fr 1.3fr;
+    gap: 16px;
+}
+.form-row-transp-frete > .form-group { min-width: 0; }
+.form-row-transp-frete .autocomplete-wrapper { width: 100%; }
+@media (max-width: 1100px) {
+    .form-row-transp-frete { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Lista de moedas do frete (carregarMoedasTransporte) — mesmo visual das sugestões */
+.autocomplete-wrapper { position: relative; }
+.autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    min-width: 200px;
+    background: #fff;
+    border: 1px solid var(--cinza-claro, #e2e8f0);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    z-index: 9999;
+    max-height: 240px;
+    overflow-y: auto;
+}
+.autocomplete-dropdown .autocomplete-item { font-size: 13px; padding: 9px 12px; }
+/* Vazia = escondida (o fechar global de navegador.js remove o display inline) */
+.autocomplete-dropdown:empty { display: none !important; }
+input.transp-campo-auto { background: #f8fafc; color: #334155; cursor: default; }

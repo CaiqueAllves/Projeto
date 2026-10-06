@@ -20,6 +20,95 @@ function carregarJsPDFSobDemanda() {
     return _jspdfCarregado;
 }
 
+const PDF_PROF_ROTULOS = {
+    tipo: { exportacao_direta: 'Exportação Direta', exportacao_indireta: 'Exportação Indireta' },
+    proposito: { vendas: 'Vendas', amostra: 'Amostra', troca: 'Troca', doacao: 'Doação', conserto: 'Conserto / Reparo', retorno: 'Retorno', exposicao: 'Exposição / Feira' },
+    forma_pagamento: { dinheiro: 'Dinheiro', cheque: 'Cheque', 'cartao-credito': 'Cartão de Crédito', 'cartao-debito': 'Cartão de Débito',
+        duplicata: 'Duplicata Mercantil', boleto: 'Boleto Bancário', deposito: 'Depósito Bancário', swift: 'SWIFT', cad: 'CAD',
+        '30-advanced': '30% ADVANCED', '70-against-document': '70% AGAINST DOCUMENT', 'sem-pagamento': 'Sem Pagamento',
+        'pagamento-posterior': 'Pagamento Posterior', outros: 'Outros' },
+    prazo_pagamento: { avista: 'À Vista', 15: '15 dias', 30: '30 dias', 45: '45 dias', 60: '60 dias', 90: '90 dias', 120: '120 dias' },
+};
+
+// Completa os dados da Proforma com o cadastro: Exportador (parceiro escolhido
+// ou a própria empresa), Importador, e os produtos dos itens (SKU, NCM, HS Code,
+// marca, fabricante) + logística (volumes/pesos pela embalagem tipo caixa).
+// Só preenche o que estiver vazio — nunca sobrescreve o que veio salvo.
+async function _pdfProformaCompletar(d) {
+    if (typeof supabaseClient === 'undefined') return d;
+    const vazio = v => v === null || v === undefined || String(v).trim() === '';
+    const endereco = e => [[e.endereco, e.numero].filter(Boolean).join(', '), e.complemento].filter(Boolean).join(' - ');
+    try {
+        const ids = [d.emissor_tipo === 'terceiro' ? d.parceiro_id : null, d.destinatario_id].filter(Boolean);
+        const { data: parcs } = ids.length ? await supabaseClient.from('parceiros').select('*').in('id', ids) : { data: [] };
+        const parc = id => (parcs || []).find(p => String(p.id) === String(id));
+
+        let exp = d.emissor_tipo === 'terceiro' ? parc(d.parceiro_id) : null;
+        if (!exp && d.emissor_tipo !== 'terceiro') {
+            const u = obterUsuarioLogado?.();
+            const { data: emp } = await supabaseClient.from('empresas')
+                .select('razao_social, nome_fantasia, cnpj, endereco, numero, complemento, cidade, estado, cep')
+                .eq('id', d.empresa_id || u?.empresa_id).maybeSingle();
+            if (emp) exp = { ...emp, documento: emp.cnpj };
+        }
+        if (exp) {
+            if (vazio(d.empresa_nome) && vazio(d.razao_social)) d.empresa_nome = exp.razao_social || exp.nome_fantasia;
+            if (vazio(d.documento)) d.documento = exp.documento;
+            if (vazio(d.endereco))  d.endereco  = endereco(exp);
+            if (vazio(d.cidade))    d.cidade    = exp.cidade;
+            if (vazio(d.estado))    d.estado    = exp.estado;
+            if (vazio(d.cep))       d.cep       = exp.cep;
+        }
+        const imp = parc(d.destinatario_id);
+        if (imp) {
+            if (vazio(d.destinatario_razao_social)) d.destinatario_razao_social = imp.razao_social || imp.nome_fantasia;
+            if (vazio(d.destinatario_doc))      d.destinatario_doc      = imp.documento;
+            if (vazio(d.destinatario_endereco)) d.destinatario_endereco = endereco(imp);
+            if (vazio(d.destinatario_cidade))   d.destinatario_cidade   = imp.cidade;
+            if (vazio(d.destinatario_estado))   d.destinatario_estado   = imp.estado;
+            if (vazio(d.destinatario_cep))      d.destinatario_cep      = imp.cep;
+        }
+
+        const prodIds = [...new Set((d.itens || []).map(i => i.produto_id).filter(Boolean))];
+        if (prodIds.length) {
+            const [{ data: prods }, { data: embs }] = await Promise.all([
+                supabaseClient.from('produtos').select('id, sku, ncm, hscode, marca, empresa_parceira_id').in('id', prodIds),
+                supabaseClient.from('produto_embalagens').select('*').in('produto_id', prodIds),
+            ]);
+            const fabIds = [...new Set((prods || []).map(p => p.empresa_parceira_id).filter(Boolean))];
+            const { data: fabs } = fabIds.length ? await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia').in('id', fabIds) : { data: [] };
+            const prodPor = {}; (prods || []).forEach(p => { prodPor[p.id] = p; });
+            const caixa = {}; (embs || []).filter(e => (e.tipo || 'caixa') === 'caixa').forEach(e => { if (!caixa[e.produto_id]) caixa[e.produto_id] = e; });
+            const soma = { vol: 0, liq: 0, bruto: 0, ok: false };
+            d.itens.forEach(it => {
+                const p = prodPor[it.produto_id];
+                if (!p) return;
+                if (vazio(it.sku))     it.sku     = p.sku;
+                if (vazio(it.ncm))     it.ncm     = p.ncm;
+                if (vazio(it.hs_code)) it.hs_code = p.hscode;
+                if (vazio(it.marca))   it.marca   = p.marca;
+                if (vazio(it.fabricante)) {
+                    const f = (fabs || []).find(x => String(x.id) === String(p.empresa_parceira_id));
+                    if (f) it.fabricante = f.razao_social || f.nome_fantasia;
+                }
+                const e = caixa[it.produto_id], porVol = Number(e?.quantidade) || 0;
+                if (e && porVol) {
+                    const vols = Math.ceil((Number(it.qtd) || 0) / porVol);
+                    soma.vol += vols; soma.liq += vols * (Number(e.peso_liquido) || 0); soma.bruto += vols * (Number(e.peso_bruto) || 0); soma.ok = true;
+                    if (vazio(it.volume_peso)) it.volume_peso = `${vols} vol. / ${(vols * (Number(e.peso_bruto) || 0)).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg`;
+                }
+            });
+            const n3 = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+            if (soma.ok) {
+                if (vazio(d.volume_total)) d.volume_total = `${soma.vol} volume${soma.vol !== 1 ? 's' : ''}`;
+                if (vazio(d.peso_liquido)) d.peso_liquido = `${n3(soma.liq)} kg`;
+                if (vazio(d.peso_bruto))   d.peso_bruto   = `${n3(soma.bruto)} kg`;
+            }
+        }
+    } catch (e) { console.warn('[PDF Proforma] não foi possível completar com o cadastro:', e); }
+    return d;
+}
+
 // opcoes.retornarBlob: em vez de baixar, devolve o PDF (Blob) — usado pelo
 // anexo automático do documento "Nº Proforma Invoice" (ver mais abaixo).
 async function gerarPDFProformaDados(d, opcoes = {}) {
@@ -33,6 +122,10 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
         criadoPor = (await window.supabaseAPI.buscarNomesUsuarios([d.criado_por]))[d.criado_por];
     }
     if (!criadoPor) { const u = obterUsuarioLogado?.(); criadoPor = (!d.criado_por || d.criado_por === u?.id) ? (u?.nome || u?.email || null) : null; }
+
+    // A Proforma guarda só os ids/nome das empresas e os itens como foram
+    // digitados — completa com o cadastro (endereço, documento, NCM, marca...).
+    d = await _pdfProformaCompletar({ ...d, itens: (d.itens || []).map(it => ({ ...it })) });
 
     const jsPDFLib = window.jspdf;
     if (!jsPDFLib) { alert('jsPDF não carregado. Recarregue a página.'); return; }
@@ -65,6 +158,7 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     const codigo = vv(d.codigo);
     const dataGeracao = new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
     const modalTxt = {aereo:'Aéreo',maritimo:'Marítimo',terrestre:'Terrestre'}[d.modal] || vv(d.modal);
+    const rot = (mapa, v) => v ? (mapa[v] || v) : '—';
     const moedaProforma = d.moeda || (d.itens && d.itens.length > 0 ? d.itens[0].moeda : null) || '—';
 
     // ── CABEÇALHO (20mm) ─────────────────────
@@ -82,7 +176,7 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     doc.rect(ML,Y,W-ML*2,10,'FD');
     const cw6=(W-ML*2)/6;
     for(let i=1;i<=5;i++){doc.setDrawColor(...BORDA);doc.setLineWidth(0.2);doc.line(ML+cw6*i,Y+1.5,ML+cw6*i,Y+8.5);}
-    [{label:'Tipo',valor:vv(d.tipo)},{label:'Propósito',valor:vv(d.proposito)},{label:'Modal',valor:modalTxt},
+    [{label:'Tipo',valor:rot(PDF_PROF_ROTULOS.tipo,d.tipo)},{label:'Propósito',valor:rot(PDF_PROF_ROTULOS.proposito,d.proposito)},{label:'Modal',valor:modalTxt},
      {label:'Incoterm',valor:vv(d.incoterm)},{label:'Moeda',valor:moedaProforma},{label:'Emissão',valor:fd(d.data_emissao)}
     ].forEach((info,i)=>{
         const cx=ML+cw6*i+cw6/2;
@@ -119,9 +213,9 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     else if(d.modal==='aereo') rotaRows.push(['Aeroporto de Origem',vv(d.aeroporto_origem)],['Aeroporto de Destino',vv(d.aeroporto_destino)]);
     else if(d.modal==='terrestre') rotaRows.push(['Fronteira de Saída',vv(d.fronteira_saida)],['Fronteira de Entrada',vv(d.fronteira_entrada)]);
     const condRows=[
-        ['Forma de Pagamento',vv(d.forma_pagamento)],
-        ['Prazo de Pagamento',vv(d.prazo_pagamento)],
-        ['Validade',vv(d.validade_dias)],
+        ['Forma de Pagamento',rot(PDF_PROF_ROTULOS.forma_pagamento,d.forma_pagamento)],
+        ['Prazo de Pagamento',rot(PDF_PROF_ROTULOS.prazo_pagamento,d.prazo_pagamento)],
+        ['Validade',d.validade_dias ? (/^\d+$/.test(String(d.validade_dias)) ? `${d.validade_dias} dia${String(d.validade_dias)==='1'?'':'s'}` : String(d.validade_dias)) : '—'],
     ];
     const maxBRows=Math.max(emRows.length,deRows.length,rotaRows.length,condRows.length);
     const bandTH=bandHdr+maxBRows*bRH+2, bY=Y;

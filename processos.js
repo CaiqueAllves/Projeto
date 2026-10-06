@@ -450,6 +450,8 @@ async function procToggleExcluidos() {
 }
 
 async function procCarregarExcluidos() {
+    // Apaga de vez o que já passou dos 7 dias antes de listar
+    await window.supabaseAPI?.purgarExcluidosVencidos?.({ forcar: true });
     const container = document.getElementById('procExcluidosContainer');
     if (!container) return;
     container.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
@@ -509,6 +511,18 @@ async function procCarregarExcluidos() {
 
 async function procRestaurar(id) {
     try {
+        // Processo excluído junto com a Proforma: só volta restaurando a Proforma
+        const { data: pr } = await supabaseClient.from('processos').select('proforma_id').eq('id', id).maybeSingle();
+        if (pr?.proforma_id) {
+            const { data: prof } = await supabaseClient.from('proformas').select('codigo, status').eq('id', pr.proforma_id).maybeSingle();
+            if (prof?.status === 'excluido') {
+                await confirmarAcao(
+                    `A Proforma ${prof.codigo || ''} deste processo também está excluída. Restaure a Proforma (tela Proformas › Excluídos) — os processos dela voltam junto.`,
+                    { titulo: 'Proforma excluída', confirmar: 'Entendi', cancelar: null }
+                );
+                return;
+            }
+        }
         const res = await window.supabaseAPI.atualizarProcesso(id, { status: 'aberto' });
         if (!res.sucesso) throw new Error(res.mensagem);
         await procCarregarExcluidos();
