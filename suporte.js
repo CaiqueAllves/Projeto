@@ -1040,7 +1040,7 @@ let _suporteAnexoResposta = null;
 
 function suporteEscolherAnexoResposta(arquivo) {
     if (!arquivo) return;
-    if (arquivo.size > 10 * 1024 * 1024) { alert('O arquivo é grande demais (máx. 10 MB).'); return; }
+    if (arquivo.size > 10 * 1024 * 1024) { (window.mostrarNotificacao || window.alert)('O arquivo é grande demais (máx. 10 MB).', 'warning'); return; }
     _suporteAnexoResposta = arquivo;
     const chip = document.getElementById('suporteRespAnexoChip');
     const thumb = document.getElementById('suporteRespAnexoThumb');
@@ -1106,7 +1106,7 @@ async function suporteEnviarMensagemChamado() {
 
     } catch (e) {
         console.error('[Suporte Chamado] Erro ao enviar mensagem:', e);
-        alert('Não foi possível enviar sua mensagem. Tente novamente.');
+        (window.mostrarNotificacao || window.alert)('Não foi possível enviar sua mensagem. Tente novamente.', 'error');
     } finally {
         input.disabled = false;
         sendBtn.disabled = false;

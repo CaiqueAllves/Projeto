@@ -104,14 +104,7 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     const moeda = d.itens.find(it => it.moeda)?.moeda || proc.moeda || '—';
 
     // ── CABEÇALHO ─────────────────────────────
-    rx(0, 0, W, 20, NAVY); rx(0, 0, 4, 20, AZUL_MED);
-    sf('bold', 13, BRANCO); doc.text('MARPEX', ML + 3, 8.5);
-    sf('normal', 6.5, [160, 190, 240]); doc.text('Gestão de Comércio Exterior', ML + 3, 13);
-    sf('normal', 6, [120, 160, 220]); doc.text('Criado por: ' + (d.criadoPor || '—'), ML + 3, 17.5);
-    sf('bold', 11, BRANCO); doc.text(cfg.titulo, W - ML, 8.5, { align: 'right' });
-    sf('normal', 8, [160, 190, 240]); doc.text(d.numero, W - ML, 14, { align: 'right' });
-    sf('normal', 6, [120, 160, 220]); doc.text('Gerado em: ' + dataGeracao, W - ML, 17.5, { align: 'right' });
-    Y = 23;
+    Y = pdfCabecalho(doc, { titulo: cfg.titulo, numero: d.numero, criadoPor: d.criadoPor, dataGeracao, ML });
 
     // ── BARRA INFO ────────────────────────────
     doc.setFillColor(...CINZA_BG); doc.setDrawColor(...BORDA); doc.setLineWidth(0.3);
@@ -292,14 +285,7 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     doc.text('Importador — Assinatura do Responsável', sigX2 + sigW / 2, Y + 8, { align: 'center' });
 
     // ── RODAPÉ ────────────────────────────────
-    const n = doc.getNumberOfPages();
-    for (let p = 1; p <= n; p++) {
-        doc.setPage(p); rx(0, 190, W, 20, NAVY); rx(0, 190, 4, 20, AZUL_MED);
-        sf('bold', 8, BRANCO); doc.text('MARPEX', ML + 3, 198);
-        sf('normal', 7, [160, 190, 240]); doc.text('Gestão de Comércio Exterior', ML + 3, 205);
-        sf('normal', 7, [160, 190, 240]); doc.text(`Página ${p} de ${n}`, W / 2, 202, { align: 'center' });
-        sf('normal', 7, [160, 190, 240]); doc.text(`${cfg.titulo} ${d.numero}`, W - ML, 202, { align: 'right' });
-    }
+    pdfRodape(doc, { textoDireita: `${cfg.titulo} ${d.numero}`, ML });
 
     const nomeArquivo = `${cfg.arquivo}_${d.numero.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
     return { blob: doc.output('blob'), nomeArquivo, numero: d.numero, proformaId: proc.proforma_id };

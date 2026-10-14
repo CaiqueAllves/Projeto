@@ -410,3 +410,17 @@ label.doc-row-excluir { cursor:pointer; display:inline-flex; align-items:center;
 .doc-status-linha--assinado i { color: #4776ec; }
 .doc-tipo-tag--proc { background: #eef3ff; color: #4776ec; }
 .doc-gerar-pdf { color: #dc2626 !important; font-weight: 600; }
+
+/* Assinatura digital por link (WhatsApp) — linha Nº Proforma Invoice */
+.doc-link-assinatura { margin-top: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11.5px; }
+.doc-btn-whats {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 999px;
+    border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d;
+    font-size: 11.5px; font-weight: 600; cursor: pointer;
+}
+.doc-btn-whats:hover { background: #dcfce7; }
+.doc-btn-whats i { font-size: 13px; }
+.doc-link-pendente { color: #b45309; }
+.doc-link-pendente a { color: #4776ec; margin-left: 4px; }
+.doc-link-assinatura--ok { color: #15803d; flex-direction: row; }

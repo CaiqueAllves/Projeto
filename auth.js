@@ -309,6 +309,10 @@ function togglePassword() {
 
 // Sistema de Notificações
 function mostrarNotificacao(mensagem, tipo = 'info') {
+    // Aceita os tipos em português também (várias telas usam 'erro'/'sucesso'/
+    // 'aviso' — antes esses avisos saíam sem ícone e sem cor).
+    tipo = { erro: 'error', sucesso: 'success', aviso: 'warning', alerta: 'warning' }[tipo] || tipo;
+    if (!['success', 'error', 'warning', 'info'].includes(tipo)) tipo = 'info';
     const notificacao = document.createElement('div');
     notificacao.className = `notificacao notificacao-${tipo}`;
     

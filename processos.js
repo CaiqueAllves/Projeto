@@ -272,6 +272,7 @@ function _renderCard(p) {
             <div class="proc-card-btns">
                 <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
                 <button class="btn-acao btn-pdf"     data-action="pdf"        data-id="${escapeHtml(p.id)}" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                <button class="btn-acao btn-ver"     data-action="historico"  data-id="${escapeHtml(p.id)}" data-codigo="${escapeHtml(p.numero_processo || p.codigo || '')}" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="btn-acao btn-editar"  data-action="editar"     data-id="${escapeHtml(p.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-pagar"   data-id="${escapeHtml(p.id)}" title="Gerar Conta a Pagar"><i class="fa-solid fa-arrow-up"></i></button>
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-receber" data-id="${escapeHtml(p.id)}" title="Gerar Conta a Receber"><i class="fa-solid fa-arrow-down"></i></button>
@@ -357,6 +358,7 @@ function renderLista(filtro) {
                 ${p.proforma_id ? `<button class="btn-acao btn-ver" data-action="ver-proforma" data-id="${escapeHtml(p.proforma_id)}" title="Ver Proforma de origem"><i class="fa-solid fa-file-invoice-dollar"></i></button>` : ''}
                 <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
                 <button class="btn-acao btn-pdf"     data-action="pdf"        data-id="${escapeHtml(p.id)}" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                <button class="btn-acao btn-ver"     data-action="historico"  data-id="${escapeHtml(p.id)}" data-codigo="${escapeHtml(p.numero_processo || p.codigo || '')}" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="btn-acao btn-editar"  data-action="editar"     data-id="${escapeHtml(p.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-pagar"   data-id="${escapeHtml(p.id)}" title="Gerar Conta a Pagar"><i class="fa-solid fa-arrow-up"></i></button>
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-receber" data-id="${escapeHtml(p.id)}" title="Gerar Conta a Receber"><i class="fa-solid fa-arrow-down"></i></button>
@@ -401,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (action === 'gerar-conta-pagar')   window.open(`contas-pagar.html?gerar_processo_id=${id}`, '_blank');
         if (action === 'gerar-conta-receber') window.open(`contas-receber.html?gerar_processo_id=${id}`, '_blank');
         if (action === 'excluir')      abrirModalExcluir(id);
+        if (action === 'historico')    abrirHistorico('processo', id, btn.getAttribute('data-codigo'));
         if (action === 'toggle-card')  procToggleCard(id);
     }
     document.getElementById('kanbanBoard')?.addEventListener('click', _handleAcao);
@@ -523,12 +526,15 @@ async function procRestaurar(id) {
                 return;
             }
         }
-        const res = await window.supabaseAPI.atualizarProcesso(id, { status: 'aberto' });
+        // volta ao status de antes da exclusão (status_anterior), ou "Aberto"
+        const { data: ant, error: eAnt } = await supabaseClient.from('processos').select('status_anterior').eq('id', id).maybeSingle();
+        const statusVolta = (!eAnt && ant?.status_anterior && ant.status_anterior !== 'excluido') ? ant.status_anterior : 'aberto';
+        const res = await window.supabaseAPI.atualizarProcesso(id, { status: statusVolta });
         if (!res.sucesso) throw new Error(res.mensagem);
         await procCarregarExcluidos();
         await carregarProcessos();
     } catch (err) {
-        alert('Erro ao restaurar: ' + err.message);
+        mostrarNotificacao('Erro ao restaurar: ' + err.message, 'error');
     }
 }
 

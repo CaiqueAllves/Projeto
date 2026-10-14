@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Assinatura de Proforma — Marpex</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style-assinar.css?v=26ebd1e5">
+</head>
+<body>
+    <header class="as-topo">
+        <div class="as-topo-marca">MARPEX <span>Gestão de Comércio Exterior</span></div>
+        <div class="as-topo-titulo"><i class="fa-solid fa-file-signature"></i> Assinatura de Proforma</div>
+    </header>
+
+    <main class="as-main">
+        <!-- estados: carregando / erro / assinado / formulário -->
+        <section id="asCarregando" class="as-card as-estado">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <p>Carregando a Proforma...</p>
+        </section>
+
+        <section id="asErro" class="as-card as-estado" hidden>
+            <i class="fa-solid fa-link-slash as-icone-erro"></i>
+            <h2 id="asErroTitulo">Link inválido</h2>
+            <p id="asErroTexto">Este link de assinatura não existe ou foi cancelado. Peça um novo link a quem enviou.</p>
+        </section>
+
+        <section id="asConcluido" class="as-card as-estado" hidden>
+            <i class="fa-solid fa-circle-check as-icone-ok"></i>
+            <h2>Proforma assinada</h2>
+            <p id="asConcluidoTexto"></p>
+        </section>
+
+        <div id="asConteudo" hidden>
+            <section class="as-card">
+                <div class="as-card-cab">
+                    <div>
+                        <div class="as-rotulo">Proforma Invoice</div>
+                        <div class="as-codigo" id="asCodigo">—</div>
+                    </div>
+                    <a id="asLinkPdf" class="as-btn-pdf" target="_blank" rel="noopener" hidden>
+                        <i class="fa-solid fa-file-pdf"></i> Ver PDF completo
+                    </a>
+                </div>
+                <div class="as-partes">
+                    <div><div class="as-rotulo">Exportador</div><div id="asExportador">—</div></div>
+                    <div><div class="as-rotulo">Importador</div><div id="asImportador">—</div><div class="as-sub" id="asImportadorDoc"></div></div>
+                    <div><div class="as-rotulo">Incoterm / Modal</div><div id="asIncoterm">—</div></div>
+                    <div><div class="as-rotulo">Pagamento</div><div id="asPagamento">—</div></div>
+                </div>
+                <div class="as-tabela-wrap">
+                    <table class="as-tabela">
+                        <thead><tr><th>Produto</th><th class="dir">Qtd</th><th>Un.</th><th class="dir">Preço</th><th class="dir">Total</th></tr></thead>
+                        <tbody id="asItens"></tbody>
+                    </table>
+                </div>
+                <div class="as-total"><span>Total</span><strong id="asTotal">—</strong></div>
+            </section>
+
+            <section class="as-card">
+                <h3 class="as-h3">Dados de quem assina</h3>
+                <div class="as-campos">
+                    <label>Nome completo <span class="obr">*</span><input type="text" id="asNome" autocomplete="name" maxlength="150"></label>
+                    <label>CPF / CNPJ / Passaporte <span class="obr">*</span><input type="text" id="asDocumento" maxlength="40"></label>
+                    <label>Cargo<input type="text" id="asCargo" maxlength="80"></label>
+                    <label>E-mail<input type="email" id="asEmail" autocomplete="email" maxlength="120"></label>
+                </div>
+
+                <div class="as-assinatura-cab">
+                    <span>Assinatura <span class="obr">*</span> <small>(desenhe com o dedo ou o mouse)</small></span>
+                    <button type="button" id="asLimpar" class="as-btn-link"><i class="fa-solid fa-eraser"></i> Limpar</button>
+                </div>
+                <canvas id="asCanvas" class="as-canvas"></canvas>
+
+                <label class="as-aceite">
+                    <input type="checkbox" id="asAceite">
+                    <span>Li a Proforma <strong id="asCodigoAceite"></strong> e concordo com os seus termos. Reconheço esta assinatura eletrônica como válida, com a data, a hora e o endereço de acesso registrados.</span>
+                </label>
+
+                <p id="asMsg" class="as-msg" hidden></p>
+                <button type="button" id="asAssinar" class="as-btn-assinar" disabled>
+                    <i class="fa-solid fa-signature"></i> Assinar Proforma
+                </button>
+                <p class="as-validade" id="asValidade"></p>
+            </section>
+        </div>
+    </main>
+
+    <footer class="as-rodape">© 2026 Marpex — assinatura eletrônica (MP 2.200-2/2001, art. 10 §2º · Lei 14.063/2020)</footer>
+
+    <script src="supabase.min.js?v=ba2e1d14"></script>
+    <script src="supabase-api.js?v=71b9a321"></script>
+    <script src="assinar.js?v=b0c77dc2"></script>
+</body>
+</html>

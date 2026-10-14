@@ -1,12 +1,11 @@
 // ========================================
 // PDF — PROFORMA (registro já salvo)
-// Usado por proforma.js (lista) e pedidos.js (botão "Ver Proforma gerada")
+// Usado por proforma.js (lista), formularios.js e documentos.js
 // ========================================
 
 // jsPDF sob demanda (revisão de performance) — ~340KB que só servem pra
-// gerar PDF; este arquivo é carregado tanto em proforma.html quanto em
-// pedidos.html, então o helper mora aqui em vez de duplicado nos dois
-// (pdf-pedido.js, que só existe em pedidos.html, reaproveita esta função).
+// gerar PDF; pdf-documentos.js (Commercial Invoice / Packing List) também
+// reaproveita esta função.
 let _jspdfCarregado = null;
 function carregarJsPDFSobDemanda() {
     if (_jspdfCarregado) return _jspdfCarregado;
@@ -114,7 +113,7 @@ async function _pdfProformaCompletar(d) {
 async function gerarPDFProformaDados(d, opcoes = {}) {
     try {
         await carregarJsPDFSobDemanda();
-    } catch (e) { if (!opcoes.retornarBlob) alert('Não foi possível carregar o gerador de PDF. Tente novamente.'); return null; }
+    } catch (e) { if (!opcoes.retornarBlob) mostrarNotificacao('Não foi possível carregar o gerador de PDF. Tente novamente.', 'error'); return null; }
 
     // "Criado por": quem cadastrou a proforma (proformas.criado_por)
     let criadoPor = null;
@@ -128,7 +127,7 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     d = await _pdfProformaCompletar({ ...d, itens: (d.itens || []).map(it => ({ ...it })) });
 
     const jsPDFLib = window.jspdf;
-    if (!jsPDFLib) { alert('jsPDF não carregado. Recarregue a página.'); return; }
+    if (!jsPDFLib) { mostrarNotificacao('Gerador de PDF não carregado. Recarregue a página.', 'error'); return null; }
     const { jsPDF } = jsPDFLib;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const W = 297, ML = 14, MR = 283;
@@ -162,14 +161,7 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     const moedaProforma = d.moeda || (d.itens && d.itens.length > 0 ? d.itens[0].moeda : null) || '—';
 
     // ── CABEÇALHO (20mm) ─────────────────────
-    rx(0,0,W,20,NAVY); rx(0,0,4,20,AZUL_MED);
-    sf('bold',13,BRANCO); doc.text('MARPEX',ML+3,8.5);
-    sf('normal',6.5,[160,190,240]); doc.text('Gestão de Comércio Exterior',ML+3,13);
-    sf('bold',11,BRANCO); doc.text('PROFORMA INVOICE',W-ML,8.5,{align:'right'});
-    sf('normal',8,[160,190,240]); doc.text(codigo,W-ML,14,{align:'right'});
-    sf('normal',6,[120,160,220]); doc.text('Gerado em: '+dataGeracao,W-ML,17.5,{align:'right'});
-    sf('normal',6,[120,160,220]); doc.text('Criado por: '+(criadoPor||'—'),ML+3,17.5);
-    Y=23;
+    Y = pdfCabecalho(doc, { titulo: 'PROFORMA INVOICE', numero: codigo, criadoPor, dataGeracao, ML });
 
     // ── BARRA INFO (6 campos, 10mm) ──────────
     doc.setFillColor(...CINZA_BG); doc.setDrawColor(...BORDA); doc.setLineWidth(0.3);
@@ -381,14 +373,7 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     }
 
     // ── RODAPÉ (20mm) ─────────────────────────
-    const nPags=doc.getNumberOfPages();
-    for(let p=1;p<=nPags;p++){
-        doc.setPage(p); rx(0,190,W,20,NAVY); rx(0,190,4,20,AZUL_MED);
-        sf('bold',8,BRANCO); doc.text('MARPEX',ML+3,198);
-        sf('normal',7,[160,190,240]); doc.text('Gestão de Comércio Exterior',ML+3,205);
-        sf('normal',7,[160,190,240]); doc.text(`Página ${p} de ${nPags}`,W/2,202,{align:'center'});
-        sf('normal',7,[160,190,240]); doc.text(dataGeracao,W-ML,202,{align:'right'});
-    }
+    pdfRodape(doc, { textoDireita: dataGeracao, ML });
 
     if (opcoes.retornarBlob) return doc.output('blob');
     doc.save(`proforma_${codigo}_${new Date().toISOString().slice(0,10)}.pdf`);

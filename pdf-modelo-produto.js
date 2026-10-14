@@ -1,7 +1,7 @@
 // ========================================
 //  GERADOR DE PDF — GUIA DE PREENCHIMENTO (Modelo de Produtos)
 //  Depende de: jsPDF (CDN) + PROD_MODELO_CAMPOS (produtos.js)
-//  Mesma paleta de cores usada em pdf-pedido.js/pdf-proforma.js/pdf-processo.js.
+//  Mesma paleta de cores usada em pdf-proforma.js/pdf-processo.js/pdf-documentos.js.
 // ========================================
 
 async function gerarPDFModeloProduto() {

@@ -84,6 +84,11 @@ async function docCarregar() {
         (_docSalvos[d.proforma_id] ||= {})[docChaveRegistro(d)] = d;
     });
 
+    // Pedidos de assinatura por link (assinar.html) — o mais recente de cada proforma
+    _docAssinaturasLink = {};
+    const resAss = await window.supabaseAPI.buscarAssinaturasProformas(proformaIds);
+    (resAss.data || []).forEach(a => { if (!_docAssinaturasLink[a.proforma_id]) _docAssinaturasLink[a.proforma_id] = a; });
+
     // Nomes de quem criou proformas/processos (coluna Status: "Criado ... por ...")
     _docNomes = await window.supabaseAPI.buscarNomesUsuarios([
         ..._docProformas.map(p => p.criado_por),
@@ -283,6 +288,7 @@ function _docLinksProcessos(p) {
 }
 
 let _docNomes = {};
+let _docAssinaturasLink = {};
 
 // Cada linha de documento é identificada por uma chave: 'tipo' ou, nos
 // documentos por Processo (Commercial Invoice / Packing List / DUE), 'tipo@processoId'.
@@ -527,6 +533,9 @@ function _docRenderLinha(proforma, r) {
             </button>`;
     }
 
+    // Proforma Invoice: assinatura digital pelo próprio Importador, por link (WhatsApp)
+    if (tipo.id === 'proforma') assinaturaHtml += _docAssinaturaLinkHtml(proforma, assinado);
+
     return `
         <tr>
             <td>${_docNomeComLink(proforma, r)}</td>
@@ -535,6 +544,80 @@ function _docRenderLinha(proforma, r) {
             <td>${assinaturaHtml}</td>
             <td>${excluir}</td>
         </tr>`;
+}
+
+// ── Assinatura digital por link (WhatsApp) ─────────────────────────────
+function _docAssinaturaLinkHtml(proforma, assinado) {
+    const a = _docAssinaturasLink[proforma.id];
+    const fmt = iso => iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    if (assinado) {
+        return a?.status === 'assinado'
+            ? `<div class="doc-link-assinatura doc-link-assinatura--ok"><i class="fa-solid fa-shield-halved"></i> Assinatura digital · ${_docEsc(a.assinante_documento || '')}${a.ip ? ` · IP ${_docEsc(a.ip)}` : ''}</div>`
+            : '';
+    }
+    const pendente = a?.status === 'pendente' && new Date(a.expira_em) > new Date();
+    return `
+        <div class="doc-link-assinatura">
+            <button class="doc-btn-whats" onclick="docEnviarLinkAssinatura('${proforma.id}')" title="Gerar link de assinatura e enviar ao Importador pelo WhatsApp">
+                <i class="fa-brands fa-whatsapp"></i> ${pendente ? 'Reenviar link' : 'Enviar link p/ assinar'}
+            </button>
+            ${pendente ? `<span class="doc-link-pendente">Aguardando · enviado ${fmt(a.criado_em)} <a href="#" onclick="docCopiarLinkAssinatura(event,'${a.token}')" title="Copiar o link">copiar link</a></span>` : ''}
+        </div>`;
+}
+
+function docCopiarLinkAssinatura(ev, token) {
+    ev?.preventDefault(); ev?.stopPropagation();
+    const url = urlAssinaturaProforma(token);
+    navigator.clipboard?.writeText(url).then(() => mostrarNotificacao('Link de assinatura copiado.', 'sucesso'))
+        .catch(() => window.prompt('Copie o link de assinatura:', url));
+}
+
+function _docTelefoneWhatsapp(tel) {
+    const d = String(tel || '').replace(/\D/g, '');
+    if (!d) return '';
+    return (d.length === 10 || d.length === 11) ? '55' + d : d;
+}
+
+async function docEnviarLinkAssinatura(proformaId) {
+    const p = _docProformas.find(x => String(x.id) === String(proformaId));
+    if (!p) return;
+    // abre a aba já no clique (depois de "await" o navegador bloquearia como popup)
+    const aba = window.open('', '_blank');
+    try {
+        // garante o PDF anexado (o Importador confere antes de assinar)
+        let reg = _docSalvos[proformaId]?.proforma;
+        if (!reg?.arquivo_path && typeof anexarPDFProformaAutomatico === 'function') {
+            const novo = await anexarPDFProformaAutomatico(p, reg || null);
+            if (novo) { (_docSalvos[proformaId] ||= {}).proforma = novo; reg = novo; }
+        }
+        let telefone = '';
+        if (p.destinatario_id) {
+            const { data: c } = await supabaseClient.from('parceiro_contatos').select('telefone')
+                .eq('parceiro_id', p.destinatario_id).not('telefone', 'is', null)
+                .order('ordem', { ascending: true }).limit(1).maybeSingle();
+            telefone = _docTelefoneWhatsapp(c?.telefone);
+        }
+        const res = await window.supabaseAPI.criarAssinaturaProforma(proformaId, reg?.arquivo_path, telefone);
+        if (!res.sucesso) { aba?.close(); mostrarNotificacao('Não foi possível gerar o link: ' + res.mensagem, 'erro'); return; }
+
+        const url = urlAssinaturaProforma(res.data.token);
+        const nome = _docDestinatarioNome(p);
+        const msg = [
+            `Olá${nome && nome !== '—' ? ', ' + nome : ''}!`,
+            `Segue o link para conferir e assinar a Proforma ${p.codigo || ''}:`,
+            url,
+            `O link é válido até ${new Date(res.data.expira_em).toLocaleDateString('pt-BR')}.`,
+        ].join('\n');
+        const wa = `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`;
+        if (aba) aba.location.href = wa; else window.open(wa, '_blank');
+
+        _docAssinaturasLink[proformaId] = { ...res.data, proforma_id: proformaId };
+        docRenderizar();
+        mostrarNotificacao(telefone ? 'Link gerado — confira a mensagem no WhatsApp e envie.' : 'Link gerado. O Importador não tem telefone cadastrado: escolha o contato no WhatsApp.', telefone ? 'sucesso' : 'warning');
+    } catch (e) {
+        aba?.close();
+        mostrarNotificacao('Erro ao gerar o link: ' + e.message, 'erro');
+    }
 }
 
 function docToggleLinha(proformaId, estavaExpandido) {

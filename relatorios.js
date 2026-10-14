@@ -991,65 +991,15 @@ function baixarPDF() {
 // ========================================
 
 function salvarHistorico(tipo) {
-    const cfg     = CONFIG_REL[tipo];
-    const usuario = JSON.parse(sessionStorage.getItem('usuarioLogado') || '{}');
-    const di      = document.getElementById('relDataInicio')?.value || '';
-    const df      = document.getElementById('relDataFim')?.value || '';
-
-    const registro = {
-        id:       Date.now(),
-        tipo:     cfg.nome,
-        usuario:  usuario.nome || '—',
-        dataGer:  new Date().toISOString(),
-        periodo:  di && df ? `${formatarData(di)} – ${formatarData(df)}` : '—',
-        formato:  'PDF'
-    };
-
-    const lista = JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]');
-    lista.unshift(registro);
-    localStorage.setItem(HISTORICO_KEY, JSON.stringify(lista));
-    renderHistorico();
+    const di = document.getElementById('relDataInicio')?.value || '';
+    const df = document.getElementById('relDataFim')?.value || '';
+    const periodo = di && df ? `${formatarData(di)} – ${formatarData(df)}` : '—';
+    relHistSalvar('operacional', HISTORICO_KEY, (CONFIG_REL[tipo] || {}).nome || tipo, periodo);
 }
 
-function renderHistorico() {
-    const tbody = document.getElementById('historicoBody');
-    if (!tbody) return;
-
-    const lista = JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]');
-
-    if (lista.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" style="text-align:center;padding:28px;color:#94a3b8;font-size:13px;">
-                    <i class="fa-solid fa-clock-rotate-left" style="margin-right:8px;"></i>
-                    Nenhum relatório gerado ainda.
-                </td>
-            </tr>`;
-        return;
-    }
-
-    tbody.innerHTML = lista.map(r => `
-        <tr>
-            <td>${r.tipo}</td>
-            <td><span class="hist-usuario"><i class="fa-solid fa-user"></i> ${r.usuario}</span></td>
-            <td>${new Date(r.dataGer).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
-            <td><span class="hist-format pdf">PDF</span></td>
-            <td>
-                <div class="hist-actions">
-                    <button class="hist-btn" title="Período: ${r.periodo}"><i class="fa-solid fa-calendar-days"></i></button>
-                    <button class="hist-btn hist-btn-del" title="Remover do histórico" onclick="removerHistorico(${r.id})">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>`).join('');
-}
-
-function removerHistorico(id) {
-    const lista = JSON.parse(localStorage.getItem(HISTORICO_KEY) || '[]').filter(r => r.id !== id);
-    localStorage.setItem(HISTORICO_KEY, JSON.stringify(lista));
-    renderHistorico();
-}
+// Histórico agora vem do banco (relatorios-historico.js)
+function renderHistorico() { relHistRender('operacional', HISTORICO_KEY); }
+function removerHistorico(id) { relHistRemover(id, 'operacional', HISTORICO_KEY); }
 
 function formatarData(iso) {
     if (!iso) return '—';

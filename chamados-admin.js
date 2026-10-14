@@ -361,7 +361,7 @@ async function cadExcluir(id) {
 let _cadAnexo = null;
 function cadEscolherAnexo(arquivo) {
     if (!arquivo) return;
-    if (arquivo.size > 10 * 1024 * 1024) { alert('O arquivo é grande demais (máx. 10 MB).'); return; }
+    if (arquivo.size > 10 * 1024 * 1024) { mostrarNotificacao('O arquivo é grande demais (máx. 10 MB).', 'warning'); return; }
     _cadAnexo = arquivo;
     document.getElementById('cadAnexoNome').textContent = arquivo.name || 'imagem colada';
     const thumb = document.getElementById('cadAnexoThumb');

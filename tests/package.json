@@ -1,0 +1,12 @@
+{
+  "name": "marpex-testes",
+  "private": true,
+  "description": "Testes automáticos de ponta a ponta do Marpex (Playwright, contra o Supabase real)",
+  "scripts": {
+    "test": "node run.js",
+    "instalar": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

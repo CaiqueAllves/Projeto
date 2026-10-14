@@ -123,10 +123,3 @@ function _rfEsc(str) {
 // Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
 // automático não deve sobreviver a um logout explícito). cpfSalvo é mantido
 // de propósito, só pra não precisar redigitar o CPF na próxima vez.
-function handleLogout() {
-    sessionStorage.removeItem('usuarioLogado');
-    localStorage.removeItem('rememberMe');
-    localStorage.removeItem('usuarioSalvo');
-    localStorage.removeItem('lastLogin');
-    window.location.href = 'login.html';
-}

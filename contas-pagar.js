@@ -319,7 +319,7 @@ async function cpSalvar() {
     const venc      = document.getElementById('cpVencimento').value;
 
     if (!descricao || !valor || !venc) {
-        alert('Preencha Descrição, Valor e Vencimento.');
+        mostrarNotificacao('Preencha Descrição, Valor e Vencimento.', 'warning');
         return;
     }
 
@@ -347,7 +347,7 @@ async function cpSalvar() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar';
 
-    if (!res.sucesso) { alert('Erro: ' + res.mensagem); return; }
+    if (!res.sucesso) { mostrarNotificacao('Erro: ' + res.mensagem, 'error'); return; }
     cpFecharModal();
     await cpCarregar();
 }
@@ -605,7 +605,7 @@ async function cpConfirmarExcluir() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-trash"></i> Excluir';
 
-    if (!res.sucesso) { alert('Erro: ' + res.mensagem); return; }
+    if (!res.sucesso) { mostrarNotificacao('Erro: ' + res.mensagem, 'error'); return; }
     cpFecharModalExcluir();
     await cpCarregar();
 }
@@ -626,10 +626,3 @@ function _cpEsc(str) {
 // Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
 // automático não deve sobreviver a um logout explícito). cpfSalvo é mantido
 // de propósito, só pra não precisar redigitar o CPF na próxima vez.
-function handleLogout() {
-    sessionStorage.removeItem('usuarioLogado');
-    localStorage.removeItem('rememberMe');
-    localStorage.removeItem('usuarioSalvo');
-    localStorage.removeItem('lastLogin');
-    window.location.href = 'login.html';
-}

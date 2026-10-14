@@ -967,18 +967,17 @@ async function salvarProcesso(dados) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        const numero_processo = await _gerarNumeroProcesso(usuario.empresa_id);
-
         const payload = {
             ..._payloadProcesso(dados),
-            numero_processo:         numero_processo,
             empresa_proprietaria_id: usuario.empresa_id,
             criado_por:              usuario.id,
             data_abertura:           dados.data_abertura || new Date().toISOString().split('T')[0],
         };
-        let { data, error } = await supabaseClient.from('processos').insert(payload).select().single();
+        // Número pelo contador atômico (ver _inserirComNumero)
+        const legado = () => _gerarNumeroProcesso(usuario.empresa_id);
+        let { data, error } = await _inserirComNumero('processos', 'numero_processo', 'processo', 'PROC', payload, legado);
         if (error && /sem_assinatura|itens/.test(error.message || '')) {
-            ({ data, error } = await supabaseClient.from('processos').insert(_semColunasSemAssinatura(payload)).select().single());
+            ({ data, error } = await _inserirComNumero('processos', 'numero_processo', 'processo', 'PROC', _semColunasSemAssinatura(payload), legado));
         }
 
         if (error) return { sucesso: false, mensagem: error.message };
@@ -1586,22 +1585,47 @@ async function contarPropostas() {
     } catch { return 0; }
 }
 
+// Número de Proforma/Processo pelo contador atômico (proximo_numero_sequencial
+// — database-numeracao-atomica.sql). Se o banco recusar por número repetido
+// (ex.: contador ainda não iniciado no maior número existente), tenta de novo
+// com o próximo do contador e, por último, com o maior número existente + 1.
+async function _inserirComNumero(tabela, campo, tipo, prefixo, payload, numeroLegado) {
+    let ultimoErro = null;
+    for (let tentativa = 0; tentativa < 4; tentativa++) {
+        let numero;
+        if (tentativa < 3) {
+            const r = await gerarNumeroSequencial(tipo, prefixo);
+            numero = r.sucesso ? r.numero : await numeroLegado();
+        } else {
+            numero = await numeroLegado();
+        }
+        const res = await supabaseClient.from(tabela).insert({ ...payload, [campo]: numero }).select('*').single();
+        if (!res.error) return res;
+        ultimoErro = res.error;
+        if (!/duplicate key|23505/i.test(res.error.message || '') || !/codigo|numero_processo/i.test(res.error.message || '')) return res;
+    }
+    return { data: null, error: ultimoErro };
+}
+
+async function _maiorCodigoProforma() {
+    const usuario = obterUsuarioLogado();
+    const ano = new Date().getFullYear();
+    const { data } = await supabaseClient.from('proformas').select('codigo')
+        .eq('empresa_id', usuario.empresa_id).like('codigo', `PRO${ano}%`)
+        .order('codigo', { ascending: false }).limit(50);
+    const nums = (data || []).map(p => parseInt(String(p.codigo).slice(`PRO${ano}`.length), 10))
+        .filter(n => !isNaN(n) && n < 1e6);
+    return `PRO${ano}${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(6, '0')}`;
+}
+
 async function salvarPropostaDB(dados) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        // Gerado de novo aqui (em vez de confiar no valor calculado quando o
-        // formulário abriu) pra evitar colisão se o usuário deixar a aba
-        // aberta por muito tempo enquanto outras proformas são criadas.
-        const ano  = new Date().getFullYear();
-        const cont = await contarPropostas();
-        const codigo = `PRO${ano}${String(cont + 1).padStart(6, '0')}`;
-
-        const { data, error } = await supabaseClient
-            .from('proformas')
-            .insert({
-                codigo:              codigo,
+        // Número definitivo só no momento de salvar (contador atômico — duas
+        // pessoas salvando juntas nunca recebem o mesmo número).
+        const { data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', 'PRO', {
                 empresa_id:          usuario.empresa_id || null,
                 criado_por:          usuario.id,
                 idioma:              dados.idioma              || 'pt',
@@ -1641,9 +1665,7 @@ async function salvarPropostaDB(dados) {
                 destinatario_doc_tipo:   dados.destinatario_doc_tipo    || null,
                 validade_dias:           dados.validade_dias            || null,
                 obs_status:              dados.obs_status               || null,
-            })
-            .select('*')
-            .single();
+            }, _maiorCodigoProforma);
 
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
@@ -1993,6 +2015,45 @@ async function excluirContaReceber(id) {
 // ========================================
 
 // ========================================
+// ASSINATURA DIGITAL DA PROFORMA (link pelo WhatsApp)
+// ========================================
+// database-assinatura-digital.sql. O link aponta pra assinar.html?t=<token>,
+// página pública que o Importador abre sem login.
+
+async function criarAssinaturaProforma(proformaId, arquivoPath, enviadoPara) {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada' };
+        const { data, error } = await supabaseClient.from('assinaturas_proforma').insert({
+            empresa_id:      usuario.empresa_id,
+            proforma_id:     proformaId,
+            criado_por:      usuario.id,
+            criado_por_nome: usuario.nome || usuario.email || null,
+            arquivo_path:    arquivoPath || null,
+            enviado_para:    enviadoPara || null,
+        }).select('id, token, criado_em, expira_em, status').single();
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function buscarAssinaturasProformas(proformaIds) {
+    try {
+        if (!proformaIds?.length) return { sucesso: true, data: [] };
+        const { data, error } = await supabaseClient.from('assinaturas_proforma')
+            .select('id, token, proforma_id, status, criado_em, criado_por_nome, expira_em, assinado_em, assinante_nome, assinante_documento, assinante_cargo, ip, hash_pdf')
+            .in('proforma_id', proformaIds)
+            .order('criado_em', { ascending: false });
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+function urlAssinaturaProforma(token) {
+    return new URL(`assinar.html?t=${encodeURIComponent(token)}`, location.href).href;
+}
+
+// ========================================
 // REMOÇÃO DEFINITIVA DOS EXCLUÍDOS (7 dias)
 // ========================================
 // Proformas/Processos excluídos há mais de 7 dias corridos sem restaurar são
@@ -2115,6 +2176,8 @@ async function buscarSaldoProforma(proformaId, processoIgnorarId = null) {
 }
 
 window.supabaseAPI = {
+    criarAssinaturaProforma,
+    buscarAssinaturasProformas,
     purgarExcluidosVencidos,
     buscarSaldoProforma,
     buscarNomesUsuarios,
@@ -2172,10 +2235,6 @@ window.supabaseAPI = {
     atualizarEtapaOportunidade,
     excluirOportunidade,
     restaurarOportunidade,
-    buscarPedidos,
-    salvarPedido,
-    atualizarStatusPedido,
-    excluirPedido,
     buscarDocumentosProformas,
     marcarDocumentoAssinado,
     anexarDocumentoProforma,
@@ -2229,23 +2288,6 @@ window.supabaseAPI = {
 //     updated_at              TIMESTAMPTZ DEFAULT NOW()
 // );
 //
-// CREATE TABLE pedidos (
-//     id                      UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-//     empresa_proprietaria_id UUID REFERENCES empresas(id),
-//     numero                  TEXT,
-//     cliente_id              INTEGER REFERENCES parceiros(id),
-//     proforma_id             UUID,
-//     oportunidade_id         UUID REFERENCES oportunidades(id),
-//     status                  TEXT DEFAULT 'aguardando'
-//                                 CHECK (status IN ('aguardando','confirmado','em_producao','embarcado','entregue','cancelado')),
-//     valor_total             NUMERIC,
-//     moeda                   TEXT DEFAULT 'USD',
-//     data_pedido             DATE,
-//     data_entrega_prevista   DATE,
-//     observacoes             TEXT,
-//     created_at              TIMESTAMPTZ DEFAULT NOW(),
-//     updated_at              TIMESTAMPTZ DEFAULT NOW()
-// );
 
 async function buscarOportunidades(filtros = {}) {
     try {
@@ -2406,35 +2448,10 @@ async function restaurarOportunidade(id) {
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-async function buscarPedidos(filtros = {}) {
-    try {
-        const usuario = obterUsuarioLogado();
-        if (!usuario) return { sucesso: false, data: [] };
-        let query = supabaseClient
-            .from('pedidos')
-            .select(`*,
-                parceiros!pedidos_cliente_id_fkey(razao_social, nome_fantasia, documento),
-                remetente:parceiros!pedidos_remetente_parceiro_id_fkey(razao_social, nome_fantasia, documento),
-                pedido_itens(*, produtos(nome, sku))`)
-            .neq('status', 'excluido')
-            .order('created_at', { ascending: false });
-        if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
-        // Filtro de período (revisão de performance) — só se aplica a pedidos
-        // já finalizados; um em andamento continua sempre visível.
-        if (filtros.diasAtras) {
-            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString();
-            query = query.or(`status.not.in.(entregue,cancelado),created_at.gte.${desde}`);
-        }
-        const { data, error } = await query;
-        if (error) return { sucesso: false, mensagem: error.message, data: [] };
-        return { sucesso: true, data: data || [] };
-    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
-}
-
 // Numeração sequencial que nunca repete, mesmo se o registro for excluído
-// de verdade depois (diferente do MAX+1 usado em Pedido/Processo abaixo,
-// que só funciona porque aqueles nunca são excluídos fisicamente — ver
-// database/database-oportunidades-numero-proposta.sql). Usa a RPC
+// de verdade depois (ver
+// database/database-oportunidades-numero-proposta.sql; usada também por
+// Proforma e Processo — database-numeracao-atomica.sql). Usa a RPC
 // proximo_numero_sequencial (INSERT...ON CONFLICT...RETURNING atômico),
 // então também não tem a brecha de corrida que o MAX+1 local tem.
 async function gerarNumeroSequencial(tipo, prefixo) {
@@ -2452,134 +2469,8 @@ async function gerarNumeroSequencial(tipo, prefixo) {
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 
-// Gera o número do pedido no mesmo padrão de Proforma (PRO...) e Processo
-// (PROC...): PED{ano}{sequencial de 6 dígitos}, ex. PED2026000001. Busca o
-// maior número já usado no ano pra essa empresa e soma 1, em vez de contar
-// linhas (evita colisão quando pedidos antigos foram excluídos).
-async function _gerarNumeroPedido(empresaId) {
-    const ano     = new Date().getFullYear();
-    const pattern = `PED${ano}%`;
-
-    const { data } = await supabaseClient
-        .from('pedidos')
-        .select('numero')
-        .eq('empresa_proprietaria_id', empresaId)
-        .like('numero', pattern)
-        .order('numero', { ascending: false })
-        .limit(1);
-
-    let seq = 1;
-    if (data && data.length > 0) {
-        const ultimo = data[0].numero;
-        const num    = parseInt(ultimo?.slice(`PED${ano}`.length), 10);
-        if (!isNaN(num)) seq = num + 1;
-    }
-
-    return `PED${ano}${String(seq).padStart(6, '0')}`;
-}
-
-// itens: [{ produto_id, produto_nome, quantidade, unidade_medida, preco_unitario }]
-async function salvarPedido(dados, id = null, itens = []) {
-    try {
-        const usuario = obterUsuarioLogado();
-        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
-
-        // Número gerado automaticamente só na criação — edição preserva o que já existe.
-        const numero = id ? (dados.numero || null) : await _gerarNumeroPedido(usuario.empresa_id);
-
-        const payload = {
-            numero, cliente_id: dados.cliente_id || null,
-            remetente_parceiro_id: dados.remetente_parceiro_id || null,
-            proforma_id: dados.proforma_id || null, oportunidade_id: dados.oportunidade_id || null,
-            status: dados.status || 'aguardando', valor_total: dados.valor_total || null,
-            moeda: dados.moeda || 'USD', data_pedido: dados.data_pedido || null,
-            data_entrega_prevista: dados.data_entrega_prevista || null,
-            observacoes: dados.observacoes || null, updated_at: new Date().toISOString(),
-        };
-        let result;
-        if (id) {
-            result = await supabaseClient.from('pedidos').update(payload).eq('id', id).select().single();
-        } else {
-            payload.empresa_proprietaria_id = usuario.empresa_id;
-            payload.criado_por = usuario.nome || usuario.email || 'Desconhecido';
-            result = await supabaseClient.from('pedidos').insert(payload).select().single();
-        }
-        if (result.error) return { sucesso: false, mensagem: result.error.message };
-
-        const pedidoId = result.data.id;
-
-        // Substitui os itens sem transação disponível no cliente: insere os novos
-        // primeiro e só apaga os antigos (por id) depois do insert ter sucesso, para
-        // que uma falha no insert nunca deixe o pedido sem nenhum item.
-        const { data: itensAntigos } = await supabaseClient.from('pedido_itens').select('id').eq('pedido_id', pedidoId);
-        const idsAntigos = (itensAntigos || []).map(i => i.id);
-
-        const linhasValidas = (itens || []).filter(it => it.produto_nome && Number(it.quantidade) > 0);
-        if (linhasValidas.length) {
-            const rows = linhasValidas.map(it => ({
-                pedido_id: pedidoId,
-                produto_id: it.produto_id || null,
-                produto_nome: it.produto_nome,
-                quantidade: it.quantidade,
-                unidade_medida: it.unidade_medida || 'UN',
-                preco_unitario: it.preco_unitario || 0,
-            }));
-            const { error: insErr } = await supabaseClient.from('pedido_itens').insert(rows);
-            if (insErr) return { sucesso: false, mensagem: insErr.message };
-        }
-
-        if (idsAntigos.length) {
-            const { error: delErr } = await supabaseClient.from('pedido_itens').delete().in('id', idsAntigos);
-            if (delErr) return { sucesso: false, mensagem: delErr.message };
-        }
-
-        // Marca no histórico da Proposta que ela virou Pedido — só na
-        // criação (edição de um pedido já existente não é um novo evento).
-        if (!id && dados.oportunidade_id) {
-            _registrarHistoricoOportunidade(dados.oportunidade_id, 'pedido_gerado', null, numero, pedidoId);
-        }
-
-        return { sucesso: true, data: result.data };
-    } catch (err) { return { sucesso: false, mensagem: err.message }; }
-}
-
-async function atualizarStatusPedido(id, status) {
-    try {
-        const { data: atual } = await supabaseClient.from('pedidos').select('status, oportunidade_id').eq('id', id).single();
-        const { error } = await supabaseClient.from('pedidos')
-            .update({ status, updated_at: new Date().toISOString() }).eq('id', id);
-        if (error) return { sucesso: false, mensagem: error.message };
-        if (atual?.oportunidade_id && atual.status !== status) {
-            _registrarHistoricoOportunidade(atual.oportunidade_id, 'pedido_status_alterado', atual.status, status, id);
-        }
-        return { sucesso: true };
-    } catch (err) { return { sucesso: false, mensagem: err.message }; }
-}
-
-// Exclusão suave (soft delete) — mesmo padrão de proformas/processos:
-// o pedido some da listagem mas fica recuperável por 7 dias no painel Excluídos.
-async function excluirPedido(id) {
-    try {
-        const usuario = obterUsuarioLogado();
-        const { data: atual } = await supabaseClient.from('pedidos').select('oportunidade_id').eq('id', id).single();
-        const { error } = await supabaseClient
-            .from('pedidos')
-            .update({
-                status:       'excluido',
-                excluido_em:  new Date().toISOString(),
-                excluido_por: usuario?.nome || usuario?.email || 'Desconhecido',
-            })
-            .eq('id', id);
-        if (error) return { sucesso: false, mensagem: error.message };
-        if (atual?.oportunidade_id) {
-            _registrarHistoricoOportunidade(atual.oportunidade_id, 'pedido_excluido', null, null, id);
-        }
-        return { sucesso: true };
-    } catch (err) { return { sucesso: false, mensagem: err.message }; }
-}
-
 // ========================================
-// DOCUMENTOS DO PEDIDO (tela Documentos)
+// DOCUMENTOS DA PROFORMA (tela Documentos)
 // ========================================
 
 async function buscarDocumentosProformas(proformaIds) {

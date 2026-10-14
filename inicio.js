@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     mostrarDataAtual();
     carregarTarefas();
     renderizarTarefas();
+    carregarTarefasDoBanco();
     carregarPendenciasSistema().then(renderizarTarefas);
 
     // Buscar empresas do Supabase uma única vez e compartilhar com todas as funções
@@ -152,17 +153,46 @@ async function carregarEstatisticas(empresas) {
 // SISTEMA DE TAREFAS
 // ========================================
 
+// Tarefas ficam no banco (tabela tarefas — database-melhorias-2026-10.sql):
+// seguem o usuário em qualquer computador e podem ser compartilhadas com a
+// equipe. Enquanto a tabela não existe, continuam no navegador (como antes);
+// quando passa a existir, as tarefas antigas do navegador são levadas pro banco.
+let _tarefasNoBanco = false;
+
+function _tarefasLocais() {
+    try { return JSON.parse(localStorage.getItem(_chaveTarefas()) || '[]'); } catch { return []; }
+}
+
+function _tarefaDoBanco(t, meuId) {
+    return { id: t.id, titulo: t.titulo, prioridade: t.prioridade, prazo: t.prazo, concluida: t.concluida,
+             data: t.criado_em, compartilhada: t.compartilhada, autor: t.usuario_nome, propria: t.usuario_id === meuId };
+}
+
 function carregarTarefas() {
-    const tarefasSalvas = localStorage.getItem(_chaveTarefas());
-    if (tarefasSalvas) {
-        tarefas = JSON.parse(tarefasSalvas);
-    } else {
-        tarefas = [];
+    tarefas = _tarefasLocais();   // mostra algo já; o banco substitui logo em seguida
+}
+
+async function carregarTarefasDoBanco() {
+    const u = obterUsuarioLogado();
+    if (!u?.empresa_id) return;
+    const { data, error } = await supabaseClient.from('tarefas').select('*').order('criado_em', { ascending: false });
+    if (error) { _tarefasNoBanco = false; return; }
+    _tarefasNoBanco = true;
+    // migra as tarefas que estavam só no navegador
+    const locais = _tarefasLocais();
+    if (locais.length) {
+        const rows = locais.map(t => ({ empresa_id: u.empresa_id, usuario_id: u.id, usuario_nome: u.nome || u.email || null,
+            titulo: t.titulo, prioridade: t.prioridade || 'media', prazo: t.prazo || null, concluida: !!t.concluida,
+            criado_em: t.data || new Date().toISOString() }));
+        const ins = await supabaseClient.from('tarefas').insert(rows).select('*');
+        if (!ins.error) { try { localStorage.removeItem(_chaveTarefas()); } catch {} (data || []).unshift(...(ins.data || [])); }
     }
+    tarefas = (data || []).map(t => _tarefaDoBanco(t, u.id));
+    renderizarTarefas();
 }
 
 function salvarTarefas() {
-    localStorage.setItem(_chaveTarefas(), JSON.stringify(tarefas));
+    if (!_tarefasNoBanco) localStorage.setItem(_chaveTarefas(), JSON.stringify(tarefas));
 }
 
 // ========================================
@@ -196,7 +226,10 @@ async function carregarPendenciasSistema() {
     const usuario = obterUsuarioLogado();
     if (!usuario) { _pendProformas = []; _pendProdutosPendentes = []; return; }
 
-    let query = supabaseClient.from('proformas').select('*').neq('status', 'excluido');
+    // só os campos que as Pendências usam (antes trazia a Proforma inteira, com produtos etc.)
+    let query = supabaseClient.from('proformas')
+        .select('id, codigo, status, emissor_tipo, parceiro_id, parceiro_razao_social, destinatario_id, destinatario_razao_social')
+        .neq('status', 'excluido');
     if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
     const { data: proformasData } = await query;
     const proformas = proformasData || [];
@@ -321,9 +354,9 @@ function _pendCardTarefa(tarefa) {
                 </div>
                 <div class="pend-card-titulo-wrap">
                     <div class="pend-card-titulo task-title ${tarefa.concluida ? 'completed' : ''}" title="${_pendEsc(tarefa.titulo)}">${_pendEsc(tarefa.titulo)}</div>
-                    <div class="pend-card-sub">${formatarDataTarefa(tarefa.data)}</div>
+                    <div class="pend-card-sub">${formatarDataTarefa(tarefa.data)}${tarefa.compartilhada ? ` · <i class="fa-solid fa-users" title="Compartilhada com a equipe"></i>${tarefa.propria === false && tarefa.autor ? ' ' + _pendEsc(tarefa.autor) : ''}` : ''}</div>
                 </div>
-                <div class="task-delete" onclick="confirmarExclusaoTarefa(this, ${tarefa.id})" title="Excluir"><i class="fa-solid fa-trash"></i></div>
+                ${tarefa.propria === false ? '' : `<div class="task-delete" onclick="confirmarExclusaoTarefa(this, ${tarefa.id})" title="Excluir"><i class="fa-solid fa-trash"></i></div>`}
             </div>
             <div class="pend-card-corpo">
                 ${tarefa.prazo ? `<div class="pend-card-linha"><i class="fa-regular fa-calendar"></i> Prazo: <strong>${formatarDataPrazo(tarefa.prazo)}</strong></div>` : ''}
@@ -399,46 +432,48 @@ function fecharModal() {
     document.getElementById('tarefaTitulo').value = '';
     document.getElementById('tarefaPrioridade').value = 'media';
     document.getElementById('tarefaPrazo').value = '';
+    const comp = document.getElementById('tarefaCompartilhada');
+    if (comp) comp.checked = false;
 }
 
-function salvarTarefa() {
+async function salvarTarefa() {
     const titulo = document.getElementById('tarefaTitulo').value.trim();
     const prioridade = document.getElementById('tarefaPrioridade').value;
     const prazo = document.getElementById('tarefaPrazo').value;
     
     if (!titulo) {
-        alert('Digite um título para a tarefa!');
+        mostrarNotificacao('Digite um título para a tarefa.', 'warning');
         return;
     }
     
-    const novaTarefa = {
-        id: Date.now(),
-        titulo: titulo,
-        prioridade: prioridade,
-        prazo: prazo || null,
-        concluida: false,
-        data: new Date().toISOString()
-    };
-    
-    tarefas.unshift(novaTarefa);
-    salvarTarefas();
+    const compartilhada = !!document.getElementById('tarefaCompartilhada')?.checked;
+    if (_tarefasNoBanco) {
+        const u = obterUsuarioLogado();
+        const { data, error } = await supabaseClient.from('tarefas').insert({
+            empresa_id: u.empresa_id, usuario_id: u.id, usuario_nome: u.nome || u.email || null,
+            titulo, prioridade, prazo: prazo || null, compartilhada,
+        }).select('*').single();
+        if (error) { mostrarNotificacao('Erro ao salvar a tarefa: ' + error.message, 'error'); return; }
+        tarefas.unshift(_tarefaDoBanco(data, u.id));
+    } else {
+        tarefas.unshift({ id: Date.now(), titulo, prioridade, prazo: prazo || null, concluida: false, data: new Date().toISOString(), propria: true });
+        salvarTarefas();
+    }
     renderizarTarefas();
     fecharModal();
-    
-    mostrarNotificacao('✅ Tarefa adicionada com sucesso!', 'success');
+    mostrarNotificacao('Tarefa adicionada.', 'success');
 }
 
-function toggleTarefa(id) {
+async function toggleTarefa(id) {
     const tarefa = tarefas.find(t => t.id === id);
-    if (tarefa) {
-        tarefa.concluida = !tarefa.concluida;
-        salvarTarefas();
-        renderizarTarefas();
-        
-        if (tarefa.concluida) {
-            mostrarNotificacao('✅ Tarefa concluída!', 'success');
-        }
-    }
+    if (!tarefa) return;
+    tarefa.concluida = !tarefa.concluida;
+    if (_tarefasNoBanco) {
+        const { error } = await supabaseClient.from('tarefas').update({ concluida: tarefa.concluida }).eq('id', id);
+        if (error) { tarefa.concluida = !tarefa.concluida; mostrarNotificacao('Erro ao atualizar a tarefa: ' + error.message, 'error'); return; }
+    } else salvarTarefas();
+    renderizarTarefas();
+    if (tarefa.concluida) mostrarNotificacao('Tarefa concluída!', 'success');
 }
 
 function confirmarExclusaoTarefa(btn, id) {
@@ -453,7 +488,11 @@ function cancelarExclusaoTarefa(id) {
     if (painel) painel.style.display = 'none';
 }
 
-function deletarTarefa(id) {
+async function deletarTarefa(id) {
+    if (_tarefasNoBanco) {
+        const { error } = await supabaseClient.from('tarefas').delete().eq('id', id);
+        if (error) { mostrarNotificacao('Erro ao excluir a tarefa: ' + error.message, 'error'); return; }
+    }
     tarefas = tarefas.filter(t => t.id !== id);
     salvarTarefas();
     renderizarTarefas();

@@ -1,0 +1,42 @@
+# Testes automáticos a cada envio para o main (ver tests/README.md).
+# Precisa dos segredos MARPEX_CPF e MARPEX_SENHA (conta de TESTE) em
+# Settings › Secrets and variables › Actions. Sem eles, o job é pulado.
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MARPEX_CPF: ${{ secrets.MARPEX_CPF }}
+      MARPEX_SENHA: ${{ secrets.MARPEX_SENHA }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir segredos
+        id: segredos
+        run: |
+          if [ -z "$MARPEX_CPF" ] || [ -z "$MARPEX_SENHA" ]; then
+            echo "Segredos MARPEX_CPF/MARPEX_SENHA não cadastrados — testes pulados."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.segredos.outputs.ok == 'true'
+        with:
+          node-version: 20
+      - name: Instalar
+        if: steps.segredos.outputs.ok == 'true'
+        working-directory: tests
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Rodar testes
+        if: steps.segredos.outputs.ok == 'true'
+        working-directory: tests
+        run: npm test

@@ -384,7 +384,7 @@ async function crSalvar() {
     const descricao = document.getElementById('crDescricao').value.trim();
     const valor     = _crValorMonetario(document.getElementById('crValor'));
     const venc      = document.getElementById('crVencimento').value;
-    if (!descricao || !valor || !venc) { alert('Preencha Descrição, Valor e Vencimento.'); return; }
+    if (!descricao || !valor || !venc) { mostrarNotificacao('Preencha Descrição, Valor e Vencimento.', 'warning'); return; }
 
     const btn = document.getElementById('crBtnSalvar');
     btn.disabled = true;
@@ -408,7 +408,7 @@ async function crSalvar() {
     const res = await salvarContaReceber(dados, id);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar';
-    if (!res.sucesso) { alert('Erro: ' + res.mensagem); return; }
+    if (!res.sucesso) { mostrarNotificacao('Erro: ' + res.mensagem, 'error'); return; }
     crFecharModal();
     await crCarregar();
 }
@@ -662,7 +662,7 @@ async function crConfirmarExcluir() {
     const res = await excluirContaReceber(_crExcluirId);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-trash"></i> Excluir';
-    if (!res.sucesso) { alert('Erro: ' + res.mensagem); return; }
+    if (!res.sucesso) { mostrarNotificacao('Erro: ' + res.mensagem, 'error'); return; }
     crFecharModalExcluir();
     await crCarregar();
 }
@@ -685,10 +685,3 @@ function _crEscAttr(str) {
 // Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
 // automático não deve sobreviver a um logout explícito). cpfSalvo é mantido
 // de propósito, só pra não precisar redigitar o CPF na próxima vez.
-function handleLogout() {
-    sessionStorage.removeItem('usuarioLogado');
-    localStorage.removeItem('rememberMe');
-    localStorage.removeItem('usuarioSalvo');
-    localStorage.removeItem('lastLogin');
-    window.location.href = 'login.html';
-}

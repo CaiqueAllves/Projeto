@@ -87,24 +87,16 @@ function gerarPDFProcesso() {
     // ════════════════════════════════════════
     // CABEÇALHO
     // ════════════════════════════════════════
-    rect(0, 0, W, 20, NAVY);
-    rect(0, 0, 4, 20, AZUL_MED);
-    setFont('bold', 13, BRANCO); doc.text('MARPEX', ML + 3, 8.5);
-    setFont('normal', 6.5, [160, 190, 240]); doc.text('Gestão de Comércio Exterior', ML + 3, 13);
-    setFont('bold', 11, BRANCO); doc.text('PROCESSO DE EXPORTAÇÃO', W - ML, 8.5, { align: 'right' });
     // Número do processo + Proforma de origem (o campo "Código" do form é o da Proforma)
     const numeroProc = window._procNumero || null;
     const linhaCodigo = numeroProc
         ? `${numeroProc}${codigo !== '—' ? '  ·  Proforma ' + codigo : ''}`
         : (codigo !== '—' ? 'Proforma ' + codigo : 'Sem código');
-    setFont('normal', 8, [160, 190, 240]); doc.text(linhaCodigo, W - ML, 14, { align: 'right' });
-    setFont('normal', 6, [120, 160, 220]); doc.text('Gerado em: ' + dataGeracao, W - ML, 17.5, { align: 'right' });
     // Quem cadastrou o processo (formularios.js → procCarregarEdicao); processo
     // ainda não salvo = usuário logado.
     const _u = (typeof obterUsuarioLogado === 'function') ? obterUsuarioLogado() : null;
     const criadoPor = window._procCriadoPorNome || _u?.nome || _u?.email || '—';
-    setFont('normal', 6, [120, 160, 220]); doc.text('Criado por: ' + criadoPor, ML + 3, 17.5);
-    Y = 23;
+    Y = pdfCabecalho(doc, { titulo: 'PROCESSO DE EXPORTAÇÃO', numero: linhaCodigo, criadoPor, dataGeracao, ML });
 
     // ════════════════════════════════════════
     // BARRA INFO (6 campos)
@@ -447,16 +439,7 @@ function gerarPDFProcesso() {
     // ════════════════════════════════════════
     // RODAPÉ
     // ════════════════════════════════════════
-    const totalPags = doc.getNumberOfPages();
-    for (let p = 1; p <= totalPags; p++) {
-        doc.setPage(p);
-        rect(0, 190, W, 20, NAVY);
-        rect(0, 190, 4, 20, AZUL_MED);
-        setFont('bold', 8, BRANCO); doc.text('MARPEX', ML + 3, 198);
-        setFont('normal', 7, [160, 190, 240]); doc.text('Gestão de Comércio Exterior', ML + 3, 205);
-        setFont('normal', 7, [160, 190, 240]); doc.text(`Página ${p} de ${totalPags}`, W / 2, 202, { align: 'center' });
-        setFont('normal', 7, [160, 190, 240]); doc.text(dataGeracao, W - ML, 202, { align: 'right' });
-    }
+    pdfRodape(doc, { textoDireita: dataGeracao, ML });
 
     // ── Salvar ────────────────────────────
     const nomeArq = `processo_${codigo !== '—' ? codigo : 'sem-codigo'}_${new Date().toISOString().slice(0, 10)}.pdf`;

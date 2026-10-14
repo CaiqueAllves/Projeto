@@ -283,7 +283,6 @@ function _fecharSidebarMobile() {
 const _MODULO_PAGINAS = {
     'proposta.html':              'comercial',
     'pipeline.html':              'comercial',
-    'pedidos.html':               'comercial',
     'relatorios-comercial.html':  'comercial',
     'contas-pagar.html':          'financeiro',
     'contas-receber.html':        'financeiro',
