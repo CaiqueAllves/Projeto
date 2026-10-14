@@ -8,22 +8,6 @@
     gap: 16px;
 }
 
-/* ── Filtros mais discretos (sobrescreve .filtro-btn global só nesta tela) ── */
-.filtros-container .filtro-btn {
-    padding: 6px 12px;
-    border-width: 1px;
-    border-radius: 7px;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: #64748b;
-}
-.filtros-container .filtro-btn:hover { color: #c2410c; border-color: #fdba74; }
-.filtros-container .filtro-btn.active {
-    background: #fff7ed;
-    border-color: #fdba74;
-    color: #c2410c;
-}
-
 .doc-vazio {
     display: flex;
     align-items: center;
@@ -180,7 +164,7 @@
     text-align: left;
     font-size: 11px;
     font-weight: 700;
-    color: #94a3b8;
+    color: #fff;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     padding: 8px 16px;
@@ -244,18 +228,27 @@
 
 .doc-assinatura-feita {
     display: inline-flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 190px;
+    text-align: left;
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
-    border-radius: 999px;
-    padding: 4px 8px 4px 14px;
+    border-radius: 10px;
+    padding: 6px 8px 7px 12px;
 }
-.doc-assinatura-info { line-height: 1.35; text-align: left; }
-.doc-assinatura-por { font-size: 12.5px; font-weight: 600; color: #15803d; }
-.doc-assinatura-enviado { font-size: 11px; color: #4d7c62; }
-.doc-assinatura-enviado strong { color: #1e293b; font-weight: 700; }
+.doc-assinatura-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.doc-assinatura-titulo { font-size: 11px; font-weight: 700; color: #15803d; text-transform: uppercase; letter-spacing: .3px; }
+.doc-assinatura-titulo i { margin-right: 3px; }
+.doc-assinatura-desfazer { border: none; background: none; color: #86a894; cursor: pointer; padding: 2px 4px; border-radius: 5px; font-size: 11px; }
+.doc-assinatura-desfazer:hover { background: #dcfce7; color: #15803d; }
+.doc-assinatura-por { font-size: 13px; font-weight: 600; color: #1e293b; }
+.doc-assinatura-por i { color: #15803d; font-size: 11px; margin-right: 3px; }
 .doc-assinatura-data { font-size: 11px; color: #4d7c62; }
+.doc-assinatura-acoes { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.doc-assinatura-acao { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #15803d; background: #fff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 3px 8px; cursor: pointer; text-decoration: none; font-family: inherit; }
+.doc-assinatura-acao:hover { background: #dcfce7; }
+.doc-assinatura-enviado { font-size: 10.5px; color: #64748b; margin-top: 2px; white-space: nowrap; }
 
 /* ── Anexado mas ainda não assinado (arquivo já veio do Processo ou de anexo avulso) ── */
 .doc-assinatura-anexado { display: inline-flex; align-items: center; gap: 6px; }
@@ -297,7 +290,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 10050; /* acima da janela de documentos do card (.hist-overlay) */
 }
 .doc-modal-box {
     background: white;
@@ -395,7 +388,11 @@
 .doc-anexo-btn { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border:1px dashed #93c5fd; border-radius:999px; background:#f8fbff; color:#2563eb; font-size:12px; font-weight:600; cursor:pointer; transition:background .15s, border-color .15s; }
 .doc-anexo-btn:hover { background:#eff6ff; border-color:#3b82f6; }
 .doc-anexo-btn.carregando { pointer-events:none; opacity:.7; }
-.doc-anexo-cell { display:inline-flex; align-items:center; gap:4px; max-width:100%; }
+.doc-anexo-cell { display:inline-flex; flex-direction:column; align-items:center; gap:5px; max-width:100%; }
+.doc-anexo-acoes { display:flex; gap:6px; justify-content:center; }
+.doc-anexo-acao { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#64748b; background:none; border:1px solid #e2e8f0; border-radius:6px; padding:3px 8px; cursor:pointer; font-family:inherit; }
+.doc-anexo-acao:hover { color:#2563eb; border-color:#bfdbfe; background:#eff6ff; }
+.doc-anexo-acao--excluir:hover { color:#dc2626; border-color:#fecaca; background:#fef2f2; }
 .doc-anexo-cell .doc-anexo-ver { max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-decoration:none; }
 label.doc-row-excluir { cursor:pointer; display:inline-flex; align-items:center; }
 
@@ -403,11 +400,17 @@ label.doc-row-excluir { cursor:pointer; display:inline-flex; align-items:center;
 .doc-linha-pedido.doc-linha-destaque > td { background: #fef9c3; transition: background .6s ease; }
 
 /* Coluna Status: "Criado em ... por ..." / "Assinado por ... em ..." */
-.doc-status-info { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; text-align: left; }
-.doc-status-linha { font-size: 11.5px; color: #475569; line-height: 1.35; }
+.doc-status-info { display: flex; flex-direction: column; gap: 1px; align-items: flex-start; text-align: left; }
+.doc-status-info .doc-fonte { margin-bottom: 3px; }
+.doc-status-linha { font-size: 11.5px; color: #64748b; line-height: 1.35; white-space: nowrap; }
 .doc-status-linha i { color: #16a34a; margin-right: 3px; font-size: 11px; }
 .doc-status-linha strong { color: #1e293b; font-weight: 600; }
 .doc-status-linha--assinado i { color: #4776ec; }
+.doc-fonte { white-space:nowrap; display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:999px; }
+.doc-fonte i { font-size:10px; }
+.doc-fonte--sistema  { background:#eef2ff; color:#4338ca; }
+.doc-fonte--upload   { background:#fff7ed; color:#c2410c; }
+.doc-fonte--processo { background:#f1f5f9; color:#475569; }
 .doc-tipo-tag--proc { background: #eef3ff; color: #4776ec; }
 .doc-gerar-pdf { color: #dc2626 !important; font-weight: 600; }
 
@@ -424,3 +427,36 @@ label.doc-row-excluir { cursor:pointer; display:inline-flex; align-items:center;
 .doc-link-pendente { color: #b45309; }
 .doc-link-pendente a { color: #4776ec; margin-left: 4px; }
 .doc-link-assinatura--ok { color: #15803d; flex-direction: row; }
+
+/* ── Janela "Documentos" dos cards de Proforma/Processo (docAbrirJanela) — base .hist-* de style-base.css ── */
+.doc-janela { max-width: 1040px; }
+.doc-janela .doc-detalhe-wrap { padding: 0; }
+.doc-janela .hist-corpo { padding-bottom: 16px; }
+@media (min-width: 769px) {
+    .doc-janela .doc-pedido-tabela { min-width: 760px; }
+    .doc-janela .hist-corpo { overflow-x: auto; }
+}
+@media (max-width: 768px) {
+    .doc-janela { max-height: 92vh; }
+    .doc-janela .hist-corpo { padding: 12px 10px; }
+    .doc-janela .doc-pedido-tabela tbody tr { padding: 10px 12px; }
+}
+
+/* ── Blocos da janela: Proforma / cada Processo / Sem processo definido ── */
+.doc-blocos { display: flex; flex-direction: column; gap: 16px; }
+.doc-bloco { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
+.doc-bloco .doc-pedido-tabela { border: none; border-radius: 0; margin-bottom: 0; box-shadow: none; }
+.doc-bloco-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.doc-bloco-tit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: #1e293b; min-width: 0; }
+.doc-bloco-tit > i { color: #4776ec; }
+.doc-bloco-tit .doc-link { font-weight: 700; }
+.doc-bloco-cont { font-size: 11px; font-weight: 600; color: #64748b; background: #eef2f7; padding: 2px 8px; border-radius: 999px; }
+.doc-bloco-sub { flex-basis: 100%; font-size: 11.5px; color: #94a3b8; font-weight: 400; }
+.doc-bloco--processo { border-left: 3px solid #4776ec; }
+.doc-bloco--proforma { border-left: 3px solid #7c3aed; }
+.doc-bloco--proforma .doc-bloco-tit > i { color: #7c3aed; }
+.doc-bloco--orfao { border-left: 3px solid #f59e0b; }
+.doc-bloco--orfao .doc-bloco-cab { background: #fffbeb; }
+.doc-bloco--orfao .doc-bloco-tit > i { color: #d97706; }
+.doc-bloco--sem-processo { opacity: .8; }
+.doc-orfao-select { font-size: 12px; padding: 5px 8px; border: 1px solid #fcd34d; border-radius: 6px; background: #fffbeb; color: #92400e; font-family: inherit; cursor: pointer; }

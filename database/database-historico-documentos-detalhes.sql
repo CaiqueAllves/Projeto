@@ -1,0 +1,96 @@
+-- Histórico de documentos com detalhes desde a criação (2026-10-14)
+-- Antes, quando um documento nascia já com arquivo (ex.: PDF da Proforma
+-- anexado pelo sistema, ou upload direto), o histórico só dizia "Documento
+-- registrado". Agora grava o nome/caminho do arquivo e a assinatura, e a
+-- janela de Histórico mostra "Arquivo anexado: X · gerado pelo sistema/upload".
+-- Só troca a função do trigger (database-historico-alteracoes.sql) —
+-- idempotente, pode rodar de novo sem erro.
+
+CREATE OR REPLACE FUNCTION public.registrar_historico()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_old     jsonb;
+    v_new     jsonb;
+    v_reg     jsonb;
+    v_dif     jsonb := '{}'::jsonb;
+    k         text;
+    v_acao    text;
+    v_uid     uuid := auth.uid();
+    v_usu_id  uuid;
+    v_nome    text;
+    v_empresa uuid;
+    v_registro uuid;
+    v_codigo  text;
+    ignorar   text[] := ARRAY['atualizado_em', 'status_atualizado_em', 'updated_at', 'created_at', 'criado_em', 'atualizado_por'];
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        v_old := to_jsonb(OLD); v_reg := v_old; v_acao := 'removido';
+    ELSIF TG_OP = 'INSERT' THEN
+        v_new := to_jsonb(NEW); v_reg := v_new; v_acao := 'criado';
+    ELSE
+        v_old := to_jsonb(OLD); v_new := to_jsonb(NEW); v_reg := v_new;
+        FOR k IN SELECT jsonb_object_keys(v_new) LOOP
+            CONTINUE WHEN k = ANY (ignorar);
+            IF (v_old -> k) IS DISTINCT FROM (v_new -> k) THEN
+                v_dif := v_dif || jsonb_build_object(k, jsonb_build_object(
+                    'de',   CASE WHEN length(coalesce((v_old -> k)::text, '')) > 1500 THEN to_jsonb('(alterado)'::text) ELSE v_old -> k END,
+                    'para', CASE WHEN length(coalesce((v_new -> k)::text, '')) > 1500 THEN to_jsonb('(alterado)'::text) ELSE v_new -> k END));
+            END IF;
+        END LOOP;
+        IF v_dif = '{}'::jsonb THEN RETURN NEW; END IF;
+        v_acao := CASE
+            WHEN TG_TABLE_NAME = 'proforma_documentos' THEN 'documento'
+            WHEN v_new ->> 'status' = 'excluido' AND (v_old ->> 'status') IS DISTINCT FROM 'excluido' THEN 'excluido'
+            WHEN v_old ->> 'status' = 'excluido' AND (v_new ->> 'status') IS DISTINCT FROM 'excluido' THEN 'restaurado'
+            ELSE 'alterado' END;
+    END IF;
+
+    IF TG_TABLE_NAME = 'proforma_documentos' THEN
+        v_registro := (v_reg ->> 'proforma_id')::uuid;
+        v_codigo   := v_reg ->> 'tipo_documento';
+        SELECT empresa_id INTO v_empresa FROM proformas WHERE id = v_registro;
+        IF TG_OP <> 'UPDATE' THEN v_acao := 'documento'; END IF;
+        IF TG_OP = 'INSERT' THEN
+            -- guarda também o arquivo e a assinatura com que o documento nasceu
+            -- (o Histórico mostra "Arquivo anexado: X · gerado pelo sistema/upload")
+            v_dif := jsonb_build_object('documento', jsonb_build_object('de', NULL, 'para', 'criado'));
+            FOREACH k IN ARRAY ARRAY['arquivo_nome', 'arquivo_path', 'assinado', 'assinado_por', 'assinado_em'] LOOP
+                IF (v_new ->> k) IS NOT NULL AND (v_new ->> k) <> 'false' THEN
+                    v_dif := v_dif || jsonb_build_object(k, jsonb_build_object('de', NULL, 'para', v_new -> k));
+                END IF;
+            END LOOP;
+        ELSIF TG_OP = 'DELETE' AND (v_old ->> 'arquivo_nome') IS NOT NULL THEN
+            v_dif := jsonb_build_object('arquivo_nome', jsonb_build_object('de', v_old -> 'arquivo_nome', 'para', NULL));
+        END IF;
+        IF v_reg ->> 'processo_id' IS NOT NULL THEN
+            v_dif := v_dif || jsonb_build_object('processo_id', jsonb_build_object('de', NULL, 'para', v_reg -> 'processo_id'));
+        END IF;
+    ELSE
+        v_registro := (v_reg ->> 'id')::uuid;
+        v_codigo   := coalesce(v_reg ->> 'codigo', v_reg ->> 'numero_processo');
+        v_empresa  := coalesce((v_reg ->> 'empresa_id')::uuid, (v_reg ->> 'empresa_proprietaria_id')::uuid);
+    END IF;
+
+    IF v_uid IS NOT NULL THEN
+        SELECT id, coalesce(nome_completo, email) INTO v_usu_id, v_nome FROM usuarios WHERE auth_id = v_uid;
+    END IF;
+    IF v_nome IS NULL THEN
+        v_nome := CASE WHEN v_uid IS NULL AND current_user IN ('postgres', 'supabase_admin') THEN 'Sistema'
+                       WHEN v_uid IS NULL THEN 'Assinatura pelo link / Sistema' ELSE 'Usuário' END;
+    END IF;
+
+    INSERT INTO historico_alteracoes (empresa_id, tabela, registro_id, codigo, acao, alteracoes, usuario_id, usuario_nome)
+    VALUES (v_empresa, TG_TABLE_NAME, v_registro, v_codigo, v_acao,
+            CASE WHEN v_dif = '{}'::jsonb THEN NULL ELSE v_dif END, v_usu_id, v_nome);
+
+    RETURN coalesce(NEW, OLD);
+EXCEPTION WHEN OTHERS THEN
+    -- histórico nunca pode impedir a gravação principal
+    RAISE WARNING 'registrar_historico: %', SQLERRM;
+    RETURN coalesce(NEW, OLD);
+END;
+$$;

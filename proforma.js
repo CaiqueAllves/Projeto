@@ -532,7 +532,7 @@ async function profSeguirProcesso(id) {
             aceite: 'Estou ciente de que a proforma não foi assinada e aceito os termos para iniciar o processo.',
             link: {
                 texto: 'Assinar Proposta',
-                acao: () => window.open(`documentos.html?proforma_id=${encodeURIComponent(id)}`, '_blank'),
+                acao: () => profVerDocumentos(id),
             },
         }
     );
@@ -540,93 +540,20 @@ async function profSeguirProcesso(id) {
     window.open(`formularios.html?tab=processo&proforma_id=${id}&sem_assinatura=1&aceite_em=${encodeURIComponent(new Date().toISOString())}`, '_blank');
 }
 
-// ── Documentos da Proforma (janela rápida, sem sair da tela) ─────────────
-// Mesma taxonomia da tela Documentos (doc-tipos.js): documentos da Proforma
-// e os de cada Processo dela (Commercial Invoice / Packing List / DUE).
-const PROF_BUCKET_DOCS = 'proforma-documentos-assinados';
-
-function _profDocsModal() {
-    let ov = document.getElementById('profDocsOverlay');
-    if (ov) return ov;
-    ov = document.createElement('div');
-    ov.id = 'profDocsOverlay';
-    ov.className = 'hist-overlay';
-    ov.innerHTML = `
-        <div class="hist-modal prof-docs-modal" role="dialog" aria-modal="true">
-            <div class="hist-cab">
-                <div><i class="fa-solid fa-folder-open" style="color:#4776ec;margin-right:6px;"></i> <span id="profDocsTitulo">Documentos</span></div>
-                <button type="button" class="hist-fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="hist-corpo" id="profDocsCorpo"></div>
-            <div class="prof-docs-rodape" id="profDocsRodape"></div>
-        </div>`;
-    document.body.appendChild(ov);
-    const fechar = () => ov.classList.remove('aberto');
-    ov.addEventListener('click', e => { if (e.target === ov) fechar(); });
-    ov.querySelector('.hist-fechar').addEventListener('click', fechar);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') fechar(); });
-    return ov;
-}
-
-async function profVerDocumentos(id) {
+// ── Documentos da Proforma (janela no card — documentos.js) ─────────────
+// Assinar a Proforma Invoice aprova a proforma: ao fechar, atualiza o card.
+function profVerDocumentos(id) {
     const p = _profTodos.find(x => x.id === id);
-    const ov = _profDocsModal();
-    document.getElementById('profDocsTitulo').textContent = `Documentos — Proforma ${p?.codigo || ''}`;
-    const corpo = document.getElementById('profDocsCorpo');
-    corpo.innerHTML = '<div class="hist-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>';
-    document.getElementById('profDocsRodape').innerHTML =
-        `<a href="documentos.html?proforma_id=${encodeURIComponent(id)}" target="_blank" rel="opener" class="prof-docs-gerenciar"><i class="fa-solid fa-arrow-up-right-from-square"></i> Gerenciar na tela Documentos</a>`;
-    ov.classList.add('aberto');
-
-    const [resDocs, { data: procs }] = await Promise.all([
-        window.supabaseAPI.buscarDocumentosProformas([id]),
-        supabaseClient.from('processos').select('id, numero_processo, modal, documentos, status').eq('proforma_id', id).neq('status', 'excluido'),
-    ]);
-    const salvos = {};
-    (resDocs.data || []).forEach(d => { salvos[docChaveRegistro(d)] = d; });
-    const processos = procs || [];
-    const tipos = docTiposDaProforma(processos, salvos);
-
-    const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-    const data = iso => iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-    let feitos = 0, assinados = 0;
-
-    const linhas = tipos.filter(t => !t.semProcesso).map(t => {
-        const reg = docRegistroDaLinha(salvos, t, processos);
-        const numero = (t.processoId ? processos.filter(x => x.id === t.processoId) : processos)
-            .map(x => x.documentos?.[t.id]).find(v => v && String(v).trim());
-        const proforma = t.id === 'proforma';
-        const feito = !!(reg?.arquivo_path || reg?.assinado || numero || proforma);
-        if (feito) feitos++;
-        if (reg?.assinado) assinados++;
-        const url = reg?.arquivo_path ? supabaseClient.storage.from(PROF_BUCKET_DOCS).getPublicUrl(reg.arquivo_path).data?.publicUrl : null;
-        const situacao = reg?.assinado
-            ? `<span class="prof-doc-sit ok"><i class="fa-solid fa-signature"></i> Assinado por ${esc(reg.assinado_por || '—')}${reg.assinado_em ? ' em ' + data(reg.assinado_em) : ''}</span>`
-            : reg?.arquivo_path
-                ? `<span class="prof-doc-sit anexo"><i class="fa-solid fa-paperclip"></i> Anexado${reg.enviado_em ? ' em ' + data(reg.enviado_em) : ''}${reg.enviado_por ? ' por ' + esc(reg.enviado_por) : ''} · não assinado</span>`
-                : feito
-                    ? `<span class="prof-doc-sit">${numero ? 'Nº ' + esc(numero) + ' · ' : ''}sem arquivo anexado</span>`
-                    : `<span class="prof-doc-sit pendente">Não feito</span>`;
-        return `
-            <div class="prof-doc-linha ${feito ? '' : 'prof-doc-linha--pendente'}">
-                <div class="prof-doc-info">
-                    <div class="prof-doc-nome">${esc(t.label)}
-                        ${t.processoNumero ? `<span class="prof-doc-tag">${esc(t.processoNumero)}</span>` : ''}
-                        ${t.modal ? `<span class="prof-doc-tag">${esc(DOC_MODAL_LABEL[t.modal] || t.modal)}</span>` : ''}
-                    </div>
-                    ${situacao}
-                </div>
-                ${url ? `<a class="prof-doc-ver" href="${esc(url)}" target="_blank" rel="noopener" title="Abrir ${esc(reg.arquivo_nome || 'arquivo')}"><i class="fa-solid fa-eye"></i> Ver</a>` : ''}
-            </div>`;
-    }).join('');
-
-    corpo.innerHTML = `
-        <div class="prof-docs-resumo">
-            <span><strong>${feitos}</strong> de ${tipos.filter(t => !t.semProcesso).length} feitos</span>
-            <span><strong>${assinados}</strong> assinado${assinados !== 1 ? 's' : ''}</span>
-            <span><strong>${processos.length}</strong> processo${processos.length !== 1 ? 's' : ''}</span>
-        </div>
-        ${linhas || '<div class="hist-vazio">Nenhum documento.</div>'}`;
+    return docAbrirJanela({
+        proformaId: id,
+        titulo: `Documentos — Proforma ${p?.codigo || ''}`,
+        aoFechar: async () => {
+            const atual = _profTodos.find(x => x.id === id);
+            if (!atual) return;
+            const { data } = await supabaseClient.from('proformas').select('status').eq('id', id).maybeSingle();
+            if (data && data.status !== atual.status) { atual.status = data.status; profFiltrar(); }
+        },
+    });
 }
 
 function profVerProcesso(processoId) {
@@ -822,4 +749,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnConfirmarExcluirProforma')?.addEventListener('click', profConfirmarExcluir);
 
     await profCarregarLista();
+
+    // Vindo de outro lugar (ex.: Pendências do Início) — abre direto os documentos
+    const docs = new URLSearchParams(window.location.search).get('docs');
+    if (docs && _profTodos.some(x => String(x.id) === docs)) profVerDocumentos(_profTodos.find(x => String(x.id) === docs).id);
 });

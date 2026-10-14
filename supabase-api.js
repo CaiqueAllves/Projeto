@@ -2169,7 +2169,7 @@ function calcularSaldoProforma(itensProforma, processos, processoIgnorarId = nul
 
 async function buscarSaldoProforma(proformaId, processoIgnorarId = null) {
     const [{ data: prof }, { data: procs }] = await Promise.all([
-        supabaseClient.from('proformas').select('id, codigo, itens').eq('id', proformaId).maybeSingle(),
+        supabaseClient.from('proformas').select('id, codigo, itens, status').eq('id', proformaId).maybeSingle(),
         supabaseClient.from('processos').select('id, numero_processo, status, itens').eq('proforma_id', proformaId),
     ]);
     return { proforma: prof, processos: procs || [], ...calcularSaldoProforma(prof?.itens, procs, processoIgnorarId) };

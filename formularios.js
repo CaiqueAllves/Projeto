@@ -178,6 +178,8 @@ async function confirmarSalvar() {
         if (!editandoIdProc && propostaOrigemId && resProc.data?.id) {
             await window.supabaseAPI.marcarProformaFinalizada(propostaOrigemId, resProc.data.id);
         }
+        // Itens que o usuário escolheu "Excluir da Proforma" ao remover do processo
+        if (propostaOrigemId) await _procAplicarExclusoesNaProforma(propostaOrigemId);
 
         const tituloEl   = document.getElementById('pos-salvo-titulo');
         const msgEl      = document.getElementById('pos-salvo-msg');
@@ -844,7 +846,12 @@ async function itemAdicionar(pfx) {
     itensRenderizar(pfx);
 }
 
-function itemRemover(pfx, idx) {
+async function itemRemover(pfx, idx) {
+    // Processo: item que veio da Proforma pergunta se sai só deste processo
+    // (stand-by, saldo pendente) ou da Proforma também — formularios-processo.js
+    if (pfx === 'proc' && typeof _procPerguntarRemocao === 'function') {
+        if (!(await _procPerguntarRemocao(idx))) return;
+    }
     _itensDe(pfx).splice(idx, 1);
     itensRenderizar(pfx);
 }

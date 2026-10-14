@@ -388,7 +388,7 @@ function _pendCardProforma(item) {
         linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-diagram-project"></i> <span>Processo <strong>${_pendEsc(pr.numero_processo || '—')}</strong> aberto</span> <a href="formularios.html?tab=processo&id=${pr.id}" target="_blank" rel="opener">Abrir</a></div>`);
     });
     if (item.temDocPendente) {
-        linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-file-signature"></i> <span>Documentos: <strong>${item.docsAssinados}/${item.docsFeitos}</strong> assinados</span> <a href="documentos.html?proforma_id=${proformaId}" target="_blank" rel="opener">Abrir</a></div>`);
+        linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-file-signature"></i> <span>Documentos: <strong>${item.docsAssinados}/${item.docsFeitos}</strong> assinados</span> <a href="proforma.html?docs=${proformaId}" target="_blank" rel="opener">Abrir</a></div>`);
     }
 
     return `

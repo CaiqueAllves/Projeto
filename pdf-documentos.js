@@ -310,12 +310,15 @@ async function gerarEAnexarDocumentoProcesso(tipo, processoId, { baixar = true, 
     const { atual } = await _docPdfRegistroAtual(tipo, processoId);
     if (perguntar && atual?.arquivo_path) {
         const assinado = !!atual.assinado;
+        const doSistema = typeof docArquivoDoSistema === 'function' && docArquivoDoSistema(atual.arquivo_path);
+        const quando = atual.enviado_em ? ` em ${new Date(atual.enviado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : '';
+        const quem = atual.enviado_por ? ` por ${atual.enviado_por}` : '';
         const ok = await confirmarAcao(
-            `Já existe um ${cfg.titulo.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())} anexado a este Processo`
-            + ` (${atual.arquivo_nome || 'arquivo'}${atual.enviado_por ? `, enviado por ${atual.enviado_por}` : ''}).`
-            + (assinado ? ' Ele já está ASSINADO — substituir desfaz a assinatura.' : '')
-            + ' Deseja gerar um novo PDF e substituir o arquivo atual?',
-            { titulo: 'Substituir documento?', confirmar: 'Sim, substituir', cancelar: 'Não', perigo: assinado }
+            `Já existe 1 PDF ${doSistema ? 'gerado pelo sistema' : 'enviado por upload'}${quando}${quem} para o ${cfg.titulo.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())} deste Processo`
+            + ` (${atual.arquivo_nome || 'arquivo'}).`
+            + ' Deseja gerar um novo? Se aceitar, o arquivo anterior será sobrescrito.'
+            + (assinado ? ' Atenção: o documento atual está ASSINADO — a assinatura será desfeita.' : ''),
+            { titulo: 'Substituir documento?', confirmar: 'Sim, gerar e sobrescrever', cancelar: 'Não', perigo: true }
         );
         if (!ok) return null;
     }

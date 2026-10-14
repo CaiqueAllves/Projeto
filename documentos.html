@@ -4,119 +4,17 @@
     <meta charset="UTF-8">
     <title>Marpex | Documentos</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=8c2ccd0b">
-    <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-documentos.css?v=55e7063c">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style-mobile.css?v=4ee8b672">
+    <!-- A tela Documentos virou a janela "Documentos" do card de cada Proforma
+         (proforma.html). Este arquivo só redireciona links/abas antigos. -->
+    <script>
+        (function () {
+            var q = new URLSearchParams(location.search);
+            var id = q.get('proforma_id');
+            var extra = q.get('semabas') ? 'semabas=' + encodeURIComponent(q.get('semabas')) : '';
+            var params = [id ? 'docs=' + encodeURIComponent(id) : '', extra].filter(Boolean).join('&');
+            location.replace('proforma.html' + (params ? '?' + params : ''));
+        })();
+    </script>
 </head>
-
-<body>
-
-<div class="main-layout" style="display: flex;">
-    <aside></aside>
-
-    <main>
-        <!-- TOPO -->
-        <div class="topbar">
-            <div class="topbar-left">
-                <h2><i class="fa-solid fa-folder-open"></i> Documentos</h2>
-            </div>
-            <div class="topbar-right">
-                <div class="user-info-card">
-                    <div class="user-avatar">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-                    <div class="user-details">
-                        <div class="user-name" id="displayUsername">User...</div>
-                        <div class="user-email" id="userEmail">usuario@email.com</div>
-                    </div>
-                </div>
-                <div class="logout" onclick="handleLogout()">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="content" style="padding:32px; display:flex; flex-direction:column; gap:20px;">
-
-            <!-- FILTROS E BUSCA -->
-            <div class="filtros-container">
-                <div class="busca-container">
-                    <input
-                        type="text"
-                        id="buscaDoc"
-                        placeholder="Buscar por código da proforma ou empresa..."
-                        oninput="docBuscar()"
-                    >
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </div>
-
-                <div class="filtros-btns">
-                    <button class="filtro-btn active" id="docFiltroTodos" onclick="docFiltrar('todos')">
-                        <i class="fa-solid fa-list"></i> Todos
-                    </button>
-                    <button class="filtro-btn" id="docFiltroPendentes" onclick="docFiltrar('pendentes')">
-                        <i class="fa-solid fa-clock"></i> Pendentes
-                    </button>
-                    <button class="filtro-btn" id="docFiltroAssinados" onclick="docFiltrar('assinados')">
-                        <i class="fa-solid fa-check-circle"></i> Assinados
-                    </button>
-                </div>
-            </div>
-
-            <!-- LISTA AGRUPADA POR PEDIDO -->
-            <div id="documentosContainer" class="doc-lista">
-                <div class="doc-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>
-            </div>
-
-        </div>
-
-        <!-- RODAPÉ -->
-        <footer class="dashboard-footer">
-            <span>© 2026 Marpex — Todos os direitos reservados</span>
-                <span class="footer-version">v3.0</span>
-        </footer>
-    </main>
-</div>
-
-<!-- MODAL — ASSINAR DOCUMENTO (anexa o arquivo assinado) -->
-<div class="doc-modal-overlay" id="docModalAssinatura" style="display:none;">
-    <div class="doc-modal-box">
-        <div class="doc-modal-icon"><i class="fa-solid fa-file-signature"></i></div>
-        <h3 class="doc-modal-title">Assinar Documento</h3>
-        <p class="doc-modal-msg" id="docModalAssinaturaLabel">Documento</p>
-
-        <div class="doc-modal-campo">
-            <label>Assinado por</label>
-            <input type="text" id="docModalAssinadoPor" placeholder="Nome de quem assinou...">
-        </div>
-        <div class="doc-modal-campo">
-            <label>Documento assinado (PDF ou imagem)</label>
-            <div id="docModalArquivoExistente" class="doc-modal-arquivo-existente" style="display:none;"></div>
-            <input type="file" id="docModalArquivo" accept=".pdf,.jpg,.jpeg,.png">
-        </div>
-
-        <div class="doc-modal-acoes">
-            <button class="doc-modal-btn doc-modal-btn-cancelar" onclick="docFecharModalAssinatura()">
-                <i class="fa-solid fa-xmark"></i> Cancelar
-            </button>
-            <button class="doc-modal-btn doc-modal-btn-confirmar" onclick="docConfirmarAssinaturaModal()">
-                <i class="fa-solid fa-check"></i> Confirmar
-            </button>
-        </div>
-    </div>
-</div>
-
-<script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=71b9a321"></script>
-<script src="auth.js?v=e8976219"></script>
-<script src="navegador.js?v=f9f0a4cc"></script>
-<script src="doc-tipos.js?v=86dcd676"></script>
-<script src="pdf-kit.js?v=86f6be4c"></script>
-<script src="pdf-proforma.js?v=b5a1a4a3"></script>
-<script src="pdf-documentos.js?v=38630949"></script>
-<script src="documentos.js?v=09591798"></script>
-<script src="suporte.js?v=dd1c94d5"></script>
-</body>
+<body></body>
 </html>

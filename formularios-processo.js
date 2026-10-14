@@ -304,6 +304,7 @@ async function procCarregarEdicao(id) {
 
     // Produtos do Processo (+ saldo da proforma, sem contar este processo)
     _procSaldo = p.proforma_id ? await window.supabaseAPI.buscarSaldoProforma(p.proforma_id, p.id) : null;
+    _procExcluirDaProforma = new Set();
     if (Array.isArray(p.itens) && p.itens.length > 0) {
         await Promise.all([_carregarMoedas(), _carregarUnidades()]);
         _procItens = _itensNormalizar(p.itens);
@@ -1402,10 +1403,22 @@ async function _procPreencherDaProforma(id) {
         // não podem passar do saldo (validado ao salvar).
         const procIdAtual = document.getElementById('proc-id')?.value || null;
         _procSaldo = await window.supabaseAPI.buscarSaldoProforma(id, procIdAtual);
+        _procExcluirDaProforma = new Set();
         if (Array.isArray(data.itens) && data.itens.length > 0) {
             await Promise.all([_carregarMoedas(), _carregarUnidades()]);
+            // O saldo é por produto; divide entre as linhas da Proforma na ordem
+            // (antes cada linha recebia o saldo inteiro do produto — com 2 linhas
+            // do mesmo produto, uma só já levava tudo).
+            const resta = {};
+            Object.values(_procSaldo.itens).forEach(s => { resta[s.chave] = s.saldo; });
             _procItens = _itensNormalizar(data.itens)
-                .map(it => ({ ...it, qtd: _procSaldo.itens[chaveItemProforma(it)]?.saldo ?? it.qtd }))
+                .map(it => {
+                    const k = chaveItemProforma(it);
+                    if (!(k in resta)) return it;
+                    const qtd = Math.min(Number(it.qtd) || 0, resta[k]);
+                    resta[k] -= qtd;
+                    return { ...it, qtd };
+                })
                 .filter(it => it.qtd > 0);
             itensRenderizar('proc');
             if (!_procItens.length) mostrarNotificacao('Todos os produtos desta proforma já estão em outros processos.', 'warning');
@@ -1943,18 +1956,25 @@ function _docAtualizarCampoVisual(id, nomeArquivo) {
 // processo dela, ou de uma assinatura feita direto na tela Documentos) —
 // chamado ao editar um processo e ao selecionar a Proforma de origem num
 // processo novo.
-// Commercial Invoice / Packing List / DUE são deste Processo (processo_id);
-// os demais são da Proforma toda. Registro sem processo_id (antes da migração)
-// continua valendo como antes.
+// Os documentos de embarque são deste Processo (processo_id);
+// só a Proforma Invoice é da Proforma toda (doc-tipos.js → DOC_TIPOS_POR_PROCESSO).
 function _docProcessoAtual() { return document.getElementById('proc-id')?.value || null; }
 
 async function _docCarregarAnexosProcesso(proformaId, processoId = null) {
     _docAnexosProcesso = {};
     if (!proformaId) return;
-    const res = await window.supabaseAPI.buscarDocumentosProformas([proformaId]);
-    (res.data || []).forEach(reg => {
+    const [res, { count }] = await Promise.all([
+        window.supabaseAPI.buscarDocumentosProformas([proformaId]),
+        supabaseClient.from('processos').select('id', { count: 'exact', head: true }).eq('proforma_id', proformaId).neq('status', 'excluido'),
+    ]);
+    // Documento de embarque: só o deste Processo. Anexo antigo sem processo
+    // vale só se a Proforma tem um único Processo (e ele é este).
+    const unico = processoId && count === 1;
+    (res.data || []).sort((a, b) => (a.processo_id ? 1 : 0) - (b.processo_id ? 1 : 0)).forEach(reg => {
         if (!reg.arquivo_path) return;
-        if (DOC_TIPOS_POR_PROCESSO.includes(reg.tipo_documento) && reg.processo_id && String(reg.processo_id) !== String(processoId)) return;
+        if (DOC_TIPOS_POR_PROCESSO.includes(reg.tipo_documento)) {
+            if (reg.processo_id ? String(reg.processo_id) !== String(processoId) : !unico) return;
+        }
         _docAnexosProcesso[reg.tipo_documento] = { path: reg.arquivo_path, nome: reg.arquivo_nome };
         _docAtualizarCampoVisual(reg.tipo_documento, reg.arquivo_nome);
     });
@@ -2308,6 +2328,83 @@ let _procItens = [];
 // _procSaldo = resultado de supabaseAPI → buscarSaldoProforma (itens por chave,
 // já descontando os OUTROS processos da proforma). null = processo sem proforma.
 let _procSaldo = null;
+// Produtos (chave da proforma) que o usuário mandou "Excluir da Proforma" ao
+// remover do processo — o saldo pendente deles sai da Proforma ao salvar.
+let _procExcluirDaProforma = new Set();
+
+// Remover um produto do Processo que veio da Proforma: sai só deste processo
+// (stand-by — continua como saldo pendente) ou sai da Proforma também?
+// Devolve true para remover a linha, false para cancelar.
+async function _procPerguntarRemocao(idx) {
+    const it = _procItens[idx];
+    const k = it ? chaveItemProforma(it) : null;
+    const s = k && _procSaldo?.itens[k];
+    if (!s) return true;   // produto que não é da Proforma: remove direto, como antes
+    const fmt = n => Number(n).toLocaleString('pt-BR');
+    const codigo = _procSaldo.proforma?.codigo || '';
+    const assinada = ['aprovado', 'encerrado'].includes(_procSaldo.proforma?.status);
+    const escolha = await escolherAcao(
+        `"${it.produto}" (${fmt(it.qtd)} ${it.unidade || s.unidade || ''}) veio da Proforma ${codigo}. Ele não vai neste processo, ou deve sair da Proforma também?`,
+        {
+            titulo: 'Remover produto do processo',
+            opcoes: [
+                { valor: 'standby', texto: 'Só não vai neste processo (stand-by)',
+                  descricao: `Continua na Proforma como saldo pendente, para um próximo processo. A Proforma não fica 100% embarcada.` },
+                { valor: 'excluir', texto: 'Excluir da Proforma', perigo: true,
+                  descricao: `Ao salvar, o saldo deste produto sai da Proforma ${codigo} e ela pode ficar 100% embarcada.`
+                    + (assinada ? ' Atenção: a Proforma já está assinada — os itens dela vão mudar.' : '') },
+            ],
+        });
+    if (!escolha) return false;
+    if (escolha === 'excluir') _procExcluirDaProforma.add(k);
+    else _procExcluirDaProforma.delete(k);
+    return true;
+}
+
+// Stand-by → volta para este processo com o que ainda resta do produto
+function procIncluirStandby(chave) {
+    const s = _procSaldo?.itens[chave];
+    if (!s) return;
+    const noProc = _procItens.filter(it => chaveItemProforma(it) === chave).reduce((t, it) => t + (Number(it.qtd) || 0), 0);
+    const resta = s.saldo - noProc;
+    if (resta <= 0) return;
+    _procExcluirDaProforma.delete(chave);
+    _procItens.push({ ..._itensNormalizar([s.item])[0], qtd: resta });
+    itensRenderizar('proc');
+}
+
+function procDesfazerExclusao(chave) {
+    _procExcluirDaProforma.delete(chave);
+    _procAtualizarSaldoVisual();
+}
+
+// Depois de salvar o processo: tira da Proforma o saldo pendente dos produtos
+// marcados "Excluir da Proforma" (o que já está em processos fica).
+async function _procAplicarExclusoesNaProforma(proformaId) {
+    if (!_procExcluirDaProforma.size) return;
+    const saldo = await window.supabaseAPI.buscarSaldoProforma(proformaId);
+    const itens = Array.isArray(saldo.proforma?.itens) ? saldo.proforma.itens.map(it => ({ ...it })) : [];
+    const removidos = [];
+    _procExcluirDaProforma.forEach(k => {
+        let tirar = saldo.itens[k]?.saldo || 0;
+        if (tirar <= 0) return;
+        removidos.push(saldo.itens[k].produto);
+        for (let i = itens.length - 1; i >= 0 && tirar > 0; i--) {
+            if (chaveItemProforma(itens[i]) !== k) continue;
+            const q = Number(itens[i].qtd ?? itens[i].quantidade) || 0;
+            const novo = Math.max(0, q - tirar);
+            tirar -= q - novo;
+            if ('qtd' in itens[i] || !('quantidade' in itens[i])) itens[i].qtd = novo; else itens[i].quantidade = novo;
+        }
+    });
+    _procExcluirDaProforma = new Set();
+    if (!removidos.length) return;
+    const restantes = itens.filter(it => (Number(it.qtd ?? it.quantidade) || 0) > 0);
+    const valor_total = restantes.reduce((t, it) => t + (Number(it.qtd ?? it.quantidade) || 0) * (Number(it.preco ?? it.preco_unit) || 0), 0);
+    const { error } = await supabaseClient.from('proformas').update({ itens: restantes, valor_total }).eq('id', proformaId);
+    if (error) mostrarNotificacao('O processo foi salvo, mas não foi possível tirar o item da Proforma: ' + error.message, 'erro');
+    else mostrarNotificacao(`Removido da Proforma ${saldo.proforma?.codigo || ''}: ${removidos.join(', ')}.`, 'sucesso');
+}
 
 function _procExcedentes() {
     if (!_procSaldo) return [];
@@ -2367,21 +2464,38 @@ function _procAtualizarSaldoVisual() {
     const body = document.getElementById('proc-itens-body');
     if (!body) return;
     let faixa = document.getElementById('proc-itens-aviso-parcial');
+    const restaDe = s => s.saldo - (noProcesso[s.chave] || 0);
     const pendentes = _procSaldo
-        ? Object.values(_procSaldo.itens).filter(s => s.saldo - (noProcesso[s.chave] || 0) > 0)
+        ? Object.values(_procSaldo.itens).filter(s => restaDe(s) > 0 && !_procExcluirDaProforma.has(s.chave))
         : [];
-    if (!pendentes.length || !_procItens.length) { faixa?.remove(); return; }
+    const excluidos = _procSaldo
+        ? Object.values(_procSaldo.itens).filter(s => restaDe(s) > 0 && _procExcluirDaProforma.has(s.chave))
+        : [];
+    if (!pendentes.length && !excluidos.length) { faixa?.remove(); return; }
     if (!faixa) {
         faixa = document.createElement('div');
         faixa.id = 'proc-itens-aviso-parcial';
         faixa.className = 'proc-aviso-parcial';
         body.before(faixa);
     }
-    const lista = pendentes.slice(0, 4).map(s => `${_itemEsc(s.produto)}: ${fmt(s.saldo - (noProcesso[s.chave] || 0))} ${_itemEsc(s.unidade)}`).join(' · ');
+    const chaveJs = k => _itemEsc(JSON.stringify(k));
     faixa.innerHTML = `<i class="fa-solid fa-circle-info"></i>
-        <div><strong>Embarque parcial da Proforma ${_itemEsc(_procSaldo.proforma?.codigo || '')}</strong> — este processo não leva todo o saldo.
-        Ficam para outro processo: ${lista}${pendentes.length > 4 ? ` e mais ${pendentes.length - 4}` : ''}.
-        <span class="proc-aviso-parcial-nota">Aviso só desta tela — não aparece nos documentos.</span></div>`;
+        <div class="proc-standby">
+            ${pendentes.length ? `
+            <strong>Em stand-by — saldo pendente da Proforma ${_itemEsc(_procSaldo.proforma?.codigo || '')}</strong>
+            <span class="proc-aviso-parcial-nota">Não vão neste processo e continuam na Proforma para um próximo embarque.</span>
+            <ul class="proc-standby-lista">
+                ${pendentes.map(s => `<li><span><i class="fa-solid fa-pause"></i> ${_itemEsc(s.produto)}: <strong>${fmt(restaDe(s))} ${_itemEsc(s.unidade)}</strong></span>
+                    <button type="button" class="proc-standby-btn" onclick="procIncluirStandby(${chaveJs(s.chave)})"><i class="fa-solid fa-plus"></i> Incluir neste processo</button></li>`).join('')}
+            </ul>` : ''}
+            ${excluidos.length ? `
+            <strong class="proc-standby-excluir-tit">Saem da Proforma ao salvar</strong>
+            <ul class="proc-standby-lista">
+                ${excluidos.map(s => `<li class="proc-standby-excluido"><span><i class="fa-solid fa-trash"></i> ${_itemEsc(s.produto)}: <strong>${fmt(restaDe(s))} ${_itemEsc(s.unidade)}</strong></span>
+                    <button type="button" class="proc-standby-btn" onclick="procDesfazerExclusao(${chaveJs(s.chave)})"><i class="fa-solid fa-rotate-left"></i> Desfazer</button></li>`).join('')}
+            </ul>` : ''}
+            <span class="proc-aviso-parcial-nota">Aviso só desta tela — não aparece nos documentos.</span>
+        </div>`;
 }
 
 // ========================================

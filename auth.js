@@ -276,6 +276,54 @@ function confirmarAcao(mensagem, opcoes = {}) {
     });
 }
 
+// escolherAcao(mensagem, { titulo, opcoes: [{ valor, texto, descricao?, perigo? }], cancelar })
+//   -> Promise<valor | null>  (null = cancelou: botão, Esc ou clique fora)
+// Para quando há mais de duas saídas — mesmo visual do confirmarAcao, com as
+// opções empilhadas e uma linha de explicação em cada.
+function escolherAcao(mensagem, opcoes = {}) {
+    return new Promise(resolve => {
+        const { titulo = 'Escolha uma opção', opcoes: lista = [], cancelar = 'Cancelar' } = opcoes;
+        const overlay = document.createElement('div');
+        overlay.className = 'confirmar-overlay';
+        overlay.innerHTML = `
+            <div class="confirmar-caixa" role="alertdialog" aria-modal="true">
+                <div class="confirmar-icone"><i class="fa-solid fa-circle-question"></i></div>
+                <h3 class="confirmar-titulo"></h3>
+                <p class="confirmar-msg"></p>
+                <div class="escolher-opcoes"></div>
+                <div class="confirmar-acoes"><button type="button" class="confirmar-btn confirmar-btn--cancelar"></button></div>
+            </div>`;
+        overlay.querySelector('.confirmar-titulo').textContent = titulo;
+        overlay.querySelector('.confirmar-msg').textContent = mensagem;
+        const btnCancelar = overlay.querySelector('.confirmar-btn--cancelar');
+        btnCancelar.textContent = cancelar;
+        const fechar = valor => {
+            document.removeEventListener('keydown', teclas, true);
+            overlay.classList.add('confirmar-saindo');
+            setTimeout(() => overlay.remove(), 140);
+            resolve(valor);
+        };
+        const caixa = overlay.querySelector('.escolher-opcoes');
+        lista.forEach(op => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'escolher-opcao' + (op.perigo ? ' escolher-opcao--perigo' : '');
+            b.dataset.valor = op.valor;
+            const t = document.createElement('strong'); t.textContent = op.texto;
+            b.appendChild(t);
+            if (op.descricao) { const d = document.createElement('span'); d.textContent = op.descricao; b.appendChild(d); }
+            b.addEventListener('click', () => fechar(op.valor));
+            caixa.appendChild(b);
+        });
+        const teclas = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fechar(null); } };
+        btnCancelar.addEventListener('click', () => fechar(null));
+        overlay.addEventListener('mousedown', e => { if (e.target === overlay) fechar(null); });
+        document.addEventListener('keydown', teclas, true);
+        document.body.appendChild(overlay);
+        btnCancelar.focus();
+    });
+}
+
 // Função de Logout
 // Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
 // automático não deve sobreviver a um logout explícito). cpfSalvo é mantido

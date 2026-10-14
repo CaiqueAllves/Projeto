@@ -79,7 +79,16 @@ BEGIN
         SELECT empresa_id INTO v_empresa FROM proformas WHERE id = v_registro;
         IF TG_OP <> 'UPDATE' THEN v_acao := 'documento'; END IF;
         IF TG_OP = 'INSERT' THEN
+            -- guarda também o arquivo e a assinatura com que o documento nasceu
+            -- (o Histórico mostra "Arquivo anexado: X · gerado pelo sistema/upload")
             v_dif := jsonb_build_object('documento', jsonb_build_object('de', NULL, 'para', 'criado'));
+            FOREACH k IN ARRAY ARRAY['arquivo_nome', 'arquivo_path', 'assinado', 'assinado_por', 'assinado_em'] LOOP
+                IF (v_new ->> k) IS NOT NULL AND (v_new ->> k) <> 'false' THEN
+                    v_dif := v_dif || jsonb_build_object(k, jsonb_build_object('de', NULL, 'para', v_new -> k));
+                END IF;
+            END LOOP;
+        ELSIF TG_OP = 'DELETE' AND (v_old ->> 'arquivo_nome') IS NOT NULL THEN
+            v_dif := jsonb_build_object('arquivo_nome', jsonb_build_object('de', v_old -> 'arquivo_nome', 'para', NULL));
         END IF;
         IF v_reg ->> 'processo_id' IS NOT NULL THEN
             v_dif := v_dif || jsonb_build_object('processo_id', jsonb_build_object('de', NULL, 'para', v_reg -> 'processo_id'));

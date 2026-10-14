@@ -458,6 +458,9 @@
    expande revelando Valor, Criação, Status e Ações. min-height só se aplica
    expandido, calculado pra caber tudo sem cortar conteúdo. */
 .prof-card {
+    /* sem isso a coluna (flex + overflow) espreme o card expandido e o
+       conteúdo dele invade o card de baixo */
+    flex-shrink: 0;
     background: #fff;
     border-radius: 10px;
     border: 1px solid #e2e8f0;
@@ -621,6 +624,7 @@
 
 .prof-card-btns {
     display: flex;
+    flex-wrap: wrap;   /* coluna estreita: quebra a linha em vez de espremer os botões */
     gap: 5px;
 }
 
@@ -715,24 +719,3 @@
 }
 .prof-excluir-processos i { color: #ea580c; margin-top: 2px; }
 .prof-excluir-processos-lista { font-size: 12px; color: #b45309; margin-top: 3px; }
-
-/* Janela "Documentos da Proforma" (profVerDocumentos) — usa a base .hist-* de style-base.css */
-.prof-docs-modal { max-width: 640px; }
-.prof-docs-resumo { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: #64748b; padding: 0 0 12px; border-bottom: 1px solid #eef2f7; margin-bottom: 6px; }
-.prof-docs-resumo strong { color: #1e293b; }
-.prof-doc-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
-.prof-doc-linha:last-child { border-bottom: none; }
-.prof-doc-linha--pendente .prof-doc-nome { color: #94a3b8; }
-.prof-doc-info { min-width: 0; }
-.prof-doc-nome { font-size: 13.5px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.prof-doc-tag { font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: #eef3ff; color: #4776ec; }
-.prof-doc-sit { display: block; font-size: 12px; color: #64748b; margin-top: 2px; }
-.prof-doc-sit.ok { color: #15803d; }
-.prof-doc-sit.anexo { color: #b45309; }
-.prof-doc-sit.pendente { color: #94a3b8; }
-.prof-doc-sit i { margin-right: 3px; }
-.prof-doc-ver { flex-shrink: 0; font-size: 12.5px; font-weight: 600; color: #4776ec; text-decoration: none; padding: 6px 10px; border-radius: 8px; border: 1px solid #dbe3f0; }
-.prof-doc-ver:hover { background: #f0f5ff; }
-.prof-docs-rodape { padding: 12px 20px; border-top: 1px solid #eef2f7; text-align: right; }
-.prof-docs-gerenciar { font-size: 13px; font-weight: 600; color: #4776ec; text-decoration: none; }
-.prof-docs-gerenciar i { font-size: 11px; margin-right: 4px; }

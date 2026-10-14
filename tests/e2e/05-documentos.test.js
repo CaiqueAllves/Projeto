@@ -2,7 +2,7 @@
 module.exports = {
     nome: 'Documentos: CI/PL por processo e substituição com aviso',
     async executar({ page, h }) {
-        await h.ir(page, 'documentos.html?semabas=1', 2500);
+        await h.ir(page, 'proforma.html?semabas=1', 2500);
         let ids;
         try {
             ids = await h.criarDados(page, { processos: 2 });

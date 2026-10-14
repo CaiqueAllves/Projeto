@@ -59,10 +59,6 @@ const SIDEBAR_HTML = `
                 <i class="fa-solid fa-ship"></i> Processos
             </li>
 
-            <li id="menu-documentos" onclick="window.location.href='documentos.html'">
-                <i class="fa-solid fa-folder-open"></i> Documentos
-            </li>
-
             <li id="menu-relatorios" onclick="window.location.href='relatorios.html'">
                 <i class="fa-solid fa-chart-line"></i> Relatórios
             </li>
@@ -364,7 +360,7 @@ function destacarMenuAtivo() {
         'produtos.html':            'submenu-produtos-cadastro',
         'proforma.html':            'submenu-documentos-cadastro',
         'processos.html':           'submenu-processos-cadastro',
-        'documentos.html':          'menu-documentos',
+        'documentos.html':          'submenu-documentos-cadastro',
         'chamados-admin.html':      'menu-chamados-admin',
         'relatorios.html':          'menu-relatorios',
         'relatorios-produtos.html': 'menu-relatorios',

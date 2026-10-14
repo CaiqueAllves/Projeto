@@ -2,7 +2,7 @@
 module.exports = {
     nome: 'Assinatura digital pelo link',
     async executar({ page, browser, h }) {
-        await h.ir(page, 'documentos.html?semabas=1', 2500);
+        await h.ir(page, 'proforma.html?semabas=1', 2500);
         const existe = await page.evaluate(async () => !(await supabaseClient.from('assinaturas_proforma').select('id').limit(1)).error);
         if (!existe) h.pular('database-assinatura-digital.sql ainda não foi rodado');
         let ids;
@@ -37,6 +37,18 @@ module.exports = {
             }), ids.proforma);
             h.igual(st.status, 'aprovado', 'Proforma não foi para Aprovado após assinar');
             h.esperar(st.doc?.assinado && /Fulano Teste/.test(st.doc.assinado_por), 'Documento não ficou assinado');
+            // cartão "Assinado" na janela do card: ver arquivo + comprovante em PDF
+            await h.ir(page, 'proforma.html?semabas=1', 3500);
+            await page.evaluate((id) => profVerDocumentos(id), ids.proforma);
+            await page.waitForSelector('#docJanelaOverlay .doc-assinatura-feita', { timeout: 15000 });
+            h.esperar(await page.$('#docJanelaOverlay .doc-assinatura-feita a.doc-assinatura-acao'), 'Cartão assinado sem link para o arquivo');
+            const [download] = await Promise.all([
+                page.waitForEvent('download', { timeout: 20000 }),
+                page.click('#docJanelaOverlay .doc-assinatura-feita button.doc-assinatura-acao'),
+            ]);
+            const fs = require('fs');
+            const pdf = fs.readFileSync(await download.path()).toString('latin1');
+            h.esperar(/COMPROVANTE DE ASSINATURA/.test(pdf) && /Fulano Teste/.test(pdf) && /123\.456\.789-00/.test(pdf), 'Comprovante sem os dados do assinante');
             h.semErrosJS(page);
         } finally {
             await page.evaluate(async (id) => supabaseClient.from('assinaturas_proforma').delete().eq('proforma_id', id), ids?.proforma).catch(() => {});
