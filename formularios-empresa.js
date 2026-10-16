@@ -28,6 +28,12 @@ async function salvarEmpresa(e) {
         };
         const res = await window.supabaseAPI.atualizarTenantEmpresa(dados);
         if (res.sucesso) {
+            // logo e contas bancárias da própria empresa (contas com parceiro_id NULL)
+            const avisos = [];
+            const logo = await logoCampoResolver('emp', 'logo');
+            if (logo.mudou && !(await window.supabaseAPI.atualizarTenantEmpresa({ logo_url: logo.url })).sucesso) avisos.push('logo');
+            if (!(await window.supabaseAPI.salvarContasBancarias(null, _empColetarContas())).sucesso) avisos.push('contas bancárias');
+            if (avisos.length) mostrarNotificacao(`Dados salvos, mas não foi possível gravar: ${avisos.join(', ')}. Rode database-logo-marcas-contas-bancarias.sql.`, 'aviso');
             mostrarNotificacao('Dados da empresa atualizados!', 'sucesso');
             setTimeout(() => window.location.href = 'perfil.html?empresa_atualizada=1', 1200);
         } else {
@@ -157,8 +163,13 @@ async function salvarEmpresa(e) {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar'; }
 
     if (res.sucesso) {
+        const parceiroId = _empEditandoId || res.data?.id;
+        if (parceiroId) await _empSalvarLogoMarcasContas(parceiroId);
         mostrarNotificacao(_empEditandoId ? 'Empresa atualizada com sucesso!' : 'Empresa cadastrada com sucesso!', 'sucesso');
         if (!_empEditandoId) {
+            logoCampoDefinir('emp', null);
+            document.getElementById('emp-contas-extra').innerHTML = '';
+            document.getElementById('emp-marcas-lista').innerHTML = '';
             document.getElementById('form-empresa').reset();
             _empTagsArray = [];
             empRenderizarTags();
@@ -1102,6 +1113,114 @@ function _empPreencherEdicao(dados) {
                 if (ins[3]) ins[3].value =  c.telefone || '';
             }
         });
+    }
+
+    if (dados.id) _empCarregarLogoMarcasContas(dados.id);
+}
+
+// Própria empresa (modo tenant, vindo do Perfil): logo em empresas.logo_url e
+// contas bancárias sem parceiro. Marcas são do cadastro de parceiros.
+async function _empCarregarTenantLogoContas(empresaId) {
+    document.getElementById('emp-secao-marca')?.style.setProperty('display', 'none');
+    _empIniciarLogo();
+    const { data: emp } = await supabaseClient.from('empresas').select('logo_url').eq('id', empresaId).maybeSingle();
+    logoCampoDefinir('emp', emp?.logo_url || null);
+    const contas = (await window.supabaseAPI.buscarContasBancarias(null)).data || [];
+    if (!contas.length) return;
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null && v !== '') el.value = v; };
+    const [c1, ...resto] = contas;
+    set('fin-rec-conta-id', c1.id);
+    set('fin-rec-banco', c1.banco); set('fin-rec-agencia', c1.agencia); set('fin-rec-conta', c1.conta);
+    set('fin-rec-tipo-conta', c1.tipo_conta); set('fin-rec-moeda', c1.moeda);
+    set('fin-rec-swift', c1.swift); set('fin-rec-iban', c1.iban); set('fin-rec-end-banco', c1.endereco_banco);
+    contasBancariasRender('emp-contas-extra', resto);
+}
+
+// ── Logo, Marcas e Contas bancárias (database-logo-marcas-contas-bancarias.sql) ──
+function _empIniciarLogo() {
+    const slot = document.getElementById('emp-logo-slot');
+    if (slot && !slot.innerHTML.trim()) { slot.innerHTML = logoCampoHtml('emp'); logoCampoDefinir('emp', null); }
+}
+
+// Conta de "Recebimento" (campos fixos do formulário) + as extras
+function _empColetarContas() {
+    const v = id => (document.getElementById(id)?.value || '').trim();
+    const principal = {
+        id: v('fin-rec-conta-id') || null,
+        banco: v('fin-rec-banco'), agencia: v('fin-rec-agencia'), conta: v('fin-rec-conta'),
+        tipo_conta: v('fin-rec-tipo-conta'), moeda: v('fin-rec-moeda'),
+        swift: v('fin-rec-swift').toUpperCase(), iban: v('fin-rec-iban'), endereco_banco: v('fin-rec-end-banco'),
+    };
+    return [principal, ...contasBancariasColetar('emp-contas-extra')];
+}
+
+async function _empSalvarLogoMarcasContas(parceiroId) {
+    const avisos = [];
+    const logo = await logoCampoResolver('emp', 'logo');
+    if (logo.mudou) {
+        const { error } = await supabaseClient.from('parceiros').update({ logo_url: logo.url }).eq('id', parceiroId);
+        if (error) avisos.push('logo');
+    }
+    // Marcas: envia as imagens novas e grava a lista
+    const marcas = [];
+    for (const item of document.querySelectorAll('#emp-marcas-lista .marca-item')) {
+        const arquivo = item.querySelector('input[type="file"]')?.files?.[0];
+        let url = item.dataset.url || null;
+        if (arquivo) {
+            const r = await window.supabaseAPI.enviarImagemLogo(arquivo, 'marca');
+            if (r.sucesso) { url = r.url; item.dataset.url = url; } else avisos.push('imagem de marca');
+        }
+        const nome = item.querySelector('.marca-nome-input')?.value.trim() || null;
+        if (nome || url) marcas.push({ nome, imagem_url: url });
+    }
+    const rMarcas = await window.supabaseAPI.salvarMarcasParceiro(parceiroId, marcas);
+    if (!rMarcas.sucesso && marcas.length) avisos.push('marcas');
+    const rContas = await window.supabaseAPI.salvarContasBancarias(parceiroId, _empColetarContas());
+    if (!rContas.sucesso) avisos.push('contas bancárias');
+    if (avisos.length) mostrarNotificacao(`Empresa salva, mas não foi possível gravar: ${avisos.join(', ')}. Rode database-logo-marcas-contas-bancarias.sql.`, 'aviso');
+}
+
+// Edição: financeiro (antes não carregava — salvar apagava), logo, marcas e contas
+async function _empCarregarLogoMarcasContas(parceiroId) {
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null && v !== '') el.value = v; };
+    const { data: fin } = await supabaseClient.from('parceiro_financeiro').select('*').eq('parceiro_id', parceiroId).maybeSingle();
+    if (fin) {
+        ['pag_forma', 'pag_condicao', 'pag_banco', 'pag_tipo_conta', 'pag_agencia', 'pag_conta', 'rec_forma', 'rec_moeda', 'rec_banco', 'rec_tipo_conta', 'rec_agencia', 'rec_conta']
+            .forEach(k => set('fin-' + k.replace(/_/g, '-'), fin[k]));
+    }
+    const { data: parc } = await supabaseClient.from('parceiros').select('logo_url').eq('id', parceiroId).maybeSingle();
+    _empIniciarLogo();
+    logoCampoDefinir('emp', parc?.logo_url || null);
+
+    const contas = (await window.supabaseAPI.buscarContasBancarias(parceiroId)).data || [];
+    if (contas.length) {
+        const [c1, ...resto] = contas;
+        set('fin-rec-conta-id', c1.id);
+        set('fin-rec-banco', c1.banco); set('fin-rec-agencia', c1.agencia); set('fin-rec-conta', c1.conta);
+        set('fin-rec-tipo-conta', c1.tipo_conta); set('fin-rec-moeda', c1.moeda);
+        set('fin-rec-swift', c1.swift); set('fin-rec-iban', c1.iban); set('fin-rec-end-banco', c1.endereco_banco);
+        contasBancariasRender('emp-contas-extra', resto);
+    }
+
+    const marcas = (await window.supabaseAPI.buscarMarcasParceiro(parceiroId)).data || [];
+    marcas.forEach(m => {
+        empAdicionarMarca();
+        const itens = document.querySelectorAll('#emp-marcas-lista .marca-item');
+        const item = itens[itens.length - 1];
+        if (!item) return;
+        if (m.imagem_url) {
+            item.dataset.url = m.imagem_url;
+            const prev = item.querySelector('.marca-item-preview');
+            if (prev) prev.innerHTML = `<img src="${_clcEsc(m.imagem_url)}" alt="Marca" class="marca-preview-img">`;
+        }
+        const nome = item.querySelector('.marca-nome-input');
+        if (nome && m.nome) nome.value = m.nome;
+    });
+    // carregou depois do modo visualização ter travado o formulário: trava o que entrou agora
+    if (document.querySelector('#form-empresa .btn-save')?.style.display === 'none') {
+        document.querySelectorAll('#emp-contas-extra input, #emp-contas-extra select, #emp-contas-extra button, #emp-logo-slot input, #emp-logo-slot button, #emp-marcas-lista input, #emp-marcas-lista button')
+            .forEach(el => { el.disabled = true; });
+        document.querySelectorAll('#emp-logo-slot .logo-campo-acoes, .conta-bancaria-add').forEach(el => { el.style.display = 'none'; });
     }
 }
 

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<style>
+  :root { --navy:#0a285a; --azul:#1e56a0; --azul-med:#3b82f6; --azul-claro:#dbeafe; --cinza:#64748b; --borda:#d1dbea; --bg:#f8fafc; --preto:#0f172a; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background:#9aa5b5; font-family: Helvetica, Arial, sans-serif; color: var(--preto); }
+  .pagina { width: 794px; height: 1123px; margin: 0 auto; background:#fff; position: relative; padding: 0 34px; }
+  /* cabeçalho */
+  .cab { display:flex; justify-content:space-between; align-items:flex-start; padding: 28px 0 16px; border-bottom: 3px solid var(--navy); }
+  .emissor { display:flex; gap:14px; align-items:center; }
+  .logo { width: 96px; height: 54px; border-radius: 8px; background:#0f766e; color:#fff; font-weight:800; font-size:24px; display:flex; align-items:center; justify-content:center; letter-spacing:1px; }
+  .emissor h1 { font-size: 15px; color: var(--navy); }
+  .emissor p { font-size: 9.5px; color: var(--cinza); line-height: 1.5; }
+  .doc { text-align:right; }
+  .doc h2 { font-size: 21px; color: var(--navy); letter-spacing: .5px; }
+  .doc .num { font-size: 12px; font-weight: 700; color: var(--azul); margin-top: 2px; }
+  .doc .datas { font-size: 9.5px; color: var(--cinza); margin-top: 6px; line-height: 1.6; }
+  .doc .datas b { color: var(--preto); }
+  /* faixa de termos */
+  .termos { display:grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; margin-top: 14px; background: var(--bg); border:1px solid var(--borda); border-radius: 8px; }
+  .termos > div { padding: 7px 10px; border-left:1px solid var(--borda); }
+  .termos > div:first-child { border-left:none; }
+  .rot { font-size: 7.5px; font-weight: 700; color: var(--cinza); text-transform: uppercase; letter-spacing: .4px; }
+  .val { font-size: 10.5px; font-weight: 700; color: var(--azul); margin-top: 2px; }
+  /* cartões */
+  .grade2 { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .card { border:1px solid var(--borda); border-radius: 8px; overflow:hidden; }
+  .card h3 { background: var(--navy); color:#fff; font-size: 8.5px; letter-spacing: .6px; padding: 6px 10px; border-left: 4px solid var(--azul-med); }
+  .card .corpo { padding: 8px 10px; font-size: 9.5px; line-height: 1.55; }
+  .card .corpo b { font-size: 10.5px; display:block; margin-bottom: 1px; }
+  .card .corpo span { color: var(--cinza); }
+  .linha { display:flex; justify-content:space-between; gap: 8px; border-bottom: 1px dashed #e5eaf2; padding: 2px 0; }
+  .linha:last-child { border-bottom:none; }
+  .linha span { color: var(--cinza); font-size: 8.5px; text-transform: uppercase; font-weight:700; letter-spacing:.3px; }
+  .linha em { font-style: normal; font-weight: 600; text-align:right; }
+  /* itens */
+  .titulo { margin-top: 16px; font-size: 9px; font-weight: 700; color: var(--azul); letter-spacing: .6px; background: var(--azul-claro); border-left: 4px solid var(--azul); padding: 5px 10px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 9.5px; }
+  th { background: var(--navy); color:#fff; font-size: 7.5px; letter-spacing:.4px; text-transform: uppercase; padding: 6px 8px; text-align:left; }
+  th.d, td.d { text-align:right; }
+  td { padding: 7px 8px; border-bottom: 1px solid #e5eaf2; vertical-align: top; }
+  tr:nth-child(even) td { background: var(--bg); }
+  td .sku { font-weight:700; color: var(--azul); }
+  td .sub { font-size: 8px; color: var(--cinza); margin-top: 2px; }
+  /* totais */
+  .resumo { display:grid; grid-template-columns: 1fr 250px; gap: 14px; margin-top: 10px; align-items: start; }
+  .logis { display:grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .logis > div { background: var(--bg); border:1px solid var(--borda); border-radius: 6px; padding: 6px 8px; }
+  .logis .val { color: var(--preto); font-size: 10px; }
+  .extenso { margin-top: 8px; font-size: 8.5px; color: var(--cinza); font-style: italic; }
+  .totais { border:1px solid var(--borda); border-radius: 8px; overflow:hidden; font-size: 10px; }
+  .totais div { display:flex; justify-content:space-between; padding: 5px 10px; }
+  .totais .geral { background: var(--navy); color:#fff; font-weight:700; font-size: 13px; padding: 8px 10px; }
+  .totais .geral small { font-size: 8px; color:#a0bef0; font-weight:600; letter-spacing:.4px; }
+  /* banco + obs */
+  .grade-banco { display:grid; grid-template-columns: 1.25fr 1fr; gap: 12px; margin-top: 14px; }
+  .banco { display:grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; padding: 8px 10px; }
+  .banco .val { color: var(--preto); font-size: 9.5px; font-weight: 600; }
+  .obs { padding: 8px 10px; font-size: 9px; color: #334155; line-height: 1.5; }
+  /* assinaturas */
+  .assin { display:grid; grid-template-columns: 1fr 1fr; gap: 40px; position:absolute; left:34px; right:34px; bottom: 62px; }
+  .assin div { border-top: 1px solid var(--cinza); padding-top: 5px; text-align:center; font-size: 9px; }
+  .assin b { display:block; font-size: 9.5px; }
+  .assin span { color: var(--cinza); font-size: 8px; }
+  .rodape { position:absolute; left:0; right:0; bottom:0; height: 34px; background: var(--navy); color:#a0bef0; font-size: 8px; display:flex; justify-content:space-between; align-items:center; padding: 0 34px; }
+  /* anotações do modelo (não fazem parte do PDF) */
+  .nota { position:absolute; background:#f59e0b; color:#fff; font-size: 9px; font-weight:700; border-radius: 10px; padding: 2px 7px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+</style></head>
+<body><div class="pagina">
+
+  <div class="cab">
+    <div class="emissor">
+      <div class="logo">ACME</div>
+      <div>
+        <h1>ACME EXPORTADORA LTDA</h1>
+        <p>CNPJ 12.345.678/0001-90 · IE 123.456.789.110<br>Av. Paulista, 1000 · São Paulo / SP · Brasil · CEP 01310-100<br>comercial@acme.com.br · +55 11 4000-1000</p>
+      </div>
+    </div>
+    <div class="doc">
+      <h2>PROFORMA INVOICE</h2>
+      <div class="num">Nº PRO2026000014</div>
+      <div class="datas">Emissão: <b>16/10/2026</b><br>Válida até: <b>23/10/2026</b></div>
+    </div>
+  </div>
+
+  <div class="termos">
+    <div><div class="rot">Incoterm® 2020</div><div class="val">FOB · Porto de Santos</div></div>
+    <div><div class="rot">Modal</div><div class="val">Marítimo</div></div>
+    <div><div class="rot">Moeda</div><div class="val">USD</div></div>
+    <div><div class="rot">Tipo</div><div class="val">Exportação Direta</div></div>
+    <div><div class="rot">Propósito</div><div class="val">Venda</div></div>
+  </div>
+
+  <div class="grade2">
+    <div class="card"><h3>EXPORTADOR</h3><div class="corpo">
+      <b>ACME EXPORTADORA LTDA</b>
+      CNPJ 12.345.678/0001-90<br>Av. Paulista, 1000 · São Paulo / SP<br>Brasil · CEP 01310-100<br><span>Contato: Ana Souza · ana@acme.com.br</span>
+    </div></div>
+    <div class="card"><h3>IMPORTADOR</h3><div class="corpo">
+      <b>GLOBAL FOODS S.A.</b>
+      Tax ID 30-71234567-8<br>Av. Corrientes, 500 · Buenos Aires / CABA<br>Argentina · C1043<br><span>Contato: Martín López · martin@globalfoods.ar</span>
+    </div></div>
+  </div>
+
+  <div class="grade2">
+    <div class="card"><h3>EMBARQUE</h3><div class="corpo">
+      <div class="linha"><span>Origem</span><em>Brasil · Porto de Santos</em></div>
+      <div class="linha"><span>Destino</span><em>Argentina · Puerto de Buenos Aires</em></div>
+      <div class="linha"><span>Previsão de embarque</span><em>Nov/2026</em></div>
+    </div></div>
+    <div class="card"><h3>CONDIÇÕES DE PAGAMENTO</h3><div class="corpo">
+      <div class="linha"><span>Forma</span><em>Transferência SWIFT</em></div>
+      <div class="linha"><span>Prazo</span><em>30% antecipado · 70% contra documentos</em></div>
+      <div class="linha"><span>Validade da proposta</span><em>7 dias</em></div>
+    </div></div>
+  </div>
+
+  <div class="titulo">ITENS</div>
+  <table>
+    <thead><tr><th style="width:24px">#</th><th style="width:78px">Código</th><th>Descrição</th><th class="d" style="width:70px">Qtd</th><th class="d" style="width:72px">Preço unit.</th><th class="d" style="width:86px">Total</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span class="sku">CAF-500</span></td><td>Café torrado em grãos — 500 g<div class="sub">NCM 0901.21.00 · HS 090121 · Marca Serra Alta · Fab. ACME Alimentos</div></td><td class="d">2.400<div class="sub">UN</div></td><td class="d">4,80</td><td class="d"><b>11.520,00</b></td></tr>
+      <tr><td>2</td><td><span class="sku">CAF-1K</span></td><td>Café torrado moído — 1 kg<div class="sub">NCM 0901.21.00 · HS 090121 · Marca Serra Alta · Fab. ACME Alimentos</div></td><td class="d">1.200<div class="sub">UN</div></td><td class="d">8,90</td><td class="d"><b>10.680,00</b></td></tr>
+      <tr><td>3</td><td><span class="sku">ACU-MAS</span></td><td>Açúcar mascavo orgânico — 1 kg<div class="sub">NCM 1701.13.00 · HS 170113 · Marca Doce Vale · Fab. Usina Vale Verde</div></td><td class="d">800<div class="sub">UN</div></td><td class="d">3,25</td><td class="d"><b>2.600,00</b></td></tr>
+    </tbody>
+  </table>
+
+  <div class="resumo">
+    <div>
+      <div class="logis">
+        <div><div class="rot">Volumes</div><div class="val">220 caixas</div></div>
+        <div><div class="rot">Peso líquido</div><div class="val">3.200,000 kg</div></div>
+        <div><div class="rot">Peso bruto</div><div class="val">3.520,000 kg</div></div>
+        <div><div class="rot">Cubagem</div><div class="val">14,520 m³</div></div>
+      </div>
+      <div class="extenso">Total: vinte e quatro mil e oitocentos dólares americanos.</div>
+    </div>
+    <div class="totais">
+      <div><span>Subtotal</span><b>24.800,00</b></div>
+      <div><span>Frete / Seguro</span><b>—</b></div>
+      <div class="geral"><small>TOTAL GERAL · USD</small><span>24.800,00</span></div>
+    </div>
+  </div>
+
+  <div class="grade-banco">
+    <div class="card"><h3>DADOS BANCÁRIOS</h3><div class="banco">
+      <div><div class="rot">Beneficiário</div><div class="val">ACME EXPORTADORA LTDA</div></div>
+      <div><div class="rot">Banco</div><div class="val">Banco do Brasil S.A.</div></div>
+      <div><div class="rot">Agência / Conta</div><div class="val">1234-5 / 98765-4</div></div>
+      <div><div class="rot">SWIFT / BIC</div><div class="val">BRASBRRJXXX</div></div>
+      <div style="grid-column: span 2"><div class="rot">IBAN</div><div class="val">BR15 0000 0000 0000 0000 0000 0P1</div></div>
+    </div></div>
+    <div class="card"><h3>OBSERVAÇÕES</h3><div class="obs">
+      Preços válidos para embarque até 30/11/2026. Mercadoria embalada em caixas de papelão reforçado, paletizadas. Documentação: Commercial Invoice, Packing List, Certificado de Origem e BL.
+    </div></div>
+  </div>
+
+  <div class="assin">
+    <div><b>ACME EXPORTADORA LTDA</b><span>Exportador — Assinatura do responsável</span></div>
+    <div><b>GLOBAL FOODS S.A.</b><span>Importador — De acordo (aceite da proposta)</span></div>
+  </div>
+
+  <div class="rodape"><span>Documento gerado pelo Marpex</span><span>Página 1 de 1</span><span>PROFORMA INVOICE PRO2026000014</span></div>
+
+  <!-- marcadores numerados das melhorias (explicados na conversa) -->
+  <span class="nota" style="top:30px; left:6px">1</span>
+  <span class="nota" style="top:30px; right:6px">2</span>
+  <span class="nota" style="top:150px; left:6px">3</span>
+  <span class="nota" style="top:210px; left:6px">4</span>
+  <span class="nota" style="top:315px; left:6px">5</span>
+  <span class="nota" style="top:436px; left:6px">6</span>
+  <span class="nota" style="top:470px; left:6px">7</span>
+  <span class="nota" style="top:600px; right:6px">8</span>
+  <span class="nota" style="top:694px; left:6px">9</span>
+  <span class="nota" style="bottom:72px; left:6px">10</span>
+</div></body></html>

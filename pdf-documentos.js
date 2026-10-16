@@ -32,6 +32,10 @@ async function _docPdfCarregarDados(tipo, processoId) {
         ? await supabaseClient.from('parceiros').select('*').in('id', parceiroIds)
         : { data: [] };
     const parc = id => (parceiros || []).find(p => String(p.id) === String(id)) || null;
+    const { data: contatos } = parceiroIds.length
+        ? await supabaseClient.from('parceiro_contatos').select('parceiro_id, nome, email, telefone, ordem').in('parceiro_id', parceiroIds).order('ordem')
+        : { data: [] };
+    const contatoDe = id => { const c = (contatos || []).find(x => String(x.parceiro_id) === String(id)); return c ? [c.nome, c.email || c.telefone].filter(Boolean).join(' · ') : ''; };
 
     // Exportador: parceiro escolhido (Terceiro) ou a própria empresa (Usuário)
     let exportador;
@@ -39,12 +43,12 @@ async function _docPdfCarregarDados(tipo, processoId) {
         exportador = parc(proc.remetente_parceiro_id);
     } else {
         const usuario = obterUsuarioLogado();
-        const { data: emp } = await supabaseClient.from('empresas')
-            .select('razao_social, nome_fantasia, cnpj, endereco, numero, complemento, cidade, estado, cep')
-            .eq('id', usuario.empresa_id).maybeSingle();
+        const emp = await pdfEmpresaPropria(usuario.empresa_id);
         exportador = emp ? { ...emp, documento: emp.cnpj, pais: 'Brasil' } : null;
     }
     const importador = parc(proc.empresa_parceira_id);
+    if (exportador && proc.emissor_tipo === 'terceiro') exportador._contato = contatoDe(proc.remetente_parceiro_id);
+    if (importador) importador._contato = contatoDe(proc.empresa_parceira_id);
 
     const itens = (Array.isArray(proc.itens) ? proc.itens : []).filter(it => (it.produto || '').trim());
     const prodIds = [...new Set(itens.map(it => it.produto_id).filter(Boolean))];
@@ -83,209 +87,118 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     await carregarJsPDFSobDemanda();
     const d = await _docPdfCarregarDados(tipo, processoId);
     const { proc, prof } = d;
+    // Mesmo idioma da Proforma de origem (pdf-kit.js → pdfIdioma)
+    const I = pdfIdioma(prof?.idioma), t = I.t;
+    const titulo = tipo === 'commercial' ? t.commercial_invoice : t.packing_list;
+    const vv = s => (s === null || s === undefined || String(s).trim() === '') ? '' : String(s);
+    const moeda = d.itens.find(it => it.moeda)?.moeda || proc.moeda || '';
+    const doc = pvNovoDocumento();
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const W = 297, ML = 14;
-    let Y = 0;
+    const ex = d.exportador || {}, im = d.importador || {};
+    const nomeEx = vv(ex.razao_social || ex.nome_fantasia) || '—', nomeIm = vv(im.razao_social || im.nome_fantasia) || '—';
+    const cidade = e => [vv(e.cidade), vv(e.estado)].filter(Boolean).join(' / ');
+    const rua = e => [[vv(e.endereco), vv(e.numero)].filter(Boolean).join(', '), vv(e.complemento)].filter(Boolean).join(' - ');
 
-    const NAVY=[10,40,90], AZUL=[30,86,160], AZUL_MED=[59,130,246];
-    const AZUL_CLARO=[219,234,254], CINZA=[100,116,139], CINZA_BG=[248,250,252];
-    const BORDA=[209,219,234], PRETO=[15,23,42], BRANCO=[255,255,255], AMBAR=[180,83,9];
-
-    const sf = (style, size, color) => { doc.setFont('helvetica', style); doc.setFontSize(size); doc.setTextColor(...(color || PRETO)); };
-    const rx = (x, y, w, h, cor) => { doc.setFillColor(...cor); doc.setDrawColor(...cor); doc.rect(x, y, w, h, 'F'); };
-    const pg = h => { if (Y + h > 183) { doc.addPage(); Y = 20; } };
-    const vv = s => (s === null || s === undefined || String(s).trim() === '') ? '—' : String(s);
-    const fmtN = (n, dec = 2) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-    const fd = s => s ? new Date(String(s).length === 10 ? s + 'T00:00:00' : s).toLocaleDateString('pt-BR') : '—';
-    const modalTxt = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' }[proc.modal] || vv(proc.modal);
-    const dataGeracao = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const moeda = d.itens.find(it => it.moeda)?.moeda || proc.moeda || '—';
-
-    // ── CABEÇALHO ─────────────────────────────
-    Y = pdfCabecalho(doc, { titulo: cfg.titulo, numero: d.numero, criadoPor: d.criadoPor, dataGeracao, ML });
-
-    // ── BARRA INFO ────────────────────────────
-    doc.setFillColor(...CINZA_BG); doc.setDrawColor(...BORDA); doc.setLineWidth(0.3);
-    doc.rect(ML, Y, W - ML * 2, 10, 'FD');
-    const info = [
-        ['Data', fd(proc.data_embarque || new Date().toISOString().slice(0, 10))],
-        ['Processo', vv(proc.numero_processo)],
-        ['Proforma', vv(prof?.codigo)],
-        ['Incoterm', vv(proc.incoterm)],
-        ['Modal', modalTxt],
-        ['Moeda', moeda],
-    ];
-    const cw = (W - ML * 2) / info.length;
-    info.forEach(([l, v], i) => {
-        if (i) { doc.setDrawColor(...BORDA); doc.setLineWidth(0.2); doc.line(ML + cw * i, Y + 1.5, ML + cw * i, Y + 8.5); }
-        const cx = ML + cw * i + cw / 2;
-        sf('bold', 5.5, CINZA); doc.text(l.toUpperCase(), cx, Y + 4, { align: 'center' });
-        sf('bold', 7, AZUL); doc.text(doc.splitTextToSize(v, cw - 4)[0], cx, Y + 8.5, { align: 'center' });
+    // ── Cabeçalho ──
+    let Y = pvCabecalho(doc, {
+        emissor: {
+            nome: nomeEx,
+            linhas: [ex.documento ? `${t.identificacao}: ${ex.documento}` : '', [rua(ex), cidade(ex), vv(ex.pais), ex.cep ? `${t.cep} ${ex.cep}` : ''].filter(Boolean).join(' · '),
+                     ex._contato ? `${t.contato}: ${ex._contato}` : ''],
+            logo: await pdfCarregarImagem(ex.logo_url),
+        },
+        titulo, numero: `Nº ${d.numero}`,
+        datas: [[t.data, I.data(proc.data_embarque || new Date().toISOString().slice(0, 10))], [t.proforma, vv(prof?.codigo)]],
     });
-    Y += 13;
 
-    // ── BANDA: EXPORTADOR | IMPORTADOR | EMBARQUE ─
-    const endereco = e => e ? [[e.endereco, e.numero].filter(Boolean).join(', '), e.complemento].filter(Boolean).join(' - ') : '';
-    const cidade = e => e ? [e.cidade, e.estado].filter(Boolean).join(' / ') : '';
-    const empRows = e => [
-        ['Empresa', vv(e?.razao_social || e?.nome_fantasia)],
-        ['Identificação', vv(e?.documento)],
-        ['Endereço', vv(endereco(e))],
-        ['Cidade', vv(cidade(e))],
-        ['CEP', vv(e?.cep)],
-        ['País', vv(e?.pais)],
-    ];
+    // ── Termos ──
+    Y = pvFaixaTermos(doc, Y, [
+        [t.incoterm_rot, [vv(proc.incoterm), vv(prof?.incoterm_local)].filter(Boolean).join(' · '), 1.5],
+        [t.modal, I.modal(proc.modal)], [t.moeda, moeda], [t.processo, vv(proc.numero_processo), 1.6],
+    ]);
+
+    // ── Exportador | Importador ──
+    const quadroEmpresa = (titulo, nome, e) => ({
+        titulo, nome, ultimaCinza: !!e._contato,
+        linhas: [e.documento ? `${t.identificacao}: ${e.documento}` : '', [rua(e), cidade(e)].filter(Boolean).join(' · '),
+                 [vv(e.pais), vv(e.cep)].filter(Boolean).join(' · '), e._contato ? `${t.contato}: ${e._contato}` : ''].filter(Boolean),
+    });
+    Y = pvQuadros(doc, Y, [quadroEmpresa(t.exportador, nomeEx, ex), quadroEmpresa(t.importador, nomeIm, im)]);
+
+    // ── Embarque | Pagamento (CI) ──
     const pontoOrigem  = proc.modal === 'maritimo' ? proc.porto_origem  : proc.modal === 'aereo' ? proc.aeroporto_origem  : proc.fronteira_saida;
     const pontoDestino = proc.modal === 'maritimo' ? proc.porto_destino : proc.modal === 'aereo' ? proc.aeroporto_destino : proc.fronteira_entrada;
-    const rotuloPonto  = proc.modal === 'maritimo' ? 'Porto' : proc.modal === 'aereo' ? 'Aeroporto' : 'Fronteira';
-    const embarqueRows = [
-        ['País de Origem', vv(proc.pais_origem)],
-        [`${rotuloPonto} Origem`, vv(pontoOrigem)],
-        ['País de Destino', vv(proc.pais_destino)],
-        [`${rotuloPonto} Destino`, vv(pontoDestino)],
-        ...(tipo === 'commercial'
-            ? [['Pagamento', vv([prof?.forma_pagamento, prof?.prazo_pagamento].filter(Boolean).join(' · '))]]
-            : [['Embarque', fd(proc.data_embarque)]]),
-        ...(proc.modal === 'maritimo' && proc.container_numero ? [['Container', vv(`${proc.container_tipo || ''} ${proc.container_numero}`.trim())]] : []),
-    ];
-    const colW = (W - ML * 2 - 6) / 3, bandHdr = 7, lblW = 25;
-    const cols = [[ML, 'EXPORTADOR', empRows(d.exportador)], [ML + colW + 3, 'IMPORTADOR', empRows(d.importador)], [ML + (colW + 3) * 2, 'EMBARQUE', embarqueRows]];
-    const bandH = bandHdr + Math.max(...cols.map(c => c[2].length)) * 5 + 3;
-    cols.forEach(([x, titulo, rows]) => {
-        doc.setFillColor(...BRANCO); doc.setDrawColor(...BORDA); doc.setLineWidth(0.25);
-        doc.rect(x, Y, colW, bandH, 'FD');
-        rx(x, Y, colW, bandHdr, NAVY); rx(x, Y, 3, bandHdr, AZUL_MED);
-        sf('bold', 6.5, BRANCO); doc.text(titulo, x + colW / 2, Y + 4.8, { align: 'center' });
-        rows.forEach(([l, v], i) => {
-            const yy = Y + bandHdr + 4 + i * 5;
-            sf('bold', 5.5, CINZA); doc.text(l.toUpperCase() + ':', x + 3, yy);
-            sf('normal', 6.5, PRETO); doc.text(doc.splitTextToSize(v, colW - lblW - 6)[0], x + lblW + 3, yy);
-        });
+    const quadroEmbarque = { titulo: t.embarque, chaves: [
+        [t.origem, [vv(proc.pais_origem), vv(pontoOrigem)].filter(Boolean).join(' · ')],
+        [t.destino, [vv(proc.pais_destino), vv(pontoDestino)].filter(Boolean).join(' · ')],
+        ...(proc.data_embarque ? [[t.data_embarque, I.data(proc.data_embarque)]] : []),
+        ...(proc.modal === 'maritimo' && proc.container_numero ? [[t.container, `${vv(proc.container_tipo)} ${proc.container_numero}`.trim()]] : []),
+    ] };
+    Y = pvQuadros(doc, Y, tipo === 'commercial'
+        ? [quadroEmbarque, { titulo: t.condicoes_pagamento, chaves: [[t.forma, I.formaPagamento(prof?.forma_pagamento)], [t.prazo, I.prazoPagamento(prof?.prazo_pagamento)],
+                                                                     [t.pais_origem_merc, vv(proc.pais_origem) || '—']] }]
+        : [quadroEmbarque]);
+
+    // ── Volumes e pesos por item (embalagem de transporte "caixa") ──
+    const soma = { vol: 0, pecas: 0, liq: 0, bruto: 0, m3: 0 };
+    let semEmbalagem = 0, caixaAtual = 0;
+    const totalCaixas = d.itens.reduce((tt, it) => { const q = Number(d.embalagens[it.produto_id]?.quantidade) || 0; return tt + (q ? Math.ceil((Number(it.qtd) || 0) / q) : 0); }, 0);
+    const dig = Math.max(2, String(totalCaixas).length), num = n => String(n).padStart(dig, '0');
+    const log = d.itens.map(it => {
+        const e = d.embalagens[it.produto_id], qtd = Number(it.qtd) || 0, porVol = Number(e?.quantidade) || 0;
+        soma.pecas += qtd;
+        if (!e || !porVol) { semEmbalagem++; return { e, vols: 0 }; }
+        const vols = Math.ceil(qtd / porVol), de = caixaAtual + 1, ate = caixaAtual + vols; caixaAtual = ate;
+        const liq = vols * (Number(e.peso_liquido) || 0), bruto = vols * (Number(e.peso_bruto) || 0);
+        soma.vol += vols; soma.liq += liq; soma.bruto += bruto;
+        soma.m3 += vols * (Number(e.comprimento) || 0) * (Number(e.largura) || 0) * (Number(e.altura) || 0) / 1e6;
+        return { e, vols, liq, bruto, marcacao: vols === 1 ? t.caixa(num(de)) : t.caixas(num(de), num(ate)),
+                 dims: (e.comprimento || e.largura || e.altura) ? `${I.num(e.comprimento, 0)} x ${I.num(e.largura, 0)} x ${I.num(e.altura, 0)} cm` : '' };
     });
-    Y += bandH + 5;
+    const temLogistica = soma.vol > 0;
+    const stats = temLogistica ? [[t.volumes_rot, t.volumes(I.num(soma.vol, 0))], [t.peso_liquido, `${I.num(soma.liq, 3)} kg`], [t.peso_bruto, `${I.num(soma.bruto, 3)} kg`], [t.cubagem, `${I.num(soma.m3, 3)} m³`]] : [];
 
-    // ── TABELA DE ITENS ───────────────────────
-    rx(ML, Y, 3, 6, AZUL); rx(ML + 3, Y, W - ML * 2 - 3, 6, AZUL_CLARO);
-    sf('bold', 7.5, AZUL); doc.text(tipo === 'commercial' ? 'MERCADORIAS' : 'VOLUMES E PESOS', ML + 7, Y + 4.2);
-    Y += 8;
-
-    const ncmDe = it => { const p = d.produtos[it.produto_id]; return p?.ncm || p?.hscode || '—'; };
-    let colsTab, linhas, totais, aviso = '';
+    let total = 0;
     if (tipo === 'commercial') {
-        colsTab = [['#', 8, 'l'], ['PRODUTO', 0, 'l'], ['NCM / HS', 30, 'l'], ['QTD', 22, 'r'], ['UN.', 16, 'l'], ['PREÇO UNIT.', 32, 'r'], ['TOTAL', 40, 'r']];
-        const somaMoeda = {};
-        linhas = d.itens.map((it, i) => {
-            const tot = (Number(it.qtd) || 0) * (Number(it.preco) || 0);
-            somaMoeda[it.moeda || '—'] = (somaMoeda[it.moeda || '—'] || 0) + tot;
-            return [String(i + 1), it.produto, ncmDe(it), fmtN(it.qtd, 0), vv(it.unidade), fmtN(it.preco), `${fmtN(tot)} ${it.moeda || ''}`.trim()];
+        Y = pvTituloSecao(doc, Y, t.mercadorias);
+        const linhas = d.itens.map((it, i) => {
+            const p = d.produtos[it.produto_id] || {};
+            const tot = (Number(it.qtd) || 0) * (Number(it.preco) || 0); total += tot;
+            const sub = [p.ncm ? `${t.col_ncm} ${p.ncm}` : '', p.hscode ? `HS ${p.hscode}` : ''].filter(Boolean).join(' · ');
+            return [String(i + 1), { txt: vv(p.sku) || '—', negrito: true, cor: PDF_CORES.AZUL }, { txt: vv(it.produto) || '—', sub },
+                    { txt: I.num(it.qtd, 0), sub: vv(it.unidade) }, I.num(it.preco), { txt: I.num(tot), negrito: true }];
         });
-        totais = ['TOTAL GERAL', Object.entries(somaMoeda).map(([m, v]) => `${fmtN(v)} ${m}`).join('  +  ') || '—'];
+        Y = pvTabela(doc, Y, [{ rot: '#', w: 9 }, { rot: t.col_codigo, w: 21 }, { rot: t.col_produto, w: 0 },
+            { rot: t.col_qtd, w: 20, al: 'r' }, { rot: t.col_preco_unit, w: 24, al: 'r' }, { rot: t.col_total, w: 28, al: 'r' }],
+            linhas, { vazio: t.nenhum_produto });
+        Y = pvResumo(doc, Y, {
+            stats, extenso: total ? pdfValorPorExtenso(total, moeda, I.cod) : '', rotExtenso: t.total_extenso,
+            totais: [[t.total_geral, I.num(total)]], rotuloTotal: `${t.total_geral}${moeda ? ' · ' + moeda : ''}`,
+        });
+        Y = pvQuadros(doc, Y, [pvQuadroBanco(prof?.dados_bancarios, t, nomeEx)]);
     } else {
-        // Colunas pedidas: SKU | HS Code | Marcação/numeração das caixas | Tipo de
-        // embalagem | Descrição | Qtd. de peças | Peso líq./bruto unitário | Dimensões
-        colsTab = [['CÓDIGO SKU', 24, 'l'], ['HS CODE', 22, 'l'], ['MARCAÇÃO / NUMERAÇÃO', 32, 'l'], ['TIPO DE EMBALAGEM', 30, 'l'],
-                   ['DESCRIÇÃO DO PRODUTO', 0, 'l'], ['QTD. DE PEÇAS', 20, 'r'], ['PESO LÍQ. UNIT. (KG)', 24, 'r'], ['PESO BRUTO UNIT. (KG)', 25, 'r'], ['DIMENSÕES (CM)', 30, 'l']];
-        const soma = { vol: 0, pecas: 0, liq: 0, bruto: 0, m3: 0 };
-        let semEmbalagem = 0, caixaAtual = 0;
-        // total de caixas antes, pra saber quantos dígitos usar na numeração
-        const totalCaixas = d.itens.reduce((t, it) => {
-            const q = Number(d.embalagens[it.produto_id]?.quantidade) || 0;
-            return t + (q ? Math.ceil((Number(it.qtd) || 0) / q) : 0);
-        }, 0);
-        const dig = Math.max(2, String(totalCaixas).length);
-        const num = n => String(n).padStart(dig, '0');
-        const hsDe = it => { const p = d.produtos[it.produto_id]; return p?.hscode || p?.ncm || '—'; };
-        linhas = d.itens.map(it => {
-            const p = d.produtos[it.produto_id];
-            const e = d.embalagens[it.produto_id];
-            const u = d.unitarias[it.produto_id];
-            const qtd = Number(it.qtd) || 0;
-            const porVol = Number(e?.quantidade) || 0;
-            soma.pecas += qtd;
-
-            // Peso unitário: embalagem unitária; sem ela, peso da caixa ÷ peças por caixa
-            const unitLiq   = Number(u?.peso_liquido) || (porVol ? (Number(e.peso_liquido) || 0) / porVol : 0);
-            const unitBruto = Number(u?.peso_bruto)   || (porVol ? (Number(e.peso_bruto)   || 0) / porVol : 0);
-
-            let marcacao = '—', dims = '—';
-            if (e && porVol) {
-                const vols = Math.ceil(qtd / porVol);
-                const de = caixaAtual + 1, ate = caixaAtual + vols;
-                caixaAtual = ate;
-                marcacao = vols === 1 ? `Caixa ${num(de)}` : `Caixas ${num(de)} a ${num(ate)}`;
-                soma.vol += vols;
-                soma.liq += vols * (Number(e.peso_liquido) || 0);
-                soma.bruto += vols * (Number(e.peso_bruto) || 0);
-                soma.m3 += vols * ((Number(e.comprimento) || 0) * (Number(e.largura) || 0) * (Number(e.altura) || 0)) / 1e6;
-                if (e.comprimento || e.largura || e.altura) dims = `${fmtN(e.comprimento, 0)} x ${fmtN(e.largura, 0)} x ${fmtN(e.altura, 0)}`;
-            } else {
-                semEmbalagem++;
-            }
-            return [
-                vv(p?.sku), hsDe(it), marcacao, vv(e?.tipo_embalagem || e?.nome),
-                it.produto, fmtN(qtd, 0),
-                unitLiq ? fmtN(unitLiq, 3) : '—', unitBruto ? fmtN(unitBruto, 3) : '—', dims,
-            ];
+        Y = pvTituloSecao(doc, Y, t.volumes_pesos);
+        const linhas = d.itens.map((it, i) => {
+            const p = d.produtos[it.produto_id] || {}, l = log[i];
+            const sub = [p.sku ? `SKU ${p.sku}` : '', (p.hscode || p.ncm) ? `HS ${p.hscode || p.ncm}` : '', vv(l.e?.tipo_embalagem || l.e?.nome), l.dims].filter(Boolean).join(' · ');
+            return [{ txt: l.marcacao || '—', negrito: true, cor: PDF_CORES.AZUL }, { txt: vv(it.produto) || '—', sub },
+                    I.num(it.qtd, 0), l.vols ? I.num(l.vols, 0) : '—', l.vols ? I.num(l.liq, 3) : '—', l.vols ? I.num(l.bruto, 3) : '—'];
         });
-        totais = ['TOTAIS', `${fmtN(soma.vol, 0)} volumes  ·  ${fmtN(soma.pecas, 0)} peças  ·  Peso líquido ${fmtN(soma.liq, 3)} kg  ·  Peso bruto ${fmtN(soma.bruto, 3)} kg  ·  ${fmtN(soma.m3, 3)} m³`];
-        if (semEmbalagem) aviso = `${semEmbalagem} produto(s) sem embalagem de transporte (caixa) cadastrada — marcação, pesos e dimensões não calculados. Cadastre em Produtos › Logística.`;
+        Y = pvTabela(doc, Y, [{ rot: t.col_marcacao, w: 30 }, { rot: t.col_descricao, w: 0 }, { rot: t.col_qtd_pecas, w: 18, al: 'r' },
+            { rot: t.col_volumes, w: 18, al: 'r' }, { rot: t.col_peso_liq, w: 22, al: 'r' }, { rot: t.col_peso_bruto, w: 24, al: 'r' }],
+            linhas, { vazio: t.nenhum_produto });
+        if (semEmbalagem) {
+            Y = pvGarantir(doc, Y, 6);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(180, 83, 9);
+            doc.text(doc.splitTextToSize(`${t.atencao}: ${t.aviso_sem_embalagem(semEmbalagem)}`, PV.CW)[0], PV.ML, Y + 1);
+            Y += 6;
+        }
+        Y = pvResumo(doc, Y, { stats: [[t.pecas_rot, I.num(soma.pecas, 0)], ...stats] });
     }
 
-    // largura da coluna "PRODUTO" = o que sobra
-    const fixo = colsTab.reduce((t, c) => t + c[1], 0);
-    colsTab = colsTab.map(c => c[1] ? c : [c[0], W - ML * 2 - fixo, c[2]]);
-    const xsTab = []; colsTab.reduce((x, c) => { xsTab.push(x); return x + c[1]; }, ML);
-    const cabecalho = () => {
-        sf('bold', 5.8, BRANCO);
-        const rotulos = colsTab.map(([l, w]) => doc.splitTextToSize(l, w - 3));
-        const h = Math.max(...rotulos.map(r => r.length)) > 1 ? 10 : 7;
-        rx(ML, Y, W - ML * 2, h, AZUL);
-        sf('bold', 5.8, BRANCO);
-        colsTab.forEach(([, w, al], i) => doc.text(rotulos[i], al === 'r' ? xsTab[i] + w - 2 : xsTab[i] + 2, Y + (h === 7 ? 4.8 : 4.2), { align: al === 'r' ? 'right' : 'left' }));
-        Y += h;
-    };
-    cabecalho();
-    if (!linhas.length) {
-        sf('normal', 8, CINZA); doc.text('Nenhum produto cadastrado neste processo.', ML + 3, Y + 5); Y += 8;
-    }
-    linhas.forEach((ln, r) => {
-        if (Y + 7 > 183) { doc.addPage(); Y = 20; cabecalho(); }
-        if (r % 2 === 0) rx(ML, Y, W - ML * 2, 7, CINZA_BG);
-        sf('normal', 7, PRETO);
-        ln.forEach((v, i) => {
-            const [, w, al] = colsTab[i];
-            const t = doc.splitTextToSize(String(v), w - 3)[0];
-            doc.text(t, al === 'r' ? xsTab[i] + w - 2 : xsTab[i] + 2, Y + 4.8, { align: al === 'r' ? 'right' : 'left' });
-        });
-        Y += 7;
-    });
-    pg(10);
-    rx(ML, Y, W - ML * 2, 8, NAVY);
-    sf('bold', 7, [160, 190, 240]); doc.text(totais[0], ML + 3, Y + 5.3);
-    sf('bold', 8, BRANCO); doc.text(totais[1], W - ML - 2, Y + 5.3, { align: 'right' });
-    Y += 11;
-    if (aviso) {
-        pg(8);
-        sf('normal', 6.5, AMBAR); doc.text(doc.splitTextToSize('Atenção: ' + aviso, W - ML * 2)[0], ML, Y + 3);
-        Y += 7;
-    }
-
-    // ── ASSINATURAS ───────────────────────────
-    pg(30); Y += 12;
-    const sigW = (W - ML * 2 - 30) / 2, sigX2 = ML + sigW + 30;
-    doc.setDrawColor(...CINZA); doc.setLineWidth(0.3);
-    doc.line(ML, Y, ML + sigW, Y); doc.line(sigX2, Y, sigX2 + sigW, Y);
-    sf('bold', 6.5, PRETO);
-    doc.text(vv(d.exportador?.razao_social || d.exportador?.nome_fantasia), ML + sigW / 2, Y + 4, { align: 'center' });
-    doc.text(vv(d.importador?.razao_social || d.importador?.nome_fantasia), sigX2 + sigW / 2, Y + 4, { align: 'center' });
-    sf('normal', 6, CINZA);
-    doc.text('Exportador — Assinatura do Responsável', ML + sigW / 2, Y + 8, { align: 'center' });
-    doc.text('Importador — Assinatura do Responsável', sigX2 + sigW / 2, Y + 8, { align: 'center' });
-
-    // ── RODAPÉ ────────────────────────────────
-    pdfRodape(doc, { textoDireita: `${cfg.titulo} ${d.numero}`, ML });
+    // ── Declaração (CI) e assinatura do Exportador ──
+    pvAssinaturas(doc, Y, [{ nome: nomeEx, rotulo: t.assinatura_exportador }], tipo === 'commercial' ? t.declaracao_ci : '');
+    pvRodape(doc, { t, textoDireita: `${titulo} ${d.numero}` });
 
     const nomeArquivo = `${cfg.arquivo}_${d.numero.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
     return { blob: doc.output('blob'), nomeArquivo, numero: d.numero, proformaId: proc.proforma_id };

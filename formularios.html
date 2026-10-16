@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Marpex | Formulários</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=05527eb1">
+    <link rel="stylesheet" href="style-base.css?v=3133da0a">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
     <link rel="stylesheet" href="style-formularios.css?v=febc6d1e">
     <link rel="stylesheet" href="style-cadastro.css?v=03beb8ac">
@@ -222,6 +222,9 @@
                                             <input type="text" id="emp-fantasia" name="nome_fantasia" placeholder="Se houver">
                                         </div>
                                     </div>
+
+                                    <!-- LOGO (cadastro-logo-contas.js) -->
+                                    <div class="form-grid"><div class="form-group full-width" id="emp-logo-slot"></div></div>
 
                                     <!-- ENDEREÇO FISCAL (uma linha): País | CEP | Estado | Cidade | Bairro | Endereço | Número | Complemento -->
                                     <div class="form-row-endereco">
@@ -630,8 +633,14 @@
                                             <label for="fin-rec-end-banco">Endereço do Banco</label>
                                             <input type="text" id="fin-rec-end-banco" name="fin_rec_end_banco" placeholder="Endereço completo da agência bancária">
                                         </div>
+                                        <input type="hidden" id="fin-rec-conta-id">
 
                                     </div>
+                                    <!-- Outras contas de recebimento — aparecem para escolha na Proforma -->
+                                    <div id="emp-contas-extra"></div>
+                                    <button type="button" class="btn-add-idioma conta-bancaria-add" onclick="contaBancariaAdicionar('emp-contas-extra')">
+                                        <i class="fa-solid fa-plus"></i> Adicionar outra conta de recebimento
+                                    </button>
                                 </div>
 
                             </div>
@@ -1888,6 +1897,12 @@
                                             <span class="incoterm-balao" id="prop-incoterm-info" style="display:none;"><i class="fa-solid fa-circle-info"></i></span>
                                         </div>
                                     </div>
+                                    <div class="form-group">
+                                        <label for="prop-incoterm-local">Local do Incoterm
+                                            <span class="info-balao" data-tooltip="Incoterms® 2020 exigem o local nomeado: ex. FOB Porto de Santos, EXW São Paulo, CIF Puerto de Buenos Aires. Sai no PDF ao lado do Incoterm."><i class="fa-solid fa-circle-info"></i></span>
+                                        </label>
+                                        <input type="text" id="prop-incoterm-local" name="incoterm_local" placeholder="Ex.: Porto de Santos">
+                                    </div>
                                         </div>
                                     </div>
 
@@ -2065,6 +2080,10 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="form-group">
+                                        <label for="prop-previsao-embarque">Previsão de Embarque</label>
+                                        <input type="date" id="prop-previsao-embarque" name="previsao_embarque">
+                                    </div>
                                     <div class="form-group full-width prod-obs-wrapper">
                                         <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
                                             <span>Observações</span>
@@ -2146,6 +2165,24 @@
                                     <div class="form-group" id="prop-prazo-personalizado-group" style="display:none;">
                                         <label for="prop-prazo-personalizado">Condição Personalizada <span class="required">*</span></label>
                                         <input type="text" id="prop-prazo-personalizado" name="prazo_personalizado" placeholder="Ex: 50% antecipado + 50% contra entrega">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label for="prop-conta-bancaria">Conta para pagamento
+                                            <span class="info-balao" data-tooltip="Contas de recebimento do Exportador (cadastro da empresa › Dados Financeiros, ou Perfil para a sua empresa). Os dados bancários saem na Proforma e na Commercial Invoice."><i class="fa-solid fa-circle-info"></i></span>
+                                        </label>
+                                        <select id="prop-conta-bancaria" name="conta_bancaria_id">
+                                            <option value="">— Não informar dados bancários —</option>
+                                        </select>
+                                        <small id="prop-conta-bancaria-aviso" class="campo-dica" style="display:none;"></small>
+                                    </div>
+                                    <!-- Frete / Seguro: só nos Incoterms em que o vendedor paga (C e D) -->
+                                    <div class="form-group prop-frete-seguro" style="display:none;">
+                                        <label for="prop-frete-valor">Frete <span class="label-opcional">(opcional)</span></label>
+                                        <input type="text" id="prop-frete-valor" name="frete_valor" placeholder="0,00" inputmode="numeric" oninput="propMascaraValor(this)">
+                                    </div>
+                                    <div class="form-group prop-frete-seguro" style="display:none;">
+                                        <label for="prop-seguro-valor">Seguro <span class="label-opcional">(opcional)</span></label>
+                                        <input type="text" id="prop-seguro-valor" name="seguro_valor" placeholder="0,00" inputmode="numeric" oninput="propMascaraValor(this)">
                                     </div>
                                     <div class="form-group full-width prod-obs-wrapper">
                                         <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
@@ -3208,21 +3245,22 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=85b29e5b"></script>
+<script src="supabase-api.js?v=bfd7a186"></script>
 <script src="auth.js?v=0963892b"></script>
 <script src="navegador.js?v=afdfd0cc"></script>
 <script src="doc-tipos.js?v=a2c88b3e"></script>
-<script src="formularios.js?v=7c033c72"></script>
-<script src="formularios-empresa.js?v=9d858336"></script>
+<script src="formularios.js?v=ba942f01"></script>
+<script src="cadastro-logo-contas.js?v=e016db4c"></script>
+<script src="formularios-empresa.js?v=cd7ab7e6"></script>
 <script src="formularios-processo.js?v=441e0f77"></script>
-<script src="formularios-proforma.js?v=3a2492bf"></script>
+<script src="formularios-proforma.js?v=41c49e52"></script>
 <script src="formularios-produto.js?v=3175ac31"></script>
 <script src="formularios-mobile.js?v=aeda52c3"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="pdf-kit.js?v=86f6be4c"></script>
-<script src="pdf-processo.js?v=1b90e332"></script>
-<script src="pdf-proforma.js?v=b5a1a4a3"></script>
-<script src="pdf-documentos.js?v=287e0dfb"></script>
+<script src="pdf-kit.js?v=95957ae9"></script>
+<script src="pdf-processo.js?v=48b13492"></script>
+<script src="pdf-proforma.js?v=f4831a4d"></script>
+<script src="pdf-documentos.js?v=13955173"></script>
 
 <script src="suporte.js?v=dd1c94d5"></script>
 </body>

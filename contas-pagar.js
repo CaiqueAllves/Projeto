@@ -53,20 +53,26 @@ async function _cpVerificarGeracaoViaUrl() {
     const processoId = params.get('gerar_processo_id');
     if (!processoId) return;
 
+    // Vindo do Processo: traz a Proforma de origem e o Processo. O fornecedor
+    // de uma conta a pagar (frete, despachante, fabricante...) não é deduzível
+    // do Processo — a Proforma só sugere o Exportador quando ele é terceiro.
+    // Valor fica em branco: o valor do Processo é o de VENDA, não um custo.
     const { data: processo } = await supabaseClient
         .from('processos')
-        .select('id, numero_processo, valor_total, moeda')
+        .select('id, numero_processo, moeda, itens, proforma_id')
         .eq('id', processoId).maybeSingle();
     if (processo) {
-        // Parceiro não é pré-preenchido: processos usa empresas_cadastradas,
-        // uma tabela diferente de parceiros (usada nas contas). O usuário
-        // seleciona o fornecedor manualmente.
+        const moedaItens = (Array.isArray(processo.itens) ? processo.itens : []).find(i => i.moeda)?.moeda;
+        const { data: profOrigem } = processo.proforma_id
+            ? await supabaseClient.from('proformas').select('codigo').eq('id', processo.proforma_id).maybeSingle()
+            : { data: null };
         cpAbrirModal(null, {
             descricao:    `Processo ${processo.numero_processo || ''}`.trim(),
+            proformaId:   processo.proforma_id || null,
+            proformaNome: profOrigem?.codigo || '',
             processoId:   processo.id,
             processoNome: processo.numero_processo || '',
-            valor:        processo.valor_total || '',
-            moeda:        processo.moeda || 'BRL',
+            moeda:        moedaItens || processo.moeda || 'BRL',
         });
     }
 }
@@ -265,10 +271,18 @@ function cpAbrirModal(id = null, prefill = null) {
                 document.getElementById('cpProcessoNome').value = processoSalvoNome || document.getElementById('cpProcessoNome').value;
             }
         });
+    } else {
+        // Processo sem Proforma de origem: o vínculo com o Processo não pode se perder
+        const procId = c?.processo_id || prefill?.processoId || '';
+        if (procId) {
+            document.getElementById('cpProcessoId').value   = procId;
+            document.getElementById('cpProcessoNome').value = c?.processos?.numero_processo || prefill?.processoNome || '';
+        }
     }
 
     document.getElementById('cpValor').value          = (c?.valor ?? prefill?.valor) ? _cpFormatarMonetario(c?.valor ?? prefill?.valor) : '';
-    document.getElementById('cpMoeda').value          = c?.moeda || prefill?.moeda || 'BRL';
+    const selMoeda = document.getElementById('cpMoeda');
+    selMoeda.value = finMoedaParaOpcao(selMoeda, c?.moeda || prefill?.moeda) || 'BRL';
     document.getElementById('cpVencimento').value     = c?.data_vencimento || '';
     document.getElementById('cpDataPagamento').value  = c?.data_pagamento  || '';
     document.getElementById('cpStatus').value         = c?.status || 'pendente';
@@ -511,7 +525,9 @@ async function _cpDerivarDaProforma(proformaId) {
         const valorInput = document.getElementById('cpValor');
         if (!valorInput.value.trim() && proforma?.valor_total) {
             valorInput.value = _cpFormatarMonetario(proforma.valor_total);
-            if (proforma.moeda_principal) document.getElementById('cpMoeda').value = proforma.moeda_principal;
+            const selMoeda = document.getElementById('cpMoeda');
+            const moeda = finMoedaParaOpcao(selMoeda, proforma.moeda_principal);
+            if (moeda) selMoeda.value = moeda;
         }
 
         let query = supabaseClient
@@ -612,10 +628,9 @@ async function cpConfirmarExcluir() {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+// moeda inválida (registro antigo) não pode derrubar a lista inteira (fin-moeda.js)
 function _cpFmtValor(v, moeda = 'BRL') {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency', currency: moeda, minimumFractionDigits: 2
-    }).format(Number(v) || 0);
+    return finFormatarValor(v, moeda);
 }
 
 function _cpEsc(str) {

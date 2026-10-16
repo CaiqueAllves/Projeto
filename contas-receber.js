@@ -135,20 +135,33 @@ async function _crVerificarGeracaoViaUrl() {
             });
         }
     } else if (processoId) {
+        // Vindo do Processo: traz a Proforma de origem (que trava Cliente e
+        // Processo, como na abertura pela Proforma), o valor e a moeda DESTE
+        // embarque. Sem Proforma, o Cliente vem do Importador do Processo.
         const { data: processo } = await supabaseClient
             .from('processos')
-            .select('id, numero_processo, valor_total, moeda')
+            .select('id, numero_processo, valor_total, moeda, itens, proforma_id, empresa_parceira_id')
             .eq('id', processoId).maybeSingle();
         if (processo) {
-            // Parceiro não é pré-preenchido: processos usa empresas_cadastradas,
-            // uma tabela diferente de parceiros (usada nas contas). O usuário
-            // seleciona o cliente manualmente.
+            const moedaItens = (Array.isArray(processo.itens) ? processo.itens : []).find(i => i.moeda)?.moeda;
+        const { data: profOrigem } = processo.proforma_id
+            ? await supabaseClient.from('proformas').select('codigo').eq('id', processo.proforma_id).maybeSingle()
+            : { data: null };
+            let clienteNome = '';
+            if (!processo.proforma_id && processo.empresa_parceira_id) {
+                const { data: parc } = await supabaseClient.from('parceiros').select('razao_social, nome_fantasia').eq('id', processo.empresa_parceira_id).maybeSingle();
+                clienteNome = parc?.nome_fantasia || parc?.razao_social || '';
+            }
             crAbrirModal(null, {
                 descricao:    `Processo ${processo.numero_processo || ''}`.trim(),
+                proformaId:   processo.proforma_id || null,
+                proformaNome: profOrigem?.codigo || '',
                 processoId:   processo.id,
                 processoNome: processo.numero_processo || '',
+                clienteId:    processo.proforma_id ? null : (processo.empresa_parceira_id || null),
+                clienteNome,
                 valor:        processo.valor_total || '',
-                moeda:        processo.moeda || 'BRL',
+                moeda:        moedaItens || processo.moeda || 'BRL',
             });
         }
     }
@@ -326,10 +339,17 @@ function crAbrirModal(id = null, prefill = null) {
     } else {
         document.getElementById('crClienteNome').value = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || prefill?.clienteNome || '';
         document.getElementById('crClienteId').value    = c?.parceiro_id || prefill?.clienteId || '';
+        // Processo sem Proforma de origem: o vínculo com o Processo não pode se perder
+        const procId = c?.processo_id || prefill?.processoId || '';
+        if (procId) {
+            document.getElementById('crProcessoId').value   = procId;
+            document.getElementById('crProcessoNome').value = c?.processos?.numero_processo || prefill?.processoNome || '';
+        }
     }
 
     document.getElementById('crValor').value           = (c?.valor ?? prefill?.valor) ? _crFormatarMonetario(c?.valor ?? prefill?.valor) : '';
-    document.getElementById('crMoeda').value           = c?.moeda || prefill?.moeda || 'BRL';
+    const selMoeda = document.getElementById('crMoeda');
+    selMoeda.value = finMoedaParaOpcao(selMoeda, c?.moeda || prefill?.moeda) || 'BRL';
     document.getElementById('crVencimento').value      = c?.data_vencimento || '';
     document.getElementById('crDataRecebimento').value = c?.data_recebimento || '';
     document.getElementById('crStatus').value          = c?.status || 'pendente';
@@ -568,7 +588,9 @@ async function _crDerivarDaProforma(proformaId) {
         const valorInput = document.getElementById('crValor');
         if (!valorInput.value.trim() && proforma?.valor_total) {
             valorInput.value = _crFormatarMonetario(proforma.valor_total);
-            if (proforma.moeda_principal) document.getElementById('crMoeda').value = proforma.moeda_principal;
+            const selMoeda = document.getElementById('crMoeda');
+            const moeda = finMoedaParaOpcao(selMoeda, proforma.moeda_principal);
+            if (moeda) selMoeda.value = moeda;
         }
 
         let query = supabaseClient
@@ -667,9 +689,8 @@ async function crConfirmarExcluir() {
     await crCarregar();
 }
 
-function _crFmtValor(v, moeda = 'BRL') {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: moeda, minimumFractionDigits: 2 }).format(Number(v) || 0);
-}
+// moeda inválida (registro antigo) não pode derrubar a lista inteira (fin-moeda.js)
+function _crFmtValor(v, moeda = 'BRL') { return finFormatarValor(v, moeda); }
 
 function _crEsc(str) {
     return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

@@ -1512,7 +1512,7 @@ async function atualizarTenantEmpresa(dados) {
 
         // Só inclui campos explicitamente presentes em dados (evita sobrescrever com null)
         const campos = ['razao_social','nome_fantasia','cnpj','ie','im','suframa',
-                        'cep','estado','cidade','endereco','numero','complemento'];
+                        'cep','estado','cidade','endereco','numero','complemento','logo_url'];
         const update = {};
         campos.forEach(c => { if (c in dados) update[c] = dados[c] ?? null; });
 
@@ -1618,6 +1618,19 @@ async function _maiorCodigoProforma() {
     return `PRO${ano}${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(6, '0')}`;
 }
 
+// Conta para pagamento da Proforma (database-logo-marcas-contas-bancarias.sql).
+// Antes do SQL rodar, salva sem esses campos.
+// + campos do PDF (database-proforma-campos-pdf.sql): local do Incoterm,
+// previsão de embarque, frete e seguro. Sem as colunas, salva sem eles.
+const _PROFORMA_CAMPOS_NOVOS = ['conta_bancaria_id', 'dados_bancarios', 'incoterm_local', 'previsao_embarque', 'frete_valor', 'seguro_valor'];
+function _proformaCamposBanco(dados) {
+    const c = {};
+    _PROFORMA_CAMPOS_NOVOS.forEach(k => { if (k in dados) c[k] = dados[k] ?? null; });
+    return c;
+}
+function _erroColunasBanco(error) { return new RegExp(_PROFORMA_CAMPOS_NOVOS.join('|'), 'i').test(error?.message || ''); }
+function _semCamposBanco(p) { const c = { ...p }; _PROFORMA_CAMPOS_NOVOS.forEach(k => delete c[k]); return c; }
+
 async function salvarPropostaDB(dados) {
     try {
         const usuario = obterUsuarioLogado();
@@ -1625,7 +1638,7 @@ async function salvarPropostaDB(dados) {
 
         // Número definitivo só no momento de salvar (contador atômico — duas
         // pessoas salvando juntas nunca recebem o mesmo número).
-        const { data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', 'PRO', {
+        const payloadProforma = {
                 empresa_id:          usuario.empresa_id || null,
                 criado_por:          usuario.id,
                 idioma:              dados.idioma              || 'pt',
@@ -1665,7 +1678,12 @@ async function salvarPropostaDB(dados) {
                 destinatario_doc_tipo:   dados.destinatario_doc_tipo    || null,
                 validade_dias:           dados.validade_dias            || null,
                 obs_status:              dados.obs_status               || null,
-            }, _maiorCodigoProforma);
+                ..._proformaCamposBanco(dados),
+            };
+        let { data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', 'PRO', payloadProforma, _maiorCodigoProforma);
+        if (error && _erroColunasBanco(error)) {
+            ({ data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', 'PRO', _semCamposBanco(payloadProforma), _maiorCodigoProforma));
+        }
 
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
@@ -1710,9 +1728,7 @@ async function marcarProformaFinalizadaDB(proformaId, processoId) {
 
 async function atualizarProformaDB(id, dados) {
     try {
-        const { data, error } = await supabaseClient
-            .from('proformas')
-            .update({
+        const payloadProforma = {
                 idioma:                   dados.idioma                   || 'pt',
                 idioma_outro:             dados.idioma_outro             || null,
                 tipo:                     dados.tipo                     || null,
@@ -1749,10 +1765,11 @@ async function atualizarProformaDB(id, dados) {
                 destinatario_doc_tipo:    dados.destinatario_doc_tipo    || null,
                 validade_dias:            dados.validade_dias            || null,
                 obs_status:               dados.obs_status               || null,
-            })
-            .eq('id', id)
-            .select('*')
-            .single();
+                ..._proformaCamposBanco(dados),
+            };
+        const atualizar = p => supabaseClient.from('proformas').update(p).eq('id', id).select('*').single();
+        let { data, error } = await atualizar(payloadProforma);
+        if (error && _erroColunasBanco(error)) ({ data, error } = await atualizar(_semCamposBanco(payloadProforma)));
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) {
@@ -2020,6 +2037,8 @@ async function excluirContaReceber(id) {
 // database-assinatura-digital.sql. O link aponta pra assinar.html?t=<token>,
 // página pública que o Importador abre sem login.
 
+const ASSINATURA_PRAZO_DIAS = 3;
+
 async function criarAssinaturaProforma(proformaId, arquivoPath, enviadoPara) {
     try {
         const usuario = obterUsuarioLogado();
@@ -2031,6 +2050,8 @@ async function criarAssinaturaProforma(proformaId, arquivoPath, enviadoPara) {
             criado_por_nome: usuario.nome || usuario.email || null,
             arquivo_path:    arquivoPath || null,
             enviado_para:    enviadoPara || null,
+            // prazo para o Importador assinar: 3 dias (o padrão do banco era 7)
+            expira_em:       new Date(Date.now() + ASSINATURA_PRAZO_DIAS * 864e5).toISOString(),
         }).select('id, token, criado_em, expira_em, status').single();
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
@@ -2175,7 +2196,94 @@ async function buscarSaldoProforma(proformaId, processoIgnorarId = null) {
     return { proforma: prof, processos: procs || [], ...calcularSaldoProforma(prof?.itens, procs, processoIgnorarId) };
 }
 
+// ========================================
+// LOGO, MARCAS e CONTAS BANCÁRIAS (database-logo-marcas-contas-bancarias.sql)
+// ========================================
+// Logo e imagens de marca vão para o bucket público "logos", na pasta da
+// empresa do usuário (logos/<empresa_id>/...). Antes do SQL rodar, as funções
+// devolvem erro e as telas seguem funcionando sem esses dados.
+
+async function enviarImagemLogo(arquivo, prefixo = 'logo') {
+    try {
+        const usuario = obterUsuarioLogado();
+        if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada' };
+        if (!/^image\//.test(arquivo?.type || '')) return { sucesso: false, mensagem: 'Escolha uma imagem (PNG ou JPG).' };
+        if (arquivo.size > 2 * 1024 * 1024) return { sucesso: false, mensagem: 'A imagem pode ter no máximo 2 MB.' };
+        const ext = (arquivo.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+        const caminho = `${usuario.empresa_id}/${prefixo}_${Date.now()}.${ext}`;
+        const { error } = await supabaseClient.storage.from('logos').upload(caminho, arquivo, { contentType: arquivo.type });
+        if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true, url: supabaseClient.storage.from('logos').getPublicUrl(caminho).data.publicUrl };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// parceiroId null = contas da PRÓPRIA empresa
+async function buscarContasBancarias(parceiroId = null) {
+    try {
+        const usuario = obterUsuarioLogado();
+        let q = supabaseClient.from('contas_bancarias').select('*').eq('empresa_id', usuario.empresa_id).order('ordem').order('id');
+        q = parceiroId ? q.eq('parceiro_id', parceiroId) : q.is('parceiro_id', null);
+        const { data, error } = await q;
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+// Grava a lista inteira de contas de um dono: atualiza as que já existem (o id
+// é mantido — a Proforma aponta para ele), cria as novas, apaga as removidas.
+async function salvarContasBancarias(parceiroId, contas) {
+    try {
+        const usuario = obterUsuarioLogado();
+        const atuais = (await buscarContasBancarias(parceiroId));
+        if (!atuais.sucesso) return atuais;
+        const campos = ['apelido', 'beneficiario', 'banco', 'agencia', 'conta', 'tipo_conta', 'swift', 'iban', 'endereco_banco', 'moeda'];
+        const validas = (contas || []).filter(c => campos.some(k => String(c[k] || '').trim()));
+        const manter = new Set(validas.filter(c => c.id).map(c => String(c.id)));
+        const remover = atuais.data.filter(c => !manter.has(String(c.id))).map(c => c.id);
+        if (remover.length) {
+            const { error } = await supabaseClient.from('contas_bancarias').delete().in('id', remover);
+            if (error) return { sucesso: false, mensagem: error.message };
+        }
+        for (const [i, c] of validas.entries()) {
+            const linha = { empresa_id: usuario.empresa_id, parceiro_id: parceiroId || null, ordem: i + 1 };
+            campos.forEach(k => { linha[k] = String(c[k] || '').trim() || null; });
+            const r = c.id
+                ? await supabaseClient.from('contas_bancarias').update(linha).eq('id', c.id)
+                : await supabaseClient.from('contas_bancarias').insert(linha);
+            if (r.error) return { sucesso: false, mensagem: r.error.message };
+        }
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+async function buscarMarcasParceiro(parceiroId) {
+    try {
+        const { data, error } = await supabaseClient.from('parceiro_marcas').select('*').eq('parceiro_id', parceiroId).order('ordem');
+        if (error) return { sucesso: false, mensagem: error.message, data: [] };
+        return { sucesso: true, data: data || [] };
+    } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
+}
+
+async function salvarMarcasParceiro(parceiroId, marcas) {
+    try {
+        const { error: errDel } = await supabaseClient.from('parceiro_marcas').delete().eq('parceiro_id', parceiroId);
+        if (errDel) return { sucesso: false, mensagem: errDel.message };
+        const linhas = (marcas || []).filter(m => m.nome || m.imagem_url)
+            .map((m, i) => ({ parceiro_id: parceiroId, nome: m.nome || null, imagem_url: m.imagem_url || null, ordem: i + 1 }));
+        if (linhas.length) {
+            const { error } = await supabaseClient.from('parceiro_marcas').insert(linhas);
+            if (error) return { sucesso: false, mensagem: error.message };
+        }
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
 window.supabaseAPI = {
+    enviarImagemLogo,
+    buscarContasBancarias,
+    salvarContasBancarias,
+    buscarMarcasParceiro,
+    salvarMarcasParceiro,
     criarAssinaturaProforma,
     buscarAssinaturasProformas,
     purgarExcluidosVencidos,

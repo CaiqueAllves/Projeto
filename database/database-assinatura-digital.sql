@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS assinaturas_proforma (
     criado_por          UUID,
     criado_por_nome     TEXT,
     criado_em           TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expira_em           TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '7 days'),
+    expira_em           TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '3 days'),   -- o app grava 3 dias explicitamente (supabase-api.js)
     enviado_para        TEXT,
     arquivo_path        TEXT,
     hash_pdf            TEXT,

@@ -210,7 +210,84 @@ function _coletarDadosProposta() {
         destinatario_doc_tipo:   g('prop-emp-dest-doc-tipo') || null,
         validade_dias:           g('prop-validade-dias') || null,
         obs_status:              g('prop-obs-status') || null,
+        ..._propContaEscolhida(emissorTipo),
+        incoterm_local:          g('prop-incoterm-local').trim() || null,
+        previsao_embarque:       g('prop-previsao-embarque') || null,
+        frete_valor:             _propFreteSeguroAtivo() ? _propLerValor('prop-frete-valor') : null,
+        seguro_valor:            _propFreteSeguroAtivo() ? _propLerValor('prop-seguro-valor') : null,
     };
+}
+
+// ── Frete / Seguro (Incoterms em que o vendedor paga o transporte: C e D) ──
+const PROP_INCOTERMS_FRETE = ['CFR', 'CIF', 'CPT', 'CIP', 'DAP', 'DPU', 'DDP'];
+function _propFreteSeguroAtivo() { return PROP_INCOTERMS_FRETE.includes(document.getElementById('prop-incoterm')?.value); }
+function propToggleFreteSeguro() {
+    const ativo = _propFreteSeguroAtivo();
+    document.querySelectorAll('.prop-frete-seguro').forEach(el => { el.style.display = ativo ? '' : 'none'; });
+}
+// máscara contábil: digita só números, centavos à direita (1234567 → 12.345,67)
+function propMascaraValor(input) {
+    const raw = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    input.value = raw ? (parseInt(raw, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+}
+function _propLerValor(id) {
+    const v = (document.getElementById(id)?.value || '').replace(/\./g, '').replace(',', '.');
+    return v ? Number(v) || null : null;
+}
+function _propPreencherCamposPdf(d) {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+    const fmt = v => (v === null || v === undefined || v === '') ? '' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    set('prop-incoterm-local', d.incoterm_local);
+    set('prop-previsao-embarque', d.previsao_embarque);
+    set('prop-frete-valor', fmt(d.frete_valor));
+    set('prop-seguro-valor', fmt(d.seguro_valor));
+    propToggleFreteSeguro();
+}
+
+// ── Conta para pagamento (contas de recebimento do Exportador) ──────────
+// Guarda o id da conta e uma CÓPIA dos dados: a Proforma emitida não muda
+// se a conta for editada ou apagada depois.
+let _propContas = [];
+let _propContaSelecionar = null;   // id a selecionar quando a lista chegar (edição)
+let _propContasSeq = 0;            // só a carga mais recente vale (troca rápida de Exportador)
+
+async function propCarregarContasBancarias() {
+    const sel = document.getElementById('prop-conta-bancaria');
+    const aviso = document.getElementById('prop-conta-bancaria-aviso');
+    if (!sel) return;
+    const terceiro = document.querySelector('input[name="prop-emissor-tipo"]:checked')?.value === 'terceiro';
+    const parceiroId = terceiro ? (document.getElementById('prop-cliente-id')?.value || null) : null;
+    const anterior = _propContaSelecionar ?? sel.value;
+    sel.innerHTML = '<option value="">— Não informar dados bancários —</option>';
+    _propContas = [];
+    if (terceiro && !parceiroId) { if (aviso) aviso.style.display = 'none'; return; }
+    const seq = ++_propContasSeq;
+    const r = await window.supabaseAPI.buscarContasBancarias(parceiroId);
+    if (seq !== _propContasSeq) return;
+    _propContas = r.data || [];
+    _propContas.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = contaBancariaResumo(c);
+        sel.appendChild(o);
+    });
+    if (anterior && _propContas.some(c => String(c.id) === String(anterior))) sel.value = String(anterior);
+    else if (_propContas.length === 1 && _propContaSelecionar == null) sel.value = String(_propContas[0].id);
+    _propContaSelecionar = null;
+    if (aviso) {
+        aviso.style.display = (r.sucesso && !_propContas.length) ? '' : 'none';
+        aviso.textContent = terceiro
+            ? 'Este Exportador não tem conta de recebimento cadastrada (Empresas › editar › Dados Financeiros).'
+            : 'Sua empresa não tem conta de recebimento cadastrada (Perfil › Editar Dados da Empresa › Dados Financeiros).';
+    }
+}
+
+function _propContaEscolhida(emissorTipo) {
+    const id = document.getElementById('prop-conta-bancaria')?.value || '';
+    const c = _propContas.find(x => String(x.id) === String(id));
+    if (!c) return { conta_bancaria_id: null, dados_bancarios: null };
+    const beneficiario = c.beneficiario || (emissorTipo === 'terceiro' ? document.getElementById('prop-cliente')?.value : null) || null;
+    const { apelido, banco, agencia, conta, tipo_conta, swift, iban, endereco_banco, moeda } = c;
+    return { conta_bancaria_id: c.id, dados_bancarios: { apelido, beneficiario, banco, agencia, conta, tipo_conta, swift, iban, endereco_banco, moeda } };
 }
 
 // ========================================
@@ -249,6 +326,10 @@ function iniciarResumoProposta() {
     }
 
     document.querySelectorAll('input[name="prop-emissor-tipo"]').forEach(r => r.addEventListener('change', atualizar));
+    document.getElementById('prop-incoterm')?.addEventListener('change', propToggleFreteSeguro);
+    // Exportador mudou (própria empresa ⇄ terceiro): recarrega as contas para pagamento
+    document.querySelectorAll('input[name="prop-emissor-tipo"]').forEach(r => r.addEventListener('change', () => propCarregarContasBancarias()));
+    propCarregarContasBancarias();
     document.getElementById('prop-cliente')?.addEventListener('input', atualizar);
     document.getElementById('prop-tipo')?.addEventListener('change', atualizar);
     document.getElementById('prop-origem-pais')?.addEventListener('input', atualizar);
@@ -716,6 +797,9 @@ async function propCarregarEdicao(id) {
         if (d.parceiro_razao_social) g('prop-cliente', d.parceiro_razao_social);
     }
     await _propReaplicarEmissor(d);
+    _propContaSelecionar = d.conta_bancaria_id || '';
+    propCarregarContasBancarias();
+    _propPreencherCamposPdf(d);
 
     // Destinatário
     if (d.destinatario_id) {
@@ -829,6 +913,9 @@ async function propCarregarDuplicar(id) {
         if (d.parceiro_razao_social) g('prop-cliente', d.parceiro_razao_social);
     }
     await _propReaplicarEmissor(d);
+    _propContaSelecionar = d.conta_bancaria_id || '';
+    propCarregarContasBancarias();
+    _propPreencherCamposPdf(d);
 
     // Destinatário
     if (d.destinatario_id) {
@@ -998,6 +1085,7 @@ function iniciarAutocompletePropCliente() {
         if (!item) return;
         input.value    = item.getAttribute('data-nome');
         idOculto.value = item.getAttribute('data-id');
+        propCarregarContasBancarias();
 
         const doc        = item.getAttribute('data-doc') || '';
         const docInput   = document.getElementById('prop-documento');

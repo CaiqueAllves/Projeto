@@ -469,6 +469,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarMascaraCEP();
     iniciarMascaraCEPColeta();
     empIniciarTags();
+    _empIniciarLogo();
     empContatoIniciar();
     onModeloChange('');
     empAdicionarDocumento();
@@ -482,6 +483,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             const dados = JSON.parse(raw);
             window._tenantEmpresaId = dados._tenantId;
             _empPreencherEdicao(dados);
+            _empCarregarTenantLogoContas(dados._tenantId);
             // Oculta campos de tipo (não se aplica à empresa própria)
             document.querySelector('.emp-modelo-row')?.style.setProperty('display', 'none');
             document.querySelector('.emp-tipos-row')?.style.setProperty('display', 'none');
@@ -627,7 +629,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarAutocompleteEmpresaDestinoProposta();
     iniciarAutocompleteAeroportos();
     iniciarAutocompletePortos();
-    propIniciarItens();
+    // Linha de produto em branco só numa Proforma nova. Na edição/duplicação
+    // ela corria em paralelo com o carregamento e, se terminasse depois, era
+    // somada aos itens já carregados (aparecia um item vazio a mais).
+    if (!_propIdEdicao && !_propIdDuplicar) propIniciarItens();
 
     if (_propIdEdicao) {
         await propCarregarEdicao(_propIdEdicao);
