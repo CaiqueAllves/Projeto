@@ -189,7 +189,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-calendar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Status</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" value="enviado" checked> Enviado</label>
                     <label class="rel-check"><input type="checkbox" value="aprovado" checked> Aprovado</label>
@@ -204,7 +204,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-chart-bar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Incluir status</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Incluir status</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" value="enviado" checked> Enviado</label>
                     <label class="rel-check"><input type="checkbox" value="aprovado" checked> Aprovado</label>
@@ -219,7 +219,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-building',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status das proformas</label>
+                <label for="relStatusFiltro" class="rel-param-label"><i class="fa-solid fa-filter"></i> Status das proformas</label>
                 <select id="relStatusFiltro" class="rel-select" onchange="atualizarPreview()">
                     <option value="">Todos os status</option>
                     <option value="enviado">Enviado</option>
@@ -357,12 +357,12 @@ function baixarPDF() {
                 <thead><tr><th>Código</th><th>Empresa</th><th>Tipo</th><th>Rota</th><th>Emissão</th><th>Status</th></tr></thead>
                 <tbody>${filtrados.map(p => `
                     <tr>
-                        <td>${p.codigo || '—'}</td>
-                        <td>${p.parceiro_nome || '—'}</td>
-                        <td>${p.tipo || '—'}</td>
-                        <td>${p.origem_pais || '—'} → ${p.destino_pais || '—'}</td>
-                        <td>${p.data_emissao ? new Date(p.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
-                        <td>${statusLabels[p.status] || p.status || '—'}</td>
+                        <td>${escHtml(p.codigo || '—')}</td>
+                        <td>${escHtml(p.parceiro_nome || '—')}</td>
+                        <td>${escHtml(p.tipo || '—')}</td>
+                        <td>${escHtml(p.origem_pais || '—')} → ${escHtml(p.destino_pais || '—')}</td>
+                        <td>${escHtml(p.data_emissao ? new Date(p.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR') : '—')}</td>
+                        <td>${escHtml(statusLabels[p.status] || p.status || '—')}</td>
                     </tr>`).join('')}
                 </tbody>
             </table>`;
@@ -376,7 +376,7 @@ function baixarPDF() {
                 <tbody>${selecionados.map(s => {
                     const qtd = proformas.filter(p => (p.status || 'enviado') === s).length;
                     const pct = Math.round((qtd / total) * 100);
-                    return `<tr><td>${statusLabels[s]}</td><td>${qtd}</td><td>${pct}%</td></tr>`;
+                    return `<tr><td>${escHtml(statusLabels[s])}</td><td>${escHtml(qtd)}</td><td>${escHtml(pct)}%</td></tr>`;
                 }).join('')}
                 </tbody>
             </table>`;
@@ -392,7 +392,7 @@ function baixarPDF() {
                 <thead><tr><th>#</th><th>Empresa</th><th>Proformas</th><th>%</th></tr></thead>
                 <tbody>${ranking.map(([emp, q], i) => {
                     const pct = lista.length ? Math.round((q / lista.length) * 100) : 0;
-                    return `<tr><td>${i + 1}</td><td>${emp}</td><td>${q}</td><td>${pct}%</td></tr>`;
+                    return `<tr><td>${escHtml(i + 1)}</td><td>${escHtml(emp)}</td><td>${escHtml(q)}</td><td>${escHtml(pct)}%</td></tr>`;
                 }).join('')}
                 </tbody>
             </table>`;
@@ -433,7 +433,7 @@ function baixarPDF() {
         <div class="pdf-meta">
             <div class="pdf-meta-item"><strong>Período</strong>${formatarData(di)} até ${formatarData(df)}</div>
             <div class="pdf-meta-item"><strong>Total de registros</strong>${proformas.length}</div>
-            <div class="pdf-meta-item"><strong>Solicitante</strong>${usuario.nome || '—'}</div>
+            <div class="pdf-meta-item"><strong>Solicitante</strong>${escHtml(usuario.nome || '—')}</div>
         </div>
         ${conteudoTabela}
         <div class="pdf-footer">
@@ -489,8 +489,8 @@ function renderHistorico() {
 
     tbody.innerHTML = lista.map(r => `
         <tr>
-            <td>${r.tipo}</td>
-            <td><span class="hist-usuario"><i class="fa-solid fa-user"></i> ${r.usuario}</span></td>
+            <td>${escHtml(r.tipo)}</td>
+            <td><span class="hist-usuario"><i class="fa-solid fa-user"></i> ${escHtml(r.usuario)}</span></td>
             <td>${new Date(r.dataGer).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
             <td><span class="hist-format pdf">PDF</span></td>
             <td>

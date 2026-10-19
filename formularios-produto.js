@@ -470,7 +470,7 @@ function prodAdicionarDocumento() {
         <div class="emp-doc-item-top">
             <div class="emp-doc-item-fields">
                 <div class="form-group emp-doc-tipo-group" style="flex-direction:column;">
-                    <label>Tipo de Documento</label>
+                    <label for="prod-doc-tipo-${id}">Tipo de Documento</label>
                     <select id="prod-doc-tipo-${id}" name="prod_doc_tipo_${id}" onchange="prodTipoDocChange(this, ${id})">
                         <option value="">Selecione...</option>
                         ${tiposOpts}
@@ -478,7 +478,7 @@ function prodAdicionarDocumento() {
                     <div id="prod-doc-info-${id}" style="display:none; margin-top:6px; background:#eff6ff; border-radius:8px; padding:8px 12px; font-size:12px; color:#1e40af; line-height:1.5;"></div>
                 </div>
                 <div class="form-group emp-doc-outros-group" id="prod-doc-desc-group-${id}" style="display:none;">
-                    <label>Descrição</label>
+                    <label for="prod-doc-desc-${id}">Descrição</label>
                     <input type="text" id="prod-doc-desc-${id}" name="prod_doc_desc_${id}" placeholder="Descrição...">
                 </div>
             </div>
@@ -1012,9 +1012,9 @@ function prodAdicionarIdiomaExtra() {
     row.style.cssText = 'display:grid; grid-template-columns: 0.5fr 1fr 1.5fr; gap:16px; align-items:end; position:relative;';
     row.innerHTML = `
         <div class="form-group" style="margin-bottom:0;">
-            <label>Idioma</label>
+            <label for="idioma_idioma_${id}">Idioma</label>
             <div style="display:flex; flex-direction:column; gap:6px;">
-                <select name="idioma_idioma_${id}" onchange="prodToggleIdiomaOutro(this)">
+                <select id="idioma_idioma_${id}" name="idioma_idioma_${id}" onchange="prodToggleIdiomaOutro(this)">
                     <option value="de">Alemão</option>
                     <option value="zh">Chinês</option>
                     <option value="es">Espanhol</option>
@@ -1027,12 +1027,12 @@ function prodAdicionarIdiomaExtra() {
             </div>
         </div>
         <div class="form-group" style="margin-bottom:0;">
-            <label>${labelNome} — Idioma ${num + 1}</label>
-            <input type="text" name="nome_idioma_${id}" placeholder="Nome em outro idioma">
+            <label for="nome_idioma_${id}">${labelNome} — Idioma ${num + 1}</label>
+            <input id="nome_idioma_${id}" type="text" name="nome_idioma_${id}" placeholder="Nome em outro idioma">
         </div>
         <div class="form-group" style="margin-bottom:0; position:relative;">
-            <label>${labelDesc} — Idioma ${num + 1}</label>
-            <textarea name="descricao_idioma_${id}" placeholder="Descrição em outro idioma..." maxlength="500" rows="1"
+            <label for="descricao_idioma_${id}">${labelDesc} — Idioma ${num + 1}</label>
+            <textarea id="descricao_idioma_${id}" name="descricao_idioma_${id}" placeholder="Descrição em outro idioma..." maxlength="500" rows="1"
                 style="resize:none;overflow:hidden;height:42px;min-height:42px;padding-right:36px;"
                 oninput="this.style.setProperty('height','42px','important');this.style.setProperty('height',this.scrollHeight+'px','important')"></textarea>
             <button type="button" onclick="prodRemoverIdiomaExtra('${id}')"
@@ -1082,19 +1082,19 @@ async function prodAdicionarPrecoExtra() {
     row.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:16px; align-items:end;';
     row.innerHTML = `
         <div class="form-group" style="margin-bottom:0;">
-            <label>Moeda</label>
-            <select name="preco_moeda_${id}">
+            <label for="preco_moeda_${id}">Moeda</label>
+            <select id="preco_moeda_${id}" name="preco_moeda_${id}">
                 <option value="">Selecione...</option>
                 ${opcoes}
             </select>
         </div>
         <div class="form-group" style="margin-bottom:0;">
-            <label>Preço de Venda</label>
-            <input type="text" inputmode="decimal" name="preco_valor_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this)">
+            <label for="preco_valor_${id}">Preço de Venda</label>
+            <input id="preco_valor_${id}" type="text" inputmode="decimal" name="preco_valor_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this)">
         </div>
         <div class="form-group" style="margin-bottom:0;">
-            <label>Preço de Compra</label>
-            <input type="text" inputmode="decimal" name="preco_custo_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this)">
+            <label for="preco_custo_${id}">Preço de Compra</label>
+            <input id="preco_custo_${id}" type="text" inputmode="decimal" name="preco_custo_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraMonetaria(this)">
         </div>
         <button type="button" onclick="prodRemoverPrecoExtra('${id}')"
             style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:15px;padding:2px 6px;margin-bottom:10px;"
@@ -1135,20 +1135,20 @@ function prodAdicionarMedidaCaixa() {
     row.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:12px; align-items:end;';
     row.innerHTML = `
         <div class="form-group" style="margin-bottom:0;">
-            <label>Volume ${num > 1 ? num : ''}</label>
-            <input type="text" inputmode="decimal" name="caixa_volume_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+            <label for="caixa_volume_${id}">Volume ${num > 1 ? num : ''}</label>
+            <input id="caixa_volume_${id}" type="text" inputmode="decimal" name="caixa_volume_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
         </div>
         <div class="form-group" style="margin-bottom:0;">
-            <label>Comprimento ${num > 1 ? num : ''} (cm)</label>
-            <input type="text" inputmode="decimal" name="caixa_comprimento_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+            <label for="caixa_comprimento_${id}">Comprimento ${num > 1 ? num : ''} (cm)</label>
+            <input id="caixa_comprimento_${id}" type="text" inputmode="decimal" name="caixa_comprimento_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
         </div>
         <div class="form-group" style="margin-bottom:0;">
-            <label>Largura ${num > 1 ? num : ''} (cm)</label>
-            <input type="text" inputmode="decimal" name="caixa_largura_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+            <label for="caixa_largura_${id}">Largura ${num > 1 ? num : ''} (cm)</label>
+            <input id="caixa_largura_${id}" type="text" inputmode="decimal" name="caixa_largura_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
         </div>
         <div class="form-group" style="margin-bottom:0;">
-            <label>Altura ${num > 1 ? num : ''} (cm)</label>
-            <input type="text" inputmode="decimal" name="caixa_altura_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
+            <label for="caixa_altura_${id}">Altura ${num > 1 ? num : ''} (cm)</label>
+            <input id="caixa_altura_${id}" type="text" inputmode="decimal" name="caixa_altura_${id}" placeholder="0,00" data-no-caps oninput="prodMascaraDecimal(this)">
         </div>
         <button type="button" onclick="prodRemoverMedidaCaixa('${id}')"
             style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;padding:8px 6px;margin-bottom:0;flex-shrink:0;"

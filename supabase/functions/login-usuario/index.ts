@@ -35,6 +35,9 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 const MAX_TENTATIVAS = 5;
 const BLOQUEIO_MINUTOS = 15;
+// Uma só mensagem para CPF inexistente, senha errada e conta bloqueada — não
+// revela qual foi o caso (nem se o CPF existe).
+const MSG_FALHA = `CPF ou senha incorretos. Após ${MAX_TENTATIVAS} tentativas erradas o acesso fica bloqueado por ${BLOQUEIO_MINUTOS} minutos.`;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -67,10 +70,21 @@ async function vincularAuth(admin: ReturnType<typeof createClient>, usuario: any
   });
 
   if (erroCriar) {
-    const { data: lista, error: erroLista } = await admin.auth.admin.listUsers();
+    // E-mail já existe no Auth. SÓ reaproveita a conta se ela foi criada para
+    // ESTE mesmo usuário (user_metadata.usuarios_id) e ainda não está ligada a
+    // outro registro. Antes, qualquer conta com o mesmo e-mail era adotada e
+    // tinha a senha trocada — dava para tomar a conta de outra pessoa
+    // cadastrando-se com o e-mail dela (varredura de segurança 2026-10-19).
+    const { data: lista, error: erroLista } = await admin.auth.admin.listUsers({ perPage: 1000 });
     if (erroLista) throw erroCriar;
-    const existente = lista.users.find((u) => u.email === usuario.email);
+    const alvo = String(usuario.email || '').toLowerCase();
+    const existente = lista.users.find((u) => String(u.email || '').toLowerCase() === alvo);
     if (!existente) throw erroCriar;
+    if (existente.user_metadata?.usuarios_id !== usuario.id) {
+      throw new Error('E-mail já pertence a outra conta de acesso — vínculo recusado.');
+    }
+    const { data: jaLigado } = await admin.from('usuarios').select('id').eq('auth_id', existente.id).neq('id', usuario.id).maybeSingle();
+    if (jaLigado) throw new Error('Conta de acesso já ligada a outro usuário — vínculo recusado.');
     authId = existente.id;
     await admin.auth.admin.updateUserById(authId, { password: senha });
   } else {
@@ -81,7 +95,7 @@ async function vincularAuth(admin: ReturnType<typeof createClient>, usuario: any
   return authId;
 }
 
-Deno.serve(async (req) => {
+async function tratar(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
 
@@ -104,21 +118,24 @@ Deno.serve(async (req) => {
       .single();
 
     if (error || !usuario) {
-      return jsonResponse({ sucesso: false, mensagem: 'CPF ou senha incorretos' }, 401);
-    }
-
-    if (!usuario.ativo) {
-      return jsonResponse({ sucesso: false, mensagem: 'Usuário inativo. Contate o administrador.' }, 403);
-    }
-
-    if (usuario.bloqueado_ate && new Date() < new Date(usuario.bloqueado_ate)) {
-      const minutos = Math.ceil((new Date(usuario.bloqueado_ate).getTime() - Date.now()) / 60000);
-      return jsonResponse({ sucesso: false, mensagem: `Usuário bloqueado. Tente novamente em ${minutos} minutos.` }, 403);
+      return jsonResponse({ sucesso: false, mensagem: MSG_FALHA }, 401);
     }
 
     const hashSalvo = usuario.senha_hash || '';
     const eraTextoPuro = !!hashSalvo && !/^\$2[aby]\$/.test(hashSalvo);
     const senhaCorreta = eraTextoPuro ? hashSalvo === senha : (hashSalvo ? bcrypt.compareSync(senha, hashSalvo) : false);
+
+    // "Inativo" e "bloqueado" só são revelados a quem acertou a senha — antes
+    // apareciam para qualquer um e confirmavam que o CPF existe (varredura de
+    // segurança 2026-10-19). Bloqueado continua bloqueado mesmo com a senha certa,
+    // e tentativas durante o bloqueio não estendem nem zeram o prazo.
+    // Durante o bloqueio a resposta é a MESMA da senha errada (senão a senha
+    // certa teria resposta diferente e daria para continuar testando).
+    const bloqueado = usuario.bloqueado_ate && new Date() < new Date(usuario.bloqueado_ate);
+    if (bloqueado) return jsonResponse({ sucesso: false, mensagem: MSG_FALHA }, 401);
+    if (senhaCorreta && !usuario.ativo) {
+      return jsonResponse({ sucesso: false, mensagem: 'Usuário inativo. Contate o administrador.' }, 403);
+    }
 
     if (!senhaCorreta) {
       const tentativas = (usuario.tentativas_login || 0) + 1;
@@ -127,7 +144,7 @@ Deno.serve(async (req) => {
         atualizacao.bloqueado_ate = new Date(Date.now() + BLOQUEIO_MINUTOS * 60000).toISOString();
       }
       await admin.from('usuarios').update(atualizacao).eq('id', usuario.id);
-      return jsonResponse({ sucesso: false, mensagem: 'CPF ou senha incorretos' }, 401);
+      return jsonResponse({ sucesso: false, mensagem: MSG_FALHA }, 401);
     }
 
     const atualizacaoSucesso: Record<string, unknown> = {
@@ -165,4 +182,20 @@ Deno.serve(async (req) => {
     console.error('[login-usuario] erro:', err);
     return jsonResponse({ sucesso: false, mensagem: 'Erro ao processar login. Tente novamente.' }, 500);
   }
+}
+
+// ── CORS: só o site do sistema (2026-10-19) ──────────────────────────────
+// Navegadores em outros sites não conseguem chamar esta função. Não barra
+// chamadas fora do navegador (curl, scripts) — essas não mandam Origin e
+// continuam dependendo das demais proteções (login, limites, RLS).
+const ORIGENS_PERMITIDAS = [/^https:\/\/caiqueallves\.github\.io$/, /^https:\/\/[a-z0-9-]+\.app\.github\.dev$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/];
+const ORIGEM_PADRAO = 'https://caiqueallves.github.io';
+
+Deno.serve(async (req) => {
+  const origem = req.headers.get('Origin') ?? '';
+  const resp = await tratar(req);
+  const headers = new Headers(resp.headers);
+  headers.set('Access-Control-Allow-Origin', ORIGENS_PERMITIDAS.some((r) => r.test(origem)) ? origem : ORIGEM_PADRAO);
+  headers.set('Vary', 'Origin');
+  return new Response(resp.body, { status: resp.status, headers });
 });

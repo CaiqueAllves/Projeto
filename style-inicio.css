@@ -943,7 +943,8 @@ canvas {
     margin-bottom: 0;
 }
 
-.modal-body label {
+.modal-body label,
+.modal-body :is(span,div):where(.rotulo) {
     display: block;
     font-size: 14px;
     font-weight: 600;

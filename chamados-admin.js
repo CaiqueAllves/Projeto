@@ -15,12 +15,15 @@ let _cadAbertoId = null;
 const _cadEsc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // anexo_url é gravável pelo usuário que abriu o chamado — só https vira link (bloqueia javascript:)
 const _cadUrlSegura = u => /^https:\/\//i.test(String(u || '')) ? _cadEsc(u) : '#';
+// Bucket privado: o anexo (caminho ou URL antiga) vira link temporário via
+// hidratarArquivosPrivados (supabase-api.js) — o href/src só recebe o que o
+// Storage devolve, então um valor gravado pelo usuário não vira javascript:.
 const _cadAnexoHtml = u => {
-    if (!/^https:\/\//i.test(String(u || ''))) return '';
-    const href = _cadEsc(u);
+    if (!String(u || '').trim()) return '';
+    const ref = _cadEsc(u), attrs = `data-arquivo-bucket="chamados-anexos" data-arquivo="${ref}"`;
     return /\.(png|jpe?g|gif|webp)(\?|$)/i.test(u)
-        ? `<button type="button" class="cad-thumb" data-full="${href}" title="Ampliar"><img src="${href}" alt="Anexo"><span><i class="fa-solid fa-magnifying-glass-plus"></i></span></button>`
-        : `<a class="cad-anexo" href="${href}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> Abrir anexo</a>`;
+        ? `<button type="button" class="cad-thumb" ${attrs} data-full="" title="Ampliar"><img ${attrs} alt="Anexo"><span><i class="fa-solid fa-magnifying-glass-plus"></i></span></button>`
+        : `<a class="cad-anexo" href="#" ${attrs} target="_blank" rel="noopener" onclick="if(!this.dataset.arquivoPronto) abrirArquivoPrivado(event,'chamados-anexos',this.dataset.arquivo)"><i class="fa-solid fa-paperclip"></i> Abrir anexo</a>`;
 };
 const _cadNum = c => c?.numero != null ? '#' + String(c.numero).padStart(4, '0') : '—';
 const _cadHora = iso => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -140,7 +143,25 @@ function cadFiltrar(status) {
 function _cadSolicitante(c) { return c.usuario_nome || c.usuario_email || '—'; }
 function _cadEmpresa(c) { return c.empresas?.nome_fantasia || c.empresas?.razao_social || '—'; }
 
+// Contadores no topo (todos os chamados, sem busca/filtro); tocar filtra a lista
+function _cadRenderResumo() {
+    const el = document.getElementById('cadResumo');
+    if (!el) return;
+    const conta = st => _cadChamados.filter(c => (c.status || 'aberto') === st).length;
+    const cards = [
+        ['aberto', 'Abertos', 'fa-inbox', conta('aberto')],
+        ['em_andamento', 'Em andamento', 'fa-spinner', conta('em_andamento')],
+        ['resolvido', 'Resolvidos', 'fa-circle-check', conta('resolvido')],
+        ...(_cadNovidadesOk ? [['novidades', 'Novidades', 'fa-bell', _cadNaoLidos.size]] : []),
+    ];
+    el.innerHTML = cards.map(([st, rot, ic, n]) => `
+        <button type="button" class="cad-resumo-card cad-resumo--${st}${_cadFiltro === st ? ' ativo' : ''}" onclick="cadFiltrar('${_cadFiltro === st ? 'todos' : st}')">
+            <i class="fa-solid ${ic}"></i><span class="cad-resumo-num">${n}</span><span class="cad-resumo-rot">${rot}</span>
+        </button>`).join('');
+}
+
 function cadRenderizar() {
+    _cadRenderResumo();
     const termo = (document.getElementById('buscaChamado')?.value || '').toLowerCase().trim();
     const itens = _cadChamados.filter(c => {
         if (_cadFiltro === 'novidades') { if (!_cadNaoLidos.has(c.id)) return false; }
@@ -186,7 +207,36 @@ function cadRenderizar() {
                     </tr>`;
                 }).join('')}
             </tbody>
-        </table>`;
+        </table>
+        ${_cadCardsMobile(itens)}`;
+}
+
+// Celular: a tabela de 8 colunas vira cards (o CSS esconde a tabela em telas estreitas)
+function _cadCardsMobile(itens) {
+    return `<div class="cad-cards">${itens.map(c => {
+        const st = c.status || 'aberto';
+        const nl = _cadNaoLidos.get(c.id);
+        return `
+        <div class="cad-card cad-card--${st}${nl ? ' cad-card--novo' : ''}" onclick="cadAbrir('${c.id}')">
+            <div class="cad-card-topo">
+                <span class="cad-card-num">${nl ? '<span class="cad-ponto"></span>' : ''}${_cadNum(c)}</span>
+                <select class="cad-status-select cad-badge-${st}" onclick="event.stopPropagation()" onchange="cadMudarStatus(this.value, '${c.id}')" title="Alterar status">
+                    ${Object.entries(CAD_STATUS_LABEL).map(([v, l]) => `<option value="${v}"${v === st ? ' selected' : ''}>${l}</option>`).join('')}
+                </select>
+            </div>
+            <div class="cad-card-titulo">${_cadEsc(c.titulo)}${c.anexo_url ? ' <i class="fa-solid fa-paperclip"></i>' : ''}</div>
+            ${nl ? `<span class="cad-pill-novo cad-card-pill">${nl === 'novo' ? 'Novo chamado' : 'Nova mensagem'}</span>` : ''}
+            <div class="cad-card-meta">
+                ${c.modulo ? `<span><i class="fa-solid fa-layer-group"></i> ${_cadEsc(c.modulo)}</span>` : ''}
+                <span><i class="fa-solid fa-building"></i> ${_cadEsc(_cadEmpresa(c))}</span>
+                <span><i class="fa-solid fa-user"></i> ${_cadEsc(_cadSolicitante(c))}</span>
+            </div>
+            <div class="cad-card-rodape">
+                <span><i class="fa-regular fa-clock"></i> ${_cadData(c.updated_at)}</span>
+                <button class="cad-btn-excluir" title="Excluir chamado" onclick="event.stopPropagation(); cadExcluir('${c.id}')"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('')}</div>`;
 }
 
 async function cadAbrir(id) {
@@ -208,6 +258,7 @@ async function cadAbrir(id) {
     document.getElementById('cadModalQuando').textContent = '';
     document.getElementById('cadModalDesc').textContent = c.descricao || '';
     document.getElementById('cadModalAnexo').innerHTML = _cadAnexoHtml(c.anexo_url);
+    hidratarArquivosPrivados(document.getElementById('cadModalAnexo'));
     document.getElementById('cadModalResposta').value = '';
     cadAjustarAltura(document.getElementById('cadModalResposta'));
     cadRemoverAnexo();
@@ -276,6 +327,7 @@ async function _cadCarregarThread(silencioso = false) {
             </div></div>`;
     }
     el.innerHTML = html || '<div class="cad-vazio cad-vazio-thread"><i class="fa-regular fa-comment-dots"></i><br>Nenhuma mensagem ainda. Responda abaixo para iniciar a conversa.</div>';
+    hidratarArquivosPrivados(el);
     if (naBase) { const b = document.getElementById('cadModalBody'); b.scrollTop = b.scrollHeight; }
 }
 

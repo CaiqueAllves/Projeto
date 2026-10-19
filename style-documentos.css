@@ -316,7 +316,8 @@
 .doc-modal-title { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
 .doc-modal-msg { font-size: 13px; color: #64748b; margin: 0 0 20px; }
 .doc-modal-campo { text-align: left; margin-bottom: 14px; }
-.doc-modal-campo label {
+.doc-modal-campo label,
+.doc-modal-campo :is(span,div):where(.rotulo) {
     display: block;
     font-size: 12px;
     font-weight: 600;

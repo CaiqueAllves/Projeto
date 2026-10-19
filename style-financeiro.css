@@ -347,7 +347,8 @@
 .pl-obs-content { display: none; padding-top: 8px; }
 .pl-obs-content textarea { width: 100%; }
 
-.fin-form-group label {
+.fin-form-group label,
+.fin-form-group :is(span,div):where(.rotulo) {
     font-size: 12px;
     font-weight: 600;
     color: #64748b;
@@ -449,7 +450,8 @@
     flex-wrap: wrap;
 }
 
-.fin-periodo-wrap label {
+.fin-periodo-wrap label,
+.fin-periodo-wrap :is(span,div):where(.rotulo) {
     font-size: 13px;
     font-weight: 600;
     color: #64748b;
@@ -531,6 +533,11 @@
 }
 
 .dre-indentado td:first-child { padding-left: 36px; }
+
+/* Título e seções ocupam as 2 colunas: a regra de td:last-child (valores, à
+   direita e sem quebra) pegava também essas linhas — o título não quebrava e
+   empurrava a tabela para fora da caixa (cortada à direita no celular). */
+.dre-table td[colspan] { text-align: left; white-space: normal; }
 
 /* ── Gráfico de barras CSS ─────────────────────────────────── */
 .fin-grafico-wrap {
@@ -724,7 +731,17 @@
     .fin-card { padding: 14px; gap: 10px; }
     .fin-card-valor { font-size: 16px; }
     .fin-table-wrap { margin: 10px 12px 12px; overflow-x: auto; }
-    .dre-wrap { margin: 10px 12px 12px; overflow-x: auto; }
+    /* style-mobile.css transforma toda <table> em bloco rolável, sem quebra de
+       linha e com td de 80px mínimos (tudo !important) — na DRE isso empurrava
+       a coluna de valores para fora da caixa. Seletores mais específicos vencem. */
+    .dre-wrap { margin: 10px 0 12px; overflow-x: hidden; }
+    table.dre-table { display: table !important; width: 100% !important; white-space: normal !important; font-size: 12.5px; }
+    .dre-table td { padding: 10px 12px !important; font-size: 12.5px !important; min-width: 0 !important; }
+    .dre-secao td { padding: 7px 12px !important; font-size: 10.5px !important; }
+    .dre-indentado td:first-child { padding-left: 20px !important; }
+    .dre-resultado td { font-size: 13px !important; }
+    .dre-table td:first-child { word-break: break-word; }
+    .dre-table td:last-child:not([colspan]) { white-space: nowrap !important; width: 1%; }
     .fin-form-row { flex-direction: column; gap: 10px; }
     .fin-modal { width: 95vw; }
 }

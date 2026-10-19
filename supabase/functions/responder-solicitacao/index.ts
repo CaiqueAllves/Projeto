@@ -35,7 +35,7 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-Deno.serve(async (req) => {
+async function tratar(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
 
@@ -103,4 +103,20 @@ Deno.serve(async (req) => {
     console.error('[responder-solicitacao] erro:', err);
     return jsonResponse({ sucesso: false, mensagem: err instanceof Error ? err.message : 'Erro interno' }, 500);
   }
+}
+
+// ── CORS: só o site do sistema (2026-10-19) ──────────────────────────────
+// Navegadores em outros sites não conseguem chamar esta função. Não barra
+// chamadas fora do navegador (curl, scripts) — essas não mandam Origin e
+// continuam dependendo das demais proteções (login, limites, RLS).
+const ORIGENS_PERMITIDAS = [/^https:\/\/caiqueallves\.github\.io$/, /^https:\/\/[a-z0-9-]+\.app\.github\.dev$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/];
+const ORIGEM_PADRAO = 'https://caiqueallves.github.io';
+
+Deno.serve(async (req) => {
+  const origem = req.headers.get('Origin') ?? '';
+  const resp = await tratar(req);
+  const headers = new Headers(resp.headers);
+  headers.set('Access-Control-Allow-Origin', ORIGENS_PERMITIDAS.some((r) => r.test(origem)) ? origem : ORIGEM_PADRAO);
+  headers.set('Vary', 'Origin');
+  return new Response(resp.body, { status: resp.status, headers });
 });

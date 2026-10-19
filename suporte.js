@@ -16,43 +16,9 @@ const SUPORTE_WHATSAPP_DESTINO    = '5511987216497';
 
 // ── Prompt do assistente de IA ───────────────────────────────────────────────
 
-const SUPORTE_SYSTEM_PROMPT = `Você é um assistente virtual da Marpex, sistema de gestão de comércio exterior brasileiro.
-Seu objetivo é ajudar os usuários a usar o sistema de forma clara e eficiente.
+// As instruções da IA (chat e triagem) ficam na Edge Function suporte-ia —
+// o site só informa o modo (varredura de segurança 2026-10-19).
 
-O sistema Marpex é organizado em 4 módulos, selecionáveis no topo do menu lateral:
-
-Operacional:
-- Início: painel principal com visão geral.
-- Empresas: cadastro de empresas parceiras (clientes, fornecedores etc.).
-- Produtos: cadastro de produtos.
-- Proformas: emissão e gestão de proformas.
-- Processos: quadro kanban para gestão de processos de exportação e exportação indireta. Status disponíveis: Aberta, Pendente e Encerrada.
-- Relatórios: relatórios do módulo operacional (produtos, proformas, processos).
-- Termos: termos e condições.
-- Apoio: tabelas de apoio (países e regiões, portos e armadores, aeroportos e cias aéreas, moedas, embalagens e unidades de medida, termos de pagamento, acondicionamento, container, NCM).
-
-Comercial:
-- Pipeline: quadro kanban do funil de vendas.
-- Pedidos: gestão de pedidos.
-- Relatórios: relatórios comerciais.
-
-Financeiro:
-- Contas a Pagar / Contas a Receber: gestão financeira de contas.
-- Fluxo de Caixa: acompanhamento de entradas e saídas.
-- DRE / Balancete: demonstrativo de resultado.
-- Relatórios: relatórios financeiros.
-
-Configurações:
-- Perfil: dados da conta do usuário.
-- Usuários e Permissões: gestão de usuários e permissões de acesso.
-
-Regras de resposta:
-- Use português brasileiro claro e amigável
-- Seja objetivo e direto, sem enrolação
-- Para problemas técnicos ou bugs, oriente o usuário a usar "Reportar um problema" no menu de suporte
-- Para ajuda urgente, sugira o WhatsApp disponível no menu
-- Formate respostas longas em tópicos quando adequado
-- Não invente funcionalidades que não foram mencionadas acima`;
 
 // ── Estado global ────────────────────────────────────────────────────────────
 
@@ -189,13 +155,13 @@ let _suporteChamadoAbertoId = null;
                     <p class="suporte-report-intro">Descreva o problema. Vou fazer algumas perguntas pra entender melhor e registrar pro time analisar.</p>
 
                     <div class="suporte-form-group">
-                        <label class="suporte-form-label">Título <span class="suporte-required">*</span></label>
+                        <label for="suporteReportTitulo" class="suporte-form-label">Título <span class="suporte-required">*</span></label>
                         <input type="text" id="suporteReportTitulo" class="suporte-form-input"
                             placeholder="Ex: Não consigo salvar diário da obra">
                     </div>
 
                     <div class="suporte-form-group">
-                        <label class="suporte-form-label">Módulo <span class="suporte-optional">(opcional)</span></label>
+                        <label for="suporteReportModulo" class="suporte-form-label">Módulo <span class="suporte-optional">(opcional)</span></label>
                         <select id="suporteReportModulo" class="suporte-form-select">
                             <option value="">— escolher —</option>
                             <optgroup label="Operacional">
@@ -229,7 +195,7 @@ let _suporteChamadoAbertoId = null;
                     </div>
 
                     <div class="suporte-form-group">
-                        <label class="suporte-form-label">O que aconteceu? <span class="suporte-required">*</span></label>
+                        <label for="suporteReportDesc" class="suporte-form-label">O que aconteceu? <span class="suporte-required">*</span></label>
                         <textarea id="suporteReportDesc" class="suporte-form-textarea"
                             placeholder="Descreva com seus detalhes. Pode colar um print (Ctrl+V) aqui também."></textarea>
                         <p class="suporte-form-hint">
@@ -450,6 +416,13 @@ function _suporteAdicionarMsg(role, texto, typing = false) {
     return div;
 }
 
+// A Edge Function suporte-ia exige usuário logado: manda o token da sessão
+async function _suporteCabecalhosIA() {
+    const { data } = await supabaseClient.auth.getSession();
+    const token = data?.session?.access_token || '';
+    return { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
 async function suporteEnviarMsg() {
     if (_suporteEnviando) return;
     const input   = document.getElementById('suporteChatInput');
@@ -469,11 +442,8 @@ async function suporteEnviarMsg() {
     try {
         const res = await fetch(SUPORTE_IA_ENDPOINT, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                system: SUPORTE_SYSTEM_PROMPT,
-                messages: _suporteChatHistorico
-            })
+            headers: await _suporteCabecalhosIA(),
+            body: JSON.stringify({ modo: 'chat', messages: _suporteChatHistorico })
         });
 
         const data = await res.json();
@@ -589,23 +559,15 @@ async function _suporteUploadAnexo(chamadoId) {
 
 // ── Triagem automática por IA (usada no e-mail de "Reportar problema") ──────
 
-const SUPORTE_TRIAGEM_PROMPT = `Você é um assistente de triagem de suporte técnico do sistema Marpex (comércio exterior).
-Você vai receber o título, módulo e descrição de um chamado aberto por um usuário do sistema.
-Gere uma triagem curta e objetiva para a equipe de suporte, em português, seguindo exatamente este formato (sem markdown, sem títulos extras, sem introdução):
-
-Resumo: <1-2 frases resumindo o problema em linguagem técnica objetiva>
-Urgência provável: <Baixa, Média ou Alta> — <motivo em poucas palavras>
-Possível causa: <hipótese curta, ou "Não é possível identificar com as informações disponíveis">
-
-Seja direto e não invente detalhes que não estão na descrição.`;
+// (instruções da triagem: ver supabase/functions/suporte-ia)
 
 async function _suporteGerarResumoIA(titulo, modulo, desc) {
     try {
         const res = await fetch(SUPORTE_IA_ENDPOINT, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await _suporteCabecalhosIA(),
             body: JSON.stringify({
-                system: SUPORTE_TRIAGEM_PROMPT,
+                modo: 'triagem',
                 messages: [{
                     role: 'user',
                     content: `Título: ${titulo}\nMódulo: ${modulo || 'Não informado'}\nDescrição: ${desc}`
@@ -709,6 +671,8 @@ async function suporteEnviarReport() {
     }
 
     // 3. Monta a mensagem de WhatsApp (o envio em si é um clique do usuário)
+    // bucket privado: o link do print no WhatsApp vale 7 dias
+    const printLink = anexoUrl ? (await urlArquivoTemporaria('chamados-anexos', anexoUrl, 7 * 86400)) : null;
     const resumoCurto = resumoIA ? String(resumoIA).slice(0, 600) : 'Triagem automática indisponível.';
     _suporteWhatsAppTexto = [
         '*Novo chamado Marpex*',
@@ -718,7 +682,7 @@ async function suporteEnviarReport() {
         `*Descrição:* ${desc}`,
         `*Triagem IA:* ${resumoCurto}`,
         `*Página:* ${window.location.href}`,
-        anexoUrl ? `*Print:* ${anexoUrl}` : null,
+        printLink ? `*Print:* ${printLink}` : null,
         `*Chamado:* ${_suporteUltimoNumero != null ? _suporteNumFmt(_suporteUltimoNumero) : (chamadoId || 'N/A (não foi salvo no sistema)')}`
     ].filter(Boolean).join('\n');
 
@@ -801,7 +765,7 @@ function _suporteRenderChamados(chamados) {
         const status  = c.status || 'aberto';
 
         const anexoHtml = c.anexo_url
-            ? `<a href="${_suporteEscapar(c.anexo_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="suporte-chamado-anexo" title="Ver print anexado"><i class="fa-solid fa-paperclip"></i></a>`
+            ? `<a href="#" data-arquivo-bucket="chamados-anexos" data-arquivo="${_suporteEscapar(c.anexo_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation(); if(!this.dataset.arquivoPronto) abrirArquivoPrivado(event,'chamados-anexos',this.dataset.arquivo)" class="suporte-chamado-anexo" title="Ver print anexado"><i class="fa-solid fa-paperclip"></i></a>`
             : '';
 
         const moduloHtml = c.modulo
@@ -822,6 +786,7 @@ function _suporteRenderChamados(chamados) {
             ${anexoHtml}
         </div>`;
     }).join('');
+    hidratarArquivosPrivados(lista);
     _suporteAplicarNaoLidosNaLista();
 }
 
@@ -935,7 +900,8 @@ function _suporteRenderChamadoDetalhe(chamado, mensagens) {
     resumoEl.innerHTML = `
         <p class="suporte-chamado-resumo-label"><i class="fa-solid fa-circle-info"></i> Problema relatado em ${dataAberturaFmt}</p>
         <p class="suporte-chamado-resumo-desc"></p>
-        ${chamado.anexo_url ? `<a href="${_suporteEscapar(chamado.anexo_url)}" target="_blank" rel="noopener" class="suporte-chamado-anexo"><i class="fa-solid fa-paperclip"></i> Ver print anexado</a>` : ''}`;
+        ${chamado.anexo_url ? `<a href="#" data-arquivo-bucket="chamados-anexos" data-arquivo="${_suporteEscapar(chamado.anexo_url)}" target="_blank" rel="noopener" onclick="if(!this.dataset.arquivoPronto) abrirArquivoPrivado(event,'chamados-anexos',this.dataset.arquivo)" class="suporte-chamado-anexo"><i class="fa-solid fa-paperclip"></i> Ver print anexado</a>` : ''}`;
+    hidratarArquivosPrivados(resumoEl);
     resumoEl.querySelector('.suporte-chamado-resumo-desc').textContent = chamado.descricao;
 
     // ── Conversa (respostas trocadas depois da abertura) ──
@@ -951,6 +917,7 @@ function _suporteRenderChamadoDetalhe(chamado, mensagens) {
             if (dia !== diaAnterior) { msgsEl.insertAdjacentHTML('beforeend', `<div class="suporte-msg-dia"><span>${_suporteDiaFmt(m.created_at)}</span></div>`); diaAnterior = dia; }
             msgsEl.appendChild(_suporteMontarBalaoMensagem(m.autor_tipo, m.mensagem, m.anexo_url, m.created_at));
         });
+        hidratarArquivosPrivados(msgsEl);
     }
 
     msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -1011,9 +978,12 @@ function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl, criadoEm) {
         corpo.appendChild(span);
     }
 
-    if (anexoUrl && /^https:\/\//i.test(anexoUrl)) {
+    if (anexoUrl) {
+        // bucket privado: href/src preenchidos por hidratarArquivosPrivados
         const a = document.createElement('a');
-        a.href = anexoUrl;
+        a.href = '#';
+        a.dataset.arquivoBucket = 'chamados-anexos';
+        a.dataset.arquivo = anexoUrl;
         a.target = '_blank';
         a.rel = 'noopener';
         a.title = 'Abrir anexo';
@@ -1021,7 +991,8 @@ function _suporteMontarBalaoMensagem(autorTipo, texto, anexoUrl, criadoEm) {
             a.className = 'suporte-msg-img';
             a.onclick = e => e.preventDefault();
             const img = document.createElement('img');
-            img.src = anexoUrl;
+            img.dataset.arquivoBucket = 'chamados-anexos';
+            img.dataset.arquivo = anexoUrl;
             img.alt = 'Anexo';
             a.appendChild(img);
         } else {
@@ -1098,6 +1069,7 @@ async function suporteEnviarMensagemChamado() {
         const msgsEl = document.getElementById('suporteChamadoDetalheMsgs');
         msgsEl.querySelector('.suporte-chamado-sem-respostas')?.remove();
         msgsEl.appendChild(_suporteMontarBalaoMensagem('usuario', mensagem, anexoUrl));
+        hidratarArquivosPrivados(msgsEl);
         msgsEl.scrollTop = msgsEl.scrollHeight;
         input.value = '';
         suporteAjustarAlturaResposta(input);

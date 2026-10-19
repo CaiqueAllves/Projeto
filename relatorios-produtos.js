@@ -163,7 +163,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-tag',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status dos produtos</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Status dos produtos</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" value="ativo" checked> Ativos</label>
                     <label class="rel-check"><input type="checkbox" value="inativo" checked> Inativos</label>
@@ -176,7 +176,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-chart-bar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Incluir status</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Incluir status</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" value="ativo" checked> Ativo</label>
                     <label class="rel-check"><input type="checkbox" value="inativo" checked> Inativo</label>
@@ -189,7 +189,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-warehouse',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Filtrar por situação</label>
+                <label for="relEstoqueFiltro" class="rel-param-label"><i class="fa-solid fa-filter"></i> Filtrar por situação</label>
                 <select id="relEstoqueFiltro" class="rel-select" onchange="atualizarPreview()">
                     <option value="">Todos com controle de estoque</option>
                     <option value="baixo">Apenas abaixo do mínimo</option>
@@ -310,12 +310,12 @@ function baixarPDF() {
                 <thead><tr><th>SKU</th><th>Nome</th><th>Categoria</th><th>Marca</th><th>NCM</th><th>Status</th></tr></thead>
                 <tbody>${filtrados.map(p => `
                     <tr>
-                        <td>${p.sku || '—'}</td>
-                        <td>${p.nome || '—'}</td>
-                        <td>${p.categoria || '—'}</td>
-                        <td>${p.marca || '—'}</td>
-                        <td>${p.ncm || '—'}</td>
-                        <td>${(p.statusAtivo || 'ativo') === 'ativo' ? 'Ativo' : 'Inativo'}</td>
+                        <td>${escHtml(p.sku || '—')}</td>
+                        <td>${escHtml(p.nome || '—')}</td>
+                        <td>${escHtml(p.categoria || '—')}</td>
+                        <td>${escHtml(p.marca || '—')}</td>
+                        <td>${escHtml(p.ncm || '—')}</td>
+                        <td>${escHtml((p.statusAtivo || 'ativo') === 'ativo' ? 'Ativo' : 'Inativo')}</td>
                     </tr>`).join('')}
                 </tbody>
             </table>`;
@@ -330,7 +330,7 @@ function baixarPDF() {
                 <tbody>${selecionados.map(s => {
                     const qtd = todosProdutos.filter(p => (p.statusAtivo || 'ativo') === s).length;
                     const pct = Math.round((qtd / total) * 100);
-                    return `<tr><td>${labels[s]}</td><td>${qtd}</td><td>${pct}%</td></tr>`;
+                    return `<tr><td>${escHtml(labels[s])}</td><td>${escHtml(qtd)}</td><td>${escHtml(pct)}%</td></tr>`;
                 }).join('')}
                 </tbody>
             </table>`;
@@ -351,12 +351,12 @@ function baixarPDF() {
                     const min   = Number(p.estoqueMinimo || 0);
                     const sit   = atual < min ? 'Abaixo do mínimo' : 'Em dia';
                     return `<tr>
-                        <td>${p.sku || '—'}</td>
-                        <td>${p.nome || '—'}</td>
-                        <td>${p.categoria || '—'}</td>
-                        <td>${atual}</td>
-                        <td>${min}</td>
-                        <td>${sit}</td>
+                        <td>${escHtml(p.sku || '—')}</td>
+                        <td>${escHtml(p.nome || '—')}</td>
+                        <td>${escHtml(p.categoria || '—')}</td>
+                        <td>${escHtml(atual)}</td>
+                        <td>${escHtml(min)}</td>
+                        <td>${escHtml(sit)}</td>
                     </tr>`;
                 }).join('')}
                 </tbody>
@@ -398,7 +398,7 @@ function baixarPDF() {
         <div class="pdf-meta">
             <div class="pdf-meta-item"><strong>Período</strong>${formatarData(di)} até ${formatarData(df)}</div>
             <div class="pdf-meta-item"><strong>Total de produtos</strong>${todosProdutos.length}</div>
-            <div class="pdf-meta-item"><strong>Solicitante</strong>${usuario.nome || '—'}</div>
+            <div class="pdf-meta-item"><strong>Solicitante</strong>${escHtml(usuario.nome || '—')}</div>
         </div>
         ${conteudoTabela}
         <div class="pdf-footer">

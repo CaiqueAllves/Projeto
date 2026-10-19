@@ -34,7 +34,8 @@ h1 {
   margin-bottom: 24px;
 }
 
-label {
+label,
+:is(span,div):where(.rotulo) {
   font-size: 14px;
   font-weight: 500;
 }
@@ -560,7 +561,8 @@ form {
     box-shadow: var(--sombra);
 }
 
-form label {
+form label,
+form :is(span,div):where(.rotulo) {
     font-weight: 600;
     margin-bottom: 8px;
     display: block;
@@ -1850,3 +1852,41 @@ form small {
 .conta-bancaria-remover { border: none; background: none; color: #94a3b8; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
 .conta-bancaria-remover:hover { background: #fef2f2; color: #dc2626; }
 .conta-bancaria-add { margin-top: 12px; }
+
+/* ── Permissões por perfil/módulo (auth.js → _authAplicarPermissoes) ── */
+.perm-sem-excluir .so-excluir,
+.perm-sem-financeiro .so-financeiro,
+.perm-sem-financeiro #mod-financeiro,
+.perm-sem-comercial .so-comercial,
+.perm-sem-comercial #mod-comercial,
+.perm-oculto {
+    display: none !important;
+}
+
+.perm-sem-acesso {
+    max-width: 440px;
+    margin: 80px auto;
+    padding: 32px 24px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    color: #475569;
+}
+
+.perm-sem-acesso i {
+    font-size: 32px;
+    color: #94a3b8;
+}
+
+.perm-sem-acesso h2 {
+    margin: 14px 0 8px;
+    font-size: 18px;
+    color: #1e293b;
+}
+
+.perm-sem-acesso p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}

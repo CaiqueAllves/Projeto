@@ -157,12 +157,12 @@ function renderizarEmpresas(lista) {
                                 ${_tiposBadges(e) || '<span class="cell-vazio">—</span>'}
                             </div>
                         </td>
-                        <td class="col-razao" data-label="Razão Social:"><span class="empresa-nome">${e.razao_social || '—'}</span></td>
-                        <td class="col-fantasia" data-label="Nome Fantasia:"><span class="empresa-fantasia">${e.nome_fantasia || '<span class="cell-vazio">—</span>'}</span></td>
+                        <td class="col-razao" data-label="Razão Social:"><span class="empresa-nome">${escHtml(e.razao_social || '—')}</span></td>
+                        <td class="col-fantasia" data-label="Nome Fantasia:"><span class="empresa-fantasia">${e.nome_fantasia ? escHtml(e.nome_fantasia) : '<span class="cell-vazio">—</span>'}</span></td>
                         <td class="col-doc cell-nowrap" data-label="Documento:">${e.documento
-                            ? `${_docTipoLabel(e) ? `<span class="doc-tipo-label">${_docTipoLabel(e)}</span>` : ''}${_formatarDocumentoExibicao(e.documento)}`
+                            ? `${_docTipoLabel(e) ? `<span class="doc-tipo-label">${_docTipoLabel(e)}</span>` : ''}${escHtml(_formatarDocumentoExibicao(e.documento))}`
                             : '—'}</td>
-                        <td class="col-loc cell-nowrap" data-label="Localização:">${[_normalizarPais(e.pais), e.estado].filter(Boolean).join(' / ') || '—'}</td>
+                        <td class="col-loc cell-nowrap" data-label="Localização:">${escHtml([_normalizarPais(e.pais), e.estado].filter(Boolean).join(' / ') || '—')}</td>
                         <td class="col-tags" data-label="Tags:">${(e.tags && e.tags.length) ? renderTagsMini(e.tags) : '<span class="cell-vazio">—</span>'}</td>
                         <td class="col-acoes" style="text-align:center;white-space:nowrap;" data-label="">
                             <button class="btn-acao btn-visualizar" onclick="visualizarEmpresa('${e.id}')" title="Visualizar">
@@ -178,11 +178,47 @@ function renderizarEmpresas(lista) {
                     </tr>
                 `).join('')}
             </tbody>
-        </table>`;
+        </table>
+        ${_empCardsMobile(lista)}`;
+}
+
+// Celular: cards no lugar da tabela (a versão "rótulo: valor" empilhada ficava
+// longa e cheia de "—"). O CSS mostra os cards e esconde a tabela só em telas estreitas.
+function _empEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function _empCardsMobile(lista) {
+    const iniciais = nome => String(nome || '?').replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
+    return `<div class="emp-cards">${lista.map(e => {
+        const modelo = e.is_transportadora ? 'transportadora' : (!_isBrasil(e.pais) ? 'estrangeira' : 'nacional');
+        // Transportadora já aparece no selo do modelo — não repete no tipo
+        const tipos = (_tiposBadges({ ...e, is_transportadora: false }) || '');
+        const local = [e.cidade, e.estado, _normalizarPais(e.pais)].filter(Boolean).map(_empEsc).join(' · ');
+        const doc = e.documento ? `${_docTipoLabel(e) ? `<b>${_docTipoLabel(e)}</b> ` : ''}${escHtml(_formatarDocumentoExibicao(e.documento))}` : '';
+        return `
+        <div class="emp-card emp-card--${modelo}">
+            <div class="emp-card-topo">
+                <div class="emp-card-avatar">${_empEsc(iniciais(e.nome_fantasia || e.razao_social))}</div>
+                <div class="emp-card-nomes">
+                    <div class="emp-card-nome">${_empEsc(e.razao_social || '—')}</div>
+                    ${e.nome_fantasia ? `<div class="emp-card-fantasia">${_empEsc(e.nome_fantasia)}</div>` : ''}
+                </div>
+            </div>
+            <div class="emp-card-selos">${_modeloBadge(e)}${tipos}</div>
+            ${doc || local ? `<div class="emp-card-info">
+                ${doc ? `<span><i class="fa-solid fa-id-card"></i> ${doc}</span>` : ''}
+                ${local ? `<span><i class="fa-solid fa-location-dot"></i> ${local}</span>` : ''}
+            </div>` : ''}
+            ${(e.tags && e.tags.length) ? `<div class="emp-card-tags">${e.tags.map(t => `<span class="tag-item-mini">${_empEsc(t)}</span>`).join('')}</div>` : ''}
+            <div class="emp-card-acoes">
+                <button class="emp-card-btn" onclick="visualizarEmpresa('${e.id}')"><i class="fa-solid fa-eye"></i> Ver</button>
+                <button class="emp-card-btn emp-card-btn--editar" onclick="editarEmpresa('${e.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+                <button class="emp-card-btn emp-card-btn--excluir" onclick="excluirEmpresa('${e.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('')}</div>`;
 }
 
 function renderTagsMini(tags) {
-    return tags.slice(0, 2).map(t => `<span class="tag-item-mini">${t}</span>`).join('');
+    return tags.slice(0, 2).map(t => `<span class="tag-item-mini">${escHtml(t)}</span>`).join('');
 }
 
 function filtrarEmpresas(valor) {

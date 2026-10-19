@@ -2,14 +2,24 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+    <meta name="theme-color" content="#4776ec">
+    <link rel="icon" type="image/svg+xml" href="icons/marpex.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Marpex">
+    <script src="pwa.js?v=499b88dd"></script>
     <title>Marpex | Meu Perfil</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=3133da0a">
+    <link rel="stylesheet" href="style-base.css?v=0e82b1a5">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
     <link rel="stylesheet" href="style-permissoes.css?v=22176f74">
-    <link rel="stylesheet" href="style-perfil.css?v=59c880a5">
+    <link rel="stylesheet" href="style-perfil.css?v=272e6ee6">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style-mobile.css?v=4ee8b672">
+    <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
 
 <body>
@@ -201,27 +211,27 @@
                         <div class="perfil-section-body">
                             <div class="perfil-form-grid">
                                 <div class="perfil-form-group perfil-form-group-full">
-                                    <label>Nome Completo</label>
+                                    <label for="inputNome">Nome Completo</label>
                                     <input type="text" id="inputNome" placeholder="Seu nome completo">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>E-mail</label>
+                                    <label for="inputEmail">E-mail</label>
                                     <input type="email" id="inputEmail" placeholder="seu@email.com">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>CPF <span class="label-readonly">somente leitura</span></label>
+                                    <label for="inputCpf">CPF <span class="label-readonly">somente leitura</span></label>
                                     <input type="text" id="inputCpf" disabled>
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Cargo / Função</label>
+                                    <label for="inputCargo">Cargo / Função</label>
                                     <input type="text" id="inputCargo" placeholder="Ex: Analista de Comércio Exterior">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Telefone</label>
+                                    <label for="inputTelefone">Telefone</label>
                                     <input type="text" id="inputTelefone" placeholder="(00) 00000-0000">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Perfil de Acesso <span class="label-readonly">somente leitura</span></label>
+                                    <label for="inputPerfilAcesso">Perfil de Acesso <span class="label-readonly">somente leitura</span></label>
                                     <input type="text" id="inputPerfilAcesso" disabled>
                                 </div>
                             </div>
@@ -254,31 +264,31 @@
 
                                 <!-- Razão Social | Nome Fantasia -->
                                 <div class="perfil-form-group">
-                                    <label>Razão Social</label>
+                                    <label for="empView-razao">Razão Social</label>
                                     <input type="text" id="empView-razao" disabled>
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Nome Fantasia</label>
+                                    <label for="empView-fantasia">Nome Fantasia</label>
                                     <input type="text" id="empView-fantasia" disabled>
                                 </div>
 
                                 <!-- Tipo | Documento -->
                                 <div class="perfil-form-group">
-                                    <label>Tipo <span class="label-readonly">somente leitura</span></label>
+                                    <label for="empView-tipo">Tipo <span class="label-readonly">somente leitura</span></label>
                                     <input type="text" id="empView-tipo" disabled>
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label id="empView-doc-label">Documento <span class="label-readonly">somente leitura</span></label>
+                                    <label for="empView-doc" id="empView-doc-label">Documento <span class="label-readonly">somente leitura</span></label>
                                     <input type="text" id="empView-doc" disabled>
                                 </div>
 
                                 <!-- País | Perfil na Empresa -->
                                 <div class="perfil-form-group">
-                                    <label>País</label>
+                                    <label for="empView-pais">País</label>
                                     <input type="text" id="empView-pais" disabled>
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Perfil na Empresa <span class="label-readonly">somente leitura</span></label>
+                                    <label for="empView-perfil">Perfil na Empresa <span class="label-readonly">somente leitura</span></label>
                                     <input type="text" id="empView-perfil" disabled>
                                 </div>
 
@@ -302,7 +312,7 @@
                         <div class="perfil-section-body">
                             <div class="perfil-form-grid">
                                 <div class="perfil-form-group">
-                                    <label>Já tem uma chave de empresa?</label>
+                                    <label for="vincularChaveInput">Já tem uma chave de empresa?</label>
                                     <input type="text" id="vincularChaveInput" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase;">
                                 </div>
                                 <div class="perfil-form-group" style="align-self:end;">
@@ -316,18 +326,18 @@
 
                             <div class="perfil-form-grid">
                                 <div class="perfil-form-group">
-                                    <label>Tipo de Documento</label>
+                                    <label for="vincularTipoDoc">Tipo de Documento</label>
                                     <select id="vincularTipoDoc">
                                         <option value="cnpj">CNPJ</option>
                                         <option value="outro">Outro</option>
                                     </select>
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Documento</label>
+                                    <label for="vincularDocInput">Documento</label>
                                     <input type="text" id="vincularDocInput" placeholder="Número do documento">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Razão Social</label>
+                                    <label for="vincularRazaoInput">Razão Social</label>
                                     <input type="text" id="vincularRazaoInput" placeholder="Nome da sua empresa">
                                 </div>
                                 <div class="perfil-form-group" style="align-self:end;">
@@ -441,19 +451,19 @@
                                 </div>
                                 <div class="perfil-form-grid perfil-form-grid-senha">
                                     <div class="perfil-form-group perfil-form-group-codigo">
-                                        <label>Código de Verificação</label>
+                                        <label for="inputCodigo">Código de Verificação</label>
                                         <input type="text" id="inputCodigo" placeholder="000000" maxlength="6"
                                                style="letter-spacing:6px; font-size:20px; font-weight:700; text-align:center;">
                                     </div>
                                     <div class="perfil-form-group">
-                                        <label>Nova Senha</label>
+                                        <label for="inputNovaSenha">Nova Senha</label>
                                         <div class="input-senha-wrap">
                                             <input type="password" id="inputNovaSenha" placeholder="Mínimo 6 caracteres">
                                             <i class="fa-solid fa-eye toggle-senha" onclick="toggleSenha('inputNovaSenha', this)"></i>
                                         </div>
                                     </div>
                                     <div class="perfil-form-group">
-                                        <label>Confirmar Nova Senha</label>
+                                        <label for="inputConfirmarSenha">Confirmar Nova Senha</label>
                                         <div class="input-senha-wrap">
                                             <input type="password" id="inputConfirmarSenha" placeholder="Repita a senha">
                                             <i class="fa-solid fa-eye toggle-senha" onclick="toggleSenha('inputConfirmarSenha', this)"></i>
@@ -504,7 +514,7 @@
 
                             <!-- Identificação | Número de Identificação -->
                             <div class="perfil-form-group">
-                                <label>Identificação da Empresa <span class="label-readonly">somente leitura</span></label>
+                                <label for="editEmpTipoCadastro">Identificação da Empresa <span class="label-readonly">somente leitura</span></label>
                                 <select id="editEmpTipoCadastro" onchange="editEmpAlterarTipo()">
                                     <option value="">Selecione...</option>
                                     <option value="cnpj">CNPJ</option>
@@ -512,48 +522,48 @@
                                 </select>
                             </div>
                             <div class="perfil-form-group">
-                                <label>Número de Identificação <span class="label-readonly">somente leitura</span></label>
+                                <label for="editEmpDocumento">Número de Identificação <span class="label-readonly">somente leitura</span></label>
                                 <input type="text" id="editEmpDocumento" placeholder="Selecione o tipo primeiro" disabled maxlength="18" oninput="this.value=_mascaraDocBR(this.value)">
                             </div>
 
                             <!-- IE | IM | SUFRAMA -->
                             <div class="perfil-form-group-row3">
                                 <div class="perfil-form-group">
-                                    <label>Inscrição Estadual</label>
+                                    <label for="editEmpIE">Inscrição Estadual</label>
                                     <input type="text" id="editEmpIE" placeholder="000.000.00-0" maxlength="15" inputmode="numeric" oninput="this.value=_mascaraIE(this.value)">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Inscrição Municipal</label>
+                                    <label for="editEmpIM">Inscrição Municipal</label>
                                     <input type="text" id="editEmpIM" placeholder="000000-0" maxlength="8" inputmode="numeric" oninput="this.value=_mascaraIM(this.value)">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>SUFRAMA <span class="label-opcional">(se houver)</span></label>
+                                    <label for="editEmpSuframa">SUFRAMA <span class="label-opcional">(se houver)</span></label>
                                     <input type="text" id="editEmpSuframa" placeholder="00000000" maxlength="11" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                                 </div>
                             </div>
 
                             <!-- Razão Social | Nome Fantasia -->
                             <div class="perfil-form-group">
-                                <label>Razão Social <span class="required">*</span></label>
+                                <label for="editEmpRazaoSocial">Razão Social <span class="required">*</span></label>
                                 <input type="text" id="editEmpRazaoSocial" placeholder="Nome da Empresa">
                             </div>
                             <div class="perfil-form-group">
-                                <label>Nome Fantasia <span class="label-opcional">(se houver)</span></label>
+                                <label for="editEmpNomeFantasia">Nome Fantasia <span class="label-opcional">(se houver)</span></label>
                                 <input type="text" id="editEmpNomeFantasia" placeholder="Nome comercial">
                             </div>
 
                             <!-- CEP | Estado | Cidade -->
                             <div class="perfil-form-group-row3">
                                 <div class="perfil-form-group">
-                                    <label>CEP</label>
+                                    <label for="editEmpCep">CEP</label>
                                     <input type="text" id="editEmpCep" placeholder="00000-000" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'').replace(/^(\d{5})(\d)/,'$1-$2')" onblur="editEmpBuscarCep()">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Estado</label>
+                                    <label for="editEmpEstado">Estado</label>
                                     <input type="text" id="editEmpEstado" placeholder="Estado">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Cidade</label>
+                                    <label for="editEmpCidade">Cidade</label>
                                     <input type="text" id="editEmpCidade" placeholder="Cidade">
                                 </div>
                             </div>
@@ -561,18 +571,18 @@
                             <!-- Endereço | Número | Complemento -->
                             <div class="perfil-form-group-row3-end">
                                 <div class="perfil-form-group">
-                                    <label>Endereço</label>
+                                    <label for="editEmpEndereco">Endereço</label>
                                     <input type="text" id="editEmpEndereco" placeholder="Rua, Av., etc.">
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Número</label>
+                                    <label for="editEmpNumero">Número</label>
                                     <div class="input-com-sn">
                                         <input type="text" id="editEmpNumero" placeholder="Nº" inputmode="numeric" oninput="if(!this.disabled)this.value=this.value.replace(/\D/g,'')">
                                         <span class="sn-toggle-inner" onclick="const n=document.getElementById('editEmpNumero');this.classList.toggle('ativo');const a=this.classList.contains('ativo');n.disabled=a;n.value=a?'S/N':'';n.placeholder=a?'':'Nº';">S/N</span>
                                     </div>
                                 </div>
                                 <div class="perfil-form-group">
-                                    <label>Complemento <span class="label-opcional">(opcional)</span></label>
+                                    <label for="editEmpComplemento">Complemento <span class="label-opcional">(opcional)</span></label>
                                     <input type="text" id="editEmpComplemento" placeholder="Sala, Andar, Bloco...">
                                 </div>
                             </div>
@@ -639,13 +649,13 @@
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
-<script src="supabase-api.js?v=bfd7a186"></script>
-<script src="auth.js?v=0963892b"></script>
-<script src="navegador.js?v=afdfd0cc"></script>
+<script src="supabase-api.js?v=0643ed38"></script>
+<script src="auth.js?v=1513f71e"></script>
+<script src="navegador.js?v=1113c2e2"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="perfil.js?v=0930474c"></script>
 
-<script src="suporte.js?v=dd1c94d5"></script>
+<script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>
 

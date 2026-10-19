@@ -2,14 +2,24 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+    <meta name="theme-color" content="#4776ec">
+    <link rel="icon" type="image/svg+xml" href="icons/marpex.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Marpex">
+    <script src="pwa.js?v=499b88dd"></script>
     <title>Marpex | Formulários</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=3133da0a">
+    <link rel="stylesheet" href="style-base.css?v=0e82b1a5">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-formularios.css?v=febc6d1e">
-    <link rel="stylesheet" href="style-cadastro.css?v=03beb8ac">
+    <link rel="stylesheet" href="style-formularios.css?v=1eb1f3f5">
+    <link rel="stylesheet" href="style-cadastro.css?v=f3e58ec0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style-mobile.css?v=4ee8b672">
+    <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
 
 <body>
@@ -80,7 +90,7 @@
                                 <div class="emp-modelo-tipo-row">
                                 <!-- MODELO -->
                                 <div class="modelo-selector-group modelo-selector-group--inside">
-                                    <label class="modelo-selector-label">Modelo <span class="required">*</span></label>
+                                    <span class="rotulo modelo-selector-label">Modelo <span class="required">*</span></span>
                                     <div class="modelo-cards-group">
                                         <label class="modelo-card">
                                             <input type="radio" name="emp_modelo" value="empresa" onchange="onModeloChange(this.value)">
@@ -119,7 +129,7 @@
 
                                     <!-- TIPO -->
                                     <div class="form-group" id="emp-tipo-group">
-                                        <label>Tipo <span class="required">*</span></label>
+                                        <span class="rotulo">Tipo <span class="required">*</span></span>
                                         <div class="tipo-cards-group">
                                             <label class="tipo-card">
                                                 <input type="checkbox" name="tipo_fabricante" value="fabricante">
@@ -199,7 +209,7 @@
                                                 <input type="text" id="emp-im" name="inscricao_municipal" placeholder="000000-0" inputmode="numeric" maxlength="8" oninput="this.value=_mascaraIM(this.value)">
                                             </div>
                                             <div class="form-group">
-                                                <label>
+                                                <label for="emp-suframa">
                                                     <button type="button" class="btn-suframa-link" id="btn-suframa" onclick="toggleSuframa()">
                                                         <i class="fa-solid fa-plus" id="suframa-btn-icon"></i> SUFRAMA (Zona Franca)
                                                     </button>
@@ -281,7 +291,7 @@
                                         <!-- ENDEREÇO DE COLETA -->
                                         <div id="emp-coleta-group">
                                             <div class="coleta-label-row">
-                                                <label>Endereço de Coleta</label>
+                                                <span class="rotulo">Endereço de Coleta</span>
                                                 <label class="sn-toggle">
                                                     <input type="checkbox" id="emp-coleta-mesmo" onchange="toggleDadosColeta(this.checked)">
                                                     <span>Mesmo endereço Fiscal</span>
@@ -390,12 +400,12 @@
                             <div class="section-content">
                                 <div id="emp-marcas-lista"></div>
                                 <div class="marca-footer">
-                                    <label class="tipo-card" id="btn-add-marca" onclick="empAdicionarMarca()">
+                                    <div class="rotulo tipo-card" id="btn-add-marca" onclick="empAdicionarMarca()">
                                         <div class="tipo-card-inner">
                                             <i class="fa-solid fa-plus"></i>
                                             <span>Adicionar Marca</span>
                                         </div>
-                                    </label>
+                                    </div>
                                     <label class="tipo-card">
                                         <input type="checkbox" id="emp-sem-marca-global" name="marca_sem_marca" onchange="toggleSemMarcaGlobal(this)">
                                         <div class="tipo-card-inner">
@@ -668,7 +678,7 @@
 
 
                                     <div class="form-group">
-                                        <label>Tags</label>
+                                        <label for="emp-tags-input">Tags</label>
                                         <div class="tags-input-wrapper">
                                             <input type="text" id="emp-tags-input" placeholder="Digite e pressione Enter ou clique em +" autocomplete="off">
                                             <button type="button" class="btn-add-tag" onclick="empAdicionarTag()">
@@ -792,7 +802,7 @@
                                     <div class="form-group full-width">
                                         <div class="prop-linha-4">
                                             <div class="form-group">
-                                                <label>Emissor <span class="required">*</span></label>
+                                                <span class="rotulo">Emissor <span class="required">*</span></span>
                                                 <div class="emissor-toggle">
                                                     <label class="emissor-opcao" id="emissor-opcao-usuario">
                                                         <input type="radio" name="proc-emissor-tipo" value="usuario" id="proc-emissor-usuario">
@@ -980,7 +990,7 @@
                                     <div class="form-group full-width">
                                         <div style="background:#fff3e0; border-radius:10px; padding:16px 20px;">
                                             <div class="coleta-label-row">
-                                                <label>Endereço de Coleta</label>
+                                                <span class="rotulo">Endereço de Coleta</span>
                                                 <label class="sn-toggle">
                                                     <input type="checkbox" id="proc-origem-coleta-mesmo" onchange="procToggleColetaOrigem(this.checked)">
                                                     <span>Mesmo endereço acima</span>
@@ -1783,7 +1793,7 @@
                                     <div class="form-group full-width">
                                         <div class="prop-linha-4">
                                             <div class="form-group" style="margin-bottom:0;">
-                                                <label>Código da Proforma</label>
+                                                <span class="rotulo">Código da Proforma</span>
                                                 <input type="hidden" id="prop-id">
                                                 <input type="hidden" id="prop-codigo" name="codigo">
                                                 <div class="prop-codigo-campo" id="prop-codigo-display" title="Gerado automaticamente pelo sistema">—</div>
@@ -1795,7 +1805,7 @@
                                     <div class="form-group full-width">
                                         <div class="prop-linha-4">
                                             <div class="form-group" style="margin-bottom:0;">
-                                                <label>Emissor <span class="required">*</span></label>
+                                                <span class="rotulo">Emissor <span class="required">*</span></span>
                                         <div class="emissor-toggle">
                                             <label class="emissor-opcao" id="prop-emissor-opcao-usuario">
                                                 <input type="radio" name="prop-emissor-tipo" value="usuario" id="prop-emissor-usuario">
@@ -2352,7 +2362,7 @@
 
                                     <!-- Tags (substituiu "Referência Interna") -->
                                     <div class="form-group full-width">
-                                        <label>Tags
+                                        <label for="prod-tags-input">Tags
                                             <span class="info-balao direita" data-tooltip="Palavras-chave livres pra classificar o produto (ex: sapato, camiseta). Digite e pressione Enter ou clique em +."><i class="fa-solid fa-circle-info"></i></span>
                                         </label>
                                         <div class="tags-input-wrapper">
@@ -2635,11 +2645,11 @@
 
                                     <!-- Linha 2.5: Preços em outras moedas (opcional, sem limite fixo) -->
                                     <div class="form-group full-width">
-                                        <label>Preços em outras Moedas
+                                        <span class="rotulo">Preços em outras Moedas
                                             <span class="info-balao" data-tooltip="Preço de venda alternativo pra outro mercado/moeda de exportação. Não substitui o Preço de Venda principal acima — é um adicional opcional.">
                                                 <i class="fa-solid fa-circle-info"></i>
                                             </span>
-                                        </label>
+                                        </span>
                                         <button type="button" id="btn-add-preco-prod" class="btn-add-idioma" onclick="prodAdicionarPrecoExtra()" style="margin-top:6px; width:fit-content;">
                                             <i class="fa-solid fa-plus"></i> Adicionar Preço em outra Moeda
                                         </button>
@@ -2673,7 +2683,7 @@
 
                                     <!-- Linha 1: Configurações (botões estilo marca) -->
                                     <div class="form-group full-width">
-                                        <label>Configurações de Estoque</label>
+                                        <span class="rotulo">Configurações de Estoque</span>
                                         <div class="estoque-config-row">
                                             <label class="tipo-card">
                                                 <input type="checkbox" id="prod-controla-estoque" name="controla_estoque" checked onchange="prodAtualizarEstoqueConfig()">
@@ -3245,16 +3255,16 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=bfd7a186"></script>
-<script src="auth.js?v=0963892b"></script>
-<script src="navegador.js?v=afdfd0cc"></script>
+<script src="supabase-api.js?v=0643ed38"></script>
+<script src="auth.js?v=1513f71e"></script>
+<script src="navegador.js?v=1113c2e2"></script>
 <script src="doc-tipos.js?v=a2c88b3e"></script>
-<script src="formularios.js?v=ba942f01"></script>
+<script src="formularios.js?v=8919c105"></script>
 <script src="cadastro-logo-contas.js?v=e016db4c"></script>
-<script src="formularios-empresa.js?v=cd7ab7e6"></script>
-<script src="formularios-processo.js?v=441e0f77"></script>
+<script src="formularios-empresa.js?v=f6971d7e"></script>
+<script src="formularios-processo.js?v=e6c81f04"></script>
 <script src="formularios-proforma.js?v=41c49e52"></script>
-<script src="formularios-produto.js?v=3175ac31"></script>
+<script src="formularios-produto.js?v=b22bc46d"></script>
 <script src="formularios-mobile.js?v=aeda52c3"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="pdf-kit.js?v=95957ae9"></script>
@@ -3262,7 +3272,7 @@
 <script src="pdf-proforma.js?v=f4831a4d"></script>
 <script src="pdf-documentos.js?v=13955173"></script>
 
-<script src="suporte.js?v=dd1c94d5"></script>
+<script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>
 

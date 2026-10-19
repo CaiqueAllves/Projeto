@@ -2,14 +2,24 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+    <meta name="theme-color" content="#4776ec">
+    <link rel="icon" type="image/svg+xml" href="icons/marpex.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Marpex">
+    <script src="pwa.js?v=499b88dd"></script>
     <title>Marpex | Proposta</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=3133da0a">
+    <link rel="stylesheet" href="style-base.css?v=0e82b1a5">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-pipeline.css?v=ba5daca4">
+    <link rel="stylesheet" href="style-pipeline.css?v=2909e982">
     <link rel="stylesheet" href="style-proposta.css?v=36d2e13f">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style-mobile.css?v=4ee8b672">
+    <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
 <body>
 
@@ -178,44 +188,44 @@
 
             <div class="pl-form-row">
                 <div class="pl-form-group pl-full">
-                    <label>Número da Proposta <span class="pl-req">*</span></label>
+                    <label for="propTitulo">Número da Proposta <span class="pl-req">*</span></label>
                     <input type="text" id="propTitulo" placeholder="Gerado automaticamente..." readonly>
                 </div>
             </div>
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label>Exportador</label>
+                    <label for="propRemetenteNome">Exportador</label>
                     <input type="text" id="propRemetenteNome" placeholder="Buscar empresa..." autocomplete="off" oninput="propBuscarEmpresa('remetente', this.value)" onfocus="propMostrarEmpresas('remetente', this.value)">
                     <input type="hidden" id="propRemetenteId">
                     <div class="pl-autocomplete" id="propAutoRemetente"></div>
                 </div>
                 <div class="pl-form-group">
-                    <label>Identificação Fiscal</label>
+                    <label for="propRemetenteDocumento">Identificação Fiscal</label>
                     <input type="text" id="propRemetenteDocumento" placeholder="—" readonly>
                 </div>
             </div>
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label>Importador</label>
+                    <label for="propDestinatarioNome">Importador</label>
                     <input type="text" id="propDestinatarioNome" placeholder="Buscar empresa..." autocomplete="off" oninput="propBuscarEmpresa('destinatario', this.value)" onfocus="propMostrarEmpresas('destinatario', this.value)">
                     <input type="hidden" id="propDestinatarioId">
                     <div class="pl-autocomplete" id="propAutoDestinatario"></div>
                 </div>
                 <div class="pl-form-group">
-                    <label>Identificação Fiscal</label>
+                    <label for="propDestinatarioDocumento">Identificação Fiscal</label>
                     <input type="text" id="propDestinatarioDocumento" placeholder="—" readonly>
                 </div>
             </div>
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label>Valor</label>
+                    <label for="propValor">Valor</label>
                     <input type="text" id="propValor" placeholder="0,00" inputmode="decimal" oninput="propMascaraMonetaria(this)">
                 </div>
                 <div class="pl-form-group">
-                    <label>Moeda</label>
+                    <label for="propMoeda">Moeda</label>
                     <select id="propMoeda">
                         <option value="USD">USD</option>
                     </select>
@@ -224,7 +234,7 @@
 
             <div class="pl-form-row" id="propEtapaGroup" style="display:none;">
                 <div class="pl-form-group">
-                    <label>Etapa</label>
+                    <label for="propEtapa">Etapa</label>
                     <select id="propEtapa" onchange="propToggleMotivoPerda()">
                         <option value="proposta">Proposta</option>
                         <option value="negociacao">Negociação</option>
@@ -236,25 +246,25 @@
 
             <div class="pl-form-row" id="propMotivoPerdaGroup" style="display:none;">
                 <div class="pl-form-group pl-full">
-                    <label>Motivo da Perda</label>
+                    <label for="propMotivoPerda">Motivo da Perda</label>
                     <textarea id="propMotivoPerda" rows="2" placeholder="Por que essa proposta foi perdida?"></textarea>
                 </div>
             </div>
 
             <div class="pl-form-row">
                 <div class="pl-form-group pl-full">
-                    <label>Responsável</label>
+                    <label for="propResponsavel">Responsável</label>
                     <input type="text" id="propResponsavel" placeholder="Nome do responsável">
                 </div>
             </div>
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label>Data de Criação</label>
+                    <label for="propDataCriacao">Data de Criação</label>
                     <input type="date" id="propDataCriacao" readonly>
                 </div>
                 <div class="pl-form-group">
-                    <label>Prazo Hábil</label>
+                    <label for="propPrazoDias">Prazo Hábil</label>
                     <select id="propPrazoDias" onchange="propAtualizarPrazo()">
                         <option value="">Selecione...</option>
                         <option value="2">2 dias</option>
@@ -265,14 +275,14 @@
                     </select>
                 </div>
                 <div class="pl-form-group">
-                    <label>Previsão de Fechamento</label>
+                    <label for="propDataPrevista">Previsão de Fechamento</label>
                     <input type="date" id="propDataPrevista" readonly>
                 </div>
             </div>
 
             <div class="pl-form-row" id="propPrazoCustomGroup" style="display:none;">
                 <div class="pl-form-group">
-                    <label>Quantos dias de prazo?</label>
+                    <label for="propPrazoCustom">Quantos dias de prazo?</label>
                     <input type="number" id="propPrazoCustom" min="1" placeholder="Ex: 30" oninput="propAtualizarPrazoCustom()">
                 </div>
             </div>
@@ -338,10 +348,10 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=bfd7a186"></script>
-<script src="auth.js?v=0963892b"></script>
-<script src="navegador.js?v=afdfd0cc"></script>
+<script src="supabase-api.js?v=0643ed38"></script>
+<script src="auth.js?v=1513f71e"></script>
+<script src="navegador.js?v=1113c2e2"></script>
 <script src="proposta.js?v=20754d45"></script>
-<script src="suporte.js?v=dd1c94d5"></script>
+<script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

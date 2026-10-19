@@ -7,7 +7,8 @@ module.exports = {
         try {
             ids = await h.criarDados(page, { processos: 1 });
             // novo processo a partir da Proforma: documentos preenchidos e saldo restante (100 - 50)
-            await h.ir(page, 'formularios.html?tab=processo&proforma_id=' + ids.proforma, 5000);
+            await h.ir(page, 'formularios.html?tab=processo&proforma_id=' + ids.proforma, 2000);
+            await page.waitForFunction(() => ['proc-documento', 'proc-emp-dest-auto-doc', 'proc-emp-dest-auto-id'].every(id => document.getElementById(id)?.value), null, { timeout: 15000 }).catch(() => {});
             const f = await page.evaluate(() => ({
                 expDoc: document.getElementById('proc-documento').value,
                 impDoc: document.getElementById('proc-emp-dest-auto-doc').value,

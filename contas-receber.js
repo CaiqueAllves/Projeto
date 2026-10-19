@@ -244,7 +244,7 @@ function crRenderizar() {
                 <div class="fin-acoes">
                     <button class="fin-btn-acao fin-btn-editar" onclick="crAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
                     ${podeReceber ? `<button class="fin-btn-acao fin-btn-pagar" onclick="crMarcarRecebido('${c.id}')" title="Marcar como recebido"><i class="fa-solid fa-circle-check"></i></button>` : ''}
-                    <button class="fin-btn-acao fin-btn-excluir" onclick="crAbrirModalExcluir('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    <button class="fin-btn-acao fin-btn-excluir so-excluir" onclick="crAbrirModalExcluir('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
         </tr>`;
@@ -665,6 +665,7 @@ document.addEventListener('click', e => {
 });
 
 function crAbrirModalExcluir(id) {
+    if (!usuarioPodeExcluir()) return avisoSemPermissaoExcluir();
     _crExcluirId = id;
     const c = _crTodas.find(x => x.id === id);
     document.getElementById('crExcluirNome').textContent = c?.descricao || '';

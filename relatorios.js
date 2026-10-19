@@ -235,7 +235,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-calendar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Tipo</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Tipo</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" name="rel-tipo" value="fabricante" checked> Fabricantes</label>
                     <label class="rel-check"><input type="checkbox" name="rel-tipo" value="fornecedor" checked> Fornecedores</label>
@@ -243,7 +243,7 @@ const CONFIG_REL = {
                 </div>
             </div>
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-building"></i> Modelo</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-building"></i> Modelo</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="empresa" checked> Empresa (Nacional)</label>
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="company" checked> Company (Estrangeira)</label>
@@ -258,7 +258,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-chart-bar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Tipo</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Tipo</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" name="rel-tipo" value="fabricante" checked> Fabricantes</label>
                     <label class="rel-check"><input type="checkbox" name="rel-tipo" value="fornecedor" checked> Fornecedores</label>
@@ -266,7 +266,7 @@ const CONFIG_REL = {
                 </div>
             </div>
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-building"></i> Modelo</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-building"></i> Modelo</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="empresa" checked> Empresa (Nacional)</label>
                     <label class="rel-check"><input type="checkbox" name="rel-modelo" value="company" checked> Company (Estrangeira)</label>
@@ -281,13 +281,13 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-globe',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-earth-americas"></i> Países</label>
+                <label for="relPaisFiltro" class="rel-param-label"><i class="fa-solid fa-earth-americas"></i> Países</label>
                 <select id="relPaisFiltro" class="rel-select" onchange="atualizarPreviewModal()">
                     <option value="">Todos os países</option>
                 </select>
             </div>
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-ranking-star"></i> Exibir no ranking</label>
+                <label for="relRankingTop" class="rel-param-label"><i class="fa-solid fa-ranking-star"></i> Exibir no ranking</label>
                 <select id="relRankingTop" class="rel-select" onchange="atualizarPreviewModal()">
                     <option value="5">Top 5</option>
                     <option value="10" selected>Top 10</option>
@@ -301,7 +301,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-calendar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Status</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="enviado" checked> Enviado</label>
                     <label class="rel-check"><input type="checkbox" name="rel-prof-status" value="aprovado" checked> Aprovado</label>
@@ -322,7 +322,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-building',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-ranking-star"></i> Exibir no ranking</label>
+                <label for="relRankingTopCliente" class="rel-param-label"><i class="fa-solid fa-ranking-star"></i> Exibir no ranking</label>
                 <select id="relRankingTopCliente" class="rel-select" onchange="atualizarPreviewModal()">
                     <option value="5">Top 5</option>
                     <option value="10" selected>Top 10</option>
@@ -336,7 +336,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-calendar',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Status</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" name="rel-proc-status" value="aberto" checked> Aberto</label>
                     <label class="rel-check"><input type="checkbox" name="rel-proc-status" value="em_andamento" checked> Em Andamento</label>
@@ -365,7 +365,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-list',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-filter"></i> Status</label>
+                <span class="rotulo rel-param-label"><i class="fa-solid fa-filter"></i> Status</span>
                 <div class="rel-check-row">
                     <label class="rel-check"><input type="checkbox" name="rel-prod-status" value="ativo" checked> Ativo</label>
                     <label class="rel-check"><input type="checkbox" name="rel-prod-status" value="pendente" checked> Pendente</label>
@@ -380,7 +380,7 @@ const CONFIG_REL = {
         icone: 'fa-solid fa-barcode',
         params: `
             <div class="rel-param-group">
-                <label class="rel-param-label"><i class="fa-solid fa-ranking-star"></i> Exibir no ranking</label>
+                <label for="relRankingTopNcm" class="rel-param-label"><i class="fa-solid fa-ranking-star"></i> Exibir no ranking</label>
                 <select id="relRankingTopNcm" class="rel-select" onchange="atualizarPreviewModal()">
                     <option value="5">Top 5</option>
                     <option value="10" selected>Top 10</option>
@@ -637,7 +637,7 @@ function atualizarPreviewModal() {
             return;
         }
         el.innerHTML = ranking.map(([nome, info], i) =>
-            `<div class="prev-linha"><span><b>${i + 1}.</b> ${nome}</span><strong>${info.qtd}</strong></div>`
+            `<div class="prev-linha"><span><b>${i + 1}.</b> ${escHtml(nome)}</span><strong>${info.qtd}</strong></div>`
         ).join('');
 
     } else if (tipoRelatorioAtual === 'processos-periodo') {
@@ -737,11 +737,11 @@ function baixarPDF() {
                 <tbody>
                     ${lista.map(e => `
                         <tr>
-                            <td>${e.razao_social || '—'}</td>
-                            <td>${_tiposStr(e)}</td>
-                            <td>${_modeloLabel(_modeloEmpresa(e))}</td>
-                            <td>${e.pais || '—'}</td>
-                            <td>${e.documento || '—'}</td>
+                            <td>${escHtml(e.razao_social || '—')}</td>
+                            <td>${escHtml(_tiposStr(e))}</td>
+                            <td>${escHtml(_modeloLabel(_modeloEmpresa(e)))}</td>
+                            <td>${escHtml(e.pais || '—')}</td>
+                            <td>${escHtml(e.documento || '—')}</td>
                         </tr>`).join('')}
                 </tbody>
             </table>`;
@@ -762,11 +762,11 @@ function baixarPDF() {
                 <tbody>
                     ${lista.map(e => `
                         <tr>
-                            <td>${e.razao_social || '—'}</td>
-                            <td>${_tiposStr(e)}</td>
-                            <td>${_modeloLabel(_modeloEmpresa(e))}</td>
-                            <td>${e.pais || '—'}</td>
-                            <td>${e.documento || '—'}</td>
+                            <td>${escHtml(e.razao_social || '—')}</td>
+                            <td>${escHtml(_tiposStr(e))}</td>
+                            <td>${escHtml(_modeloLabel(_modeloEmpresa(e)))}</td>
+                            <td>${escHtml(e.pais || '—')}</td>
+                            <td>${escHtml(e.documento || '—')}</td>
                         </tr>`).join('')}
                 </tbody>
             </table>`;
@@ -783,7 +783,7 @@ function baixarPDF() {
             <table>
                 <thead><tr><th>#</th><th>País</th><th>Empresas</th></tr></thead>
                 <tbody>
-                    ${ranking.map(([pais, qtd], i) => `<tr><td>${i + 1}</td><td>${pais}</td><td>${qtd}</td></tr>`).join('')}
+                    ${ranking.map(([pais, qtd], i) => `<tr><td>${escHtml(i + 1)}</td><td>${escHtml(pais)}</td><td>${escHtml(qtd)}</td></tr>`).join('')}
                 </tbody>
             </table>`;
 
@@ -798,11 +798,11 @@ function baixarPDF() {
                 <tbody>
                     ${lista.map(p => `
                         <tr>
-                            <td>${p.codigo || '—'}</td>
-                            <td>${p.destinatario_razao_social || '—'}</td>
-                            <td>${labelsProf[p.status] || p.status || '—'}</td>
-                            <td>${p.moeda_principal || 'USD'} ${Number(p.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                            <td>${p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '—'}</td>
+                            <td>${escHtml(p.codigo || '—')}</td>
+                            <td>${escHtml(p.destinatario_razao_social || '—')}</td>
+                            <td>${escHtml(labelsProf[p.status] || p.status || '—')}</td>
+                            <td>${escHtml(p.moeda_principal || 'USD')} ${Number(p.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            <td>${escHtml(p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '—')}</td>
                         </tr>`).join('')}
                 </tbody>
             </table>`;
@@ -818,7 +818,7 @@ function baixarPDF() {
                 <tbody>
                     ${Object.keys(labelsProf).map(st => {
                         const n = lista.filter(p => (p.status || 'enviado') === st).length;
-                        return `<tr><td>${labelsProf[st]}</td><td>${n}</td><td>${Math.round((n / total) * 100)}%</td></tr>`;
+                        return `<tr><td>${escHtml(labelsProf[st])}</td><td>${escHtml(n)}</td><td>${escHtml(Math.round((n / total) * 100))}%</td></tr>`;
                     }).join('')}
                 </tbody>
             </table>`;
@@ -840,7 +840,7 @@ function baixarPDF() {
             <table>
                 <thead><tr><th>#</th><th>Cliente</th><th>Qtd. Proformas</th><th>Valor Total</th></tr></thead>
                 <tbody>
-                    ${ranking.map(([nome, info], i) => `<tr><td>${i + 1}</td><td>${nome}</td><td>${info.qtd}</td><td>${info.moeda} ${info.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`).join('')}
+                    ${ranking.map(([nome, info], i) => `<tr><td>${escHtml(i + 1)}</td><td>${escHtml(nome)}</td><td>${escHtml(info.qtd)}</td><td>${escHtml(info.moeda)} ${info.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`).join('')}
                 </tbody>
             </table>`;
 
@@ -855,12 +855,12 @@ function baixarPDF() {
                 <tbody>
                     ${lista.map(p => `
                         <tr>
-                            <td>${p.numero_processo || '—'}</td>
-                            <td>${p.tipo || '—'}</td>
-                            <td>${labelsProc[p.status] || p.status || '—'}</td>
-                            <td>${p.pais_origem || '—'} → ${p.pais_destino || '—'}</td>
-                            <td>${p.modal || '—'}</td>
-                            <td>${p.moeda || 'USD'} ${Number(p.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            <td>${escHtml(p.numero_processo || '—')}</td>
+                            <td>${escHtml(p.tipo || '—')}</td>
+                            <td>${escHtml(labelsProc[p.status] || p.status || '—')}</td>
+                            <td>${escHtml(p.pais_origem || '—')} → ${escHtml(p.pais_destino || '—')}</td>
+                            <td>${escHtml(p.modal || '—')}</td>
+                            <td>${escHtml(p.moeda || 'USD')} ${Number(p.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                         </tr>`).join('')}
                 </tbody>
             </table>`;
@@ -876,7 +876,7 @@ function baixarPDF() {
                 <tbody>
                     ${Object.keys(labelsProc).map(st => {
                         const n = lista.filter(p => (p.status || 'aberto') === st).length;
-                        return `<tr><td>${labelsProc[st]}</td><td>${n}</td><td>${Math.round((n / total) * 100)}%</td></tr>`;
+                        return `<tr><td>${escHtml(labelsProc[st])}</td><td>${escHtml(n)}</td><td>${escHtml(Math.round((n / total) * 100))}%</td></tr>`;
                     }).join('')}
                 </tbody>
             </table>`;
@@ -892,7 +892,7 @@ function baixarPDF() {
                 <tbody>
                     ${Object.keys(labelsModal).map(md => {
                         const n = lista.filter(p => p.modal === md).length;
-                        return `<tr><td>${labelsModal[md]}</td><td>${n}</td><td>${Math.round((n / total) * 100)}%</td></tr>`;
+                        return `<tr><td>${escHtml(labelsModal[md])}</td><td>${escHtml(n)}</td><td>${escHtml(Math.round((n / total) * 100))}%</td></tr>`;
                     }).join('')}
                 </tbody>
             </table>`;
@@ -908,11 +908,11 @@ function baixarPDF() {
                 <tbody>
                     ${lista.map(p => `
                         <tr>
-                            <td>${p.sku || '—'}</td>
-                            <td>${p.nome || '—'}</td>
-                            <td>${p.ncm || '—'}</td>
-                            <td>${p.unidade_medida || '—'}</td>
-                            <td>${labelsProd[p.status] || p.status || '—'}</td>
+                            <td>${escHtml(p.sku || '—')}</td>
+                            <td>${escHtml(p.nome || '—')}</td>
+                            <td>${escHtml(p.ncm || '—')}</td>
+                            <td>${escHtml(p.unidade_medida || '—')}</td>
+                            <td>${escHtml(labelsProd[p.status] || p.status || '—')}</td>
                         </tr>`).join('')}
                 </tbody>
             </table>`;
@@ -930,7 +930,7 @@ function baixarPDF() {
             <table>
                 <thead><tr><th>#</th><th>NCM</th><th>Produtos</th><th>Percentual</th></tr></thead>
                 <tbody>
-                    ${ranking.map(([ncm, qtd], i) => `<tr><td>${i + 1}</td><td>${ncm}</td><td>${qtd}</td><td>${Math.round((qtd / totalLista) * 100)}%</td></tr>`).join('')}
+                    ${ranking.map(([ncm, qtd], i) => `<tr><td>${escHtml(i + 1)}</td><td>${escHtml(ncm)}</td><td>${escHtml(qtd)}</td><td>${escHtml(Math.round((qtd / totalLista) * 100))}%</td></tr>`).join('')}
                 </tbody>
             </table>`;
     }
@@ -973,7 +973,7 @@ function baixarPDF() {
         <div class="pdf-meta">
             <div class="pdf-meta-item"><strong>Período</strong>${di === '—' && df === '—' ? 'Todos os registros' : `${di} até ${df}`}</div>
             <div class="pdf-meta-item"><strong>Total de registros</strong>${totalRegistros}</div>
-            <div class="pdf-meta-item"><strong>Solicitante</strong>${usuario.nome || '—'}</div>
+            <div class="pdf-meta-item"><strong>Solicitante</strong>${escHtml(usuario.nome || '—')}</div>
         </div>
         ${conteudoTabela}
         <div class="pdf-footer">
@@ -1236,7 +1236,7 @@ function _extParams(tipo) {
     const c = EXT_REL[tipo];
     const grupo = (rotulo, icone, corpo) => `
         <div class="rel-param-group">
-            <label class="rel-param-label"><i class="${icone}"></i> ${rotulo}</label>
+            <label for="relExtAlvo" class="rel-param-label"><i class="${icone}"></i> ${rotulo}</label>
             ${corpo}
         </div>`;
     const selectAlvo = (rotulo, icone, opcoes) => grupo(rotulo, icone, `
@@ -1355,7 +1355,7 @@ function _extTabelaOps(base, linhas) {
                         <td style="white-space:nowrap;">${_extEsc(l.statusLabel)}</td>
                         <td>${_extEsc(l.extra)}</td>
                         ${procs ? '' : `<td>${_extEsc(l.modal)}</td>`}
-                        <td style="white-space:nowrap;">${l.moeda} ${l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td style="white-space:nowrap;">${escHtml(l.moeda)} ${l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     </tr>`).join('')}
             </tbody>
         </table>`;

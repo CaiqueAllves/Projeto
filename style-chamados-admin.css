@@ -107,3 +107,58 @@
 @keyframes cadPiscar { 0%,100% { background:transparent; } 15%,55% { background:#fde68a; } }
 .cad-contagem { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; margin-left:4px; padding:0 5px; border-radius:999px; background:#ef4444; color:#fff; font-size:10.5px; font-weight:700; }
 @media (prefers-reduced-motion: reduce) { .cad-ponto, .cad-piscar { animation:none; } }
+
+/* ── Resumo por status (chamados-admin.js → _cadRenderResumo) ── */
+.cad-resumo { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; }
+.cad-resumo:empty { display:none; }
+.cad-resumo-card { --c:#4776ec; --f:#eef3ff; display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; column-gap:12px; align-items:center; text-align:left; padding:12px 14px; border-radius:14px; border:1.5px solid transparent; background:#fff; box-shadow:0 1px 4px rgba(15,23,42,.07); cursor:pointer; font-family:inherit; transition:border-color .15s, transform .15s; }
+.cad-resumo-card i { grid-row:1 / span 2; width:38px; height:38px; border-radius:11px; background:var(--f); color:var(--c); display:flex; align-items:center; justify-content:center; font-size:16px; }
+.cad-resumo-num { font-size:20px; font-weight:800; color:#0f172a; line-height:1.1; }
+.cad-resumo-rot { font-size:12px; font-weight:600; color:#64748b; }
+.cad-resumo-card:hover { transform:translateY(-1px); }
+.cad-resumo-card.ativo { border-color:var(--c); background:var(--f); }
+.cad-resumo--aberto { --c:#dc2626; --f:#fef2f2; }
+.cad-resumo--em_andamento { --c:#b45309; --f:#fffbeb; }
+.cad-resumo--resolvido { --c:#15803d; --f:#f0fdf4; }
+.cad-resumo--novidades { --c:#7c3aed; --f:#f5f3ff; }
+
+/* ── Celular: cards no lugar da tabela ── */
+.cad-cards { display:none; }
+@media (max-width:768px) {
+    main .content { padding:12px !important; gap:12px !important; }
+    .cad-resumo { grid-template-columns:1fr 1fr; gap:8px; }
+    .cad-resumo-card { padding:10px; column-gap:9px; border-radius:12px; }
+    .cad-resumo-card i { width:32px; height:32px; font-size:14px; border-radius:9px; }
+    .cad-resumo-num { font-size:17px; }
+    .cad-resumo-rot { font-size:11px; }
+    .cad-busca-grupo { min-width:0; max-width:none; width:100%; flex-direction:row; }
+    .cad-busca-grupo .cad-busca-campo { width:120px; flex:0 0 120px; }
+    /* status: faixa rolável de chips em vez de quebrar em várias linhas */
+    .filtros-btns { display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; overflow-x:auto !important; overflow-y:visible !important; gap:6px !important; padding-bottom:2px; scrollbar-width:none; }
+    .filtros-btns::-webkit-scrollbar { display:none; }
+    .filtros-btns .filtro-btn { flex:0 0 auto !important; white-space:nowrap; }
+    .cad-lista { background:transparent; box-shadow:none; overflow:visible; }
+    /* style-mobile.css força toda <table> a display:block !important */
+    .cad-lista table.cad-tabela { display:none !important; }
+    .cad-cards { display:flex; flex-direction:column; gap:10px; }
+    .cad-card { --c:#dc2626; background:#fff; border-radius:14px; padding:12px; box-shadow:0 1px 4px rgba(15,23,42,.08); border-left:4px solid var(--c); display:flex; flex-direction:column; gap:7px; cursor:pointer; }
+    .cad-card--em_andamento { --c:#f59e0b; }
+    .cad-card--resolvido { --c:#16a34a; }
+    .cad-card--novo { background:#fffbeb; }
+    .cad-card-topo { display:flex; flex-direction:row; justify-content:space-between; align-items:center; gap:8px; }
+    .cad-card-num { display:inline-flex; align-items:center; font-weight:800; color:#4776ec; font-size:13px; white-space:nowrap; }
+    .cad-card-titulo { font-size:14.5px; font-weight:700; color:#1e293b; line-height:1.35; overflow-wrap:anywhere; }
+    .cad-card--novo .cad-card-titulo { font-weight:800; }
+    .cad-card-pill { align-self:flex-start; margin-left:0; }
+    .cad-card-meta { display:flex; flex-direction:row; flex-wrap:wrap; gap:5px 12px; font-size:12px; color:#475569; }
+    .cad-card-meta span { display:inline-flex; align-items:center; gap:5px; min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cad-card-meta i { color:#94a3b8; font-size:11px; }
+    .cad-card-rodape { display:flex; flex-direction:row; justify-content:space-between; align-items:center; padding-top:7px; border-top:1px solid #f1f5f9; font-size:11.5px; color:#94a3b8; }
+    .cad-card-rodape .cad-btn-excluir { color:#94a3b8; }
+    /* conversa em tela cheia */
+    .cad-overlay { padding:0 !important; }
+    .cad-modal { height:100% !important; max-width:none; border-radius:0 !important; }
+    .cad-modal-header { padding:14px 14px 10px; }
+    .cad-modal-body { padding:12px 14px; }
+    .cad-dica { display:none; }
+}

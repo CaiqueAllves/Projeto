@@ -1,0 +1,19 @@
+{
+  "name": "Marpex — Gestão de Comércio Exterior",
+  "short_name": "Marpex",
+  "description": "Proformas, processos de exportação, documentos e financeiro.",
+  "lang": "pt-BR",
+  "id": "./login.html",
+  "start_url": "./login.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#4271e9",
+  "theme_color": "#4776ec",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/marpex.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

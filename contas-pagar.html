@@ -2,13 +2,23 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+    <meta name="theme-color" content="#4776ec">
+    <link rel="icon" type="image/svg+xml" href="icons/marpex.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Marpex">
+    <script src="pwa.js?v=499b88dd"></script>
     <title>Marpex | Contas a Pagar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=3133da0a">
+    <link rel="stylesheet" href="style-base.css?v=0e82b1a5">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=8111972c">
+    <link rel="stylesheet" href="style-financeiro.css?v=cbfcf9d8">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style-mobile.css?v=4ee8b672">
+    <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
 <body>
 
@@ -124,13 +134,13 @@
 
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label>Descrição <span style="color:#ef4444">*</span></label>
+                    <label for="cpDescricao">Descrição <span style="color:#ef4444">*</span></label>
                     <input type="text" id="cpDescricao" placeholder="Ex: Frete internacional DHL">
                 </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label>Vincular a Proforma</label>
+                    <label for="cpProformaNome">Vincular a Proforma</label>
                     <input type="text" id="cpProformaNome" placeholder="Buscar proforma por código..." autocomplete="off" oninput="cpBuscarProforma(this.value)" onfocus="cpMostrarProforma(this.value)">
                     <input type="hidden" id="cpProformaId">
                     <div class="pl-autocomplete" id="cpAutoProforma"></div>
@@ -138,13 +148,13 @@
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
-                    <label>Fornecedor / Parceiro</label>
+                    <label for="cpFornecedorNome">Fornecedor / Parceiro</label>
                     <input type="text" id="cpFornecedorNome" placeholder="Buscar parceiro..." autocomplete="off" oninput="cpBuscarParceiro(this.value)" onfocus="cpMostrarParceiro(this.value)">
                     <input type="hidden" id="cpFornecedorId">
                     <div class="pl-autocomplete" id="cpAutoParceiro"></div>
                 </div>
                 <div class="fin-form-group">
-                    <label>Vincular a Processo</label>
+                    <label for="cpProcessoNome">Vincular a Processo</label>
                     <input type="text" id="cpProcessoNome" placeholder="Escolha uma Proforma primeiro" autocomplete="off" disabled oninput="cpBuscarProcesso(this.value)" onfocus="cpMostrarProcesso(this.value)">
                     <input type="hidden" id="cpProcessoId">
                     <div class="pl-autocomplete" id="cpAutoProcesso"></div>
@@ -152,11 +162,11 @@
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
-                    <label>Valor <span style="color:#ef4444">*</span></label>
+                    <label for="cpValor">Valor <span style="color:#ef4444">*</span></label>
                     <input type="text" id="cpValor" placeholder="0,00" inputmode="decimal" oninput="cpMascaraMonetaria(this)">
                 </div>
                 <div class="fin-form-group">
-                    <label>Moeda</label>
+                    <label for="cpMoeda">Moeda</label>
                     <select id="cpMoeda">
                         <option value="BRL">BRL</option>
                         <option value="USD">USD</option>
@@ -166,17 +176,17 @@
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
-                    <label>Vencimento <span style="color:#ef4444">*</span></label>
+                    <label for="cpVencimento">Vencimento <span style="color:#ef4444">*</span></label>
                     <input type="date" id="cpVencimento">
                 </div>
                 <div class="fin-form-group">
-                    <label>Data de Pagamento</label>
+                    <label for="cpDataPagamento">Data de Pagamento</label>
                     <input type="date" id="cpDataPagamento">
                 </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
-                    <label>Status</label>
+                    <label for="cpStatus">Status</label>
                     <select id="cpStatus" onchange="cpAoMudarStatus()">
                         <option value="pendente">Pendente</option>
                         <option value="pago">Pago</option>
@@ -185,7 +195,7 @@
                     </select>
                 </div>
                 <div class="fin-form-group">
-                    <label>Categoria</label>
+                    <label for="cpCategoria">Categoria</label>
                     <select id="cpCategoria">
                         <option value="">Selecione...</option>
                         <option value="frete">Frete</option>
@@ -241,11 +251,11 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=bfd7a186"></script>
-<script src="auth.js?v=0963892b"></script>
-<script src="navegador.js?v=afdfd0cc"></script>
+<script src="supabase-api.js?v=0643ed38"></script>
+<script src="auth.js?v=1513f71e"></script>
+<script src="navegador.js?v=1113c2e2"></script>
 <script src="fin-moeda.js?v=ccdced38"></script>
-<script src="contas-pagar.js?v=4e2f6133"></script>
-<script src="suporte.js?v=dd1c94d5"></script>
+<script src="contas-pagar.js?v=b94c7e08"></script>
+<script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

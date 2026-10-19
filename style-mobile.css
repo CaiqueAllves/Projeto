@@ -522,7 +522,8 @@
         gap: 8px !important;
         margin: 4px 12px 0 !important;
     }
-    .fin-periodo-wrap label { flex: 0 0 100% !important; }
+    .fin-periodo-wrap label,
+.fin-periodo-wrap :is(span,div):where(.rotulo) { flex: 0 0 100% !important; }
     .fin-periodo-wrap input[type="month"],
     .fin-periodo-wrap select {
         flex: 1 1 100% !important;
@@ -986,6 +987,15 @@
         padding: 0 0 16px 0 !important;
         align-items: stretch !important;
         width: 100% !important;
+        /* .content (style-cadastro.css) é coluna flex de altura fixa com
+           overflow:hidden — quem rola é o quadro. Sem isto a coluna ativa da
+           Proforma passava da tela e os cards de baixo ficavam inalcançáveis
+           (Processos só rolava por acaso, via overflow-x:auto do desktop). */
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* ── Botões de status (Pedidos/Proforma/Processos) — faixa de chips
@@ -1273,7 +1283,8 @@
 
     /* Form fields em modais */
     .form-group { margin-bottom: 12px !important; }
-    .form-group label { font-size: 13px !important; }
+    .form-group label,
+.form-group :is(span,div):where(.rotulo) { font-size: 13px !important; }
     .form-group input,
     .form-group select,
     .form-group textarea {

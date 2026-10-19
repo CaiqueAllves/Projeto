@@ -113,8 +113,8 @@ function renderizarSolicitacoes(solicitacoes) {
                 ${iniciaisDe(sol.nome_usuario)}
             </div>
             <div class="sol-info">
-                <div class="sol-nome">${sol.nome_usuario || '—'}</div>
-                <div class="sol-email">${sol.email_usuario || '—'}</div>
+                <div class="sol-nome">${_permEsc(sol.nome_usuario || '—')}</div>
+                <div class="sol-email">${_permEsc(sol.email_usuario || '—')}</div>
                 <div class="sol-data"><i class="fa-regular fa-clock"></i> Solicitado em ${formatarData(sol.criado_em)}</div>
             </div>
             <div class="sol-acoes">
@@ -233,9 +233,9 @@ function renderizarUsuarios(usuarios) {
                     <div class="usuario-card-top">
                         <div class="usuario-card-avatar">${iniciais}</div>
                         <div class="usuario-card-identidade">
-                            <div class="usuario-card-nome">${u.nome_completo || '—'}</div>
-                            <div class="usuario-card-email">${u.email || '—'}</div>
-                            ${u.cargo ? `<div class="usuario-card-cargo"><i class="fa-solid fa-briefcase"></i> ${u.cargo}</div>` : ''}
+                            <div class="usuario-card-nome">${_permEsc(u.nome_completo || '—')}</div>
+                            <div class="usuario-card-email">${_permEsc(u.email || '—')}</div>
+                            ${u.cargo ? `<div class="usuario-card-cargo"><i class="fa-solid fa-briefcase"></i> ${_permEsc(u.cargo)}</div>` : ''}
                         </div>
                         <span class="${badgeStatus} badge-status-card">${u.ativo ? 'Ativo' : 'Inativo'}</span>
                     </div>
@@ -243,7 +243,7 @@ function renderizarUsuarios(usuarios) {
                     <div class="usuario-card-info">
                         <div class="usuario-info-item">
                             <span class="usuario-info-label">CPF</span>
-                            <span class="usuario-info-valor">${u.cpf || '—'}</span>
+                            <span class="usuario-info-valor">${_permEsc(u.cpf || '—')}</span>
                         </div>
                         <div class="usuario-info-item">
                             <span class="usuario-info-label">Último acesso</span>
@@ -258,9 +258,9 @@ function renderizarUsuarios(usuarios) {
 
                     <div class="usuario-card-controles">
                         <div class="usuario-controle-grupo">
-                            <label class="controle-label">Perfil de acesso</label>
+                            ${isAdmin ? `<label class="controle-label" for="perfil-sel-${u.id}">Perfil de acesso</label>` : `<span class="controle-label rotulo">Perfil de acesso</span>`}
                             ${isAdmin
-                                ? `<select class="perfil-select" onchange="alterarPerfil('${u.id}', this.value)">
+                                ? `<select class="perfil-select" id="perfil-sel-${u.id}" onchange="alterarPerfil('${u.id}', this.value)">
                                     <option value="gerente" ${u.perfil === 'gerente' ? 'selected' : ''}>Gerente</option>
                                     <option value="usuario" ${u.perfil === 'usuario' ? 'selected' : ''}>Usuário</option>
                                    </select>`
@@ -269,7 +269,8 @@ function renderizarUsuarios(usuarios) {
                         </div>
                         ${isAdmin
                             ? `<button class="btn-toggle-usuario ${u.ativo ? 'btn-desativar' : 'btn-ativar'}"
-                                onclick="confirmarToggle('${u.id}', ${u.ativo}, '${(u.nome_completo || '').replace(/'/g, "\\'")}')">
+                                data-nome="${_permEsc(u.nome_completo || '')}"
+                                onclick="confirmarToggle('${u.id}', ${u.ativo}, this.dataset.nome)">
                                 <i class="fa-solid fa-${u.ativo ? 'ban' : 'circle-check'}"></i>
                                 ${u.ativo ? 'Desativar' : 'Ativar'}
                                </button>`
@@ -306,7 +307,7 @@ function renderizarAtividade(usuarios) {
                 <div class="atividade-item">
                     <div class="atividade-avatar">${iniciaisDe(u.nome_completo)}</div>
                     <div class="atividade-info">
-                        <span class="atividade-nome">${u.nome_completo || '—'}</span>
+                        <span class="atividade-nome">${_permEsc(u.nome_completo || '—')}</span>
                         <span class="atividade-acao">acessou o sistema</span>
                     </div>
                     <div class="atividade-tempo">
@@ -326,8 +327,8 @@ function confirmarToggle(id, ativoAtual, nome) {
     pendingToggle = { id, ativoAtual };
     const acao = ativoAtual ? 'Desativar' : 'Ativar';
     const descricao = ativoAtual
-        ? `<strong>${nome}</strong> perderá acesso imediato ao sistema.`
-        : `<strong>${nome}</strong> voltará a ter acesso ao sistema.`;
+        ? `<strong>${_permEsc(nome)}</strong> perderá acesso imediato ao sistema.`
+        : `<strong>${_permEsc(nome)}</strong> voltará a ter acesso ao sistema.`;
 
     document.getElementById('modalDesativarTitulo').textContent = `${acao} usuário?`;
     document.getElementById('modalDesativarTexto').innerHTML = descricao;
@@ -511,7 +512,14 @@ document.addEventListener('click', function (e) {
 
 function iniciaisDe(nome) {
     if (!nome) return '?';
-    return nome.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+    return _permEsc(nome.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase());
+}
+
+// Nome, e-mail e cargo vêm de quem se cadastrou (inclusive gente de FORA da
+// empresa, nos pedidos de entrada) — sempre escapar antes de pôr no HTML.
+// Varredura de segurança 2026-10-19: um "nome" com código rodava na sessão do admin.
+function _permEsc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function formatarData(iso) {

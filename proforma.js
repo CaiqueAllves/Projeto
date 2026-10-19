@@ -78,11 +78,12 @@ function _profBotaoProcesso(p, status) {
 function _profBotaoContaReceber(p) {
     const temProcesso = p._processos && p._processos.length > 0;
     return temProcesso
-        ? `<button class="btn-acao btn-editar" onclick="profGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
+        ? `<button class="btn-acao btn-editar so-financeiro" onclick="profGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
         : `<button class="btn-acao btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`;
 }
 
 function profGerarContaReceber(id) {
+    if (usuarioTemModulo('financeiro') === false) return mostrarNotificacao('Você não tem acesso ao módulo Financeiro.', 'warning');
     window.open(`contas-receber.html?gerar_proforma_id=${id}`, '_blank');
 }
 
@@ -288,7 +289,7 @@ function _profRenderCard(p) {
                 <button class="btn-acao btn-ver" onclick="abrirHistorico('proforma','${p.id}','${_profEscapar(p.codigo || '')}')" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="btn-acao btn-duplicar" onclick="profDuplicar('${p.id}')" title="Duplicar Proforma"><i class="fa-solid fa-copy"></i></button>
                 <button class="btn-acao btn-editar"  onclick="profEditar('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                <button class="btn-acao btn-excluir" onclick="profAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn-acao btn-excluir so-excluir" onclick="profAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </div>
         </div>` : ''}
     </div>`;
@@ -374,7 +375,7 @@ function profRenderizarLista(lista) {
                     <button class="btn-acao btn-editar" onclick="profEditar('${p.id}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
                     </button>
-                    <button class="btn-acao btn-excluir" onclick="profAbrirModalExcluir('${p.id}')" title="Excluir">
+                    <button class="btn-acao btn-excluir so-excluir" onclick="profAbrirModalExcluir('${p.id}')" title="Excluir">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -562,6 +563,7 @@ function profVerProcesso(processoId) {
 
 // ── Excluir (soft delete) ─────────────────
 function profAbrirModalExcluir(id) {
+    if (!usuarioPodeExcluir()) return avisoSemPermissaoExcluir();
     _profExcluirId = id;
     const p    = _profTodos.find(x => x.id === id);
     const info = document.getElementById('excluirProformaInfo');
@@ -681,7 +683,7 @@ async function profCarregarExcluidos() {
                     <span class="prof-excluido-rota">${p.origem_pais || '—'} → ${p.destino_pais || '—'}</span>
                     ${metaHtml}
                 </div>
-                <button class="prof-excluido-restaurar" onclick="profRestaurar('${p.id}')">
+                <button class="prof-excluido-restaurar so-excluir" onclick="profRestaurar('${p.id}')">
                     <i class="fa-solid fa-rotate-left"></i> Restaurar
                 </button>
             </div>`;
@@ -692,6 +694,7 @@ async function profCarregarExcluidos() {
 }
 
 async function profRestaurar(id) {
+    if (!usuarioPodeExcluir()) return avisoSemPermissaoExcluir();
     try {
         // Volta ao status que tinha antes de excluir (status_anterior — guardado
         // por trigger, database-melhorias-2026-10.sql); sem ele, "Enviado".

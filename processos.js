@@ -140,6 +140,7 @@ async function carregarProcessos() {
 let _idParaExcluir = '';
 
 function abrirModalExcluir(id) {
+    if (!usuarioPodeExcluir()) return avisoSemPermissaoExcluir();
     const proc = readProcessos().find(p => p.id === id);
     if (!proc) return;
     _idParaExcluir = id;
@@ -292,7 +293,7 @@ function _renderCard(p) {
                 <button class="btn-acao btn-editar"  data-action="editar"     data-id="${escapeHtml(p.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-pagar"   data-id="${escapeHtml(p.id)}" title="Gerar Conta a Pagar"><i class="fa-solid fa-arrow-up"></i></button>
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-receber" data-id="${escapeHtml(p.id)}" title="Gerar Conta a Receber"><i class="fa-solid fa-arrow-down"></i></button>
-                <button class="btn-acao btn-excluir" data-action="excluir"    data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn-acao btn-excluir so-excluir" data-action="excluir"    data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </div>
         </div>` : ''}
     </div>`;
@@ -381,7 +382,7 @@ function renderLista(filtro) {
                 <button class="btn-acao btn-editar"  data-action="editar"     data-id="${escapeHtml(p.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-pagar"   data-id="${escapeHtml(p.id)}" title="Gerar Conta a Pagar"><i class="fa-solid fa-arrow-up"></i></button>
                 <button class="btn-acao btn-editar"  data-action="gerar-conta-receber" data-id="${escapeHtml(p.id)}" title="Gerar Conta a Receber"><i class="fa-solid fa-arrow-down"></i></button>
-                <button class="btn-acao btn-excluir" data-action="excluir"    data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn-acao btn-excluir so-excluir" data-action="excluir"    data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </div></td>
         </tr>`;
     }).join('');
@@ -522,7 +523,7 @@ async function procCarregarExcluidos() {
                     <span class="prof-excluido-rota">${p.pais_origem || '—'} → ${p.pais_destino || '—'}</span>
                     ${metaHtml}
                 </div>
-                <button class="prof-excluido-restaurar" onclick="procRestaurar('${p.id}')">
+                <button class="prof-excluido-restaurar so-excluir" onclick="procRestaurar('${p.id}')">
                     <i class="fa-solid fa-rotate-left"></i> Restaurar
                 </button>
             </div>`;
@@ -533,6 +534,7 @@ async function procCarregarExcluidos() {
 }
 
 async function procRestaurar(id) {
+    if (!usuarioPodeExcluir()) return avisoSemPermissaoExcluir();
     try {
         // Processo excluído junto com a Proforma: só volta restaurando a Proforma
         const { data: pr } = await supabaseClient.from('processos').select('proforma_id').eq('id', id).maybeSingle();

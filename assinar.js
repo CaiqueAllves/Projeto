@@ -63,7 +63,12 @@ async function asCarregar() {
     $('asTotal').textContent = Object.entries(somas).map(([m, v]) => `${asNum(v)} ${m}`).join(' + ') || `${asNum(p.valor_total)} ${p.moeda || ''}`;
 
     if (data.arquivo_path) {
-        const url = supabaseClient.storage.from(AS_BUCKET).getPublicUrl(data.arquivo_path).data?.publicUrl;
+        // PDF em bucket privado: o link temporário foi gerado quando o link de
+        // assinatura foi enviado (mesmo prazo). Links antigos: endereço público.
+        let url = null;
+        const r = await supabaseClient.rpc('assinatura_arquivo_url', { p_token: asToken });
+        if (!r.error && typeof r.data === 'string' && /^https:\/\//.test(r.data)) url = r.data;
+        if (!url) url = supabaseClient.storage.from(AS_BUCKET).getPublicUrl(data.arquivo_path).data?.publicUrl;
         if (url) { $('asLinkPdf').href = url; $('asLinkPdf').hidden = false; }
     }
     $('asValidade').textContent = `Link válido até ${asData(data.expira_em)}${data.criado_por ? ` · enviado por ${data.criado_por}` : ''}.`;

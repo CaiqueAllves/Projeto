@@ -268,7 +268,8 @@
   accent-color: #4776ec;
 }
 
-.check-item label {
+.check-item label,
+.check-item :is(span,div):where(.rotulo) {
   font-weight: 700;
   color: #334155;
   margin: 0;

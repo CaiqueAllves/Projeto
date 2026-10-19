@@ -498,7 +498,37 @@ function renderTabela(filtro) {
                     </td>
                 </tr>`).join('')}
             </tbody>
-        </table>`;
+        </table>
+        ${_prodCardsMobile(list)}`;
+}
+
+// Celular: a tabela de 11 colunas fica ilegível — cada produto vira um card
+// (o CSS mostra os cards e esconde a tabela só em telas estreitas). Os
+// botões usam o mesmo data-action, tratado pelo clique do #listaContainer.
+function _prodCardsMobile(list) {
+    const dado = (rot, v) => v ? `<div class="prod-card-dado"><span>${rot}</span><strong>${escapeHtml(v)}</strong></div>` : '';
+    return `<div class="prod-cards">${list.map(p => {
+        const meta = [p.categoria, p.marca].filter(Boolean).map(escapeHtml).join(' · ');
+        const dados = [dado('NCM', p.ncm), dado('Unidade', p.unidade_medida), dado('Lote', p.lote)].join('');
+        const precos = _prodListaValoresVenda(p);
+        const tags = (p.tags || []).map(t => `<span class="tag-item-mini">${escapeHtml(t)}</span>`).join('');
+        return `
+        <div class="prod-card ${p.status === 'inativo' ? 'prod-card--inativo' : ''}">
+            <div class="prod-card-topo">
+                <span class="prod-sku">${escapeHtml(p.sku || 'SEM SKU')}</span>
+                ${statusProdBadge(p.status)}
+            </div>
+            <div class="prod-card-nome">${escapeHtml(p.nome || '—')}</div>
+            ${meta ? `<div class="prod-card-meta">${meta}</div>` : ''}
+            ${dados ? `<div class="prod-card-dados">${dados}</div>` : ''}
+            ${precos !== '—' ? `<div class="prod-card-precos"><span class="prod-card-rot">Venda</span>${precos}</div>` : ''}
+            ${tags ? `<div class="prod-card-tags">${tags}</div>` : ''}
+            <div class="prod-card-acoes">
+                <button class="prod-card-btn" data-action="editar" data-id="${escapeHtml(p.id)}"><i class="fa-solid fa-pen"></i> Editar</button>
+                <button class="prod-card-btn prod-card-btn--excluir" data-action="excluir" data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('')}</div>`;
 }
 
 // Preço de Venda principal + preços em outras moedas (precos_alternativos,

@@ -2,13 +2,23 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+    <meta name="theme-color" content="#4776ec">
+    <link rel="icon" type="image/svg+xml" href="icons/marpex.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Marpex">
+    <script src="pwa.js?v=499b88dd"></script>
     <title>Marpex | Central de Chamados</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=3133da0a">
+    <link rel="stylesheet" href="style-base.css?v=0e82b1a5">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-chamados-admin.css?v=b490da62">
+    <link rel="stylesheet" href="style-chamados-admin.css?v=a77a7569">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style-mobile.css?v=4ee8b672">
+    <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
 
 <body>
@@ -59,6 +69,9 @@
                     <button class="filtro-btn"        data-status="novidades"    onclick="cadFiltrar('novidades')"><i class="fa-solid fa-bell"></i> Novidades <span class="cad-contagem" id="cadContagemNovidades" style="display:none;">0</span></button>
                 </div>
             </div>
+
+            <!-- Resumo: toque filtra a lista (chamados-admin.js → _cadRenderResumo) -->
+            <div id="cadResumo" class="cad-resumo"></div>
 
             <div id="cadLista" class="cad-lista">
                 <div class="cad-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>
@@ -126,10 +139,10 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=bfd7a186"></script>
-<script src="auth.js?v=0963892b"></script>
-<script src="navegador.js?v=afdfd0cc"></script>
-<script src="chamados-admin.js?v=d4e0a19d"></script>
-<script src="suporte.js?v=dd1c94d5"></script>
+<script src="supabase-api.js?v=0643ed38"></script>
+<script src="auth.js?v=1513f71e"></script>
+<script src="navegador.js?v=1113c2e2"></script>
+<script src="chamados-admin.js?v=bb62f09b"></script>
+<script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

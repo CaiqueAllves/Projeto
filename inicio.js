@@ -604,8 +604,8 @@ function carregarAtividades(empresas) {
         item.innerHTML = `
             <div class="timeline-dot" style="background: ${atividade.cor};"></div>
             <div class="timeline-content">
-                <div class="timeline-title">${atividade.titulo}</div>
-                <div class="timeline-desc">${atividade.descricao}</div>
+                <div class="timeline-title">${escHtml(atividade.titulo)}</div>
+                <div class="timeline-desc">${escHtml(atividade.descricao)}</div>
                 <div class="timeline-time">${formatarDataAtividade(atividade.data)}</div>
             </div>
         `;

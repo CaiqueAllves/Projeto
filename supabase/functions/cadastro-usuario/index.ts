@@ -38,7 +38,7 @@ function gerarChaveEmpresa(): string {
   return `${seg()}-${seg()}-${seg()}`;
 }
 
-Deno.serve(async (req) => {
+async function tratar(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
 
@@ -66,6 +66,18 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (erroCpf) return jsonResponse({ sucesso: false, mensagem: 'Erro ao verificar CPF: ' + erroCpf.message });
     if (cpfExistente) return jsonResponse({ sucesso: false, mensagem: 'Este CPF já está cadastrado!' });
+
+    // E-mail é a identidade no login (Supabase Auth): não pode repetir.
+    // Antes só o CPF era conferido — um e-mail repetido permitia tomar a conta
+    // de outra pessoa no primeiro login (varredura de segurança 2026-10-19).
+    const emailNorm = String(email).trim().toLowerCase();
+    const { data: emailExistente, error: erroEmail } = await admin
+      .from('usuarios')
+      .select('id')
+      .ilike('email', emailNorm.replace(/[\\%_]/g, (c) => '\\' + c))
+      .limit(1);
+    if (erroEmail) return jsonResponse({ sucesso: false, mensagem: 'Erro ao verificar e-mail: ' + erroEmail.message });
+    if (emailExistente && emailExistente.length) return jsonResponse({ sucesso: false, mensagem: 'Este e-mail já está cadastrado!' });
 
     let empresaId: string | null = null;
     let chaveGerada: string | null = null;
@@ -148,7 +160,8 @@ Deno.serve(async (req) => {
     return jsonResponse({
       sucesso: true,
       mensagem: 'Conta criada com sucesso!',
-      usuario: novoUsuario,
+      // só o básico — a linha inteira levava senha_hash junto na resposta
+      usuario: { id: novoUsuario.id, nome_completo: novoUsuario.nome_completo, email: novoUsuario.email },
       chave_gerada: chaveGerada,
       aviso,
       sandbox: sandboxInfo,
@@ -157,4 +170,20 @@ Deno.serve(async (req) => {
     console.error('[cadastro-usuario] erro:', err);
     return jsonResponse({ sucesso: false, mensagem: 'Erro ao processar cadastro.' }, 500);
   }
+}
+
+// ── CORS: só o site do sistema (2026-10-19) ──────────────────────────────
+// Navegadores em outros sites não conseguem chamar esta função. Não barra
+// chamadas fora do navegador (curl, scripts) — essas não mandam Origin e
+// continuam dependendo das demais proteções (login, limites, RLS).
+const ORIGENS_PERMITIDAS = [/^https:\/\/caiqueallves\.github\.io$/, /^https:\/\/[a-z0-9-]+\.app\.github\.dev$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/];
+const ORIGEM_PADRAO = 'https://caiqueallves.github.io';
+
+Deno.serve(async (req) => {
+  const origem = req.headers.get('Origin') ?? '';
+  const resp = await tratar(req);
+  const headers = new Headers(resp.headers);
+  headers.set('Access-Control-Allow-Origin', ORIGENS_PERMITIDAS.some((r) => r.test(origem)) ? origem : ORIGEM_PADRAO);
+  headers.set('Vary', 'Origin');
+  return new Response(resp.body, { status: resp.status, headers });
 });

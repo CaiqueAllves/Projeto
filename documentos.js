@@ -149,11 +149,11 @@ function _docGarantirModalAssinatura() {
             <h3 class="doc-modal-title">Assinar Documento</h3>
             <p class="doc-modal-msg" id="docModalAssinaturaLabel">Documento</p>
             <div class="doc-modal-campo">
-                <label>Assinado por</label>
+                <label for="docModalAssinadoPor">Assinado por</label>
                 <input type="text" id="docModalAssinadoPor" placeholder="Nome de quem assinou...">
             </div>
             <div class="doc-modal-campo">
-                <label>Documento assinado (PDF ou imagem)</label>
+                <label for="docModalArquivo">Documento assinado (PDF ou imagem)</label>
                 <div id="docModalArquivoExistente" class="doc-modal-arquivo-existente" style="display:none;"></div>
                 <input type="file" id="docModalArquivo" accept=".pdf,.jpg,.jpeg,.png">
             </div>
@@ -239,11 +239,11 @@ const _docEsc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '
 const _docUrlProforma = id => `formularios.html?tab=proposta&id=${encodeURIComponent(id)}&modo=visualizar`;
 const _docUrlProcesso = id => `formularios.html?tab=processo&id=${encodeURIComponent(id)}&modo=visualizar`;
 
-function _docUrlArquivo(path) {
-    try {
-        const u = supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).getPublicUrl(path).data?.publicUrl;
-        return /^https:\/\//i.test(u || '') ? u : null;
-    } catch { return null; }
+// Bucket privado: o link temporário é preenchido depois de montar a tela
+// (hidratarArquivosPrivados, supabase-api.js); clicar antes disso gera na hora.
+function _docAttrsArquivo(path) {
+    return `href="#" target="_blank" rel="noopener" data-arquivo-bucket="${BUCKET_DOC_ASSINATURA}" data-arquivo="${_docEsc(path)}" `
+         + `onclick="if(!this.dataset.arquivoPronto){abrirArquivoPrivado(event,this.dataset.arquivoBucket,this.dataset.arquivo)}"`;
 }
 
 // Telas do próprio sistema (formularios.html) abrem com rel="opener": a sessão
@@ -301,14 +301,11 @@ function _docAnexoCelula(proforma, r) {
     const { tipo, arquivoPath, arquivoNome } = r;
     if (tipo.semProcesso) return `<span class="doc-status-na" title="Este documento é de cada embarque">Gere um Processo primeiro</span>`;
     const input = `<input type="file" hidden accept="${DOC_ANEXO_ACEITA}" onchange="docAnexarArquivo('${proforma.id}','${tipo.chave}',this)">`;
-    const url = arquivoPath ? _docUrlArquivo(arquivoPath) : null;
     if (!arquivoPath) {
         return `<label class="doc-anexo-btn" title="Anexar o documento (mesmo que ainda não esteja assinado)"><i class="fa-solid fa-upload"></i> Anexar${input}</label>`;
     }
     const nome = _docEsc(arquivoNome || 'documento');
-    const ver = url
-        ? `<a class="doc-anexo-ver" href="${_docEsc(url)}" target="_blank" rel="noopener" title="Abrir ${nome}"><i class="fa-solid fa-paperclip"></i> ${nome}</a>`
-        : `<span class="doc-anexo-ver"><i class="fa-solid fa-paperclip"></i> ${nome}</span>`;
+    const ver = `<a class="doc-anexo-ver" ${_docAttrsArquivo(arquivoPath)} title="Abrir ${nome}"><i class="fa-solid fa-paperclip"></i> ${nome}</a>`;
     return `<div class="doc-anexo-cell">${ver}
         <div class="doc-anexo-acoes">
             <label class="doc-anexo-acao" title="Substituir o arquivo"><i class="fa-solid fa-arrow-up-from-bracket"></i> Substituir${input}</label>
@@ -511,6 +508,7 @@ function docRenderizar() {
     if (_docProformaUnica) {
         const l = linhas[0];
         container.innerHTML = l ? _docRenderDetalhe(l.proforma, l.docRowsFiltradas) : '<div class="doc-vazio">Proforma não encontrada.</div>';
+        hidratarArquivosPrivados(container);
         return;
     }
 
@@ -537,6 +535,7 @@ function docRenderizar() {
                 ${linhas.map(l => _docRenderLinhaProforma(l, forcarExpandir)).join('')}
             </tbody>
         </table>`;
+    hidratarArquivosPrivados(container);
 }
 
 function _docRenderLinhaProforma({ proforma, remetente, destinatario, docRowsFiltradas, totalDocs, assinadosDocs }, forcarExpandir) {
@@ -742,8 +741,7 @@ function _docRenderLinha(proforma, r) {
 // digital do Importador), baixar o comprovante com as evidências.
 function _docAssinaturaAcoes(proforma, tipo, arquivoPath) {
     const acoes = [];
-    const url = arquivoPath ? _docUrlArquivo(arquivoPath) : null;
-    if (url) acoes.push(`<a class="doc-assinatura-acao" href="${_docEsc(url)}" target="_blank" rel="noopener" title="Abrir o documento assinado"><i class="fa-solid fa-paperclip"></i> Ver arquivo</a>`);
+    if (arquivoPath) acoes.push(`<a class="doc-assinatura-acao" ${_docAttrsArquivo(arquivoPath)} title="Abrir o documento assinado"><i class="fa-solid fa-paperclip"></i> Ver arquivo</a>`);
     if (tipo.id === 'proforma' && _docAssinaturasLink[proforma.id]?.status === 'assinado') {
         acoes.push(`<button class="doc-assinatura-acao" onclick="docComprovanteAssinatura(event,'${proforma.id}')" title="Comprovante da assinatura digital (dados do assinante, data/hora, IP, hash)"><i class="fa-solid fa-certificate"></i> Comprovante</button>`);
     }

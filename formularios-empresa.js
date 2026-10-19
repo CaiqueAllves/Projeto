@@ -643,14 +643,14 @@ function empAdicionarDocumento() {
         <div class="emp-doc-item-top">
             <div class="emp-doc-item-fields">
                 <div class="form-group emp-doc-tipo-group">
-                    <label>Tipo de Documento</label>
+                    <label for="emp-doc-tipo-${id}">Tipo de Documento</label>
                     <select id="emp-doc-tipo-${id}" name="doc_tipo_${id}" onchange="empTipoDocChange(this, ${id})">
                         <option value="">Selecione...</option>
                         ${tiposOpts}
                     </select>
                 </div>
                 <div class="form-group emp-doc-outros-group" id="emp-doc-outros-group-${id}" style="display:none;">
-                    <label>Descrição do Documento</label>
+                    <label for="emp-doc-outros-${id}">Descrição do Documento</label>
                     <input type="text" id="emp-doc-outros-${id}" name="doc_outros_${id}" placeholder="Descreva o tipo de documento...">
                 </div>
             </div>

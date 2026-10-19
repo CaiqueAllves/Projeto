@@ -319,6 +319,7 @@ function _initNavegador() {
     if (_EMBUTIDO || window.__redirecionandoParaShell) return;
     injetarSidebar();
     setModulo(_getModuloAtual());
+    if (typeof _authAplicarPermissoes === 'function') _authAplicarPermissoes(obterUsuarioLogado?.());
     inicializarMenuColapsavel();
     destacarInicio();
     _injetarMobile();

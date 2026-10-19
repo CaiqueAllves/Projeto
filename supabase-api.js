@@ -170,11 +170,20 @@ async function solicitarEntradaEmpresa(chaveEmpresa) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        const { data: empresaEncontrada } = await supabaseClient
-            .from('empresas')
-            .select('id, razao_social')
-            .eq('chave_empresa', (chaveEmpresa || '').toUpperCase())
-            .maybeSingle();
+        // A tabela empresas só mostra a própria empresa (database-seguranca-2026-10.sql);
+        // a busca pela chave é feita por uma função que devolve só id + razão social.
+        let empresaEncontrada = null;
+        const rpc = await supabaseClient.rpc('buscar_empresa_por_chave', { p_chave: chaveEmpresa || '' });
+        if (!rpc.error) {
+            empresaEncontrada = (rpc.data || [])[0] || null;
+        } else {
+            // SQL ainda não rodado: busca antiga
+            ({ data: empresaEncontrada } = await supabaseClient
+                .from('empresas')
+                .select('id, razao_social')
+                .eq('chave_empresa', (chaveEmpresa || '').toUpperCase())
+                .maybeSingle());
+        }
 
         if (!empresaEncontrada) {
             return { sucesso: false, mensagem: 'Chave de empresa não encontrada.' };
@@ -513,7 +522,7 @@ async function atualizarUsuarioLogado() {
 
         const { data: usuario, error } = await supabaseClient
             .from('usuarios')
-            .select('id, cpf, nome_completo, email, perfil, ativo, empresa_id, avatar_url, empresas(razao_social, status, expira_em)')
+            .select('id, cpf, nome_completo, email, perfil, ativo, empresa_id, avatar_url, permissoes, empresas(razao_social, status, expira_em)')
             .eq('id', atual.id)
             .single();
         if (error || !usuario) return null;
@@ -538,6 +547,7 @@ async function atualizarUsuarioLogado() {
             empresa_status:    usuario.empresas?.status || null,
             empresa_expira_em: usuario.empresas?.expira_em || null,
             avatar_url: usuario.avatar_url || null,
+            permissoes: (usuario.permissoes && typeof usuario.permissoes === 'object') ? usuario.permissoes : {},
         };
 
         sessionStorage.setItem('usuarioLogado', JSON.stringify(atualizado));
@@ -720,12 +730,12 @@ async function buscarDadosPlano() {
         const [{ count: totalAtivos }, { count: totalUsuarios }] = await Promise.all([
             supabaseClient
                 .from('usuarios')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
                 .eq('empresa_id', usuario.empresa_id)
                 .eq('ativo', true),
             supabaseClient
                 .from('usuarios')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
                 .eq('empresa_id', usuario.empresa_id)
         ]);
 
@@ -781,7 +791,7 @@ async function criarSubUsuario(dados) {
         const { data, error } = await supabaseClient
             .from('usuarios')
             .insert(novoUsuario)
-            .select()
+            .select('id, nome_completo, cpf, email, perfil, ativo, empresa_id, data_nascimento')
             .single();
 
         if (error) return { sucesso: false, mensagem: error.message };
@@ -2043,7 +2053,7 @@ async function criarAssinaturaProforma(proformaId, arquivoPath, enviadoPara) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada' };
-        const { data, error } = await supabaseClient.from('assinaturas_proforma').insert({
+        const payload = {
             empresa_id:      usuario.empresa_id,
             proforma_id:     proformaId,
             criado_por:      usuario.id,
@@ -2052,7 +2062,16 @@ async function criarAssinaturaProforma(proformaId, arquivoPath, enviadoPara) {
             enviado_para:    enviadoPara || null,
             // prazo para o Importador assinar: 3 dias (o padrão do banco era 7)
             expira_em:       new Date(Date.now() + ASSINATURA_PRAZO_DIAS * 864e5).toISOString(),
-        }).select('id, token, criado_em, expira_em, status').single();
+        };
+        // o Importador abre sem login: o link do PDF (bucket privado) é gerado
+        // agora, com o mesmo prazo do link de assinatura
+        if (arquivoPath) payload.arquivo_url = await urlArquivoTemporaria('proforma-documentos-assinados', arquivoPath, ASSINATURA_PRAZO_DIAS * 86400);
+        const inserir = p => supabaseClient.from('assinaturas_proforma').insert(p).select('id, token, criado_em, expira_em, status').single();
+        let { data, error } = await inserir(payload);
+        if (error && /arquivo_url/i.test(error.message || '')) {   // SQL de segurança ainda não rodado
+            delete payload.arquivo_url;
+            ({ data, error } = await inserir(payload));
+        }
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
@@ -2276,6 +2295,62 @@ async function salvarMarcasParceiro(parceiroId, marcas) {
         }
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// ========================================
+// ARQUIVOS PRIVADOS (link temporário)
+// ========================================
+// proforma-documentos-assinados e chamados-anexos são buckets PRIVADOS
+// (database-seguranca-2026-10.sql): um link público valia para sempre para
+// quem o tivesse. Agora o link é gerado na hora, para quem está logado e tem
+// permissão de leitura (regras do Storage), e vale por pouco tempo.
+// Aceita o caminho do arquivo OU uma URL antiga (pública/assinada) já gravada.
+const ARQUIVO_LINK_SEGUNDOS = 3600;
+
+function caminhoDoArquivo(bucket, urlOuCaminho) {
+    const v = String(urlOuCaminho || '').trim();
+    if (!v) return '';
+    const m = v.match(new RegExp(`/storage/v1/object/(?:public|sign|authenticated)/${bucket}/([^?#]+)`));
+    return m ? decodeURIComponent(m[1]) : v.replace(/^\/+/, '');
+}
+
+async function urlArquivoTemporaria(bucket, urlOuCaminho, segundos = ARQUIVO_LINK_SEGUNDOS) {
+    const caminho = caminhoDoArquivo(bucket, urlOuCaminho);
+    if (!caminho) return null;
+    const { data, error } = await supabaseClient.storage.from(bucket).createSignedUrl(caminho, segundos);
+    return error ? null : data?.signedUrl || null;
+}
+
+// Abre numa aba nova: a aba abre no clique (senão o navegador bloqueia como
+// popup) e recebe o endereço quando o link temporário fica pronto.
+async function abrirArquivoPrivado(ev, bucket, urlOuCaminho) {
+    ev?.preventDefault?.(); ev?.stopPropagation?.();
+    const aba = window.open('', '_blank');
+    const url = await urlArquivoTemporaria(bucket, urlOuCaminho);
+    if (!url) { aba?.close(); if (typeof mostrarNotificacao === 'function') mostrarNotificacao('Não foi possível abrir o arquivo.', 'erro'); return; }
+    if (aba) aba.location.href = url; else window.open(url, '_blank');
+}
+
+// Depois de montar um HTML: preenche href/src de elementos marcados com
+// data-arquivo-bucket + data-arquivo (links e miniaturas), em lote.
+async function hidratarArquivosPrivados(raiz = document) {
+    const els = [...(raiz?.querySelectorAll?.('[data-arquivo-bucket][data-arquivo]') || [])].filter(el => !el.dataset.arquivoPronto);
+    if (!els.length) return;
+    const porBucket = {};
+    els.forEach(el => { (porBucket[el.dataset.arquivoBucket] ||= []).push(el); });
+    for (const [bucket, lista] of Object.entries(porBucket)) {
+        const caminhos = [...new Set(lista.map(el => caminhoDoArquivo(bucket, el.dataset.arquivo)).filter(Boolean))];
+        if (!caminhos.length) continue;
+        const { data } = await supabaseClient.storage.from(bucket).createSignedUrls(caminhos, ARQUIVO_LINK_SEGUNDOS);
+        const mapa = Object.fromEntries((data || []).filter(d => d.signedUrl).map(d => [d.path, d.signedUrl]));
+        lista.forEach(el => {
+            const url = mapa[caminhoDoArquivo(bucket, el.dataset.arquivo)];
+            if (!url) return;
+            if (el.tagName === 'IMG') el.src = url; else el.href = url;
+            if (el.dataset.full !== undefined) el.dataset.full = url;
+            el.dataset.arquivoPronto = '1';
+        });
+    }
 }
 
 window.supabaseAPI = {

@@ -2074,11 +2074,9 @@ async function docGerarPdfProcesso(tipo) {
 function docVer(id) {
     const anexo = _docAnexosProcesso[id];
     if (!anexo) return;
-    // Bucket é público — usa a URL pública direta (síncrona, sem download
-    // de blob) em vez de window.open após um await, que o navegador trata
-    // como popup não solicitado pelo usuário e bloqueia.
-    const { data } = supabaseClient.storage.from(BUCKET_DOC_PROFORMA).getPublicUrl(anexo.path);
-    window.open(data.publicUrl, '_blank');
+    // Bucket privado: link temporário. abrirArquivoPrivado abre a aba já no
+    // clique (senão o navegador bloqueia como popup) e preenche depois.
+    abrirArquivoPrivado(null, BUCKET_DOC_PROFORMA, anexo.path);
 }
 
 async function docExcluir(id) {

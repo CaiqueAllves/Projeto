@@ -114,6 +114,7 @@ function verificarAutenticacao(opcoes = {}) {
 }
 
 function _authAtualizarInterface(usuarioAtual) {
+    _authAplicarPermissoes(usuarioAtual);
     const displayUsername = document.getElementById('displayUsername');
     const empresaNome = document.getElementById('empresaNome');
 
@@ -322,6 +323,75 @@ function escolherAcao(mensagem, opcoes = {}) {
         document.body.appendChild(overlay);
         btnCancelar.focus();
     });
+}
+
+// ── Permissões por perfil e por módulo ──────────────────────────────────
+// Valem também no banco (database-permissoes-perfil-modulo.sql e
+// database-comercial-e-arquivos.sql); aqui só escondem o que a pessoa não
+// pode usar.
+//   - Excluir/restaurar Proforma, Processo e Contas: só admin e gerente.
+//   - Módulos (Usuários e Permissões): admin tem todos; os demais seguem o
+//     que o admin marcou (padrão: só Operacional). Sem o Financeiro, a pessoa
+//     vê os valores das Proformas e Processos mas não entra no Financeiro;
+//     sem o Comercial, não entra em Proposta/Pipeline.
+const _AUTH_MODULOS_PADRAO = { operacional: true, comercial: false, financeiro: false };
+const _AUTH_MODULOS_BLOQUEAVEIS = {
+    financeiro: { nome: 'Financeiro', paginas: ['contas-pagar.html', 'contas-receber.html', 'pipeline-financeiro.html',
+        'fluxo-caixa.html', 'relatorios-financeiro.html', 'dre.html'] },
+    comercial:  { nome: 'Comercial',  paginas: ['proposta.html', 'pipeline.html', 'relatorios-comercial.html'] },
+};
+
+function usuarioPodeExcluir(u = obterUsuarioLogado?.()) {
+    return !!u && (u.perfil === 'admin' || u.perfil === 'gerente');
+}
+
+// true/false; null enquanto as permissões ainda não chegaram do banco
+function usuarioTemModulo(modulo, u = obterUsuarioLogado?.()) {
+    if (!u) return false;
+    if (u.perfil === 'admin') return true;
+    if (!u.permissoes || typeof u.permissoes !== 'object') return null;
+    const v = u.permissoes[modulo];
+    return typeof v === 'boolean' ? v : !!_AUTH_MODULOS_PADRAO[modulo];
+}
+
+function avisoSemPermissaoExcluir() {
+    mostrarNotificacao('Apenas o administrador ou o gerente pode excluir ou restaurar.', 'warning');
+    return false;
+}
+
+function _authAplicarPermissoes(u) {
+    const corpo = document.body;
+    if (!corpo || !u) return;
+    corpo.classList.toggle('perm-sem-excluir', !usuarioPodeExcluir(u));
+    const pagina = (location.pathname.split('/').pop() || '').toLowerCase();
+
+    for (const [modulo, cfg] of Object.entries(_AUTH_MODULOS_BLOQUEAVEIS)) {
+        const tem = usuarioTemModulo(modulo, u);
+        corpo.classList.toggle('perm-sem-' + modulo, tem === false);
+        if (tem !== false) continue;
+
+        // menu: tira o módulo do seletor (no iPhone, display:none em <option> não funciona)
+        document.querySelectorAll(`#modSelect option[value="${modulo}"]`).forEach(o => o.remove());
+        if (sessionStorage.getItem('modulo_ativo') === modulo && typeof setModulo === 'function') setModulo('operacional');
+
+        // tela do módulo aberta direto (favorito, aba antiga, link)
+        if (cfg.paginas.includes(pagina) && !document.getElementById('permSemAcesso')) {
+            const alvo = document.querySelector('.content') || document.querySelector('main') || corpo;
+            // esconde (não apaga) o conteúdo: o código da tela ainda preenche esses elementos
+            [...alvo.children].forEach(el => el.classList.add('perm-oculto'));
+            alvo.insertAdjacentHTML('beforeend', `<div id="permSemAcesso" class="perm-sem-acesso">
+                <i class="fa-solid fa-lock"></i>
+                <h2>Sem acesso ao módulo ${cfg.nome}</h2>
+                <p>Peça ao administrador da empresa para liberar o ${cfg.nome} em Configurações › Usuários e Permissões.</p>
+            </div>`);
+        }
+    }
+}
+
+// Escape de HTML — usar SEMPRE que um texto vindo do banco/usuário entra em
+// innerHTML/template (varredura de segurança 2026-10-19).
+function escHtml(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // Função de Logout

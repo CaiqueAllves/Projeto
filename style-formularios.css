@@ -68,7 +68,8 @@
     gap: 4px;
 }
 
-.prop-item-field label {
+.prop-item-field label,
+.prop-item-field :is(span,div):where(.rotulo) {
     font-size: 11px;
     font-weight: 600;
     color: #94a3b8;
@@ -1073,7 +1074,8 @@ form {
     padding: 0;
 }
 
-.form-group label {
+.form-group label,
+.form-group :is(span,div):where(.rotulo) {
     font-size: 13px;
     font-weight: 600;
     color: var(--texto);
@@ -1444,7 +1446,8 @@ form {
     margin-bottom: 4px;
 }
 
-.doc-label-row label {
+.doc-label-row label,
+.doc-label-row :is(span,div):where(.rotulo) {
     margin-bottom: 0 !important;
     font-size: 13px;
     font-weight: 600;
@@ -1530,7 +1533,8 @@ form {
     gap: 8px;
 }
 
-.empresa-destino-header label {
+.empresa-destino-header label,
+.empresa-destino-header :is(span,div):where(.rotulo) {
     margin-bottom: 0 !important;
     font-size: 13px;
     font-weight: 600;
@@ -1609,7 +1613,8 @@ form {
     margin-bottom: 4px;
 }
 
-.rota-label-row label {
+.rota-label-row label,
+.rota-label-row :is(span,div):where(.rotulo) {
     margin-bottom: 0 !important;
     font-size: 13px;
     font-weight: 600;
@@ -1991,7 +1996,8 @@ form {
     align-items: center;
     justify-content: space-between;
 }
-.numero-label-row > label { margin-bottom: 0 !important; }
+.numero-label-row > label,
+.numero-label-row > :is(span,div):where(.rotulo) { margin-bottom: 0 !important; }
 
 .input-com-sn {
     position: relative;
@@ -2702,7 +2708,8 @@ form {
     margin-bottom: 4px;
 }
 
-.coleta-label-row label:first-child {
+.coleta-label-row label:first-child,
+.coleta-label-row :is(span,div):where(.rotulo):first-child {
     font-size: 14px;
     font-weight: 600;
     color: var(--texto);
@@ -3343,7 +3350,8 @@ form {
     margin-bottom: 4px;
 }
 
-.prod-url-img-label-row label {
+.prod-url-img-label-row label,
+.prod-url-img-label-row :is(span,div):where(.rotulo) {
     margin-bottom: 0;
 }
 
@@ -3497,7 +3505,8 @@ form {
 /* Ajuste fino: Tipo em grade 2x2 com a mesma altura dos cards de Modelo, rótulos iguais */
 .emp-modelo-tipo-row { align-items: stretch; }
 .emp-modelo-tipo-row #emp-tipo-group { display: flex; flex-direction: column; }
-.emp-modelo-tipo-row #emp-tipo-group > label {
+.emp-modelo-tipo-row #emp-tipo-group > label,
+.emp-modelo-tipo-row #emp-tipo-group > :is(span,div):where(.rotulo) {
     display: block;
     font-size: 13px;
     font-weight: 600;
@@ -3515,7 +3524,8 @@ form {
 .emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner { height: 100%; box-sizing: border-box; }
 .emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner { justify-content: center; }
 .emp-modelo-tipo-row #emp-tipo-group { gap: 0; padding: 0; }
-.emp-modelo-tipo-row #emp-tipo-group > label { margin: 0 0 12px; }
+.emp-modelo-tipo-row #emp-tipo-group > label,
+.emp-modelo-tipo-row #emp-tipo-group > :is(span,div):where(.rotulo) { margin: 0 0 12px; }
 .emp-modelo-tipo-row #emp-tipo-group .tipo-card { display: block; width: 100%; }
 .emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner { width: 100%; }
 
@@ -3568,7 +3578,8 @@ form {
     gap: 12px;
     align-items: end;
 }
-.form-row-ident > .form-group > label { white-space: nowrap; font-size: 12.5px; }
+.form-row-ident > .form-group > label,
+.form-row-ident > .form-group > :is(span,div):where(.rotulo) { white-space: nowrap; font-size: 12.5px; }
 @media (max-width: 1100px) {
     .form-row-ident { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: start; }
 }
@@ -3585,7 +3596,8 @@ form {
 .form-row-endereco > .form-group:has(#emp-numero),
 .form-row-endereco > .form-group:has(#emp-cep) { flex-grow: .7; }
 .form-row-endereco > .form-group:has(#emp-pais) { flex-grow: 1.2; }
-.form-row-endereco label { white-space: nowrap; font-size: 12.5px; }
+.form-row-endereco label,
+.form-row-endereco :is(span,div):where(.rotulo) { white-space: nowrap; font-size: 12.5px; }
 @media (max-width: 1300px) {
     .form-row-endereco { flex-wrap: wrap; align-items: flex-start; }
     .form-row-endereco > .form-group { flex-basis: 150px; }
@@ -3598,12 +3610,16 @@ form {
 .form-row-ident > .form-group > label,
 .form-row-endereco > .form-group > label,
 .emp-modelo-tipo-row .modelo-selector-label,
-.emp-modelo-tipo-row #emp-tipo-group > label {
+.emp-modelo-tipo-row #emp-tipo-group > label,
+.form-row-ident > .form-group > :is(span,div):where(.rotulo),
+.form-row-endereco > .form-group > :is(span,div):where(.rotulo),
+.emp-modelo-tipo-row #emp-tipo-group > :is(span,div):where(.rotulo) {
     font-size: 14px;
     font-weight: 600;
     color: rgb(71, 85, 105);
 }
-.form-row-endereco > .form-group > label { overflow: hidden; text-overflow: ellipsis; }
+.form-row-endereco > .form-group > label,
+.form-row-endereco > .form-group > :is(span,div):where(.rotulo) { overflow: hidden; text-overflow: ellipsis; }
 
 /* CEP antes do Estado (endereço fiscal), Estado mais estreito; a mensagem do CEP
    fica fora do fluxo pra não desalinhar os campos da linha. O CEP some sozinho fora do Brasil. */
@@ -3620,7 +3636,8 @@ form {
 }
 .form-row-ident > .form-group { flex: 1 1 0; min-width: 0; margin: 0; }
 .form-row-ident > .form-group:has(#emp-documento) { flex-grow: 1.3; }
-.form-row-ident > .form-group > label { overflow: visible; }
+.form-row-ident > .form-group > label,
+.form-row-ident > .form-group > :is(span,div):where(.rotulo) { overflow: visible; }
 @media (max-width: 1300px) {
     .form-row-ident { flex-wrap: wrap; align-items: flex-start; }
     .form-row-ident > .form-group { flex: 1 1 170px; }
