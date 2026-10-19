@@ -388,6 +388,39 @@ function _authAplicarPermissoes(u) {
     }
 }
 
+// ── Mensagens de erro amigáveis ─────────────────────────────────────────
+// Erros do banco/Supabase chegam em inglês técnico (nomes de tabela, regra,
+// coluna). Os avisos (mostrarNotificacao/mostrarToast) passam por aqui: o
+// trecho técnico vira uma frase em português e o original vai pro console.
+// Mensagens que já estão em português (ex.: as das regras do banco) passam
+// direto.
+const _ERROS_AMIGAVEIS = [
+    [/row-level security|permission denied|insufficient_privilege/i, 'Você não tem permissão para fazer isso.'],
+    [/duplicate key value|already exists|23505/i, 'Já existe um registro com esses dados.'],
+    [/foreign key constraint|still referenced|23503/i, 'Este registro está ligado a outros dados e não pode ser alterado ou excluído.'],
+    [/violates check constraint|23514/i, 'Algum valor não é aceito (por exemplo, valor negativo ou status inválido).'],
+    [/null value in column|violates not-null/i, 'Preencha os campos obrigatórios.'],
+    [/JWT expired|invalid JWT|JWSError/i, 'Sua sessão expirou. Entre novamente.'],
+    [/Failed to fetch|NetworkError|Load failed/i, 'Sem conexão com o servidor. Confira a internet e tente de novo.'],
+    [/exceeded the maximum allowed size|payload too large/i, 'O arquivo é maior que o permitido.'],
+    [/mime type .* is not supported/i, 'Tipo de arquivo não aceito.'],
+    [/schema cache|Could not find the .* column|column .* does not exist|relation .* does not exist/i, 'Esta tela está desatualizada em relação ao banco. Recarregue a página; se continuar, avise o suporte.'],
+    [/invalid input syntax/i, 'Algum campo está com formato inválido.'],
+    [/value too long/i, 'Algum texto passou do tamanho máximo.'],
+    [/statement timeout|canceling statement/i, 'O servidor demorou para responder. Tente de novo.'],
+];
+
+function amigavelErroBanco(texto) {
+    if (typeof texto !== 'string' || !texto) return texto;
+    const achado = _ERROS_AMIGAVEIS.find(([re]) => re.test(texto));
+    if (!achado) return texto;
+    console.warn('[erro original]', texto);
+    // mantém o começo em português ("Erro ao excluir: ...") e troca o resto
+    const i = texto.indexOf(': ');
+    const prefixo = i > 0 && !achado[0].test(texto.slice(0, i)) ? texto.slice(0, i + 2) : '';
+    return prefixo + achado[1];
+}
+
 // Escape de HTML — usar SEMPRE que um texto vindo do banco/usuário entra em
 // innerHTML/template (varredura de segurança 2026-10-19).
 function escHtml(v) {
@@ -427,6 +460,7 @@ function togglePassword() {
 
 // Sistema de Notificações
 function mostrarNotificacao(mensagem, tipo = 'info') {
+    if (typeof amigavelErroBanco === 'function') mensagem = amigavelErroBanco(mensagem);
     // Aceita os tipos em português também (várias telas usam 'erro'/'sucesso'/
     // 'aviso' — antes esses avisos saíam sem ícone e sem cor).
     tipo = { erro: 'error', sucesso: 'success', aviso: 'warning', alerta: 'warning' }[tipo] || tipo;

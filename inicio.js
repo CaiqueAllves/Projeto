@@ -818,6 +818,7 @@ function criarGraficoProformas(proformas) {
 // ========================================
 
 function mostrarNotificacao(mensagem, tipo = 'info') {
+    if (typeof amigavelErroBanco === 'function') mensagem = amigavelErroBanco(mensagem);
     const notificacao = document.createElement('div');
     notificacao.className = `notificacao notificacao-${tipo}`;
     

@@ -1103,6 +1103,7 @@ async function editEmpBuscarCep() {
 }
 
 function mostrarToast(msg, tipo = 'sucesso') {
+    if (typeof amigavelErroBanco === 'function') msg = amigavelErroBanco(msg);
     const toast = document.getElementById('toast');
     const icone = tipo === 'sucesso' ? 'circle-check' : 'circle-exclamation';
     toast.innerHTML = `<i class="fa-solid fa-${icone}"></i> ${msg}`;

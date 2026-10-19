@@ -18,6 +18,7 @@ import bcrypt from 'npm:bcryptjs@2.4.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const LIMITE_TENTATIVAS_HORA = 10;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +59,29 @@ async function tratar(req: Request): Promise<Response> {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    // Limite: 10 tentativas por hora por IP (tabela cadastro_tentativas,
+    // database-validacoes.sql). Sem a tabela, segue sem limite.
+    // cabeçalhos preenchidos pela infraestrutura primeiro; x-forwarded-for
+    // por último (o primeiro item dele pode vir do próprio cliente)
+    const ip = req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip')
+      || (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'desconhecido';
+    const umaHoraAtras = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: tentativas, error: erroLimite } = await admin
+      .from('cadastro_tentativas')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip', ip)
+      .gte('criado_em', umaHoraAtras);
+    if (!erroLimite) {
+      if ((tentativas ?? 0) >= LIMITE_TENTATIVAS_HORA) {
+        return jsonResponse({ sucesso: false, mensagem: 'Muitas tentativas de cadastro a partir desta rede. Tente de novo em uma hora.' }, 429);
+      }
+      await admin.from('cadastro_tentativas').insert({ ip });
+      // faxina ocasional do que tem mais de 1 dia
+      if (Math.random() < 0.05) {
+        await admin.from('cadastro_tentativas').delete().lt('criado_em', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+      }
+    }
 
     const { data: cpfExistente, error: erroCpf } = await admin
       .from('usuarios')

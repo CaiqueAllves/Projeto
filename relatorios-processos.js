@@ -493,6 +493,7 @@ function formatarData(iso) {
 }
 
 function mostrarNotificacao(mensagem, tipo = 'info') {
+    if (typeof amigavelErroBanco === 'function') mensagem = amigavelErroBanco(mensagem);
     const cores = { success: '#22C55E', error: '#dc2626', warning: '#f59e0b', info: '#4776ec' };
     const icones = { success: 'fa-circle-check', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' };
     const n = document.createElement('div');

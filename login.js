@@ -336,6 +336,7 @@ function validarEmail(email) {
 
 // Sistema de notificações
 function mostrarNotificacao(mensagem, tipo = 'info') {
+    if (typeof amigavelErroBanco === 'function') mensagem = amigavelErroBanco(mensagem);
     // Remover notificação anterior se existir
     const notifAnterior = document.querySelector('.toast-notification');
     if (notifAnterior) {
