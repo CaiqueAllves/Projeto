@@ -1835,12 +1835,30 @@ async function atualizarProformaDB(id, dados) {
 // Blocos 3 e 5 (database-plano-contas-comercial-financeiro.sql) trouxeram
 // plano_contas.natureza; cada busca tenta do formato mais completo pro mais
 // simples, conforme os SQLs que já rodaram.
-const _FIN_BASE = '*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo)';
+const _FIN_BASE = '*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo, proforma_id)';
 const _FIN_PLANO_NAT = _FIN_BASE + ', plano_contas(codigo, subfator_nome, conta_codigo, conta_nome, bloco, natureza)';
 const _FIN_PLANO     = _FIN_BASE + ', plano_contas(codigo, subfator_nome, conta_codigo, conta_nome, bloco)';
 const _CP_SELECTS = [_FIN_PLANO_NAT, _FIN_PLANO, _FIN_BASE];
 const _CR_SELECTS = [_FIN_PLANO_NAT, _FIN_PLANO];
-const _cpSemPlano = err => /plano_conta|plano_contas|natureza|relationship/i.test(err?.message || '');
+const _cpSemPlano = err => /plano_conta|plano_contas|natureza|cambio|relationship/i.test(err?.message || '');
+// Previsto × Revisado (database-financeiro-previsto-revisado.sql): copia os
+// campos informados para o payload; antes do SQL, a gravação tenta sem eles.
+const _FIN_CAMPOS_PREVISTO = ['valor_previsto', 'cambio_previsto', 'previsto_em', 'valor_revisado', 'cambio_revisado', 'revisado_em'];
+function _finAplicarPrevisto(payload, dados) {
+    _FIN_CAMPOS_PREVISTO.forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
+}
+async function _finGravarComFallback(gravar, payload) {
+    let result = await gravar(payload);
+    if (result.error && /previsto|revisado/i.test(result.error.message || '')) {
+        _FIN_CAMPOS_PREVISTO.forEach(k => delete payload[k]);
+        result = await gravar(payload);
+    }
+    if (result.error && /cambio/i.test(result.error.message || '')) {
+        delete payload.cambio;
+        result = await gravar(payload);
+    }
+    return result;
+}
 async function _finSelectComFallback(montar, selects) {
     let r;
     for (const sel of selects) {
@@ -1908,15 +1926,17 @@ async function salvarContaPagar(dados, id = null) {
             status:          dados.status || 'pendente',
             categoria:       dados.categoria || null,
             plano_conta_id:  dados.plano_conta_id || null,
+            cambio:          dados.cambio || null,
             observacoes:     dados.observacoes || null,
             atualizado_em:   new Date().toISOString(),
         };
         if (!id) { payload.empresa_id = usuario.empresa_id; payload.criado_por = usuario.id; }
+        _finAplicarPrevisto(payload, dados);
         const gravar = (p) => id
             ? supabaseClient.from('contas_pagar').update(p).eq('id', id).select().single()
             : supabaseClient.from('contas_pagar').insert(p).select().single();
-        let result = await gravar(payload);
-        // antes do SQL do plano de contas (Blocos 2 e 4) a coluna não existe
+        // antes dos SQLs (previsto / câmbio / plano de contas) as colunas não existem
+        let result = await _finGravarComFallback(gravar, payload);
         if (result.error && _cpSemPlano(result.error)) {
             delete payload.plano_conta_id;
             result = await gravar(payload);
@@ -2006,17 +2026,17 @@ async function salvarContaReceber(dados, id = null) {
             status:           dados.status || 'pendente',
             categoria:        dados.categoria || null,
             plano_conta_id:   dados.plano_conta_id || null,
+            cambio:           dados.cambio || null,
             observacoes:      dados.observacoes || null,
             atualizado_em:    new Date().toISOString(),
         };
-        let result;
-        if (id) {
-            result = await supabaseClient.from('contas_receber').update(payload).eq('id', id).select().single();
-        } else {
-            payload.empresa_id = usuario.empresa_id;
-            payload.criado_por = usuario.id;
-            result = await supabaseClient.from('contas_receber').insert(payload).select().single();
-        }
+        if (!id) { payload.empresa_id = usuario.empresa_id; payload.criado_por = usuario.id; }
+        _finAplicarPrevisto(payload, dados);
+        const gravar = (p) => id
+            ? supabaseClient.from('contas_receber').update(p).eq('id', id).select().single()
+            : supabaseClient.from('contas_receber').insert(p).select().single();
+        // antes dos SQLs (previsto / câmbio) as colunas não existem
+        const result = await _finGravarComFallback(gravar, payload);
         if (result.error) return { sucesso: false, mensagem: result.error.message };
         return { sucesso: true, data: result.data };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }

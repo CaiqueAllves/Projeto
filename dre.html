@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://olinda.bcb.gov.br https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
     <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
     <meta name="theme-color" content="#4776ec">
     <link rel="icon" type="image/svg+xml" href="icons/marpex.svg">
@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css?v=0e82b1a5">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=b50042da">
+    <link rel="stylesheet" href="style-financeiro.css?v=97ee7401">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -57,13 +57,55 @@
                 </button>
             </div>
 
-            <!-- DRE -->
-            <div class="dre-wrap">
-                <table class="dre-table" id="dreTable">
-                    <tbody id="dreTbody">
-                        <tr><td colspan="2" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
-                    </tbody>
-                </table>
+            <!-- Abas (Bloco 7 do Plano de Contas) -->
+            <div class="dre-abas" role="tablist">
+                <button type="button" class="dre-aba ativa" data-aba="resultado" onclick="dreAbrirAba('resultado')"><i class="fa-solid fa-table-list"></i> Resultado do período</button>
+                <button type="button" class="dre-aba" data-aba="operacoes" onclick="dreAbrirAba('operacoes')"><i class="fa-solid fa-ship"></i> Por operação</button>
+                <button type="button" class="dre-aba" data-aba="analise" onclick="dreAbrirAba('analise')"><i class="fa-solid fa-chart-pie"></i> Análise</button>
+                <button type="button" class="dre-aba" data-aba="previsto" onclick="dreAbrirAba('previsto')"><i class="fa-solid fa-scale-balanced"></i> Previsto × Realizado</button>
+            </div>
+            <div class="dre-aviso" id="dreAviso" hidden></div>
+
+            <!-- Resultado do período: indicadores (7.14) + DRE -->
+            <div class="dre-painel" id="drePainelResultado">
+                <div class="dre-indicadores" id="dreIndicadores"></div>
+                <div class="dre-wrap">
+                    <table class="dre-table" id="dreTable">
+                        <tbody id="dreTbody">
+                            <tr><td colspan="2" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Por operação: resultado e custo unitário de cada Proforma (7.15) -->
+            <div class="dre-painel" id="drePainelOperacoes" hidden>
+                <div class="dre-wrap dre-wrap-tabela" id="dreOperacoes"></div>
+            </div>
+
+            <!-- Análise gerencial por dimensão (7.17) -->
+            <div class="dre-painel" id="drePainelAnalise" hidden>
+                <div class="dre-analise-filtro">
+                    <label for="dreDimensao">Analisar por</label>
+                    <select id="dreDimensao" onchange="dreRenderAnalise()">
+                        <option value="pais">País de destino</option>
+                        <option value="cliente">Cliente (Importador)</option>
+                        <option value="incoterm">Incoterm</option>
+                        <option value="modal">Modal</option>
+                        <option value="moeda">Moeda da operação</option>
+                        <option value="fornecedor">Fornecedor (custos)</option>
+                    </select>
+                </div>
+                <div class="dre-wrap dre-wrap-tabela" id="dreAnalise"></div>
+            </div>
+
+            <!-- Previsto × Realizado (7.16) -->
+            <div class="dre-painel" id="drePainelPrevisto" hidden>
+                <div class="dre-analise-filtro">
+                    <label for="drePrevOperacao">Operação</label>
+                    <select id="drePrevOperacao" onchange="dreRenderPrevisto()"></select>
+                </div>
+                <div class="dre-wrap dre-wrap-tabela" id="drePrevisto"></div>
             </div>
 
         </div>
@@ -75,10 +117,11 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=caa35554"></script>
+<script src="supabase-api.js?v=214e1be4"></script>
 <script src="auth.js?v=37c2c7b0"></script>
 <script src="navegador.js?v=1c5fb652"></script>
-<script src="dre.js?v=b55603e7"></script>
+<script src="fin-moeda.js?v=0f017527"></script>
+<script src="dre.js?v=5c888545"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

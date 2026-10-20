@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://olinda.bcb.gov.br https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
     <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
     <meta name="theme-color" content="#4776ec">
     <link rel="icon" type="image/svg+xml" href="icons/marpex.svg">
@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css?v=0e82b1a5">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=b50042da">
+    <link rel="stylesheet" href="style-financeiro.css?v=97ee7401">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -174,6 +174,13 @@
                     </select>
                 </div>
             </div>
+            <div class="fin-form-row" id="cpCambioGrupo" hidden>
+                <div class="fin-form-group fin-full">
+                    <label for="cpCambio">Câmbio (R$ por 1 <span id="cpCambioMoeda">USD</span>)</label>
+                    <input type="text" id="cpCambio" placeholder="0,0000" inputmode="decimal" autocomplete="off">
+                    <small class="fin-cambio-info" id="cpCambioInfo"></small>
+                </div>
+            </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
                     <label for="cpVencimento">Vencimento <span style="color:#ef4444">*</span></label>
@@ -216,6 +223,7 @@
                     <div class="pl-autocomplete" id="cpAutoPlanoConta"></div>
                 </div>
             </div>
+            <div id="cpPrevistoBox"></div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full pl-obs-wrapper">
                     <div class="pl-obs-toggle" onclick="cpToggleObs(this)">
@@ -261,11 +269,12 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=caa35554"></script>
+<script src="supabase-api.js?v=214e1be4"></script>
 <script src="auth.js?v=37c2c7b0"></script>
 <script src="navegador.js?v=1c5fb652"></script>
-<script src="fin-moeda.js?v=ccdced38"></script>
-<script src="contas-pagar.js?v=791b62f7"></script>
+<script src="fin-moeda.js?v=0f017527"></script>
+<script src="fin-previsto.js?v=ed820757"></script>
+<script src="contas-pagar.js?v=2e468a39"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

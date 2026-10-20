@@ -9,6 +9,7 @@ let _crExcluirId = null;
 document.addEventListener('DOMContentLoaded', async () => {
     _crCarregarUsuario();
     await _crCarregarMoedas();
+    finCambioIniciar('cr', ['crDataRecebimento', 'crVencimento']);
     await _crCarregarPlanoContas();
     await crCarregar();
     await _crVerificarGeracaoViaUrl();
@@ -302,6 +303,7 @@ function crAoMudarStatus() {
     const dataEl = document.getElementById('crDataRecebimento');
     if (document.getElementById('crStatus').value === 'recebido' && !dataEl.value) {
         dataEl.value = new Date().toISOString().slice(0, 10);
+        finCambioAtualizar('cr');
     }
 }
 
@@ -312,7 +314,17 @@ async function crMarcarRecebido(id) {
     c.status = 'recebido';
     c.data_recebimento = hoje;
     crRenderizar();
-    await atualizarContaReceber(id, { status: 'recebido', data_recebimento: hoje });
+    // moeda estrangeira: guarda a PTAX do dia do recebimento (sem a coluna, grava sem)
+    const campos = { status: 'recebido', data_recebimento: hoje };
+    if (c.moeda && c.moeda !== 'BRL' && !c.cambio) {
+        const cot = await finCotacaoPtax(c.moeda, hoje);
+        if (cot) campos.cambio = cot.taxa;
+    }
+    const r = await atualizarContaReceber(id, campos);
+    if (r && !r.sucesso && campos.cambio && /cambio/i.test(r.mensagem || '')) {
+        delete campos.cambio;
+        await atualizarContaReceber(id, campos);
+    }
 }
 
 function crAbrirModal(id = null, prefill = null) {
@@ -359,6 +371,8 @@ function crAbrirModal(id = null, prefill = null) {
     document.getElementById('crDataRecebimento').value = c?.data_recebimento || '';
     document.getElementById('crStatus').value          = c?.status || 'pendente';
 
+    finCambioCarregar('cr', c?.cambio);
+    finPrevistoCarregar('cr', c);
     const planoConta = c?.plano_conta_id
         ? _crPlanoContasTodas.find(p => p.id === c.plano_conta_id)
         : null;
@@ -366,7 +380,8 @@ function crAbrirModal(id = null, prefill = null) {
     document.getElementById('crPlanoContaNome').value = planoConta ? `${planoConta.codigo} — ${planoConta.subfator_nome}` : '';
 
     document.getElementById('crObservacoes').value     = c?.observacoes || '';
-    const obsToggle = document.querySelector('#crModalOverlay .pl-obs-toggle');
+    // Observações (a seção Previsto/Revisado também usa .pl-obs-toggle)
+    const obsToggle = document.querySelector('#crModalOverlay .pl-obs-toggle[onclick*="ToggleObs"]');
     if (obsToggle) { obsToggle.classList.remove('aberto'); obsToggle.nextElementSibling.style.display = 'none'; }
 
     document.getElementById('crModalOverlay').classList.add('ativo');
@@ -426,6 +441,8 @@ async function crSalvar() {
         data_recebimento: document.getElementById('crDataRecebimento').value || null,
         status:           document.getElementById('crStatus').value,
         plano_conta_id:   document.getElementById('crPlanoContaId').value || null,
+        cambio:           finCambioParaSalvar('cr'),
+        ...(await finPrevistoParaSalvar('cr', valor, finCambioParaSalvar('cr'))),
         observacoes:      document.getElementById('crObservacoes').value.trim() || null,
     };
 
@@ -595,7 +612,7 @@ async function _crDerivarDaProforma(proformaId) {
             valorInput.value = _crFormatarMonetario(proforma.valor_total);
             const selMoeda = document.getElementById('crMoeda');
             const moeda = finMoedaParaOpcao(selMoeda, proforma.moeda_principal);
-            if (moeda) selMoeda.value = moeda;
+            if (moeda) { selMoeda.value = moeda; finCambioAtualizar('cr', { forcar: true }); }
         }
 
         let query = supabaseClient

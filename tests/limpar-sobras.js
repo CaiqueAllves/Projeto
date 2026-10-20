@@ -8,6 +8,11 @@ const h = require('./helpers.js');
     console.log(await page.evaluate(async () => {
         const out = {};
         const ids = async (t, col) => ((await supabaseClient.from(t).select('id').like(col, 'TSTE2E%')).data || []).map(r => r.id);
+        // contas de teste primeiro (apontam para Proformas/Processos/parceiros de teste)
+        for (const t of ['contas_receber', 'contas_pagar']) {
+            const r = await supabaseClient.from(t).delete().like('descricao', 'TSTE2E%').select('id');
+            if (r.data?.length) out[t] = r.data.length;
+        }
         const pfIds = await ids('proformas', 'codigo');
         if (pfIds.length) {
             const { data: docs } = await supabaseClient.from('proforma_documentos').select('arquivo_path').in('proforma_id', pfIds);
