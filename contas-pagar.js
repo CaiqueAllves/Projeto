@@ -9,9 +9,83 @@ let _cpExcluirId = null;
 document.addEventListener('DOMContentLoaded', async () => {
     _cpCarregarUsuario();
     await _cpCarregarMoedas();
+    await _cpCarregarPlanoContas();
     await cpCarregar();
     await _cpVerificarGeracaoViaUrl();
 });
+
+// ── Plano de Contas (Blocos 2 a 5 — custos) ──────────────────────────────────
+// database-plano-contas-aquisicoes-operacional.sql (2 e 4) e
+// database-plano-contas-comercial-financeiro.sql (3 e 5; os ganhos do Bloco 5
+// ficam em Contas a Receber). Mesma busca
+// agrupada de Contas a Receber; escolher a conta já preenche a Categoria
+// (resumo usado nos relatórios antigos), que continua editável para
+// despesas de blocos ainda não implantados (impostos, bancárias...).
+let _cpPlanoContas = [];
+
+async function _cpCarregarPlanoContas() {
+    try {
+        const res = await buscarPlanoContas([2, 3, 4, 5]);
+        if (res.sucesso) _cpPlanoContas = (res.data || []).filter(c => c.natureza !== 'ganho');
+    } catch (e) {
+        console.warn('[Contas a Pagar] Falha ao carregar plano de contas:', e);
+    }
+}
+
+function _cpRotuloConta(c) {
+    return c ? `${c.codigo} — ${c.subfator_nome}` : '';
+}
+
+// Categoria-resumo a partir da conta: Aquisições = fornecedor; Comercial =
+// comercial; frete, logística e agente de cargas = frete; o resto do
+// Operacional = operacional; Financeiro/Cambial = financeiro
+function _cpCategoriaDaConta(c) {
+    if (!c) return '';
+    const b = Number(c.bloco);
+    if (b === 2) return 'fornecedor';
+    if (b === 3) return 'comercial';
+    if (b === 5) return 'financeiro';
+    return ['04.04', '04.08', '04.10', '04.12'].includes(c.conta_codigo) ? 'frete' : 'operacional';
+}
+
+function _cpRenderPlanoContaLista(termo) {
+    const box = document.getElementById('cpAutoPlanoConta');
+    if (!_cpPlanoContas.length) { box.innerHTML = '<div class="pl-auto-vazio">Plano de contas indisponível</div>'; return; }
+    const t = (termo || '').toLowerCase().trim();
+    const filtradas = !t ? _cpPlanoContas : _cpPlanoContas.filter(c =>
+        c.subfator_nome.toLowerCase().includes(t) || c.codigo.toLowerCase().includes(t) ||
+        c.conta_nome.toLowerCase().includes(t) || (c.descricao || '').toLowerCase().includes(t));
+    if (!filtradas.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma conta encontrada</div>'; return; }
+    let blocoAtual = null, grupoAtual = null;
+    box.innerHTML = filtradas.map(c => {
+        const cabBloco = c.bloco !== blocoAtual ? `<div class="pl-auto-group pl-auto-bloco">${_cpEsc(c.bloco + '. ' + c.bloco_nome)}</div>` : '';
+        blocoAtual = c.bloco;
+        const chave = `${c.conta_codigo} — ${c.conta_nome}`;
+        const cabGrupo = chave !== grupoAtual ? `<div class="pl-auto-group">${_cpEsc(chave)}</div>` : '';
+        grupoAtual = chave;
+        return `${cabBloco}${cabGrupo}<div class="pl-auto-item" data-id="${_cpEsc(c.id)}" onclick="cpSelecionarPlanoConta(this.dataset.id)" title="${_cpEsc(c.descricao || '')}">
+            <span class="pl-auto-nome">${_cpEsc(_cpRotuloConta(c))}</span>
+        </div>`;
+    }).join('');
+}
+
+function cpBuscarPlanoConta(termo) {
+    document.getElementById('cpPlanoContaId').value = '';
+    _cpRenderPlanoContaLista(termo);
+}
+
+function cpMostrarPlanoConta(termo) {
+    _cpRenderPlanoContaLista(termo);
+}
+
+function cpSelecionarPlanoConta(id) {
+    const c = _cpPlanoContas.find(x => x.id === id);
+    document.getElementById('cpPlanoContaId').value   = id;
+    document.getElementById('cpPlanoContaNome').value = _cpRotuloConta(c);
+    document.getElementById('cpAutoPlanoConta').innerHTML = '';
+    const cat = _cpCategoriaDaConta(c);
+    if (cat) document.getElementById('cpCategoria').value = cat;
+}
 
 // ── Moedas (tabela apoio_moedas) ─────────────────────────────────────────────
 
@@ -24,7 +98,7 @@ async function _cpCarregarMoedas() {
             .select('codigo, descricao, sigla')
             .order('descricao', { ascending: true });
         if (data?.length) {
-            sel.innerHTML = data.map(m => `<option value="${m.sigla || m.codigo}">${_cpEsc(m.descricao || '')}</option>`).join('');
+            sel.innerHTML = data.map(m => `<option value="${escHtml(m.sigla || m.codigo)}">${_cpEsc(m.descricao || '')}</option>`).join('');
         }
     } catch (e) {
         console.warn('[Contas a Pagar] Falha ao carregar moedas:', e);
@@ -149,11 +223,11 @@ function cpRenderizar() {
         const podePagar = c.status === 'pendente' || c.status === 'vencido';
 
         return `<tr>
-            <td><strong>${_cpEsc(c.descricao)}</strong>${c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(c.categoria)}</span>` : ''}${c.proformas?.codigo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_cpEsc(c.proformas.codigo)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_cpEsc(c.processos.numero_processo)}</span>` : ''}</td>
+            <td><strong>${_cpEsc(c.descricao)}</strong>${c.plano_contas ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(_cpRotuloConta(c.plano_contas))}</span>` : (c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(c.categoria)}</span>` : '')}${c.proformas?.codigo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_cpEsc(c.proformas.codigo)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_cpEsc(c.processos.numero_processo)}</span>` : ''}</td>
             <td>${_cpEsc(parceiro)}</td>
             <td class="td-valor">${valor}</td>
             <td>${venc}</td>
-            <td>${badgeMap[c.status] || c.status}</td>
+            <td>${badgeMap[c.status] || escHtml(c.status)}</td>
             <td>
                 <div class="fin-acoes">
                     <button class="fin-btn-acao fin-btn-editar" onclick="cpAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
@@ -287,6 +361,9 @@ function cpAbrirModal(id = null, prefill = null) {
     document.getElementById('cpDataPagamento').value  = c?.data_pagamento  || '';
     document.getElementById('cpStatus').value         = c?.status || 'pendente';
     document.getElementById('cpCategoria').value      = c?.categoria || '';
+    const planoConta = c?.plano_conta_id ? (_cpPlanoContas.find(p => p.id === c.plano_conta_id) || c.plano_contas) : null;
+    document.getElementById('cpPlanoContaId').value   = c?.plano_conta_id || '';
+    document.getElementById('cpPlanoContaNome').value = _cpRotuloConta(planoConta);
     document.getElementById('cpObservacoes').value    = c?.observacoes || '';
 
     const obsToggle = document.querySelector('#cpModalOverlay .pl-obs-toggle');
@@ -352,6 +429,7 @@ async function cpSalvar() {
         data_pagamento:  document.getElementById('cpDataPagamento').value || null,
         status:         document.getElementById('cpStatus').value,
         categoria:      document.getElementById('cpCategoria').value || null,
+        plano_conta_id: document.getElementById('cpPlanoContaId').value || null,
         observacoes:    document.getElementById('cpObservacoes').value.trim() || null,
     };
 
@@ -396,7 +474,7 @@ async function _cpListarParceiros(termo) {
 
         if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum parceiro encontrado — cadastre em Empresas primeiro</div>'; return; }
         box.innerHTML = data.map(p => `
-            <div class="pl-auto-item" onclick="cpSelecionarParceiro(${p.id}, '${_cpEsc(p.nome_fantasia || p.razao_social)}')">
+            <div class="pl-auto-item" data-nome="${_cpEsc(p.nome_fantasia || p.razao_social)}" onclick="cpSelecionarParceiro(${p.id}, this.dataset.nome)">
                 <span class="pl-auto-nome">${_cpEsc(p.nome_fantasia || p.razao_social)}</span>
                 ${p.nome_fantasia ? `<span class="pl-auto-razao">${_cpEsc(p.razao_social)}</span>` : ''}
             </div>`).join('');
@@ -442,7 +520,7 @@ async function _cpListarProformas(termo) {
         if (meuToken !== _cpProformaReqToken) return; // resposta antiga, descarta
         if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma proforma encontrada</div>'; return; }
         box.innerHTML = data.map(p => `
-            <div class="pl-auto-item" onclick="cpSelecionarProforma('${p.id}', '${_cpEsc(p.codigo || '')}')">
+            <div class="pl-auto-item" data-nome="${_cpEsc(p.codigo || '')}" onclick="cpSelecionarProforma('${p.id}', this.dataset.nome)">
                 <span class="pl-auto-nome">${_cpEsc(p.codigo || '')}</span>
             </div>`).join('');
     } catch (e) {}
@@ -562,7 +640,7 @@ function _cpRenderizarProcessos(termo) {
         : _cpProformaProcessos;
     if (!lista.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo vinculado a esta proforma</div>'; return; }
     box.innerHTML = lista.map(p => `
-        <div class="pl-auto-item" onclick="cpSelecionarProcesso('${p.id}', '${_cpEsc(p.numero_processo || '')}')">
+        <div class="pl-auto-item" data-nome="${_cpEsc(p.numero_processo || '')}" onclick="cpSelecionarProcesso('${p.id}', this.dataset.nome)">
             <span class="pl-auto-nome">${_cpEsc(p.numero_processo || '')}</span>
         </div>`).join('');
 }
@@ -593,6 +671,10 @@ document.addEventListener('click', e => {
     }
     if (!e.target.closest('#cpAutoProcesso') && !e.target.closest('#cpProcessoNome')) {
         const box = document.getElementById('cpAutoProcesso');
+        if (box) box.innerHTML = '';
+    }
+    if (!e.target.closest('#cpAutoPlanoConta') && !e.target.closest('#cpPlanoContaNome')) {
+        const box = document.getElementById('cpAutoPlanoConta');
         if (box) box.innerHTML = '';
     }
 });

@@ -145,7 +145,7 @@ function _authAtualizarInterface(usuarioAtual) {
         // Atualizar botão de conta mobile
         const contaBtn = document.querySelector('.mob-conta-btn');
         if (contaBtn) {
-            contaBtn.innerHTML = `<img src="${usuarioAtual.avatar_url}" class="mob-conta-avatar-img" alt="avatar">`;
+            contaBtn.innerHTML = `<img src="${escHtml(usuarioAtual.avatar_url)}" class="mob-conta-avatar-img" alt="avatar">`;
         }
     }
 }
@@ -477,7 +477,7 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     
     notificacao.innerHTML = `
         <i class="fa-solid ${icones[tipo]}"></i>
-        <span>${mensagem}</span>
+        <span>${escHtml(mensagem)}</span>
     `;
     
     document.body.appendChild(notificacao);

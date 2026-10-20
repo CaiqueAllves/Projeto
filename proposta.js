@@ -59,7 +59,7 @@ async function _propCarregarMoedas() {
             .select('codigo, descricao, sigla')
             .order('descricao', { ascending: true });
         if (data?.length) {
-            sel.innerHTML = data.map(m => `<option value="${m.sigla || m.codigo}">${_propEscapar(m.descricao || '')}</option>`).join('');
+            sel.innerHTML = data.map(m => `<option value="${escHtml(m.sigla || m.codigo)}">${_propEscapar(m.descricao || '')}</option>`).join('');
         }
     } catch (e) {
         console.warn('[Proposta] Falha ao carregar moedas:', e);
@@ -866,7 +866,7 @@ async function propCarregarExcluidos() {
             </div>`;
         }).join('');
     } catch (err) {
-        container.innerHTML = `<div style="padding:16px;color:#dc2626;font-size:13px;">Erro: ${err.message}</div>`;
+        container.innerHTML = `<div style="padding:16px;color:#dc2626;font-size:13px;">Erro: ${escHtml(err.message)}</div>`;
     }
 }
 

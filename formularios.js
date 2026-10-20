@@ -367,11 +367,11 @@ function _acMostrar(inputEl, listaEl, termo) {
         listaEl.innerHTML = filtradas.slice(0, 30).map(e => `
             <div class="autocomplete-item"
                  data-id="${e.id}"
-                 data-nome="${(e.razao_social || '').replace(/"/g, '&quot;')}"
-                 data-doc="${(e.documento || '').replace(/"/g, '&quot;')}"
-                 data-pais="${(e.pais || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${e.razao_social || ''}</span>
-                ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
+                 data-nome="${escHtml(e.razao_social || '')}"
+                 data-doc="${escHtml(e.documento || '')}"
+                 data-pais="${escHtml(e.pais || '')}">
+                <span class="ac-nome">${escHtml(e.razao_social || '')}</span>
+                ${e.nome_fantasia ? `<span class="ac-fantasia">${escHtml(e.nome_fantasia)}</span>` : ''}
             </div>`).join('');
     }
     _acPosicionar(inputEl, listaEl);
@@ -394,8 +394,8 @@ function _acMostrarProformas(inputEl, listaEl, termo) {
         listaEl.innerHTML = filtradas.slice(0, 30).map(p => `
             <div class="autocomplete-item"
                  data-id="${p.id}"
-                 data-nome="${(p.nome || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${p.nome || ''}</span>
+                 data-nome="${escHtml(p.nome || '')}">
+                <span class="ac-nome">${escHtml(p.nome || '')}</span>
             </div>`).join('');
     }
     _acPosicionar(inputEl, listaEl);
@@ -911,13 +911,13 @@ function itensRenderizar(pfx) {
             <div class="prop-item-bottom">
                 <div class="prop-item-field prop-item-field--qtd">
                     <label for="${pfx}-item-qtd-${i}">Qtd</label>
-                    <input id="${pfx}-item-qtd-${i}" type="number" class="prop-item-input prop-item-num" min="0" step="1" value="${item.qtd}"
+                    <input id="${pfx}-item-qtd-${i}" type="number" class="prop-item-input prop-item-num" min="0" step="1" value="${escHtml(item.qtd)}"
                         oninput="itemAtualizar('${pfx}', ${i}, 'qtd', parseInt(this.value)||0)">
                 </div>
                 <div class="prop-item-field prop-item-field--un">
                     <label for="${pfx}-item-un-${i}">Un.</label>
                     <select id="${pfx}-item-un-${i}" class="prop-item-select" onchange="itemAtualizar('${pfx}', ${i}, 'unidade', this.value)">
-                        ${unidades.map(u => `<option value="${u.unidade}"${item.unidade===u.unidade?' selected':''}>${u.unidade}</option>`).join('')}
+                        ${unidades.map(u => `<option value="${escHtml(u.unidade)}"${item.unidade===u.unidade?' selected':''}>${escHtml(u.unidade)}</option>`).join('')}
                     </select>
                 </div>
                 <div class="prop-item-field prop-item-field--preco">
@@ -930,7 +930,7 @@ function itensRenderizar(pfx) {
                 <div class="prop-item-field prop-item-field--moeda">
                     <label for="${pfx}-item-moeda-${i}">Moeda</label>
                     <select id="${pfx}-item-moeda-${i}" class="prop-item-select" onchange="itemAtualizar('${pfx}', ${i}, 'moeda', this.value)">
-                        ${moedas.map(m => `<option value="${m.descricao}"${item.moeda===m.descricao?' selected':''}>${m.descricao}</option>`).join('')}
+                        ${moedas.map(m => `<option value="${escHtml(m.descricao)}"${item.moeda===m.descricao?' selected':''}>${escHtml(m.descricao)}</option>`).join('')}
                     </select>
                 </div>
                 <div class="prop-item-field prop-item-field--total">

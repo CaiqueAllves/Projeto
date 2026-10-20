@@ -264,7 +264,7 @@ function renderizarUsuarios(usuarios) {
                                     <option value="gerente" ${u.perfil === 'gerente' ? 'selected' : ''}>Gerente</option>
                                     <option value="usuario" ${u.perfil === 'usuario' ? 'selected' : ''}>Usuário</option>
                                    </select>`
-                                : `<span class="badge-perfil ${badgePerfil}">${perfisLabel[u.perfil] || u.perfil}</span>`
+                                : `<span class="badge-perfil ${badgePerfil}">${escHtml(perfisLabel[u.perfil] || u.perfil)}</span>`
                             }
                         </div>
                         ${isAdmin
@@ -549,7 +549,7 @@ function mostrarToast(msg, tipo = 'sucesso') {
     if (typeof amigavelErroBanco === 'function') msg = amigavelErroBanco(msg);
     const toast = document.getElementById('toast');
     const icone = tipo === 'sucesso' ? 'circle-check' : 'circle-exclamation';
-    toast.innerHTML = `<i class="fa-solid fa-${icone}"></i> ${msg}`;
+    toast.innerHTML = `<i class="fa-solid fa-${icone}"></i> ${escHtml(msg)}`;
     toast.className = `toast ${tipo} show`;
     setTimeout(() => toast.classList.remove('show'), 5000);
 }

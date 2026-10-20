@@ -319,9 +319,9 @@ async function _cadCarregarThread(silencioso = false) {
         const suporte = m.autor_tipo === 'suporte';
         const nome = suporte ? 'Suporte' : (m.usuario_nome || 'Usuário');
         const soAnexo = m.anexo_url && m.mensagem === '(anexo)';
-        html += `<div class="cad-linha cad-linha-${m.autor_tipo}">
-            <div class="cad-avatar cad-avatar-${m.autor_tipo}">${suporte ? '<i class="fa-solid fa-headset"></i>' : _cadEsc(nome.trim().charAt(0).toUpperCase() || '?')}</div>
-            <div class="cad-msg cad-msg-${m.autor_tipo}">
+        html += `<div class="cad-linha cad-linha-${escHtml(m.autor_tipo)}">
+            <div class="cad-avatar cad-avatar-${escHtml(m.autor_tipo)}">${suporte ? '<i class="fa-solid fa-headset"></i>' : _cadEsc(nome.trim().charAt(0).toUpperCase() || '?')}</div>
+            <div class="cad-msg cad-msg-${escHtml(m.autor_tipo)}">
                 <span class="cad-msg-autor">${_cadEsc(nome)} <em>${_cadHora(m.created_at)}</em></span>
                 ${soAnexo ? '' : `<p>${_cadEsc(m.mensagem)}</p>`}${_cadAnexoHtml(m.anexo_url)}
             </div></div>`;

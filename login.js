@@ -362,7 +362,7 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     
     notificacao.innerHTML = `
         <i class="fa-solid ${icones[tipo]}"></i>
-        <span>${mensagem}</span>
+        <span>${escHtml(mensagem)}</span>
     `;
     
     notificacao.style.cssText = `

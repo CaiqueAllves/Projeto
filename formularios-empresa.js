@@ -326,9 +326,9 @@ function iniciarAutocompletePaisEmpresa() {
             ? base.filter(p => p.descricao.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q))
             : base;
         lista.innerHTML = filtrados.slice(0, 50).map(p => `
-            <div class="autocomplete-item" data-codigo="${p.codigo}" data-nome="${(p.descricao || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${p.descricao}</span>
-                <span class="ac-fantasia">${p.codigo}</span>
+            <div class="autocomplete-item" data-codigo="${escHtml(p.codigo)}" data-nome="${escHtml(p.descricao || '')}">
+                <span class="ac-nome">${escHtml(p.descricao)}</span>
+                <span class="ac-fantasia">${escHtml(p.codigo)}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
@@ -582,7 +582,7 @@ function empPreviewMarca(input, id) {
     if (!preview) return;
     const reader = new FileReader();
     reader.onload = e => {
-        preview.innerHTML = `<img src="${e.target.result}" alt="Marca" class="marca-preview-img">`;
+        preview.innerHTML = `<img src="${escHtml(e.target.result)}" alt="Marca" class="marca-preview-img">`;
     };
     reader.readAsDataURL(input.files[0]);
 }
@@ -721,7 +721,7 @@ function empAdicionarDocumento() {
 
         <div class="emp-doc-footer">
             <i class="fa-solid fa-user"></i>
-            <span>${usuario}</span>
+            <span>${escHtml(usuario)}</span>
             <span class="emp-doc-footer-sep">•</span>
             <i class="fa-regular fa-calendar"></i>
             <span id="emp-doc-data-${id}">${dataStr}</span>

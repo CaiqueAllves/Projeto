@@ -25,7 +25,7 @@ async function _crCarregarMoedas() {
             .select('codigo, descricao, sigla')
             .order('descricao', { ascending: true });
         if (data?.length) {
-            sel.innerHTML = data.map(m => `<option value="${m.sigla || m.codigo}">${_crEsc(m.descricao || '')}</option>`).join('');
+            sel.innerHTML = data.map(m => `<option value="${escHtml(m.sigla || m.codigo)}">${_crEsc(m.descricao || '')}</option>`).join('');
         }
     } catch (e) {
         console.warn('[Contas a Receber] Falha ao carregar moedas:', e);
@@ -41,8 +41,10 @@ function crToggleObs(toggle) {
     content.style.display = aberto ? 'none' : 'block';
 }
 
-// ── Plano de Contas (Bloco 1 — Receitas) ──────────────────────────
-// Ver database/database-plano-contas-receitas.sql. Dropdown de busca
+// ── Plano de Contas (Bloco 1 — Receitas + ganhos do Bloco 5) ───────
+// Ver database/database-plano-contas-receitas.sql e, para os ganhos
+// financeiros/cambiais (variação positiva, juros/multa recebidos...),
+// database-plano-contas-comercial-financeiro.sql. Dropdown de busca
 // customizado (não <select>, pra não estourar a largura do modal com
 // os rótulos longos de Conta) — agrupa visualmente por Conta (ex:
 // "01.01 — Exportação de Serviços") com os Subfatores dentro de cada
@@ -51,8 +53,8 @@ let _crPlanoContasTodas = [];
 
 async function _crCarregarPlanoContas() {
     try {
-        const res = await buscarPlanoContas(1);
-        if (res.sucesso) _crPlanoContasTodas = res.data || [];
+        const res = await buscarPlanoContas([1, 5]);
+        if (res.sucesso) _crPlanoContasTodas = (res.data || []).filter(c => Number(c.bloco) === 1 || ['ganho', 'ambos'].includes(c.natureza));
     } catch (e) {
         console.warn('[Contas a Receber] Falha ao carregar plano de contas:', e);
     }
@@ -70,12 +72,15 @@ function _crRenderPlanoContaLista(termo) {
 
     if (!filtradas.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma conta encontrada</div>'; return; }
 
-    let grupoAtual = null;
+    let blocoAtual = null, grupoAtual = null;
+    const variosBlocos = new Set(filtradas.map(c => c.bloco)).size > 1;
     box.innerHTML = filtradas.map(c => {
+        const cabBloco = variosBlocos && c.bloco !== blocoAtual ? `<div class="pl-auto-group pl-auto-bloco">${_crEsc(c.bloco + '. ' + c.bloco_nome)}</div>` : '';
+        blocoAtual = c.bloco;
         const chave = `${c.conta_codigo} — ${c.conta_nome}`;
         const header = chave !== grupoAtual ? `<div class="pl-auto-group">${_crEsc(chave)}</div>` : '';
         grupoAtual = chave;
-        return `${header}<div class="pl-auto-item" onclick="crSelecionarPlanoConta('${c.id}', '${_crEscAttr(c.codigo)} — ${_crEscAttr(c.subfator_nome)}')">
+        return `${cabBloco}${header}<div class="pl-auto-item" onclick="crSelecionarPlanoConta('${c.id}', '${_crEscAttr(c.codigo)} — ${_crEscAttr(c.subfator_nome)}')">
             <span class="pl-auto-nome">${_crEsc(c.codigo)} — ${_crEsc(c.subfator_nome)}</span>
         </div>`;
     }).join('');
@@ -239,7 +244,7 @@ function crRenderizar() {
             <td>${_crEsc(cliente)}</td>
             <td class="td-valor entrada">${valor}</td>
             <td>${venc}</td>
-            <td>${badgeMap[c.status] || c.status}</td>
+            <td>${badgeMap[c.status] || escHtml(c.status)}</td>
             <td>
                 <div class="fin-acoes">
                     <button class="fin-btn-acao fin-btn-editar" onclick="crAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
@@ -460,7 +465,7 @@ async function _crListarParceiros(termo) {
         if (meuToken !== _crParceiroReqToken) return; // resposta antiga, descarta
         if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum cliente encontrado — cadastre em Empresas primeiro</div>'; return; }
         box.innerHTML = data.map(p => `
-            <div class="pl-auto-item" onclick="crSelecionarParceiro(${p.id}, '${_crEsc(p.nome_fantasia || p.razao_social)}')">
+            <div class="pl-auto-item" data-nome="${_crEsc(p.nome_fantasia || p.razao_social)}" onclick="crSelecionarParceiro(${p.id}, this.dataset.nome)">
                 <span class="pl-auto-nome">${_crEsc(p.nome_fantasia || p.razao_social)}</span>
                 ${p.nome_fantasia ? `<span class="pl-auto-razao">${_crEsc(p.razao_social)}</span>` : ''}
             </div>`).join('');
@@ -505,7 +510,7 @@ async function _crListarProformas(termo) {
         if (meuToken !== _crProformaReqToken) return; // resposta antiga, descarta
         if (!data?.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma proforma encontrada</div>'; return; }
         box.innerHTML = data.map(p => `
-            <div class="pl-auto-item" onclick="crSelecionarProforma('${p.id}', '${_crEsc(p.codigo || '')}')">
+            <div class="pl-auto-item" data-nome="${_crEsc(p.codigo || '')}" onclick="crSelecionarProforma('${p.id}', this.dataset.nome)">
                 <span class="pl-auto-nome">${_crEsc(p.codigo || '')}</span>
             </div>`).join('');
     } catch (e) {}
@@ -625,7 +630,7 @@ function _crRenderizarProcessos(termo) {
         : _crProformaProcessos;
     if (!lista.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhum processo vinculado a esta proforma</div>'; return; }
     box.innerHTML = lista.map(p => `
-        <div class="pl-auto-item" onclick="crSelecionarProcesso('${p.id}', '${_crEsc(p.numero_processo || '')}')">
+        <div class="pl-auto-item" data-nome="${_crEsc(p.numero_processo || '')}" onclick="crSelecionarProcesso('${p.id}', this.dataset.nome)">
             <span class="pl-auto-nome">${_crEsc(p.numero_processo || '')}</span>
         </div>`).join('');
 }

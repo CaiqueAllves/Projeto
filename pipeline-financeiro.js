@@ -176,7 +176,7 @@ function _pfRenderCard(p, etapa) {
         ? `<div class="pf-card-contas">${contas.map(c => {
             const statusReal = (c.status === 'pendente' && c.data_vencimento && c.data_vencimento < hoje) ? 'vencido' : c.status;
             const venc = c.data_vencimento ? new Date(c.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
-            const val  = `${c.moeda || 'BRL'} ${Number(c.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            const val  = `${escHtml(c.moeda || 'BRL')} ${Number(c.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
             return `<div class="pf-card-conta">
                 <span class="fin-badge ${badgeMap[statusReal] || statusReal}">${_pfLabelStatus(statusReal)}</span>
                 <span class="pf-card-conta-valor">${val}</span>

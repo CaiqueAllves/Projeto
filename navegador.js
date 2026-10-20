@@ -192,7 +192,7 @@ function _injetarMobile() {
         contaBtn.className = 'mob-conta-btn';
         contaBtn.setAttribute('aria-label', 'Conta');
         if (u.avatar_url) {
-            contaBtn.innerHTML = `<img src="${u.avatar_url}" class="mob-conta-avatar-img" alt="avatar">`;
+            contaBtn.innerHTML = `<img src="${escHtml(u.avatar_url)}" class="mob-conta-avatar-img" alt="avatar">`;
         } else {
             contaBtn.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
         }

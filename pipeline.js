@@ -176,7 +176,7 @@ function _plRenderCard(o) {
     const expandido = _plCardsExpandidos.has(o.id);
 
     return `
-    <div class="pl-kcard ${expandido ? 'pl-kcard-expandido' : ''}" data-etapa="${o.etapa}" data-id="${o.id}">
+    <div class="pl-kcard ${expandido ? 'pl-kcard-expandido' : ''}" data-etapa="${escHtml(o.etapa)}" data-id="${o.id}">
         <div class="pl-kcard-top">
             <span class="pl-kcard-titulo"><i class="fa-solid fa-file-lines"></i> ${_plEscapar(o.titulo)}</span>
             <button class="pl-kcard-toggle" onclick="plToggleCard('${o.id}')" title="${expandido ? 'Recolher' : 'Expandir'}">

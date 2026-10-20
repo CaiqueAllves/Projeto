@@ -1829,23 +1829,41 @@ async function atualizarProformaDB(id, dados) {
 //     atualizado_em    TIMESTAMPTZ DEFAULT NOW()
 // );
 
+// Contas a Pagar com a Conta do Plano de Contas (Blocos 2 e 4 —
+// database-plano-contas-aquisicoes-operacional.sql). Antes do SQL rodar,
+// plano_conta_id não existe e o select cai no formato antigo.
+// Blocos 3 e 5 (database-plano-contas-comercial-financeiro.sql) trouxeram
+// plano_contas.natureza; cada busca tenta do formato mais completo pro mais
+// simples, conforme os SQLs que já rodaram.
+const _FIN_BASE = '*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo)';
+const _FIN_PLANO_NAT = _FIN_BASE + ', plano_contas(codigo, subfator_nome, conta_codigo, conta_nome, bloco, natureza)';
+const _FIN_PLANO     = _FIN_BASE + ', plano_contas(codigo, subfator_nome, conta_codigo, conta_nome, bloco)';
+const _CP_SELECTS = [_FIN_PLANO_NAT, _FIN_PLANO, _FIN_BASE];
+const _CR_SELECTS = [_FIN_PLANO_NAT, _FIN_PLANO];
+const _cpSemPlano = err => /plano_conta|plano_contas|natureza|relationship/i.test(err?.message || '');
+async function _finSelectComFallback(montar, selects) {
+    let r;
+    for (const sel of selects) {
+        r = await montar(sel);
+        if (!r.error || !_cpSemPlano(r.error)) return r;
+    }
+    return r;
+}
+
 async function buscarContasPagar(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
-        let query = supabaseClient
-            .from('contas_pagar')
-            .select('*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo)')
-            .order('data_vencimento', { ascending: true });
-        if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-        // Filtro de período (revisão de performance) — só se aplica a contas
-        // já pagas/canceladas; pendente ou vencida continua sempre visível,
-        // mesmo com vencimento antigo (é justamente o que precisa de ação).
-        if (filtros.diasAtras) {
-            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
-            query = query.or(`status.not.in.(pago,cancelado),data_vencimento.gte.${desde}`);
-        }
-        const { data, error } = await query;
+        const montar = (sel) => {
+            let query = supabaseClient.from('contas_pagar').select(sel).order('data_vencimento', { ascending: true });
+            if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+            if (filtros.diasAtras) {
+                const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
+                query = query.or(`status.not.in.(pago,cancelado),data_vencimento.gte.${desde}`);
+            }
+            return query;
+        };
+        const { data, error } = await _finSelectComFallback(montar, _CP_SELECTS);
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
@@ -1855,14 +1873,14 @@ async function buscarContasPagarPeriodo(inicio, fim) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
-        let query = supabaseClient
-            .from('contas_pagar')
-            .select('*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo)')
-            .gte('data_vencimento', inicio)
-            .lte('data_vencimento', fim)
-            .order('data_vencimento', { ascending: true });
-        if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-        const { data, error } = await query;
+        const montar = (sel) => {
+            let query = supabaseClient.from('contas_pagar').select(sel)
+                .gte('data_vencimento', inicio).lte('data_vencimento', fim)
+                .order('data_vencimento', { ascending: true });
+            if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+            return query;
+        };
+        const { data, error } = await _finSelectComFallback(montar, _CP_SELECTS);
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
@@ -1889,16 +1907,19 @@ async function salvarContaPagar(dados, id = null) {
             data_pagamento:  dados.status === 'pago' ? (dados.data_pagamento || new Date().toISOString().slice(0, 10)) : (dados.data_pagamento || null),
             status:          dados.status || 'pendente',
             categoria:       dados.categoria || null,
+            plano_conta_id:  dados.plano_conta_id || null,
             observacoes:     dados.observacoes || null,
             atualizado_em:   new Date().toISOString(),
         };
-        let result;
-        if (id) {
-            result = await supabaseClient.from('contas_pagar').update(payload).eq('id', id).select().single();
-        } else {
-            payload.empresa_id  = usuario.empresa_id;
-            payload.criado_por  = usuario.id;
-            result = await supabaseClient.from('contas_pagar').insert(payload).select().single();
+        if (!id) { payload.empresa_id = usuario.empresa_id; payload.criado_por = usuario.id; }
+        const gravar = (p) => id
+            ? supabaseClient.from('contas_pagar').update(p).eq('id', id).select().single()
+            : supabaseClient.from('contas_pagar').insert(p).select().single();
+        let result = await gravar(payload);
+        // antes do SQL do plano de contas (Blocos 2 e 4) a coluna não existe
+        if (result.error && _cpSemPlano(result.error)) {
+            delete payload.plano_conta_id;
+            result = await gravar(payload);
         }
         if (result.error) return { sucesso: false, mensagem: result.error.message };
         return { sucesso: true, data: result.data };
@@ -1932,18 +1953,18 @@ async function buscarContasReceber(filtros = {}) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
-        let query = supabaseClient
-            .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
-            .order('data_vencimento', { ascending: true });
-        if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-        // Filtro de período (revisão de performance) — mesma lógica de
-        // buscarContasPagar: só afeta contas já recebidas/canceladas.
-        if (filtros.diasAtras) {
-            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
-            query = query.or(`status.not.in.(recebido,cancelado),data_vencimento.gte.${desde}`);
-        }
-        const { data, error } = await query;
+        const montar = (sel) => {
+            let query = supabaseClient.from('contas_receber').select(sel).order('data_vencimento', { ascending: true });
+            if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+            // Filtro de período (revisão de performance) — mesma lógica de
+            // buscarContasPagar: só afeta contas já recebidas/canceladas.
+            if (filtros.diasAtras) {
+                const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
+                query = query.or(`status.not.in.(recebido,cancelado),data_vencimento.gte.${desde}`);
+            }
+            return query;
+        };
+        const { data, error } = await _finSelectComFallback(montar, _CR_SELECTS);
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
@@ -1953,14 +1974,14 @@ async function buscarContasReceberPeriodo(inicio, fim) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
-        let query = supabaseClient
-            .from('contas_receber')
-            .select('*, parceiros(razao_social, nome_fantasia), proformas(codigo), processos(numero_processo), plano_contas(codigo, subfator_nome, conta_codigo, conta_nome)')
-            .gte('data_vencimento', inicio)
-            .lte('data_vencimento', fim)
-            .order('data_vencimento', { ascending: true });
-        if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-        const { data, error } = await query;
+        const montar = (sel) => {
+            let query = supabaseClient.from('contas_receber').select(sel)
+                .gte('data_vencimento', inicio).lte('data_vencimento', fim)
+                .order('data_vencimento', { ascending: true });
+            if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+            return query;
+        };
+        const { data, error } = await _finSelectComFallback(montar, _CR_SELECTS);
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
@@ -2002,17 +2023,18 @@ async function salvarContaReceber(dados, id = null) {
 }
 
 // Plano de Contas — tabela de referência hierárquica (Bloco > Conta >
-// Subfator), ver database/database-plano-contas-receitas.sql. Por
-// enquanto só o Bloco 1 (Receitas) está populado; `bloco` deixa pronto
-// pra filtrar os próximos blocos conforme forem sendo integrados.
+// Subfator). Populados: Bloco 1 Receitas (database-plano-contas-receitas.sql)
+// e Blocos 2 Aquisições + 4 Operacional (database-plano-contas-aquisicoes-
+// operacional.sql). `bloco` aceita um número ou uma lista (Contas a Pagar
+// usa [2, 4]).
 async function buscarPlanoContas(bloco = 1) {
     try {
-        const { data, error } = await supabaseClient
-            .from('plano_contas')
-            .select('id, bloco, bloco_nome, conta_codigo, conta_nome, codigo, subfator_nome, descricao, base, ordem')
-            .eq('bloco', bloco)
-            .eq('ativo', true)
-            .order('ordem', { ascending: true });
+        const blocos = Array.isArray(bloco) ? bloco : [bloco];
+        const COLS = 'id, bloco, bloco_nome, conta_codigo, conta_nome, codigo, subfator_nome, descricao, base, ordem';
+        const montar = (sel) => supabaseClient.from('plano_contas').select(sel)
+            .in('bloco', blocos).eq('ativo', true)
+            .order('bloco', { ascending: true }).order('ordem', { ascending: true });
+        const { data, error } = await _finSelectComFallback(montar, [COLS + ', natureza', COLS]);
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }

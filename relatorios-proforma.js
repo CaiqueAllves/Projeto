@@ -495,7 +495,7 @@ function renderHistorico() {
             <td><span class="hist-format pdf">PDF</span></td>
             <td>
                 <div class="hist-actions">
-                    <button class="hist-btn" title="Período: ${r.periodo}"><i class="fa-solid fa-calendar-days"></i></button>
+                    <button class="hist-btn" title="Período: ${escHtml(r.periodo)}"><i class="fa-solid fa-calendar-days"></i></button>
                     <button class="hist-btn hist-btn-del" title="Remover" onclick="removerHistorico(${r.id})">
                         <i class="fa-solid fa-trash"></i>
                     </button>

@@ -613,13 +613,13 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
             ? filtradas.slice(0, 30).map(e => `
                 <div class="autocomplete-item"
                      data-id="${e.id}"
-                     data-razao="${(e.razao_social  || '').replace(/"/g,'&quot;')}"
-                     data-fantasia="${(e.nome_fantasia || '').replace(/"/g,'&quot;')}"
-                     data-doc="${e.documento || ''}"
-                     data-tipo="${e.tipo_cadastro || ''}"
-                     data-idint="${(e.codigo || '').replace(/"/g,'&quot;')}">
-                    <span class="ac-nome">${e.razao_social || ''}</span>
-                    ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
+                     data-razao="${escHtml(e.razao_social  || '')}"
+                     data-fantasia="${escHtml(e.nome_fantasia || '')}"
+                     data-doc="${escHtml(e.documento || '')}"
+                     data-tipo="${escHtml(e.tipo_cadastro || '')}"
+                     data-idint="${escHtml(e.codigo || '')}">
+                    <span class="ac-nome">${escHtml(e.razao_social || '')}</span>
+                    ${e.nome_fantasia ? `<span class="ac-fantasia">${escHtml(e.nome_fantasia)}</span>` : ''}
                 </div>`).join('')
             : '<div class="autocomplete-vazio">Nenhuma empresa encontrada</div>';
         _acPosicionar(input, lista);
@@ -1000,9 +1000,9 @@ function iniciarAutocompletePaisOrigemProposta() {
             ? _acPaises.filter(p => p.descricao.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q))
             : _acPaises;
         lista.innerHTML = filtrados.slice(0, 50).map(p => `
-            <div class="autocomplete-item" data-codigo="${p.codigo}" data-nome="${(p.descricao || '').replace(/"/g,'&quot;')}">
-                <span class="ac-nome">${p.descricao}</span>
-                <span class="ac-fantasia">${p.codigo}</span>
+            <div class="autocomplete-item" data-codigo="${escHtml(p.codigo)}" data-nome="${escHtml(p.descricao || '')}">
+                <span class="ac-nome">${escHtml(p.descricao)}</span>
+                <span class="ac-fantasia">${escHtml(p.codigo)}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
@@ -1046,8 +1046,8 @@ function iniciarAutocompletePaisDestinoProposta() {
             ? _acPaises.filter(p => p.descricao.toLowerCase().includes(q))
             : _acPaises;
         lista.innerHTML = filtrados.slice(0, 30).map(p => `
-            <div class="autocomplete-item" data-nome="${p.descricao}" data-codigo="${p.codigo || ''}">
-                <span class="ac-nome">${p.descricao}</span>
+            <div class="autocomplete-item" data-nome="${escHtml(p.descricao)}" data-codigo="${escHtml(p.codigo || '')}">
+                <span class="ac-nome">${escHtml(p.descricao)}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');

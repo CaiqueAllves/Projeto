@@ -507,9 +507,9 @@ function iniciarAutocompletePaisOrigem() {
             ? _acPaises.filter(p => p.descricao.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q))
             : _acPaises;
         lista.innerHTML = filtrados.slice(0, 50).map(p => `
-            <div class="autocomplete-item" data-codigo="${p.codigo}" data-nome="${(p.descricao || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${p.descricao}</span>
-                <span class="ac-fantasia">${p.codigo}</span>
+            <div class="autocomplete-item" data-codigo="${escHtml(p.codigo)}" data-nome="${escHtml(p.descricao || '')}">
+                <span class="ac-nome">${escHtml(p.descricao)}</span>
+                <span class="ac-fantasia">${escHtml(p.codigo)}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
@@ -548,9 +548,9 @@ function iniciarAutocompletePaisDestino() {
             ? _acPaises.filter(p => p.descricao.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q))
             : _acPaises;
         lista.innerHTML = filtrados.slice(0, 50).map(p => `
-            <div class="autocomplete-item" data-codigo="${p.codigo}" data-nome="${(p.descricao || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${p.descricao}</span>
-                <span class="ac-fantasia">${p.codigo}</span>
+            <div class="autocomplete-item" data-codigo="${escHtml(p.codigo)}" data-nome="${escHtml(p.descricao || '')}">
+                <span class="ac-nome">${escHtml(p.descricao)}</span>
+                <span class="ac-fantasia">${escHtml(p.codigo)}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
@@ -593,10 +593,10 @@ function _iniciarAcAeroporto(inputId, listaId) {
 
         lista.innerHTML = filtrados.slice(0, 50).map(a => `
             <div class="autocomplete-item"
-                 data-nome="${(a.nome || '').replace(/"/g, '&quot;')}"
-                 data-codigo="${(a.codigo || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${a.nome}</span>
-                <span class="ac-fantasia">${a.codigo}${a.pais ? ' · ' + a.pais : ''}</span>
+                 data-nome="${escHtml(a.nome || '')}"
+                 data-codigo="${escHtml(a.codigo || '')}">
+                <span class="ac-nome">${escHtml(a.nome)}</span>
+                <span class="ac-fantasia">${escHtml(a.codigo)}${escHtml(a.pais ? ' · ' + a.pais : '')}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
@@ -646,10 +646,10 @@ function _iniciarAcPorto(inputId, listaId) {
 
         lista.innerHTML = filtrados.slice(0, 50).map(p => `
             <div class="autocomplete-item"
-                 data-nome="${(p.nome  || '').replace(/"/g, '&quot;')}"
-                 data-sigla="${(p.sigla || '').replace(/"/g, '&quot;')}">
-                <span class="ac-nome">${p.nome}</span>
-                <span class="ac-fantasia">${p.sigla ? p.sigla + ' · ' : ''}${p.cidade ? p.cidade + ' · ' : ''}${p.pais || ''}</span>
+                 data-nome="${escHtml(p.nome  || '')}"
+                 data-sigla="${escHtml(p.sigla || '')}">
+                <span class="ac-nome">${escHtml(p.nome)}</span>
+                <span class="ac-fantasia">${escHtml(p.sigla ? p.sigla + ' · ' : '')}${escHtml(p.cidade ? p.cidade + ' · ' : '')}${escHtml(p.pais || '')}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
@@ -745,9 +745,9 @@ function iniciarAutocompleteContainer() {
 
         lista.innerHTML = filtrados.length
             ? filtrados.slice(0, 40).map(c => `
-                <div class="autocomplete-item" data-id="${c.id}" data-nome="${(c.identificacao || '').replace(/"/g, '&quot;')}">
-                    <span class="ac-nome">${c.identificacao || ''}</span>
-                    <span class="ac-fantasia">${c.tipo || ''} ${c.descricao ? '— ' + c.descricao : ''}</span>
+                <div class="autocomplete-item" data-id="${c.id}" data-nome="${escHtml(c.identificacao || '')}">
+                    <span class="ac-nome">${escHtml(c.identificacao || '')}</span>
+                    <span class="ac-fantasia">${escHtml(c.tipo || '')} ${escHtml(c.descricao ? '— ' + c.descricao : '')}</span>
                 </div>`).join('')
             : '<div class="autocomplete-vazio">Nenhum resultado encontrado</div>';
         _acPosicionar(input, lista);
@@ -792,9 +792,9 @@ function iniciarAutocompleteAcondicionamento() {
 
         lista.innerHTML = filtrados.length
             ? filtrados.slice(0, 40).map(c => `
-                <div class="autocomplete-item" data-id="${c.id}" data-nome="${(c.identificacao || '').replace(/"/g, '&quot;')}">
-                    <span class="ac-nome">${c.identificacao || ''}</span>
-                    <span class="ac-fantasia">${c.tipo || ''} ${c.descricao ? '— ' + c.descricao : ''}</span>
+                <div class="autocomplete-item" data-id="${c.id}" data-nome="${escHtml(c.identificacao || '')}">
+                    <span class="ac-nome">${escHtml(c.identificacao || '')}</span>
+                    <span class="ac-fantasia">${escHtml(c.tipo || '')} ${escHtml(c.descricao ? '— ' + c.descricao : '')}</span>
                 </div>`).join('')
             : '<div class="autocomplete-vazio">Nenhum resultado encontrado</div>';
         _acPosicionar(input, lista);
@@ -865,9 +865,9 @@ function renderEtapas() {
             <div class="etapa-col-check">
                 <input type="checkbox" class="etapa-check" ${e.concluida ? 'checked' : ''}>
             </div>
-            <input type="text" class="etapa-nome" value="${(e.nome || '').replace(/"/g, '&quot;')}" placeholder="Nome da etapa">
-            <input type="date" class="etapa-data" value="${e.data || ''}">
-            <input type="text" class="etapa-resp" value="${(e.responsavel || '').replace(/"/g, '&quot;')}" placeholder="Responsável">
+            <input type="text" class="etapa-nome" value="${escHtml(e.nome || '')}" placeholder="Nome da etapa">
+            <input type="date" class="etapa-data" value="${escHtml(e.data || '')}">
+            <input type="text" class="etapa-resp" value="${escHtml(e.responsavel || '')}" placeholder="Responsável">
             <button type="button" class="btn-remover-etapa" title="Remover">
                 <i class="fa-solid fa-xmark"></i>
             </button>
@@ -1223,7 +1223,7 @@ function _renderIntermediarios() {
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <input type="text" name="${item.tipo}_intermediario_${idx}" placeholder="${cfg.placeholder}" class="rota-inter-input" data-id="${item.id}" value="${(item.valor || '').replace(/"/g, '&quot;')}">
+            <input type="text" name="${escHtml(item.tipo)}_intermediario_${idx}" placeholder="${cfg.placeholder}" class="rota-inter-input" data-id="${item.id}" value="${escHtml(item.valor || '')}">
         </div>`;
     }).join('');
 
@@ -1672,12 +1672,12 @@ function iniciarAutocompleteEmpresaDestino() {
             lista.innerHTML = filtradas.slice(0, 30).map(e => `
                 <div class="autocomplete-item"
                      data-id="${e.id}"
-                     data-razao="${(e.razao_social  || '').replace(/"/g,'&quot;')}"
-                     data-fantasia="${(e.nome_fantasia || '').replace(/"/g,'&quot;')}"
-                     data-doc="${e.documento || ''}"
-                     data-idint="${(e.codigo || '').replace(/"/g,'&quot;')}">
-                    <span class="ac-nome">${e.razao_social || ''}</span>
-                    ${e.nome_fantasia ? `<span class="ac-fantasia">${e.nome_fantasia}</span>` : ''}
+                     data-razao="${escHtml(e.razao_social  || '')}"
+                     data-fantasia="${escHtml(e.nome_fantasia || '')}"
+                     data-doc="${escHtml(e.documento || '')}"
+                     data-idint="${escHtml(e.codigo || '')}">
+                    <span class="ac-nome">${escHtml(e.razao_social || '')}</span>
+                    ${e.nome_fantasia ? `<span class="ac-fantasia">${escHtml(e.nome_fantasia)}</span>` : ''}
                 </div>`).join('');
         }
         _acPosicionar(input, lista);
@@ -1808,8 +1808,8 @@ function iniciarAutocompleteDestinoPais() {
             lista.innerHTML = '<div class="autocomplete-vazio">Nenhum país encontrado</div>';
         } else {
             lista.innerHTML = filtradas.slice(0, 30).map(p => `
-                <div class="autocomplete-item" data-nome="${p.descricao}" data-codigo="${p.codigo || ''}">
-                    <span class="ac-nome">${p.descricao}</span>
+                <div class="autocomplete-item" data-nome="${escHtml(p.descricao)}" data-codigo="${escHtml(p.codigo || '')}">
+                    <span class="ac-nome">${escHtml(p.descricao)}</span>
                 </div>`).join('');
         }
         _acPosicionar(input, lista);
@@ -2241,9 +2241,9 @@ function iniciarTransportadoraPropria() {
         if (!filtradas.length) { nomeLista.classList.remove('aberta'); return; }
         nomeLista.innerHTML = filtradas.slice(0, 20).map(t => `
             <div class="autocomplete-item"
-                 data-nome="${(t.nome_empresa || t.nome_fantasia || '').replace(/"/g,'&quot;')}"
-                 data-doc="${t.documento || ''}">
-                <span class="ac-nome">${t.nome_empresa || t.nome_fantasia || '—'}</span>
+                 data-nome="${escHtml(t.nome_empresa || t.nome_fantasia || '')}"
+                 data-doc="${escHtml(t.documento || '')}">
+                <span class="ac-nome">${escHtml(t.nome_empresa || t.nome_fantasia || '—')}</span>
                 <span class="ac-fantasia">${[t.nome_fantasia && t.nome_empresa ? t.nome_fantasia : '', t.documento || ''].filter(Boolean).join(' · ')}</span>
             </div>`).join('');
         _acPosicionar(_campoAtivo, nomeLista);

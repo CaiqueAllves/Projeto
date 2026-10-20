@@ -52,7 +52,7 @@ function _kanbanSetLoading() {
 function _kanbanSetErro(msg) {
     KANBAN_COLS.forEach(g => {
         const body = document.getElementById(`cards-${g}`);
-        if (body) body.innerHTML = `<div class="kanban-vazio" style="color:#ef4444;"><i class="fa-solid fa-circle-exclamation"></i><span>${msg}</span></div>`;
+        if (body) body.innerHTML = `<div class="kanban-vazio" style="color:#ef4444;"><i class="fa-solid fa-circle-exclamation"></i><span>${escapeHtml(msg)}</span></div>`;
     });
 }
 
@@ -509,7 +509,7 @@ async function procCarregarExcluidos() {
                 metaHtml = `
                     <span class="prof-excluido-rota">
                         <i class="fa-solid fa-calendar-xmark" style="font-size:10px;"></i> ${dataFmt}
-                        ${p.excluido_por ? `· ${p.excluido_por}` : ''}
+                        ${p.excluido_por ? `· ${escapeHtml(p.excluido_por)}` : ''}
                     </span>
                     <span class="prof-excluido-rota" style="color:${corDias};">
                         <i class="fa-solid fa-clock" style="font-size:10px;"></i>
@@ -519,8 +519,8 @@ async function procCarregarExcluidos() {
             return `
             <div class="prof-excluido-item">
                 <div class="prof-excluido-info">
-                    <span class="prof-excluido-codigo">${p.numero_processo || '—'}</span>
-                    <span class="prof-excluido-rota">${p.pais_origem || '—'} → ${p.pais_destino || '—'}</span>
+                    <span class="prof-excluido-codigo">${escHtml(p.numero_processo || '—')}</span>
+                    <span class="prof-excluido-rota">${escHtml(p.pais_origem || '—')} → ${escHtml(p.pais_destino || '—')}</span>
                     ${metaHtml}
                 </div>
                 <button class="prof-excluido-restaurar so-excluir" onclick="procRestaurar('${p.id}')">
@@ -529,7 +529,7 @@ async function procCarregarExcluidos() {
             </div>`;
         }).join('');
     } catch (err) {
-        container.innerHTML = `<div style="padding:16px;color:#dc2626;font-size:13px;">Erro: ${err.message}</div>`;
+        container.innerHTML = `<div style="padding:16px;color:#dc2626;font-size:13px;">Erro: ${escHtml(err.message)}</div>`;
     }
 }
 

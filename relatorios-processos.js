@@ -467,7 +467,7 @@ function renderHistorico() {
             <td><span class="hist-format pdf">PDF</span></td>
             <td>
                 <div class="hist-actions">
-                    <button class="hist-btn" title="Período: ${r.periodo}"><i class="fa-solid fa-calendar-days"></i></button>
+                    <button class="hist-btn" title="Período: ${escHtml(r.periodo)}"><i class="fa-solid fa-calendar-days"></i></button>
                     <button class="hist-btn hist-btn-del" title="Remover" onclick="removerHistorico(${r.id})">
                         <i class="fa-solid fa-trash"></i>
                     </button>
@@ -497,7 +497,7 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     const cores = { success: '#22C55E', error: '#dc2626', warning: '#f59e0b', info: '#4776ec' };
     const icones = { success: 'fa-circle-check', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' };
     const n = document.createElement('div');
-    n.innerHTML = `<i class="fa-solid ${icones[tipo]}"></i><span>${mensagem}</span>`;
+    n.innerHTML = `<i class="fa-solid ${icones[tipo]}"></i><span>${escHtml(mensagem)}</span>`;
     n.style.cssText = `position:fixed;top:100px;right:20px;background:white;color:${cores[tipo]};padding:14px 22px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;font-weight:600;z-index:99999;border-left:4px solid ${cores[tipo]};font-size:14px;`;
     document.body.appendChild(n);
     setTimeout(() => n.remove(), 5000);

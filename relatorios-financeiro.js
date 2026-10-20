@@ -93,7 +93,7 @@ async function rfCarregar() {
                 : '—';
             return `<tr>
                 <td><strong>${_rfEsc(c.descricao)}</strong></td>
-                <td><span style="font-size:11px;color:#94a3b8">${_rfEsc(c.categoria || '—')}</span></td>
+                <td><span style="font-size:11px;color:#94a3b8">${_rfEsc(c.plano_contas ? `${c.plano_contas.codigo} — ${c.plano_contas.subfator_nome}` : (c.categoria || '—'))}</span></td>
                 <td>${venc}</td>
                 <td class="td-valor saida">${_rfFmt(c.valor)}</td>
             </tr>`;

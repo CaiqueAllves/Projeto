@@ -549,7 +549,7 @@ function prodAdicionarDocumento() {
 
         <div class="emp-doc-footer">
             <i class="fa-solid fa-user"></i>
-            <span>${usuario}</span>
+            <span>${escHtml(usuario)}</span>
             <span class="emp-doc-footer-sep">•</span>
             <i class="fa-regular fa-calendar"></i>
             <span id="prod-doc-data-${id}">${dataStr}</span>
@@ -768,7 +768,7 @@ function iniciarAutocompleteEmpresaProduto() {
               )
             : _acEmpresas;
         lista.innerHTML = filtradas.length
-            ? filtradas.map(e => `<div class="autocomplete-item" data-id="${e.id}" data-nome="${e.nome_fantasia || e.razao_social}" data-doc="${e.documento || ''}">${e.nome_fantasia || e.razao_social}${e.documento ? `<span class="autocomplete-sub">${e.documento}</span>` : ''}</div>`).join('')
+            ? filtradas.map(e => `<div class="autocomplete-item" data-id="${e.id}" data-nome="${escHtml(e.nome_fantasia || e.razao_social)}" data-doc="${escHtml(e.documento || '')}">${escHtml(e.nome_fantasia || e.razao_social)}${e.documento ? `<span class="autocomplete-sub">${escHtml(e.documento)}</span>` : ''}</div>`).join('')
             : '<div class="autocomplete-vazio">Nenhum parceiro encontrado</div>';
         lista.style.display = 'block';
     }
@@ -805,9 +805,9 @@ function iniciarAutocompleteMoedaProduto() {
             : _acMoedas;
         if (!filtradas.length) { lista.classList.remove('aberta'); return; }
         lista.innerHTML = filtradas.slice(0, 30).map(m => `
-            <div class="autocomplete-item" data-codigo="${m.codigo || ''}" data-descricao="${m.descricao || ''}">
-                <span class="ac-nome">${m.descricao || ''}</span>
-                <span class="ac-fantasia">${m.codigo || ''}</span>
+            <div class="autocomplete-item" data-codigo="${escHtml(m.codigo || '')}" data-descricao="${escHtml(m.descricao || '')}">
+                <span class="ac-nome">${escHtml(m.descricao || '')}</span>
+                <span class="ac-fantasia">${escHtml(m.codigo || '')}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
@@ -899,12 +899,12 @@ function iniciarAutocompleteNcmProduto() {
             lista.innerHTML = completos.map(n => {
                 const utrib = n.utrib_abrev ? `${n.utrib_abrev}${n.utrib_descricao ? ' — ' + n.utrib_descricao : ''}` : '';
                 return `<div class="autocomplete-item"
-                    data-ncm="${n.ncm}"
-                    data-descricao="${(n.descricao || '').replace(/"/g, '&quot;')}"
-                    data-descricao-completa="${(n.descricao_concat || '').replace(/"/g, '&quot;')}"
-                    data-utrib="${utrib.replace(/"/g, '&quot;')}">
-                    <span class="ac-nome">${n.ncm}</span>
-                    <span class="ac-fantasia">${n.descricao_concat || n.descricao || ''}</span>
+                    data-ncm="${escHtml(n.ncm)}"
+                    data-descricao="${escHtml(n.descricao || '')}"
+                    data-descricao-completa="${escHtml(n.descricao_concat || '')}"
+                    data-utrib="${escHtml(utrib)}">
+                    <span class="ac-nome">${escHtml(n.ncm)}</span>
+                    <span class="ac-fantasia">${escHtml(n.descricao_concat || n.descricao || '')}</span>
                 </div>`;
             }).join('');
             _acPosicionar(input, lista);
@@ -1075,7 +1075,7 @@ async function prodAdicionarPrecoExtra() {
     const id = Date.now() + Math.floor(Math.random() * 1000);
 
     const moedas  = await _carregarMoedas();
-    const opcoes  = moedas.map(m => `<option value="${m.sigla}">${m.sigla} — ${m.descricao}</option>`).join('');
+    const opcoes  = moedas.map(m => `<option value="${escHtml(m.sigla)}">${escHtml(m.sigla)} — ${escHtml(m.descricao)}</option>`).join('');
 
     const row = document.createElement('div');
     row.id = `prod-preco-row-${id}`;
@@ -1958,9 +1958,9 @@ function iniciarAutocompleteUnidadeProduto() {
             : _acUnidades;
         if (!filtradas.length) { lista.classList.remove('aberta'); return; }
         lista.innerHTML = filtradas.slice(0, 100).map(u => `
-            <div class="autocomplete-item" data-valor="${u.unidade}">
-                <span class="ac-nome">${u.unidade}</span>
-                <span class="ac-fantasia">${u.descricao || ''}</span>
+            <div class="autocomplete-item" data-valor="${escHtml(u.unidade)}">
+                <span class="ac-nome">${escHtml(u.unidade)}</span>
+                <span class="ac-fantasia">${escHtml(u.descricao || '')}</span>
             </div>`).join('');
         _acPosicionar(input, lista);
         lista.classList.add('aberta');
@@ -2036,8 +2036,8 @@ function iniciarAutocompleteEmbalagemProduto() {
             const { data } = await query.limit(100);
             if (!data?.length) { lista.classList.remove('aberta'); return; }
             lista.innerHTML = data.map(e => `
-                <div class="autocomplete-item" data-codigo="${e.codigo || ''}" data-descricao="${(e.descricao || '').replace(/"/g, '&quot;')}">
-                    <span class="ac-nome">${e.descricao || ''}</span>
+                <div class="autocomplete-item" data-codigo="${escHtml(e.codigo || '')}" data-descricao="${escHtml(e.descricao || '')}">
+                    <span class="ac-nome">${escHtml(e.descricao || '')}</span>
                 </div>`).join('');
             _acPosicionar(input, lista);
             lista.classList.add('aberta');
@@ -2080,8 +2080,8 @@ function iniciarAutocompleteAcondicionamentoProduto() {
             const { data } = await query.limit(30);
             if (!data?.length) { lista.classList.remove('aberta'); return; }
             lista.innerHTML = data.map(a => `
-                <div class="autocomplete-item" data-numero="${a.numero || ''}" data-descricao="${(a.descricao || '').replace(/"/g, '&quot;')}">
-                    <span class="ac-nome">${a.descricao || ''}</span>
+                <div class="autocomplete-item" data-numero="${escHtml(a.numero || '')}" data-descricao="${escHtml(a.descricao || '')}">
+                    <span class="ac-nome">${escHtml(a.descricao || '')}</span>
                 </div>`).join('');
             _acPosicionar(input, lista);
             lista.classList.add('aberta');

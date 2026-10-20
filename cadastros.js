@@ -267,13 +267,13 @@ function excluirEmpresa(id) {
             infoEl.innerHTML = `
                 <div class="excluir-info-row excluir-razao">
                     <i class="fa-solid fa-building"></i>
-                    <span>${empresa.razao_social || '—'}</span>
+                    <span>${escHtml(empresa.razao_social || '—')}</span>
                 </div>
-                ${empresa.nome_fantasia ? `<div class="excluir-info-fantasia"><i class="fa-solid fa-tag"></i> ${empresa.nome_fantasia}</div>` : ''}
+                ${empresa.nome_fantasia ? `<div class="excluir-info-fantasia"><i class="fa-solid fa-tag"></i> ${escHtml(empresa.nome_fantasia)}</div>` : ''}
                 <div class="excluir-info-grid">
                     <div class="excluir-info-item">
                         <span class="excluir-label">Documento</span>
-                        <span class="excluir-valor">${empresa.documento || '—'}</span>
+                        <span class="excluir-valor">${escHtml(empresa.documento || '—')}</span>
                     </div>
                     <div class="excluir-info-item">
                         <span class="excluir-label">País / Estado</span>
@@ -595,7 +595,7 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
 
     const n = document.createElement('div');
     n.className = `notificacao notificacao-${tipo}`;
-    n.innerHTML = `<i class="fa-solid ${icones[tipo]}"></i><span>${mensagem}</span>`;
+    n.innerHTML = `<i class="fa-solid ${icones[tipo]}"></i><span>${escHtml(mensagem)}</span>`;
     n.style.cssText = `position:fixed;top:100px;right:20px;background:white;color:${cores[tipo]};padding:16px 24px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;gap:12px;font-weight:600;z-index:99999;animation:slideIn .3s ease;border-left:4px solid ${cores[tipo]};max-width:400px;`;
 
     document.body.appendChild(n);

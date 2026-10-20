@@ -595,7 +595,7 @@ function atualizarPreviewModal() {
             return;
         }
         el.innerHTML = ranking.map(([pais, qtd], i) =>
-            `<div class="prev-linha"><span><b>${i + 1}.</b> ${pais}</span><strong>${qtd}</strong></div>`
+            `<div class="prev-linha"><span><b>${i + 1}.</b> ${escHtml(pais)}</span><strong>${qtd}</strong></div>`
         ).join('');
 
     } else if (tipoRelatorioAtual === 'proformas-periodo') {
@@ -1017,7 +1017,7 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     const cores  = { success: '#22C55E', error: '#dc2626', warning: '#f59e0b', info: '#4776ec' };
 
     const n = document.createElement('div');
-    n.innerHTML = `<i class="fa-solid ${icones[tipo]}"></i><span>${mensagem}</span>`;
+    n.innerHTML = `<i class="fa-solid ${icones[tipo]}"></i><span>${escHtml(mensagem)}</span>`;
     n.style.cssText = `position:fixed;top:100px;right:20px;background:white;color:${cores[tipo]};padding:14px 22px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;font-weight:600;z-index:99999;border-left:4px solid ${cores[tipo]};font-size:14px;`;
     document.body.appendChild(n);
     setTimeout(() => n.remove(), 5000);
@@ -1085,7 +1085,7 @@ function _extEmp(id) { return id ? todasEmpresas.find(x => String(x.id) === Stri
 function _extData(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR') : '—'; }
 function _extValores(v) {
     const ks = Object.keys(v || {}).filter(m => v[m]);
-    return ks.length ? ks.map(m => `${m} ${v[m].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join(' + ') : '—';
+    return ks.length ? ks.map(m => `${escHtml(m)} ${v[m].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join(' + ') : '—';
 }
 function _extSomar(linhas) {
     const v = {};

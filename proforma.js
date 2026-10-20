@@ -188,7 +188,7 @@ async function profCarregarLista() {
 
         profFiltrar();
     } catch (err) {
-        container.innerHTML = `<div class="lista-vazia"><i class="fa-solid fa-circle-exclamation"></i> Erro ao carregar: ${err.message}</div>`;
+        container.innerHTML = `<div class="lista-vazia"><i class="fa-solid fa-circle-exclamation"></i> Erro ao carregar: ${escHtml(err.message)}</div>`;
     }
 }
 
@@ -286,7 +286,7 @@ function _profRenderCard(p) {
                 <button class="btn-acao btn-ver"     onclick="profVisualizar('${p.id}')" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
                 <button class="btn-acao btn-pdf"     onclick="profGerarPDF('${p.id}')" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
                 <button class="btn-acao btn-ver" onclick="profVerDocumentos('${p.id}')" title="Documentos da Proforma"><i class="fa-solid fa-folder-open"></i></button>
-                <button class="btn-acao btn-ver" onclick="abrirHistorico('proforma','${p.id}','${_profEscapar(p.codigo || '')}')" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                <button class="btn-acao btn-ver" data-codigo="${_profEscapar(p.codigo || '')}" onclick="abrirHistorico('proforma','${p.id}',this.dataset.codigo)" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="btn-acao btn-duplicar" onclick="profDuplicar('${p.id}')" title="Duplicar Proforma"><i class="fa-solid fa-copy"></i></button>
                 <button class="btn-acao btn-editar"  onclick="profEditar('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-acao btn-excluir so-excluir" onclick="profAbrirModalExcluir('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
@@ -336,18 +336,18 @@ function profRenderizarLista(lista) {
         return `
         <tr id="prof-card-${p.id}">
             <td class="prof-col-codigo">
-                <span class="prof-card-num">${p.codigo || '—'}</span>
-                ${p.tipo ? `<br><span class="prof-tipo-sub">${_profTipoLabel(p.tipo)}</span>` : ''}
+                <span class="prof-card-num">${escHtml(p.codigo || '—')}</span>
+                ${p.tipo ? `<br><span class="prof-tipo-sub">${escHtml(_profTipoLabel(p.tipo))}</span>` : ''}
             </td>
             <td class="prof-col-rota">
-                <span title="${p.origem_pais || ''}">${p.origem_pais || '—'}</span>
+                <span title="${escHtml(p.origem_pais || '')}">${escHtml(p.origem_pais || '—')}</span>
                 <i class="fa-solid fa-arrow-right prof-rota-arrow"></i>
-                <span title="${p.destino_pais || ''}">${p.destino_pais || '—'}</span>
+                <span title="${escHtml(p.destino_pais || '')}">${escHtml(p.destino_pais || '—')}</span>
             </td>
             <td>
                 <div style="display:flex;flex-direction:column;gap:3px;">
                     ${modalLabel ? `<span class="tag-badge" style="width:fit-content;"><i class="fa-solid ${modalIco}"></i> ${modalLabel}</span>` : '<span class="cell-vazio">—</span>'}
-                    ${p.incoterm ? `<span class="tag-badge" style="width:fit-content;">${p.incoterm}</span>` : ''}
+                    ${p.incoterm ? `<span class="tag-badge" style="width:fit-content;">${escHtml(p.incoterm)}</span>` : ''}
                 </div>
             </td>
             <td class="cell-nowrap">
@@ -366,7 +366,7 @@ function profRenderizarLista(lista) {
                     <button class="btn-acao btn-ver" onclick="profVerDocumentos('${p.id}')" title="Documentos da Proforma">
                         <i class="fa-solid fa-folder-open"></i>
                     </button>
-                    <button class="btn-acao btn-ver" onclick="abrirHistorico('proforma','${p.id}','${_profEscapar(p.codigo || '')}')" title="Histórico de alterações">
+                    <button class="btn-acao btn-ver" data-codigo="${_profEscapar(p.codigo || '')}" onclick="abrirHistorico('proforma','${p.id}',this.dataset.codigo)" title="Histórico de alterações">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                     </button>
                     <button class="btn-acao btn-duplicar" onclick="profDuplicar('${p.id}')" title="Duplicar Proforma">
@@ -571,9 +571,9 @@ function profAbrirModalExcluir(id) {
     const procs = (p?._processos || []).filter(pr => pr.status !== 'excluido');
     if (info && p) {
         info.innerHTML = `
-            <strong>${p.codigo || '—'}</strong><br>
+            <strong>${escHtml(p.codigo || '—')}</strong><br>
             <span style="font-size:13px;color:#6b7280;">
-                ${_profEmissorNome(p)} → ${_profDestinatarioNome(p)}
+                ${_profEscapar(_profEmissorNome(p))} → ${_profEscapar(_profDestinatarioNome(p))}
             </span>
             ${procs.length ? `
             <div class="prof-excluir-processos">
@@ -669,7 +669,7 @@ async function profCarregarExcluidos() {
                 metaHtml = `
                     <span class="prof-excluido-rota">
                         <i class="fa-solid fa-calendar-xmark" style="font-size:10px;"></i> ${dataFmt}
-                        ${p.excluido_por ? `· ${p.excluido_por}` : ''}
+                        ${p.excluido_por ? `· ${_profEscapar(p.excluido_por)}` : ''}
                     </span>
                     <span class="prof-excluido-rota" style="color:${corDias};">
                         <i class="fa-solid fa-clock" style="font-size:10px;"></i>
@@ -679,8 +679,8 @@ async function profCarregarExcluidos() {
             return `
             <div class="prof-excluido-item">
                 <div class="prof-excluido-info">
-                    <span class="prof-excluido-codigo">${p.codigo || '—'}</span>
-                    <span class="prof-excluido-rota">${p.origem_pais || '—'} → ${p.destino_pais || '—'}</span>
+                    <span class="prof-excluido-codigo">${escHtml(p.codigo || '—')}</span>
+                    <span class="prof-excluido-rota">${escHtml(p.origem_pais || '—')} → ${escHtml(p.destino_pais || '—')}</span>
                     ${metaHtml}
                 </div>
                 <button class="prof-excluido-restaurar so-excluir" onclick="profRestaurar('${p.id}')">
@@ -689,7 +689,7 @@ async function profCarregarExcluidos() {
             </div>`;
         }).join('');
     } catch (err) {
-        container.innerHTML = `<div style="padding:16px;color:#dc2626;font-size:13px;">Erro: ${err.message}</div>`;
+        container.innerHTML = `<div style="padding:16px;color:#dc2626;font-size:13px;">Erro: ${escHtml(err.message)}</div>`;
     }
 }
 

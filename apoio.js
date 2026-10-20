@@ -454,8 +454,8 @@ function renderSugestoes() {
     }
 
     elSugestoes.innerHTML = sugs.map(s =>
-        `<div onclick="selecionarSugestao('${s.replace(/'/g,"\\'")}')">
-            <i class="fa-solid fa-magnifying-glass" style="color:#94a3b8; margin-right:6px; font-size:11px;"></i>${s}
+        `<div data-sug="${escHtml(s)}" onclick="selecionarSugestao(this.dataset.sug)">
+            <i class="fa-solid fa-magnifying-glass" style="color:#94a3b8; margin-right:6px; font-size:11px;"></i>${escHtml(s)}
          </div>`
     ).join('');
     elSugestoes.style.display = 'block';

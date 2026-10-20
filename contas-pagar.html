@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css?v=0e82b1a5">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=cbfcf9d8">
+    <link rel="stylesheet" href="style-financeiro.css?v=b50042da">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -202,8 +202,18 @@
                         <option value="imposto">Imposto / Taxa</option>
                         <option value="fornecedor">Fornecedor</option>
                         <option value="operacional">Operacional</option>
+                        <option value="comercial">Comercial</option>
+                        <option value="financeiro">Financeiro / Bancário</option>
                         <option value="outro">Outro</option>
                     </select>
+                </div>
+            </div>
+            <div class="fin-form-row">
+                <div class="fin-form-group fin-full">
+                    <label for="cpPlanoContaNome">Conta (Plano de Contas)</label>
+                    <input type="text" id="cpPlanoContaNome" placeholder="Buscar conta (Aquisições, Comercial, Operacional, Financeiro)..." autocomplete="off" oninput="cpBuscarPlanoConta(this.value)" onfocus="cpMostrarPlanoConta(this.value)">
+                    <input type="hidden" id="cpPlanoContaId">
+                    <div class="pl-autocomplete" id="cpAutoPlanoConta"></div>
                 </div>
             </div>
             <div class="fin-form-row">
@@ -251,11 +261,11 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=0643ed38"></script>
-<script src="auth.js?v=bb4a57a3"></script>
-<script src="navegador.js?v=1113c2e2"></script>
+<script src="supabase-api.js?v=caa35554"></script>
+<script src="auth.js?v=37c2c7b0"></script>
+<script src="navegador.js?v=1c5fb652"></script>
 <script src="fin-moeda.js?v=ccdced38"></script>
-<script src="contas-pagar.js?v=b94c7e08"></script>
+<script src="contas-pagar.js?v=791b62f7"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

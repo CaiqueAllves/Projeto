@@ -551,13 +551,13 @@ function _docRenderLinhaProforma({ proforma, remetente, destinatario, docRowsFil
             </td>
             <td>
                 <div class="doc-pedido-numero">${_docLink(_docUrlProforma(proforma.id), proforma.codigo || '—', 'Abrir a Proforma')}</div>
-                <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Exportador:</span> <span class="doc-parceiro-valor">${remetente}</span></div>
-                <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Importador:</span> <span class="doc-parceiro-valor">${destinatario}</span></div>
+                <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Exportador:</span> <span class="doc-parceiro-valor">${_docEsc(remetente)}</span></div>
+                <div class="doc-pedido-parceiro"><span class="doc-parceiro-label">Importador:</span> <span class="doc-parceiro-valor">${_docEsc(destinatario)}</span></div>
             </td>
-            <td class="doc-col-status"><span class="doc-badge doc-badge-neutro">${DOC_LABELS_PROFORMA[proforma.status] || proforma.status || '—'}</span></td>
+            <td class="doc-col-status"><span class="doc-badge doc-badge-neutro">${escHtml(DOC_LABELS_PROFORMA[proforma.status] || proforma.status || '—')}</span></td>
             <td class="doc-col-progresso">${_docRenderProgresso(totalDocs, assinadosDocs)}</td>
             <td class="doc-referencia">${_docLinksProcessos(proforma)}</td>
-            <td class="doc-col-status">${proc.statusTexto !== '—' ? `<span class="doc-badge doc-badge-neutro">${proc.statusTexto}</span>` : '—'}</td>
+            <td class="doc-col-status">${proc.statusTexto !== '—' ? `<span class="doc-badge doc-badge-neutro">${_docEsc(proc.statusTexto)}</span>` : '—'}</td>
         </tr>`;
 
     if (!expandido) return linhaResumo;
@@ -670,7 +670,6 @@ function _docRenderLinha(proforma, r) {
     const { tipo, feito, assinado, assinadoPor, assinadoEm, enviadoPor, arquivoPath, arquivoNome, reg } = r;
     // dentro do bloco do Processo o modal já está no cabeçalho
     const tag = tipo.modal && !tipo.processoId ? `<span class="doc-tipo-tag">${DOC_MODAL_LABEL[tipo.modal]}</span>` : '';
-    const labelEsc = (tipo.label || '').replace(/'/g, "\\'");
     const excluir = tipo.custom
         ? `<button class="doc-row-excluir" onclick="docExcluirPersonalizado('${proforma.id}','${tipo.chave}', ${reg?.id ? `'${reg.id}'` : 'null'})" title="Remover"><i class="fa-solid fa-trash"></i></button>`
         : tipo.orfao
@@ -714,12 +713,12 @@ function _docRenderLinha(proforma, r) {
     } else if (arquivoPath) {
         // Arquivo já anexado (coluna Anexo) e ainda não assinado: só falta assinar
         assinaturaHtml = `
-            <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${proforma.id}','${tipo.chave}','${labelEsc}')">
+            <button class="doc-assinatura-marcar" data-label="${_docEsc(tipo.label || '')}" onclick="docAbrirModalAssinatura('${proforma.id}','${tipo.chave}',this.dataset.label)">
                 <i class="fa-regular fa-circle"></i> Assinar
             </button>`;
     } else {
         assinaturaHtml = `
-            <button class="doc-assinatura-marcar" onclick="docAbrirModalAssinatura('${proforma.id}','${tipo.chave}','${labelEsc}')">
+            <button class="doc-assinatura-marcar" data-label="${_docEsc(tipo.label || '')}" onclick="docAbrirModalAssinatura('${proforma.id}','${tipo.chave}',this.dataset.label)">
                 <i class="fa-regular fa-circle"></i> Não Assinado
             </button>`;
     }
@@ -928,7 +927,7 @@ function docAbrirModalAssinatura(proformaId, chave, tipoLabel) {
     const reg = _docReg(proformaId, chave);
     const existenteEl = document.getElementById('docModalArquivoExistente');
     if (reg?.arquivo_path && existenteEl) {
-        existenteEl.innerHTML = `<i class="fa-solid fa-paperclip"></i> Já anexado: <strong>${reg.arquivo_nome || 'documento'}</strong> — deixe em branco pra manter, ou escolha outro pra substituir.`;
+        existenteEl.innerHTML = `<i class="fa-solid fa-paperclip"></i> Já anexado: <strong>${escHtml(reg.arquivo_nome || 'documento')}</strong> — deixe em branco pra manter, ou escolha outro pra substituir.`;
         existenteEl.style.display = 'block';
     } else if (existenteEl) {
         existenteEl.style.display = 'none';

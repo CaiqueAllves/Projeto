@@ -323,6 +323,15 @@
     top: 0;
 }
 
+/* Cabeçalho de bloco do plano de contas (Contas a Pagar: 2 Aquisições / 4 Operacional) */
+.pl-auto-group.pl-auto-bloco {
+    position: static;
+    font-size: 11px;
+    color: #fff;
+    background: #3b5bdb;
+    border-bottom: none;
+}
+
 /* ── Observações retrátil (mesmo padrão de Pipeline/Proposta) ──────────── */
 .pl-obs-wrapper { margin-top: 0; }
 .pl-obs-toggle {

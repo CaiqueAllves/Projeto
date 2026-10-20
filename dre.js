@@ -42,81 +42,133 @@ async function dreCarregar() {
     const pagar   = resPagar.data   || [];
     const receber = resReceber.data || [];
 
-    // Receitas
-    const receitaBruta = receber
-        .filter(c => c.status === 'recebido')
-        .reduce((s, c) => s + Number(c.valor || 0), 0);
+    // Estrutura do Bloco 7 do Plano de Contas (PDF "MARPEX - PLANO DE CONTAS"):
+    //   Receita Bruta (Bloco 1) − Deduções (1.90) = Receita Líquida
+    //   − Custo Direto (Bloco 2)      = Margem Bruta
+    //   − Custo Comercial (Bloco 3)   = Margem Comercial
+    //   − Custo Operacional (Bloco 4) = Margem Operacional
+    //   ± Resultado Financeiro/Cambial (Bloco 5: ganhos − custos)
+    //   − Outras despesas (sem conta do plano, pela categoria antiga)
+    //   = Resultado do período (Bloco 6 / tributário entra depois)
+    // Margens em % da Receita Líquida. Subfatores "(-)" (descontos/devoluções
+    // de compra) reduzem o custo. Lançamentos antigos sem conta: receitas em
+    // "Não classificado", despesas pela categoria.
+    const somar = (obj, chave, v) => { obj[chave] = (obj[chave] || 0) + v; };
+    const total = o => Object.values(o).reduce((s, v) => s + v, 0);
+    const chaveConta = pc => `${pc.conta_codigo} — ${pc.conta_nome}`;
+
+    const receitas = {}, deducoes = {}, ganhosFin = {};
+    receber.filter(c => c.status === 'recebido').forEach(c => {
+        const v = Number(c.valor || 0), pc = c.plano_contas;
+        if (!pc) return somar(receitas, 'Não classificado', v);
+        if (Number(pc.bloco) === 5) return somar(ganhosFin, chaveConta(pc), v);
+        if (String(pc.conta_codigo).startsWith('1.90')) return somar(deducoes, chaveConta(pc), v);
+        somar(receitas, chaveConta(pc), v);
+    });
+
+    const custos = { 2: {}, 3: {}, 4: {} }, custosFin = {}, cats = {};
+    pagar.filter(c => c.status === 'pago').forEach(c => {
+        const v = Number(c.valor || 0), pc = c.plano_contas, b = Number(pc?.bloco);
+        if (!pc || ![2, 3, 4, 5].includes(b)) return somar(cats, c.categoria || 'outro', v);
+        if (b === 5) {
+            // ganho lançado em Contas a Pagar (ex.: diferença de liquidação a favor) reduz o custo financeiro
+            return pc.natureza === 'ganho' ? somar(ganhosFin, chaveConta(pc), v) : somar(custosFin, chaveConta(pc), v);
+        }
+        const sinal = /^\(-\)/.test(pc.subfator_nome || '') ? -1 : 1;
+        somar(custos[b], chaveConta(pc), sinal * v);
+    });
+
+    const receitaBruta    = total(receitas);
+    const totalDeducoes   = total(deducoes);
+    const receitaLiquida  = receitaBruta - totalDeducoes;
+    const totalDireto     = total(custos[2]);
+    const totalComercial  = total(custos[3]);
+    const totalOperac     = total(custos[4]);
+    const totalGanhosFin  = total(ganhosFin);
+    const totalCustosFin  = total(custosFin);
+    const totalOutras     = total(cats);
+    const margemBruta     = receitaLiquida - totalDireto;
+    const margemComercial = margemBruta - totalComercial;
+    const margemOperac    = margemComercial - totalOperac;
+    const resultadoFin    = totalGanhosFin - totalCustosFin;
+    const resultado       = margemOperac + resultadoFin - totalOutras;
+    const pct = v => receitaLiquida > 0 ? (v / receitaLiquida * 100) : 0;
+    const comPct = (rotulo, v) => `${rotulo} <span style="font-size:12px;font-weight:500;opacity:.7">(${pct(v).toFixed(1)}%)</span>`;
 
     const receitaPendente = receber
         .filter(c => c.status === 'pendente' || c.status === 'vencido')
         .reduce((s, c) => s + Number(c.valor || 0), 0);
-
-    // Receitas por Conta (Plano de Contas — Bloco 1, ver
-    // database/database-plano-contas-receitas.sql). Lançamentos antigos,
-    // sem plano_conta_id vinculado, caem em "Não classificado".
-    const receitasPorConta = {};
-    receber.filter(c => c.status === 'recebido').forEach(c => {
-        const chave = c.plano_contas
-            ? `${c.plano_contas.conta_codigo} — ${c.plano_contas.conta_nome}`
-            : 'Não classificado';
-        receitasPorConta[chave] = (receitasPorConta[chave] || 0) + Number(c.valor || 0);
-    });
-
-    // Despesas por categoria
-    const cats = {};
-    pagar.filter(c => c.status === 'pago').forEach(c => {
-        const cat = c.categoria || 'outro';
-        cats[cat] = (cats[cat] || 0) + Number(c.valor || 0);
-    });
-
-    const despesaTotal = Object.values(cats).reduce((s, v) => s + v, 0);
 
     const catLabels = {
         frete:       'Fretes e Logística',
         imposto:     'Impostos e Taxas',
         fornecedor:  'Fornecedores',
         operacional: 'Despesas Operacionais',
+        comercial:   'Despesas Comerciais',
+        financeiro:  'Despesas Financeiras / Bancárias',
         outro:       'Outras Despesas',
     };
 
-    const resultadoBruto  = receitaBruta - despesaTotal;
-    const margemBruta     = receitaBruta > 0 ? (resultadoBruto / receitaBruta * 100) : 0;
-
     const periodo = `${_dreFmtPeriodo(inicio)} a ${_dreFmtPeriodo(fim)}`;
-
     const linhas = [];
+    const vazio = txt => `<tr class="dre-indentado"><td style="color:#94a3b8;font-style:italic">${txt}</td><td></td></tr>`;
+    const blocoCustos = (titulo, obj, totalRot, totalVal, txtVazio) => {
+        linhas.push(_dreSecao(titulo));
+        Object.entries(obj).forEach(([conta, val]) => linhas.push(_dreLinhaCusto(conta, val)));
+        if (!Object.keys(obj).length) linhas.push(vazio(txtVazio));
+        linhas.push(_dreTotal(totalRot, totalVal, 'vermelho'));
+    };
 
-    // Cabeçalho
     linhas.push(`<tr><td colspan="2" style="padding:14px 20px;font-size:14px;font-weight:700;color:#1e293b;border-bottom:2px solid #e2e8f0;">
         Demonstração do Resultado — ${periodo}
     </td></tr>`);
 
     // RECEITAS
-    linhas.push(_dreSecao('RECEITAS'));
-    Object.entries(receitasPorConta).forEach(([conta, val]) => {
-        linhas.push(_dreLinhaIndent(conta, val, 'verde'));
-    });
-    if (!Object.keys(receitasPorConta).length) {
-        linhas.push(`<tr class="dre-indentado"><td style="color:#94a3b8;font-style:italic">Nenhuma receita recebida no período</td><td></td></tr>`);
-    }
+    linhas.push(_dreSecao('RECEITA BRUTA DE EXPORTAÇÃO'));
+    Object.entries(receitas).forEach(([conta, val]) => linhas.push(_dreLinhaIndent(escHtml(conta), val, 'verde')));
+    if (!Object.keys(receitas).length) linhas.push(vazio('Nenhuma receita recebida no período'));
     linhas.push(_dreLinha('Receita Bruta (recebida)', receitaBruta, 'verde'));
     linhas.push(_dreLinhaIndent('Contas a Receber (pendente)', receitaPendente));
-    linhas.push(_dreTotal('(=) RECEITA LÍQUIDA', receitaBruta));
-
-    // DESPESAS
-    linhas.push(_dreSecao('DESPESAS'));
-    Object.entries(cats).forEach(([cat, val]) => {
-        linhas.push(_dreLinhaIndent(`(-) ${catLabels[cat] || cat}`, val, 'vermelho'));
-    });
-    if (!Object.keys(cats).length) {
-        linhas.push(`<tr class="dre-indentado"><td style="color:#94a3b8;font-style:italic">Nenhuma despesa paga no período</td><td></td></tr>`);
+    if (Object.keys(deducoes).length) {
+        linhas.push(_dreSecao('DEDUÇÕES DA RECEITA'));
+        Object.entries(deducoes).forEach(([conta, val]) => linhas.push(_dreLinhaIndent(`(-) ${escHtml(conta)}`, val, 'vermelho')));
     }
-    linhas.push(_dreTotal('(=) TOTAL DESPESAS', despesaTotal, 'vermelho'));
+    linhas.push(_dreTotal('(=) RECEITA LÍQUIDA', receitaLiquida));
+
+    // CUSTOS E MARGENS
+    blocoCustos('CUSTO DIRETO DO VENDIDO (CMV / CSV)', custos[2], '(=) TOTAL CUSTO DIRETO', totalDireto, 'Nenhum custo direto pago no período');
+    linhas.push(_dreTotal(comPct('(=) MARGEM BRUTA', margemBruta), margemBruta));
+    blocoCustos('CUSTO COMERCIAL', custos[3], '(=) TOTAL CUSTO COMERCIAL', totalComercial, 'Nenhum custo comercial pago no período');
+    linhas.push(_dreTotal(comPct('(=) MARGEM COMERCIAL', margemComercial), margemComercial));
+    blocoCustos('CUSTO OPERACIONAL', custos[4], '(=) TOTAL CUSTO OPERACIONAL', totalOperac, 'Nenhum custo operacional pago no período');
+    linhas.push(_dreTotal(comPct('(=) MARGEM OPERACIONAL', margemOperac), margemOperac));
+
+    // RESULTADO FINANCEIRO / CAMBIAL
+    linhas.push(_dreSecao('RESULTADO FINANCEIRO / CAMBIAL'));
+    Object.entries(ganhosFin).forEach(([conta, val]) => linhas.push(_dreLinhaIndent(`(+) ${escHtml(conta)}`, val, 'verde')));
+    Object.entries(custosFin).forEach(([conta, val]) => linhas.push(_dreLinhaIndent(`(-) ${escHtml(conta)}`, val, 'vermelho')));
+    if (!Object.keys(ganhosFin).length && !Object.keys(custosFin).length) linhas.push(vazio('Nenhum ganho ou custo financeiro no período'));
+    linhas.push(_dreTotal('(=) RESULTADO FINANCEIRO LÍQUIDO', resultadoFin, resultadoFin < 0 ? 'vermelho' : ''));
+
+    // OUTRAS DESPESAS (sem conta do plano — pela categoria antiga)
+    if (Object.keys(cats).length) {
+        linhas.push(_dreSecao('OUTRAS DESPESAS (sem conta do plano)'));
+        Object.entries(cats).forEach(([cat, val]) => linhas.push(_dreLinhaIndent(`(-) ${escHtml(catLabels[cat] || cat)}`, val, 'vermelho')));
+        linhas.push(_dreTotal('(=) TOTAL OUTRAS DESPESAS', totalOutras, 'vermelho'));
+    }
 
     // RESULTADO
-    linhas.push(_dreResultado(resultadoBruto, margemBruta));
+    linhas.push(_dreResultado(resultado, pct(resultado)));
 
     document.getElementById('dreTbody').innerHTML = linhas.join('');
+}
+
+// Linha de custo: ajustes que reduzem o custo (descontos/devoluções de
+// compra, saldo negativo) aparecem como "(+)" com o valor sem sinal
+function _dreLinhaCusto(conta, val) {
+    return val < 0
+        ? _dreLinhaIndent(`(+) ${escHtml(conta)}`, -val, 'verde')
+        : _dreLinhaIndent(`(-) ${escHtml(conta)}`, val, 'vermelho');
 }
 
 function _dreSecao(label) {

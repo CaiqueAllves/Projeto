@@ -362,7 +362,7 @@ function _pendCardTarefa(tarefa) {
                 ${tarefa.prazo ? `<div class="pend-card-linha"><i class="fa-regular fa-calendar"></i> Prazo: <strong>${formatarDataPrazo(tarefa.prazo)}</strong></div>` : ''}
             </div>
             <div class="pend-card-rodape">
-                <span class="task-priority priority-${tarefa.prioridade}">${getPrioridadeTexto(tarefa.prioridade)}</span>
+                <span class="task-priority priority-${escHtml(tarefa.prioridade)}">${getPrioridadeTexto(tarefa.prioridade)}</span>
                 <div class="task-confirm-delete" id="confirm-del-${tarefa.id}" style="display:none;">
                     <span>Excluir?</span>
                     <button class="btn-confirm-sim" onclick="deletarTarefa(${tarefa.id})">Sim</button>
@@ -838,7 +838,7 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     
     notificacao.innerHTML = `
         <i class="fa-solid ${icones[tipo]}"></i>
-        <span>${mensagem}</span>
+        <span>${escHtml(mensagem)}</span>
     `;
     
     notificacao.style.cssText = `

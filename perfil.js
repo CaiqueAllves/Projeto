@@ -449,14 +449,14 @@ async function carregarDocumentosEmpresa() {
                     <i class="fa-solid ${icone}"></i>
                 </div>
                 <div class="doc-emp-info">
-                    <div class="doc-emp-nome" title="${nome}">${nome}</div>
-                    ${size ? `<div class="doc-emp-meta">${size} · ${ext.toUpperCase()}</div>` : `<div class="doc-emp-meta">${ext.toUpperCase()}</div>`}
+                    <div class="doc-emp-nome" title="${escHtml(nome)}">${escHtml(nome)}</div>
+                    ${size ? `<div class="doc-emp-meta">${size} · ${escHtml(ext.toUpperCase())}</div>` : `<div class="doc-emp-meta">${escHtml(ext.toUpperCase())}</div>`}
                 </div>
                 <div class="doc-emp-acoes">
-                    <button class="doc-emp-btn doc-emp-btn-baixar" onclick="baixarDocEmpresa('${path}','${nome}')" title="Baixar">
+                    <button class="doc-emp-btn doc-emp-btn-baixar" data-path="${escHtml(path)}" data-nome="${escHtml(nome)}" onclick="baixarDocEmpresa(this.dataset.path, this.dataset.nome)" title="Baixar">
                         <i class="fa-solid fa-download"></i>
                     </button>
-                    <button class="doc-emp-btn doc-emp-btn-excluir" onclick="excluirDocEmpresa('${path}')" title="Excluir">
+                    <button class="doc-emp-btn doc-emp-btn-excluir" data-path="${escHtml(path)}" onclick="excluirDocEmpresa(this.dataset.path)" title="Excluir">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -1106,7 +1106,7 @@ function mostrarToast(msg, tipo = 'sucesso') {
     if (typeof amigavelErroBanco === 'function') msg = amigavelErroBanco(msg);
     const toast = document.getElementById('toast');
     const icone = tipo === 'sucesso' ? 'circle-check' : 'circle-exclamation';
-    toast.innerHTML = `<i class="fa-solid fa-${icone}"></i> ${msg}`;
+    toast.innerHTML = `<i class="fa-solid fa-${icone}"></i> ${escHtml(msg)}`;
     toast.className = `toast ${tipo} show`;
     setTimeout(() => toast.classList.remove('show'), 5000);
 }
