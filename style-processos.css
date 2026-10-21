@@ -465,8 +465,10 @@
 
 /* ── Colunas ────────────────────────────────── */
 .kanban-col {
-    flex: 1;
-    min-width: 300px;
+    /* largura mínima para os 8 botões de ação do card caberem numa linha;
+       sem espaço para todas as colunas, o quadro rola na horizontal */
+    flex: 1 0 360px;
+    min-width: 360px;
     background: #f8fafc;
     border-radius: 14px;
     border: 1px solid #e2e8f0;
@@ -741,7 +743,7 @@
     .kanban-tabs  { display: flex; flex-wrap: wrap; }
     .kanban-tab   { flex: 1 1 auto; font-size: 0.7rem; padding: 9px 4px; }
     .kanban-board { flex-direction: column; gap: 0; }
-    .kanban-col   { display: none; height: auto; border-radius: 12px; }
+    .kanban-col   { display: none; height: auto; border-radius: 12px; min-width: 0; flex: 1 1 auto; }
     .kanban-col.kanban-col-active { display: flex; }
     .proc-lista-wrap { border-radius: 10px; }
 }

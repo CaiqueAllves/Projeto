@@ -743,7 +743,7 @@ body {
     }
 }
 /* ========================================
-   LOGO + INSTALAR APP (PWA)
+   LOGO
 ======================================== */
 .logo-circle img {
     width: 84px;
@@ -763,59 +763,3 @@ body {
 @media (max-width: 968px) {
     .login-logo-mobile { display: block; }
 }
-
-.pwa-instalar { margin-top: 20px; }
-
-.pwa-instalar-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 12px;
-    cursor: pointer;
-    text-align: left;
-    color: #1e293b;
-    font-family: inherit;
-}
-
-.pwa-instalar-btn:hover { background: #dbeafe; }
-
-.pwa-instalar-btn img {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    flex-shrink: 0;
-}
-
-.pwa-instalar-btn span {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 14px;
-}
-
-.pwa-instalar-btn small {
-    font-size: 12px;
-    color: #64748b;
-}
-
-.pwa-instalar-btn > i {
-    color: #4776ec;
-    font-size: 16px;
-}
-
-.pwa-dica-ios {
-    margin-top: 10px;
-    padding: 10px 12px;
-    background: #f8fafc;
-    border-radius: 10px;
-    font-size: 13px;
-    color: #475569;
-    line-height: 1.5;
-}
-
-.pwa-dica-ios i { color: #4776ec; }

@@ -26,11 +26,14 @@ const CI_CAMPOS_PADRAO = [
     { chave: 'peso_unit',  rotulo: 'Peso líq. unitário', t: 'col_peso_liq_unit', posicao: 'coluna' },
 ];
 
-// Escolha padrão: o que o documento sempre mostrou (NCM e HS embaixo do produto)
+// Escolha padrão: NCM e HS embaixo do produto; Fabricante e Composição como
+// colunas (pedido do usuário, 2026-10-21 — também fixas no Packing List)
 function ciConfigPadrao() {
     return { modelo_id: null, campos: [
         { chave: 'ncm', rotulo: 'NCM', origem: 'padrao', posicao: 'abaixo' },
         { chave: 'hscode', rotulo: 'HS Code', origem: 'padrao', posicao: 'abaixo' },
+        { chave: 'fabricante', rotulo: 'Fabricante', origem: 'padrao', posicao: 'coluna' },
+        { chave: 'composicao', rotulo: 'Composição', origem: 'padrao', posicao: 'coluna' },
     ], valores: {} };
 }
 

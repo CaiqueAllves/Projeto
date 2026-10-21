@@ -1,4 +1,4 @@
-// App Marpex (PWA): registra o service worker, oferece "Instalar app" e
+// App Marpex (PWA): registra o service worker e
 // ajusta a navegação quando o sistema roda instalado (tela cheia).
 //
 // No app instalado não há abas: window.open(..., '_blank') de uma tela do
@@ -65,38 +65,4 @@
         // para mostrar o que foi salvo no formulário
         window.addEventListener('pageshow', (ev) => { if (ev.persisted) location.reload(); });
     }
-
-    // ── Instalar app ──────────────────────────────────────────────
-    let pedidoInstalacao = null;
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    function atualizarBotao() {
-        const caixa = document.getElementById('pwaInstalar');
-        if (!caixa) return;
-        const podeInstalar = !modoApp && (pedidoInstalacao || ios);
-        caixa.hidden = !podeInstalar;
-    }
-
-    window.addEventListener('beforeinstallprompt', (ev) => {
-        ev.preventDefault();
-        pedidoInstalacao = ev;
-        atualizarBotao();
-    });
-    window.addEventListener('appinstalled', () => { pedidoInstalacao = null; atualizarBotao(); });
-
-    window.pwaInstalar = async function () {
-        if (pedidoInstalacao) {
-            pedidoInstalacao.prompt();
-            await pedidoInstalacao.userChoice.catch(() => {});
-            pedidoInstalacao = null;
-            atualizarBotao();
-            return;
-        }
-        if (ios) {
-            const dica = document.getElementById('pwaDicaIos');
-            if (dica) dica.hidden = !dica.hidden;
-        }
-    };
-
-    document.addEventListener('DOMContentLoaded', atualizarBotao);
 })();

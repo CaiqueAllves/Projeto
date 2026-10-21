@@ -120,10 +120,16 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
         datas: [[t.data, I.data(proc.data_embarque || new Date().toISOString().slice(0, 10))], [t.proforma, vv(prof?.codigo)]],
     });
 
-    // ── Termos ──
+    // ── Termos + embarque na mesma faixa (origem, destino, data, container) ──
+    const pontoOrigem  = proc.modal === 'maritimo' ? proc.porto_origem  : proc.modal === 'aereo' ? proc.aeroporto_origem  : proc.fronteira_saida;
+    const pontoDestino = proc.modal === 'maritimo' ? proc.porto_destino : proc.modal === 'aereo' ? proc.aeroporto_destino : proc.fronteira_entrada;
     Y = pvFaixaTermos(doc, Y, [
-        [t.incoterm_rot, [vv(proc.incoterm), vv(prof?.incoterm_local)].filter(Boolean).join(' · '), 1.5],
-        [t.modal, I.modal(proc.modal)], [t.moeda, moeda], [t.processo, vv(proc.numero_processo), 1.6],
+        [t.incoterm_rot, [vv(proc.incoterm), vv(prof?.incoterm_local)].filter(Boolean).join(' · '), 1.3],
+        [t.modal, I.modal(proc.modal), 1], [t.moeda, moeda, 1.1], [t.processo, vv(proc.numero_processo), 1.5],
+        [t.origem, [vv(proc.pais_origem), vv(pontoOrigem)].filter(Boolean).join(' · '), 1.6],
+        [t.destino, [vv(proc.pais_destino), vv(pontoDestino)].filter(Boolean).join(' · '), 1.6],
+        ...(proc.data_embarque ? [[t.data_embarque, I.data(proc.data_embarque), 1.1]] : []),
+        ...(proc.modal === 'maritimo' && proc.container_numero ? [[t.container, `${vv(proc.container_tipo)} ${proc.container_numero}`.trim(), 1.5]] : []),
     ]);
 
     // ── Exportador | Importador ──
@@ -134,19 +140,11 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     });
     Y = pvQuadros(doc, Y, [quadroEmpresa(t.exportador, nomeEx, ex), quadroEmpresa(t.importador, nomeIm, im)]);
 
-    // ── Embarque | Pagamento (CI) ──
-    const pontoOrigem  = proc.modal === 'maritimo' ? proc.porto_origem  : proc.modal === 'aereo' ? proc.aeroporto_origem  : proc.fronteira_saida;
-    const pontoDestino = proc.modal === 'maritimo' ? proc.porto_destino : proc.modal === 'aereo' ? proc.aeroporto_destino : proc.fronteira_entrada;
-    const quadroEmbarque = { titulo: t.embarque, chaves: [
-        [t.origem, [vv(proc.pais_origem), vv(pontoOrigem)].filter(Boolean).join(' · ')],
-        [t.destino, [vv(proc.pais_destino), vv(pontoDestino)].filter(Boolean).join(' · ')],
-        ...(proc.data_embarque ? [[t.data_embarque, I.data(proc.data_embarque)]] : []),
-        ...(proc.modal === 'maritimo' && proc.container_numero ? [[t.container, `${vv(proc.container_tipo)} ${proc.container_numero}`.trim()]] : []),
-    ] };
-    Y = pvQuadros(doc, Y, tipo === 'commercial'
-        ? [quadroEmbarque, { titulo: t.condicoes_pagamento, chaves: [[t.forma, I.formaPagamento(prof?.forma_pagamento)], [t.prazo, I.prazoPagamento(prof?.prazo_pagamento)],
-                                                                     [t.pais_origem_merc, vv(proc.pais_origem) || '—']] }]
-        : [quadroEmbarque]);
+    // ── Pagamento (só CI; o embarque foi para a faixa de termos) ──
+    if (tipo === 'commercial') {
+        Y = pvQuadros(doc, Y, [{ titulo: t.condicoes_pagamento, chaves: [[t.forma, I.formaPagamento(prof?.forma_pagamento)], [t.prazo, I.prazoPagamento(prof?.prazo_pagamento)],
+                                                                     [t.pais_origem_merc, vv(proc.pais_origem) || '—']] }]);
+    }
 
     // ── Volumes e pesos por item (embalagem de transporte "caixa") ──
     const soma = { vol: 0, pecas: 0, liq: 0, bruto: 0, m3: 0 };
@@ -189,7 +187,7 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
         Y = pvTabela(doc, Y, [{ rot: '#', w: 9 }, { rot: t.col_codigo, w: 21 }, { rot: t.col_produto, w: 0 },
             ...extras.map(c => ({ rot: ciRotulo(c, t).toUpperCase(), w: wExtra })),
             { rot: t.col_qtd, w: 20, al: 'r' }, { rot: t.col_preco_unit, w: 24, al: 'r' }, { rot: t.col_total, w: 28, al: 'r' }],
-            linhas, { vazio: t.nenhum_produto, maxTxt: 4, maxSub: 6 });
+            linhas, { vazio: t.nenhum_produto, maxTxt: 6, maxSub: 6 });
         Y = pvResumo(doc, Y, {
             stats, extenso: total ? pdfValorPorExtenso(total, moeda, I.cod) : '', rotExtenso: t.total_extenso,
             totais: [[t.total_geral, I.num(total)]], rotuloTotal: `${t.total_geral}${moeda ? ' · ' + moeda : ''}`,
@@ -197,15 +195,22 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
         Y = pvQuadros(doc, Y, [pvQuadroBanco(prof?.dados_bancarios, t, nomeEx)]);
     } else {
         Y = pvTituloSecao(doc, Y, t.volumes_pesos);
+        // Fabricante e Composição fixos (mesmos valores da Commercial Invoice,
+        // inclusive as correções feitas na janela de colunas deste Processo)
+        const ciPl = proc.documentos?.ci_config || null;
+        const campoFab = { chave: 'fabricante', origem: 'padrao' }, campoComp = { chave: 'composicao', origem: 'padrao' };
         const linhas = d.itens.map((it, i) => {
             const p = d.produtos[it.produto_id] || {}, l = log[i];
             const sub = [p.sku ? `SKU ${p.sku}` : '', (p.hscode || p.ncm) ? `HS ${p.hscode || p.ncm}` : '', vv(l.e?.tipo_embalagem || l.e?.nome), l.dims].filter(Boolean).join(' · ');
             return [{ txt: l.marcacao || '—', negrito: true, cor: PDF_CORES.AZUL }, { txt: vv(it.produto) || '—', sub },
+                    ciValorCampo(d, it, i, campoFab, ciPl, I) || '—', ciValorCampo(d, it, i, campoComp, ciPl, I) || '—',
                     I.num(it.qtd, 0), l.vols ? I.num(l.vols, 0) : '—', l.vols ? I.num(l.liq, 3) : '—', l.vols ? I.num(l.bruto, 3) : '—'];
         });
-        Y = pvTabela(doc, Y, [{ rot: t.col_marcacao, w: 30 }, { rot: t.col_descricao, w: 0 }, { rot: t.col_qtd_pecas, w: 18, al: 'r' },
-            { rot: t.col_volumes, w: 18, al: 'r' }, { rot: t.col_peso_liq, w: 22, al: 'r' }, { rot: t.col_peso_bruto, w: 24, al: 'r' }],
-            linhas, { vazio: t.nenhum_produto });
+        Y = pvTabela(doc, Y, [{ rot: t.col_marcacao, w: 25 }, { rot: t.col_descricao, w: 0 },
+            { rot: t.col_fabricante, w: 23 }, { rot: t.col_composicao, w: 23 },
+            { rot: t.col_qtd_pecas, w: 16, al: 'r' }, { rot: t.col_volumes, w: 16, al: 'r' },
+            { rot: t.col_peso_liq, w: 20, al: 'r' }, { rot: t.col_peso_bruto, w: 22, al: 'r' }],
+            linhas, { vazio: t.nenhum_produto, maxTxt: 6, maxSub: 4 });
         if (semEmbalagem) {
             Y = pvGarantir(doc, Y, 6);
             doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(180, 83, 9);

@@ -604,22 +604,28 @@ function pvCabecalho(doc, { emissor, titulo, numero, datas = [] }) {
 }
 
 // Faixa de termos: [[rótulo, valor, peso], ...]
+// Faixa de termos (Incoterm, Modal, Moeda...): itens = [[rótulo, valor, peso?]].
+// O valor quebra em até 2 linhas; a faixa só cresce quando alguma célula precisa.
 function pvFaixaTermos(doc, Y, itens) {
     const { ML, CW } = PV, C = PDF_CORES;
     const lista = itens.filter(([, v]) => v && v !== '—');
     if (!lista.length) return Y;
     const pesoTot = lista.reduce((t, it) => t + (it[2] || 1), 0);
-    doc.setFillColor(...C.CINZA_BG); doc.setDrawColor(...C.BORDA); doc.setLineWidth(0.25);
-    doc.roundedRect(ML, Y, CW, 11, 1.5, 1.5, 'FD');
-    let x = ML;
-    lista.forEach(([r, v, p], i) => {
+    const cel = lista.map(([r, v, p]) => {
         const w = CW * (p || 1) / pesoTot;
-        if (i) { doc.setDrawColor(...C.BORDA); doc.line(x, Y, x, Y + 11); }
-        _pvT(doc, 'bold', 5.8, C.CINZA, r.toUpperCase(), x + 3, Y + 4.2);
-        _pvT(doc, 'bold', 8.3, C.AZUL, _pvCorta(doc, v, w - 5, 8.3, 'bold')[0], x + 3, Y + 8.7);
-        x += w;
+        return { r, w, linhas: _pvCorta(doc, v, w - 5, 8.3, 'bold').slice(0, 2) };
     });
-    return Y + 15;
+    const h = cel.some(c => c.linhas.length > 1) ? 14.5 : 11;
+    doc.setFillColor(...C.CINZA_BG); doc.setDrawColor(...C.BORDA); doc.setLineWidth(0.25);
+    doc.roundedRect(ML, Y, CW, h, 1.5, 1.5, 'FD');
+    let x = ML;
+    cel.forEach((c, i) => {
+        if (i) { doc.setDrawColor(...C.BORDA); doc.line(x, Y, x, Y + h); }
+        _pvT(doc, 'bold', 5.8, C.CINZA, c.r.toUpperCase(), x + 3, Y + 4.2);
+        c.linhas.forEach((ln, k) => _pvT(doc, 'bold', 8.3, C.AZUL, ln, x + 3, Y + 8.7 + k * 3.5));
+        x += c.w;
+    });
+    return Y + h + 4;
 }
 
 // Dois quadros lado a lado. Cada quadro: { titulo, nome?, linhas?: [], chaves?: [[rót, val]], obs? }

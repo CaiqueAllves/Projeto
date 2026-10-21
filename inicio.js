@@ -198,14 +198,20 @@ function salvarTarefas() {
 // ========================================
 // PENDÊNCIAS DO SISTEMA (dados reais do Supabase)
 // ========================================
-// Critérios confirmados com o usuário: Proforma com status "pendente",
-// Processo com status "aberto", e documentos já feitos mas ainda não
-// assinados (usa a mesma taxonomia/cálculo de doc-tipos.js, compartilhada
-// com a tela Documentos). Produtos pendentes (status "pendente") não
+// Critérios definidos pelo usuário (2026-10-21):
+//   - Proforma pendente: status "pendente" e a Proforma Invoice ainda não
+//     assinada;
+//   - Documento sem assinatura: Proforma Invoice ou Commercial Invoice já
+//     feita (gerada ou anexada) e ainda não assinada — os demais documentos
+//     não geram pendência (_PEND_DOCS_ASSINATURA);
+//   - Proformas encerradas (e excluídas) não entram.
+// Processo aberto deixou de ser pendência. Usa o cálculo de doc-tipos.js,
+// compartilhado com a tela Documentos. Produtos pendentes (status "pendente") não
 // pertencem a uma Proforma específica, por isso ficam numa lista
 // separada, fora da tabela.
 
 let _pendProformas          = []; // proformas com pelo menos 1 pendência, já com o detalhe calculado
+const _PEND_DOCS_ASSINATURA = ['proforma', 'commercial'];   // documentos cuja falta de assinatura vira pendência
 let _pendProdutosPendentes  = [];
 
 function _pendEmissorNome(p) {
@@ -229,7 +235,7 @@ async function carregarPendenciasSistema() {
     // só os campos que as Pendências usam (antes trazia a Proforma inteira, com produtos etc.)
     let query = supabaseClient.from('proformas')
         .select('id, codigo, status, emissor_tipo, parceiro_id, parceiro_razao_social, destinatario_id, destinatario_razao_social')
-        .neq('status', 'excluido');
+        .not('status', 'in', '(excluido,encerrado)');
     if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
     const { data: proformasData } = await query;
     const proformas = proformasData || [];
@@ -264,13 +270,12 @@ async function carregarPendenciasSistema() {
         const docsSalvos          = docsMap[p.id] || {};
 
         const proformaPendente  = p.status === 'pendente' && !docsSalvos.proforma?.assinado;
-        const processosAbertos  = processosDaProforma.filter(pr => pr.status === 'aberto');
 
         // Só conta documentos "feitos" pra saber quantos ainda faltam assinar
         // — um tipo que nunca foi gerado não é uma pendência de assinatura.
         let docsFeitos = 0, docsAssinados = 0;
         docTiposDaProforma(processosDaProforma, docsSalvos).forEach(tipo => {
-            if (tipo.custom || tipo.semProcesso) return;
+            if (tipo.custom || tipo.semProcesso || !_PEND_DOCS_ASSINATURA.includes(tipo.id)) return;
             const reg = docRegistroDaLinha(docsSalvos, tipo, processosDaProforma);
             const assinado = !!reg?.assinado;
             const feito = assinado || !!reg?.arquivo_path || docFeitoAutomatico(processosDaProforma, tipo.id, tipo.processoId);
@@ -278,14 +283,14 @@ async function carregarPendenciasSistema() {
         });
         const temDocPendente = docsFeitos > docsAssinados;
 
-        const temPendencia = proformaPendente || processosAbertos.length > 0 || temDocPendente;
+        const temPendencia = proformaPendente || temDocPendente;
         if (!temPendencia) return null;
 
         return {
             proforma: p,
             remetente:    _pendEmissorNome({ ...p, parceiro: empresaMap[p.parceiro_id] }),
             destinatario: _pendDestinatarioNome({ ...p, destinatario_emp: empresaMap[p.destinatario_id] }),
-            proformaPendente, processosAbertos,
+            proformaPendente,
             docsFeitos, docsAssinados, temDocPendente,
         };
     }).filter(Boolean);
@@ -377,18 +382,14 @@ function _pendCardProforma(item) {
 
     const tags = [];
     if (item.proformaPendente) tags.push(`<span class="pend-tag pend-tag-proforma">Proforma Pendente</span>`);
-    if (item.processosAbertos.length) tags.push(`<span class="pend-tag pend-tag-processo">Processo Aberto${item.processosAbertos.length > 1 ? ` (${item.processosAbertos.length})` : ''}</span>`);
     if (item.temDocPendente) tags.push(`<span class="pend-tag pend-tag-doc">${item.docsAssinados}/${item.docsFeitos} assinados</span>`);
 
     const linhas = [];
     if (item.proformaPendente) {
         linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-file-invoice"></i> <span>Proforma <strong>pendente</strong></span> <a href="formularios.html?tab=proposta&id=${proformaId}" target="_blank" rel="opener">Abrir</a></div>`);
     }
-    item.processosAbertos.forEach(pr => {
-        linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-diagram-project"></i> <span>Processo <strong>${_pendEsc(pr.numero_processo || '—')}</strong> aberto</span> <a href="formularios.html?tab=processo&id=${pr.id}" target="_blank" rel="opener">Abrir</a></div>`);
-    });
     if (item.temDocPendente) {
-        linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-file-signature"></i> <span>Documentos: <strong>${item.docsAssinados}/${item.docsFeitos}</strong> assinados</span> <a href="proforma.html?docs=${proformaId}" target="_blank" rel="opener">Abrir</a></div>`);
+        linhas.push(`<div class="pend-card-linha"><i class="fa-solid fa-file-signature"></i> <span>Proforma / Commercial Invoice: <strong>${item.docsAssinados}/${item.docsFeitos}</strong> assinados</span> <a href="proforma.html?docs=${proformaId}" target="_blank" rel="opener">Abrir</a></div>`);
     }
 
     return `
