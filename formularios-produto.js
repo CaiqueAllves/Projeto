@@ -79,6 +79,35 @@ function _prodCalcularMargemLucroBrutos() {
 // Idiomas do nome/descrição — linha base (prod-nome-idioma) + até 3 linhas
 // extras (prodAdicionarIdiomaExtra). Guardado como array pra poder ser
 // selecionado depois na hora de gerar documentação de proposta/processo.
+// ── Características (database-ci-colunas-modelos.sql) ──
+// Lista livre nome/valor; vira opção de coluna na Commercial Invoice.
+function prodAdicionarCaracteristica(nome = '', valor = '') {
+    const lista = document.getElementById('prod-carac-lista');
+    if (!lista) return;
+    const row = document.createElement('div');
+    row.className = 'prod-carac-linha';
+    row.innerHTML = `
+        <input type="text" class="prod-carac-nome" list="prod-carac-sugestoes" placeholder="Característica (ex.: Cor)" aria-label="Característica">
+        <input type="text" class="prod-carac-valor" placeholder="Valor (ex.: Azul)" aria-label="Valor da característica">
+        <button type="button" class="prod-carac-remover" title="Remover" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>`;
+    row.querySelector('.prod-carac-nome').value = nome;
+    row.querySelector('.prod-carac-valor').value = valor;
+    lista.appendChild(row);
+}
+
+function _prodColetarCaracteristicas() {
+    return [...document.querySelectorAll('#prod-carac-lista .prod-carac-linha')]
+        .map(r => ({ nome: r.querySelector('.prod-carac-nome').value.trim(), valor: r.querySelector('.prod-carac-valor').value.trim() }))
+        .filter(c => c.nome);
+}
+
+function _prodCarregarCaracteristicas(lista) {
+    const box = document.getElementById('prod-carac-lista');
+    if (!box) return;
+    box.innerHTML = '';
+    (Array.isArray(lista) ? lista : []).forEach(c => prodAdicionarCaracteristica(c?.nome || '', c?.valor || ''));
+}
+
 function _prodColetarIdiomas() {
     const idiomas = [];
 
@@ -189,6 +218,7 @@ function _coletarDadosProduto() {
         obs_estoque:            g('prod-obs-estoque'),
         obs_logistica:          g('prod-obs-logistica'),
         nomes_idiomas:          _prodColetarIdiomas(),
+        caracteristicas:        _prodColetarCaracteristicas(),
         precos_alternativos:    _prodColetarPrecos(),
         documentos:             _prodColetarDocumentos(),
     };
@@ -331,6 +361,7 @@ async function _prodPreencherEdicao(dados) {
     if (typeof prodCalcularResultados     === 'function') prodCalcularResultados();
 
     // Idiomas: linha base + recria as extras (máx. 3) já salvas
+    _prodCarregarCaracteristicas(dados.caracteristicas);
     const idiomas = dados.nomes_idiomas || [];
     if (idiomas[0]) {
         set('prod-nome-idioma', idiomas[0].idioma || 'pt');

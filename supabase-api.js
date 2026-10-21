@@ -1098,6 +1098,8 @@ function _prodMontarPayload(dados) {
         data_fabricacao:         dados.data_fabricacao || null,
         data_validade:           dados.data_validade || null,
         tags:                    Array.isArray(dados.tags) ? dados.tags : [],
+        // características (database-ci-colunas-modelos.sql) — só quando o formulário manda
+        ...(Array.isArray(dados.caracteristicas) ? { caracteristicas: dados.caracteristicas } : {}),
         referencia_fornecedor:   dados.referencia_fornecedor || null,
         referencia_outra:        dados.referencia_outra || null,
         empresa_parceira_id:     dados.empresa_parceira_id || null,
@@ -1254,15 +1256,13 @@ async function salvarProduto(dados) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        const { data, error } = await supabaseClient
-            .from('produtos')
-            .insert({
-                ..._prodMontarPayload(dados),
-                empresa_id: usuario.empresa_id,
-                criado_por: usuario.id,
-            })
-            .select()
-            .single();
+        const payload = { ..._prodMontarPayload(dados), empresa_id: usuario.empresa_id, criado_por: usuario.id };
+        let { data, error } = await supabaseClient.from('produtos').insert(payload).select().single();
+        // antes do SQL das características a coluna não existe
+        if (error && /caracteristicas/i.test(error.message || '')) {
+            delete payload.caracteristicas;
+            ({ data, error } = await supabaseClient.from('produtos').insert(payload).select().single());
+        }
 
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
@@ -1468,11 +1468,13 @@ async function editarProduto(id, dados) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
 
-        const { error } = await supabaseClient
-            .from('produtos')
-            .update({ ..._prodMontarPayload(dados), atualizado_em: new Date().toISOString() })
-            .eq('id', id)
-            .eq('empresa_id', usuario.empresa_id);
+        const payload = { ..._prodMontarPayload(dados), atualizado_em: new Date().toISOString() };
+        const atualizar = p => supabaseClient.from('produtos').update(p).eq('id', id).eq('empresa_id', usuario.empresa_id);
+        let { error } = await atualizar(payload);
+        if (error && /caracteristicas/i.test(error.message || '')) {
+            delete payload.caracteristicas;
+            ({ error } = await atualizar(payload));
+        }
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true };
     } catch (err) {

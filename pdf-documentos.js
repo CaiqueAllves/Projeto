@@ -52,13 +52,22 @@ async function _docPdfCarregarDados(tipo, processoId) {
 
     const itens = (Array.isArray(proc.itens) ? proc.itens : []).filter(it => (it.produto || '').trim());
     const prodIds = [...new Set(itens.map(it => it.produto_id).filter(Boolean))];
-    let produtos = {}, embalagens = {}, unitarias = {};
+    let produtos = {}, embalagens = {}, unitarias = {}, composicao = {}, fabricantes = {};
     if (prodIds.length) {
-        const [{ data: prods }, { data: embs }] = await Promise.all([
-            supabaseClient.from('produtos').select('id, sku, nome, descricao, ncm, hscode').in('id', prodIds),
+        // produto completo: marca, GTIN, lote, datas, fabricante e características
+        // entram como colunas opcionais da Commercial Invoice (ci-colunas.js)
+        const [{ data: prods }, { data: embs }, { data: comps }] = await Promise.all([
+            supabaseClient.from('produtos').select('*').in('id', prodIds),
             supabaseClient.from('produto_embalagens').select('*').in('produto_id', prodIds),
+            supabaseClient.from('produto_composicao').select('produto_id, ingrediente, nome_tecnico, concentracao_pct, criado_em').in('produto_id', prodIds).order('criado_em'),
         ]);
         (prods || []).forEach(p => { produtos[p.id] = p; });
+        (comps || []).forEach(c => { (composicao[c.produto_id] ||= []).push(c); });
+        const fabIds = [...new Set((prods || []).map(p => p.empresa_parceira_id).filter(Boolean))];
+        if (fabIds.length) {
+            const { data: fabs } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, pais').in('id', fabIds);
+            (fabs || []).forEach(f => { fabricantes[f.id] = f; });
+        }
         // Embalagem de transporte (caixa) — a primeira cadastrada de cada produto
         (embs || []).filter(e => (e.tipo || 'caixa') === 'caixa')
             .forEach(e => { if (!embalagens[e.produto_id]) embalagens[e.produto_id] = e; });
@@ -77,7 +86,7 @@ async function _docPdfCarregarDados(tipo, processoId) {
         proc.documentos = documentos;
     }
 
-    return { proc, prof, exportador, importador, itens, produtos, embalagens, unitarias, numero,
+    return { proc, prof, exportador, importador, itens, produtos, embalagens, unitarias, composicao, fabricantes, numero,
              criadoPor: nomes[proc.criado_por] || nomes[prof?.criado_por] || null };
 }
 
@@ -161,16 +170,26 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     let total = 0;
     if (tipo === 'commercial') {
         Y = pvTituloSecao(doc, Y, t.mercadorias);
+        // Campos escolhidos na janela (ci-colunas.js); sem escolha, NCM/HS
+        // embaixo do produto, como sempre foi
+        const ci = opcoes.ci || proc.documentos?.ci_config || ciConfigPadrao();
+        const campos = (ci.campos || []);
+        const extras = campos.filter(c => c.posicao === 'coluna').slice(0, CI_MAX_COLUNAS);
+        const abaixo = campos.filter(c => !extras.includes(c));
+        // colunas extras dividem o que sobra além de 40mm para o produto (de 13 a 34mm cada)
+        const wExtra = extras.length ? Math.max(13, Math.min(34, (PV.CW - 102 - 40) / extras.length)) : 0;
         const linhas = d.itens.map((it, i) => {
             const p = d.produtos[it.produto_id] || {};
             const tot = (Number(it.qtd) || 0) * (Number(it.preco) || 0); total += tot;
-            const sub = [p.ncm ? `${t.col_ncm} ${p.ncm}` : '', p.hscode ? `HS ${p.hscode}` : ''].filter(Boolean).join(' · ');
+            const sub = abaixo.map(c => { const v = ciValorCampo(d, it, i, c, ci, I); return v ? `${ciRotulo(c, t)}: ${v}` : ''; }).filter(Boolean).join(' · ');
             return [String(i + 1), { txt: vv(p.sku) || '—', negrito: true, cor: PDF_CORES.AZUL }, { txt: vv(it.produto) || '—', sub },
+                    ...extras.map(c => ciValorCampo(d, it, i, c, ci, I) || '—'),
                     { txt: I.num(it.qtd, 0), sub: vv(it.unidade) }, I.num(it.preco), { txt: I.num(tot), negrito: true }];
         });
         Y = pvTabela(doc, Y, [{ rot: '#', w: 9 }, { rot: t.col_codigo, w: 21 }, { rot: t.col_produto, w: 0 },
+            ...extras.map(c => ({ rot: ciRotulo(c, t).toUpperCase(), w: wExtra })),
             { rot: t.col_qtd, w: 20, al: 'r' }, { rot: t.col_preco_unit, w: 24, al: 'r' }, { rot: t.col_total, w: 28, al: 'r' }],
-            linhas, { vazio: t.nenhum_produto });
+            linhas, { vazio: t.nenhum_produto, maxTxt: 4, maxSub: 6 });
         Y = pvResumo(doc, Y, {
             stats, extenso: total ? pdfValorPorExtenso(total, moeda, I.cod) : '', rotExtenso: t.total_extenso,
             totais: [[t.total_geral, I.num(total)]], rotuloTotal: `${t.total_geral}${moeda ? ' · ' + moeda : ''}`,
@@ -236,7 +255,13 @@ async function gerarEAnexarDocumentoProcesso(tipo, processoId, { baixar = true, 
         if (!ok) return null;
     }
 
-    const r = await gerarPDFDocumentoProcesso(tipo, processoId);
+    // Commercial Invoice: janela de colunas antes de gerar (ci-colunas.js)
+    let ci = null;
+    if (tipo === 'commercial' && typeof ciAbrirJanelaColunas === 'function') {
+        ci = await ciAbrirJanelaColunas(processoId);
+        if (!ci) return null;
+    }
+    const r = await gerarPDFDocumentoProcesso(tipo, processoId, { ci });
     if (!r) return null;
 
     if (baixar) {

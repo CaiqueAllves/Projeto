@@ -114,7 +114,7 @@ const PDF_IDIOMAS = {
         dias: n => `${n} dia${Number(n) === 1 ? '' : 's'}`, data_embarque: 'Embarque', container: 'Container',
         itens_proforma: 'ITENS DA PROFORMA', mercadorias: 'MERCADORIAS', volumes_pesos: 'VOLUMES E PESOS',
         col_codigo: 'CÓDIGO', col_descricao: 'DESCRIÇÃO DO PRODUTO', col_hs: 'HS CODE', col_ncm: 'NCM', col_fabricante: 'FABRICANTE',
-        col_marca: 'MARCA', col_composicao: 'COMPOSIÇÃO', col_volpeso: 'VOL./PESO', col_qtd: 'QTD', col_valor_unit: 'VALOR UNIT.', col_total: 'TOTAL',
+        col_gtin: 'GTIN', col_lote: 'LOTE', col_fabricacao: 'FABRICAÇÃO', col_validade: 'VALIDADE', col_marca: 'MARCA', col_composicao: 'COMPOSIÇÃO', col_volpeso: 'VOL./PESO', col_qtd: 'QTD', col_valor_unit: 'VALOR UNIT.', col_total: 'TOTAL',
         col_produto: 'PRODUTO', col_ncm_hs: 'NCM / HS', col_un: 'UN.', col_preco_unit: 'PREÇO UNIT.', col_sku: 'CÓDIGO SKU',
         col_marcacao: 'MARCAÇÃO / NUMERAÇÃO', col_tipo_emb: 'TIPO DE EMBALAGEM', col_qtd_pecas: 'QTD. DE PEÇAS',
         col_peso_liq_unit: 'PESO LÍQ. UNIT. (KG)', col_peso_bruto_unit: 'PESO BRUTO UNIT. (KG)', col_dimensoes: 'DIMENSÕES (CM)',
@@ -155,7 +155,7 @@ const PDF_IDIOMAS = {
         dias: n => `${n} day${Number(n) === 1 ? '' : 's'}`, data_embarque: 'Shipment Date', container: 'Container',
         itens_proforma: 'PROFORMA ITEMS', mercadorias: 'GOODS', volumes_pesos: 'PACKAGES AND WEIGHTS',
         col_codigo: 'CODE', col_descricao: 'PRODUCT DESCRIPTION', col_hs: 'HS CODE', col_ncm: 'NCM', col_fabricante: 'MANUFACTURER',
-        col_marca: 'BRAND', col_composicao: 'COMPOSITION', col_volpeso: 'PKG/WEIGHT', col_qtd: 'QTY', col_valor_unit: 'UNIT PRICE', col_total: 'TOTAL',
+        col_gtin: 'GTIN', col_lote: 'BATCH', col_fabricacao: 'MFG. DATE', col_validade: 'EXPIRY DATE', col_marca: 'BRAND', col_composicao: 'COMPOSITION', col_volpeso: 'PKG/WEIGHT', col_qtd: 'QTY', col_valor_unit: 'UNIT PRICE', col_total: 'TOTAL',
         col_produto: 'PRODUCT', col_ncm_hs: 'NCM / HS', col_un: 'UNIT', col_preco_unit: 'UNIT PRICE', col_sku: 'SKU CODE',
         col_marcacao: 'MARKS / NUMBERS', col_tipo_emb: 'PACKAGE TYPE', col_qtd_pecas: 'QTY OF PIECES',
         col_peso_liq_unit: 'NET WT. UNIT (KG)', col_peso_bruto_unit: 'GROSS WT. UNIT (KG)', col_dimensoes: 'DIMENSIONS (CM)',
@@ -196,7 +196,7 @@ const PDF_IDIOMAS = {
         dias: n => `${n} día${Number(n) === 1 ? '' : 's'}`, data_embarque: 'Embarque', container: 'Contenedor',
         itens_proforma: 'ÍTEMS DE LA PROFORMA', mercadorias: 'MERCANCÍAS', volumes_pesos: 'BULTOS Y PESOS',
         col_codigo: 'CÓDIGO', col_descricao: 'DESCRIPCIÓN DEL PRODUCTO', col_hs: 'CÓDIGO HS', col_ncm: 'NCM', col_fabricante: 'FABRICANTE',
-        col_marca: 'MARCA', col_composicao: 'COMPOSICIÓN', col_volpeso: 'BULTOS/PESO', col_qtd: 'CANT.', col_valor_unit: 'PRECIO UNIT.', col_total: 'TOTAL',
+        col_gtin: 'GTIN', col_lote: 'LOTE', col_fabricacao: 'FABRICACIÓN', col_validade: 'VENCIMIENTO', col_marca: 'MARCA', col_composicao: 'COMPOSICIÓN', col_volpeso: 'BULTOS/PESO', col_qtd: 'CANT.', col_valor_unit: 'PRECIO UNIT.', col_total: 'TOTAL',
         col_produto: 'PRODUCTO', col_ncm_hs: 'NCM / HS', col_un: 'UN.', col_preco_unit: 'PRECIO UNIT.', col_sku: 'CÓDIGO SKU',
         col_marcacao: 'MARCAS / NUMERACIÓN', col_tipo_emb: 'TIPO DE EMBALAJE', col_qtd_pecas: 'CANT. DE PIEZAS',
         col_peso_liq_unit: 'PESO NETO UNIT. (KG)', col_peso_bruto_unit: 'PESO BRUTO UNIT. (KG)', col_dimensoes: 'DIMENSIONES (CM)',
@@ -237,7 +237,7 @@ const PDF_IDIOMAS = {
         dias: n => `${n} jour${Number(n) === 1 ? '' : 's'}`, data_embarque: 'Expédition', container: 'Conteneur',
         itens_proforma: 'ARTICLES DE LA PRO FORMA', mercadorias: 'MARCHANDISES', volumes_pesos: 'COLIS ET POIDS',
         col_codigo: 'CODE', col_descricao: 'DESCRIPTION DU PRODUIT', col_hs: 'CODE SH', col_ncm: 'NCM', col_fabricante: 'FABRICANT',
-        col_marca: 'MARQUE', col_composicao: 'COMPOSITION', col_volpeso: 'COLIS/POIDS', col_qtd: 'QTÉ', col_valor_unit: 'PRIX UNIT.', col_total: 'TOTAL',
+        col_gtin: 'GTIN', col_lote: 'LOT', col_fabricacao: 'FABRICATION', col_validade: 'PÉREMPTION', col_marca: 'MARQUE', col_composicao: 'COMPOSITION', col_volpeso: 'COLIS/POIDS', col_qtd: 'QTÉ', col_valor_unit: 'PRIX UNIT.', col_total: 'TOTAL',
         col_produto: 'PRODUIT', col_ncm_hs: 'NCM / SH', col_un: 'UNITÉ', col_preco_unit: 'PRIX UNIT.', col_sku: 'CODE SKU',
         col_marcacao: 'MARQUES / NUMÉROS', col_tipo_emb: "TYPE D'EMBALLAGE", col_qtd_pecas: 'QTÉ DE PIÈCES',
         col_peso_liq_unit: 'POIDS NET UNIT. (KG)', col_peso_bruto_unit: 'POIDS BRUT UNIT. (KG)', col_dimensoes: 'DIMENSIONS (CM)',
@@ -278,7 +278,7 @@ const PDF_IDIOMAS = {
         dias: n => `${n} Tag${Number(n) === 1 ? '' : 'e'}`, data_embarque: 'Versanddatum', container: 'Container',
         itens_proforma: 'PROFORMA-POSITIONEN', mercadorias: 'WAREN', volumes_pesos: 'PACKSTÜCKE UND GEWICHTE',
         col_codigo: 'CODE', col_descricao: 'PRODUKTBESCHREIBUNG', col_hs: 'HS-CODE', col_ncm: 'NCM', col_fabricante: 'HERSTELLER',
-        col_marca: 'MARKE', col_composicao: 'ZUSAMMENSETZUNG', col_volpeso: 'PKT./GEWICHT', col_qtd: 'MENGE', col_valor_unit: 'EINZELPREIS', col_total: 'GESAMT',
+        col_gtin: 'GTIN', col_lote: 'CHARGE', col_fabricacao: 'HERSTELLUNG', col_validade: 'HALTBAR BIS', col_marca: 'MARKE', col_composicao: 'ZUSAMMENSETZUNG', col_volpeso: 'PKT./GEWICHT', col_qtd: 'MENGE', col_valor_unit: 'EINZELPREIS', col_total: 'GESAMT',
         col_produto: 'PRODUKT', col_ncm_hs: 'NCM / HS', col_un: 'EINH.', col_preco_unit: 'EINZELPREIS', col_sku: 'SKU-CODE',
         col_marcacao: 'MARKIERUNG / NUMMERN', col_tipo_emb: 'VERPACKUNGSART', col_qtd_pecas: 'STÜCKZAHL',
         col_peso_liq_unit: 'NETTOGEW. EINZ. (KG)', col_peso_bruto_unit: 'BRUTTOGEW. EINZ. (KG)', col_dimensoes: 'ABMESSUNGEN (CM)',
@@ -689,7 +689,8 @@ function pvTituloSecao(doc, Y, titulo) {
 }
 
 // Tabela: colunas = [{ rot, w (0 = resto), al: 'l'|'r' }], linhas = [[{ txt, sub?, negrito?, cor? }|string]]
-function pvTabela(doc, Y, colunas, linhas, { vazio = '' } = {}) {
+// maxTxt / maxSub: quantas linhas o texto e o subtexto de cada célula podem ocupar
+function pvTabela(doc, Y, colunas, linhas, { vazio = '', maxTxt = 3, maxSub = 2 } = {}) {
     const { ML, CW } = PV, C = PDF_CORES;
     const fixo = colunas.reduce((t, c) => t + (c.w || 0), 0);
     const cols = colunas.map(c => ({ ...c, w: c.w || (CW - fixo) }));
@@ -709,8 +710,8 @@ function pvTabela(doc, Y, colunas, linhas, { vazio = '' } = {}) {
     linhas.forEach((ln, r) => {
         const cel = ln.map(v => (typeof v === 'object' && v !== null) ? v : { txt: v });
         const altura = Math.max(...cel.map((c, i) => {
-            const linhasTxt = _pvCorta(doc, c.txt ?? '', cols[i].w - 4, 7.8).slice(0, 3).length;
-            const linhasSub = c.sub ? _pvCorta(doc, c.sub, cols[i].w - 4, 6.2).slice(0, 2).length : 0;
+            const linhasTxt = _pvCorta(doc, c.txt ?? '', cols[i].w - 4, 7.8).slice(0, maxTxt).length;
+            const linhasSub = c.sub ? _pvCorta(doc, c.sub, cols[i].w - 4, 6.2).slice(0, maxSub).length : 0;
             return linhasTxt * 3.6 + linhasSub * 3 + 3.6;
         }), 7.5);
         Y = pvGarantir(doc, Y, altura, y => cab(y));
@@ -720,10 +721,10 @@ function pvTabela(doc, Y, colunas, linhas, { vazio = '' } = {}) {
             const al = cols[i].al === 'r' ? 'right' : 'left';
             const x = al === 'right' ? xs[i] + cols[i].w - 2 : xs[i] + 2;
             let y = Y + 4.2;
-            _pvCorta(doc, c.txt ?? '', cols[i].w - 4, 7.8, c.negrito ? 'bold' : 'normal').slice(0, 3).forEach(t => {
+            _pvCorta(doc, c.txt ?? '', cols[i].w - 4, 7.8, c.negrito ? 'bold' : 'normal').slice(0, maxTxt).forEach(t => {
                 _pvT(doc, c.negrito ? 'bold' : 'normal', 7.8, c.cor || C.PRETO, t, x, y, { align: al }); y += 3.6;
             });
-            if (c.sub) _pvCorta(doc, c.sub, cols[i].w - 4, 6.2).slice(0, 2).forEach(t => { _pvT(doc, 'normal', 6.2, C.CINZA, t, x, y - 0.4, { align: al }); y += 3; });
+            if (c.sub) _pvCorta(doc, c.sub, cols[i].w - 4, 6.2).slice(0, maxSub).forEach(t => { _pvT(doc, 'normal', 6.2, C.CINZA, t, x, y - 0.4, { align: al }); y += 3; });
         });
         Y += altura;
     });

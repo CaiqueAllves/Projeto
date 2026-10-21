@@ -3855,3 +3855,25 @@ input.transp-campo-auto { background: #f8fafc; color: #334155; cursor: default; 
 .proc-standby-excluir-tit { color: #b91c1c; margin-top: 4px; }
 .proc-standby-lista li.proc-standby-excluido { border-color: #fecaca; color: #991b1b; text-decoration-color: #fca5a5; }
 .proc-standby-excluido .proc-standby-btn { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+
+/* Características do produto (formularios-produto.js) */
+.prod-carac-ajuda {
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    color: #64748b;
+}
+
+.prod-carac-linha {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 34px;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.prod-carac-remover {
+    border: none;
+    background: #fef2f2;
+    color: #dc2626;
+    border-radius: 8px;
+    cursor: pointer;
+}
