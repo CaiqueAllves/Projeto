@@ -80,7 +80,7 @@ async function docCarregar(opcoes = {}) {
     let processosMap = {};
     if (proformaIds.length > 0) {
         const { data: procs } = await supabaseClient
-            .from('processos').select('id, numero_processo, status, proforma_id, modal, documentos, criado_em, criado_por').in('proforma_id', proformaIds).neq('status', 'excluido')
+            .from('processos').select('id, numero_processo, status, proforma_id, modal, tipo, documentos, criado_em, criado_por').in('proforma_id', proformaIds).neq('status', 'excluido')
             .order('criado_em', { ascending: true }).order('numero_processo', { ascending: true });   // blocos na ordem dos embarques
         (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
     }
@@ -344,7 +344,25 @@ async function docAnexarArquivo(proformaId, chave, input) {
     if (file.size > DOC_ANEXO_MAX_MB * 1024 * 1024) { mostrarNotificacao(`Arquivo maior que ${DOC_ANEXO_MAX_MB} MB.`, 'erro'); input.value = ''; return; }
 
     const reg = _docReg(proformaId, chave);
-    if (reg?.assinado && !(await confirmarAcao('Este documento já está assinado. Substituir o arquivo mantém a assinatura registrada. Continuar?', { titulo: 'Substituir arquivo', confirmar: 'Substituir' }))) { input.value = ''; return; }
+    // Já tem arquivo: avisa que o anterior será trocado pelo novo (e, na Proforma
+    // Invoice de uma Proforma com Processo(s), que isso pode influenciar no Processo)
+    if (reg?.arquivo_path) {
+        const procs = (tipoId === 'proforma' && !processoId)
+            ? (_docProformas.find(p => String(p.id) === String(proformaId))?._processos || []) : [];
+        const origem = docArquivoDoSistema(reg.arquivo_path) ? 'gerado pelo sistema' : 'enviado por upload';
+        let msg = `O documento atual (${reg.arquivo_nome || 'arquivo'}), ${origem}, será substituído pelo novo arquivo "${file.name}" e não poderá ser recuperado.`;
+        if (procs.length) {
+            const nums = procs.map(pr => pr.numero_processo || 'Processo').join(', ');
+            msg += ` Esta Proforma já tem ${procs.length > 1 ? 'os Processos' : 'o Processo'} ${nums}, criado${procs.length > 1 ? 's' : ''} a partir dela:`
+                + ' trocar o arquivo da Proforma Invoice pode influenciar no Processo — os dados dele não são atualizados sozinhos e podem ficar diferentes do novo documento.';
+        }
+        if (reg.assinado) msg += ' A assinatura registrada é mantida.';
+        const ok = await confirmarAcao(msg + ' Deseja substituir?', {
+            titulo: procs.length ? 'Atenção: Proforma com Processo' : 'Substituir documento?',
+            confirmar: 'Sim, substituir', cancelar: 'Não', perigo: true
+        });
+        if (!ok) { input.value = ''; return; }
+    }
 
     const label = input.closest('label');
     label.classList.add('carregando');

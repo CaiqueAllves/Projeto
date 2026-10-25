@@ -7,6 +7,13 @@ module.exports = {
         try {
             ids = await h.criarDados(page, { processos: 2 });
             const r = await page.evaluate(async (ids) => {
+                // Commercial Invoice abre a janela de colunas (ci-colunas.js): aceita o padrão
+                const abrirColunas = ciAbrirJanelaColunas;
+                window.ciAbrirJanelaColunas = (id) => {
+                    const p = abrirColunas(id);
+                    const t = setInterval(() => { const b = document.querySelector('.ci-btn[data-acao="gerar"]'); if (b) { clearInterval(t); b.click(); } }, 100);
+                    return p;
+                };
                 const a = await gerarEAnexarDocumentoProcesso('commercial', ids.processos[0], { baixar: false });
                 const b = await gerarEAnexarDocumentoProcesso('commercial', ids.processos[1], { baixar: false });
                 const pl = await gerarPDFDocumentoProcesso('packing', ids.processos[0]);

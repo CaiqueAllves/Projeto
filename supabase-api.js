@@ -249,6 +249,9 @@ function _colunasColetaParceiro(dadosEmpresa) {
 
 // A migração de coleta/código pode ainda não ter rodado: se o banco reclamar de
 // uma coluna coleta_*/codigo, repete a gravação sem elas em vez de perder o cadastro.
+// Modelo "Trading" exige database-exportacao-indireta.sql (regra parceiros_modelo_check)
+const _MSG_MODELO_TRADING = 'O modelo "Trading" ainda não foi ativado no banco: rode database/database-exportacao-indireta.sql no Supabase.';
+
 function _semColunasColeta(payload) {
     const p = { ...payload };
     Object.keys(p).forEach(k => { if (k.startsWith('coleta_') || k === 'codigo') delete p[k]; });
@@ -300,6 +303,7 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
 
         if (errParceiro) {
             console.error('Erro ao salvar parceiro:', errParceiro);
+            if (/parceiros_modelo_check/.test(errParceiro.message || '')) return { sucesso: false, mensagem: _MSG_MODELO_TRADING };
             if (errParceiro.code === '23505') {
                 return { sucesso: false, mensagem: 'Já existe uma empresa cadastrada com este número de identificação (CNPJ/CPF).' };
             }
@@ -432,6 +436,7 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
             ({ error: errParceiro } = await filtrarDono(supabaseClient.from('parceiros').update(_semColunasColeta(payloadParceiro)).eq('id', id)));
         }
 
+        if (errParceiro && /parceiros_modelo_check/.test(errParceiro.message || '')) return { sucesso: false, mensagem: _MSG_MODELO_TRADING };
         if (errParceiro) return { sucesso: false, mensagem: 'Erro ao atualizar: ' + errParceiro.message };
 
         // 2. Substituir contatos (delete + insert)
@@ -910,6 +915,8 @@ function _payloadProcesso(dados) {
         remetente_parceiro_id:   dados.remetente_parceiro_id || null,
         status:                  dados.status || 'aberto',
         empresa_parceira_id:     dados.empresa_parceira_id || null,
+        trading_id:              dados.tipo === 'exportacao_indireta' ? (dados.trading_id || null) : null,
+        nf_remessa_data:         dados.tipo === 'exportacao_indireta' ? (dados.nf_remessa_data || null) : null,
         modal:                   dados.modal || null,
         moeda:                   dados.moeda || 'USD',
         valor_total:             dados.valor_total || null,
@@ -950,10 +957,12 @@ function _payloadProcesso(dados) {
 // Migração database-processos-sem-assinatura.sql pode não ter rodado ainda:
 // se o banco reclamar de sem_assinatura*, repete sem essas colunas em vez de
 // impedir o salvamento do Processo.
-// Idem para database-processos-itens.sql (coluna itens).
+// Idem para database-processos-itens.sql (coluna itens) e
+// database-exportacao-indireta.sql (trading_id, nf_remessa_data).
+const _PROCESSO_COLUNAS_OPCIONAIS = /sem_assinatura|itens|trading_id|nf_remessa_data/;
 function _semColunasSemAssinatura(payload) {
     const p = { ...payload };
-    Object.keys(p).forEach(k => { if (k.startsWith('sem_assinatura') || k === 'itens') delete p[k]; });
+    Object.keys(p).forEach(k => { if (k.startsWith('sem_assinatura') || ['itens', 'trading_id', 'nf_remessa_data'].includes(k)) delete p[k]; });
     return p;
 }
 
@@ -986,7 +995,7 @@ async function salvarProcesso(dados) {
         // Número pelo contador atômico (ver _inserirComNumero)
         const legado = () => _gerarNumeroProcesso(usuario.empresa_id);
         let { data, error } = await _inserirComNumero('processos', 'numero_processo', 'processo', 'PROC', payload, legado);
-        if (error && /sem_assinatura|itens/.test(error.message || '')) {
+        if (error && _PROCESSO_COLUNAS_OPCIONAIS.test(error.message || '')) {
             ({ data, error } = await _inserirComNumero('processos', 'numero_processo', 'processo', 'PROC', _semColunasSemAssinatura(payload), legado));
         }
 
@@ -1015,7 +1024,7 @@ async function atualizarProcesso(id, dados) {
             .eq('id', id)
             .eq('empresa_proprietaria_id', usuario.empresa_id);
         let { error } = await atualizar(payload);
-        if (error && /sem_assinatura|itens/.test(error.message || '')) {
+        if (error && _PROCESSO_COLUNAS_OPCIONAIS.test(error.message || '')) {
             ({ error } = await atualizar(_semColunasSemAssinatura(payload)));
         }
         if (error) return { sucesso: false, mensagem: error.message };
@@ -1634,7 +1643,8 @@ async function _maiorCodigoProforma() {
 // Antes do SQL rodar, salva sem esses campos.
 // + campos do PDF (database-proforma-campos-pdf.sql): local do Incoterm,
 // previsão de embarque, frete e seguro. Sem as colunas, salva sem eles.
-const _PROFORMA_CAMPOS_NOVOS = ['conta_bancaria_id', 'dados_bancarios', 'incoterm_local', 'previsao_embarque', 'frete_valor', 'seguro_valor'];
+// + importador final da exportação indireta (database-exportacao-indireta.sql).
+const _PROFORMA_CAMPOS_NOVOS = ['conta_bancaria_id', 'dados_bancarios', 'incoterm_local', 'previsao_embarque', 'frete_valor', 'seguro_valor', 'importador_final_id'];
 function _proformaCamposBanco(dados) {
     const c = {};
     _PROFORMA_CAMPOS_NOVOS.forEach(k => { if (k in dados) c[k] = dados[k] ?? null; });

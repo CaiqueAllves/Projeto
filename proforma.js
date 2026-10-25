@@ -265,7 +265,7 @@ function _profRenderCard(p) {
             <span class="prof-card-empresa-valor">${_profEscapar(emissor)}</span>
         </div>
         <div class="prof-card-empresa-linha">
-            <span class="prof-card-label">Importador:</span>
+            <span class="prof-card-label">${p.tipo === 'exportacao_indireta' ? 'Trading:' : 'Importador:'}</span>
             <span class="prof-card-empresa-valor">${_profEscapar(destinatario)}</span>
         </div>
         ${_profBotaoProcesso(p, status) ? `
@@ -284,7 +284,6 @@ function _profRenderCard(p) {
             <div class="prof-card-btns">
                 ${_profBotaoContaReceber(p)}
                 <button class="btn-acao btn-ver"     onclick="profVisualizar('${p.id}')" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                <button class="btn-acao btn-pdf"     onclick="profGerarPDF('${p.id}')" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
                 <button class="btn-acao btn-ver" onclick="profVerDocumentos('${p.id}')" title="Documentos da Proforma"><i class="fa-solid fa-folder-open"></i></button>
                 <button class="btn-acao btn-ver" data-codigo="${_profEscapar(p.codigo || '')}" onclick="abrirHistorico('proforma','${p.id}',this.dataset.codigo)" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="btn-acao btn-duplicar" onclick="profDuplicar('${p.id}')" title="Duplicar Proforma"><i class="fa-solid fa-copy"></i></button>
@@ -359,9 +358,6 @@ function profRenderizarLista(lista) {
                     ${_profBotaoContaReceber(p)}
                     <button class="btn-acao btn-ver" onclick="profVisualizar('${p.id}')" title="Visualizar">
                         <i class="fa-solid fa-eye"></i>
-                    </button>
-                    <button class="btn-acao btn-pdf" onclick="profGerarPDF('${p.id}')" title="Gerar PDF">
-                        <i class="fa-solid fa-file-pdf"></i>
                     </button>
                     <button class="btn-acao btn-ver" onclick="profVerDocumentos('${p.id}')" title="Documentos da Proforma">
                         <i class="fa-solid fa-folder-open"></i>
@@ -477,21 +473,7 @@ function profEditar(id) {
 }
 
 function profVisualizar(id) {
-    window.open(`formularios.html?tab=proposta&id=${id}&modo=visualizar`, '_blank');
-}
-
-async function profGerarPDF(id) {
-    const btn = event?.currentTarget;
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
-    try {
-        const res = await window.supabaseAPI.buscarProforma(id);
-        if (!res.sucesso || !res.data) { mostrarNotificacao('Proforma não encontrada.', 'erro'); return; }
-        await gerarPDFProformaDados(res.data);
-    } catch (e) {
-        mostrarNotificacao('Erro ao gerar PDF.', 'erro');
-    } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDF'; }
-    }
+    abrirResumo('proforma', id);
 }
 
 // ── Seguir com Processo ───────────────────
@@ -558,7 +540,7 @@ function profVerDocumentos(id) {
 }
 
 function profVerProcesso(processoId) {
-    window.open(`formularios.html?tab=processo&id=${processoId}&modo=visualizar`, '_blank');
+    abrirResumo('processo', processoId);
 }
 
 // ── Excluir (soft delete) ─────────────────

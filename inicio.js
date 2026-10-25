@@ -213,6 +213,7 @@ function salvarTarefas() {
 let _pendProformas          = []; // proformas com pelo menos 1 pendência, já com o detalhe calculado
 const _PEND_DOCS_ASSINATURA = ['proforma', 'commercial'];   // documentos cuja falta de assinatura vira pendência
 let _pendProdutosPendentes  = [];
+let _pendEtapasAtrasadas    = []; // processos em andamento com etapa vencida (etapas.js)
 
 function _pendEmissorNome(p) {
     if (p.emissor_tipo === 'terceiro') {
@@ -258,7 +259,7 @@ async function carregarPendenciasSistema() {
 
     if (proformaIds.length > 0) {
         const { data: procs } = await supabaseClient
-            .from('processos').select('id, numero_processo, status, proforma_id, modal, documentos').in('proforma_id', proformaIds);
+            .from('processos').select('id, numero_processo, status, proforma_id, modal, tipo, documentos').in('proforma_id', proformaIds);
         (procs || []).forEach(pr => { (processosMap[pr.proforma_id] ||= []).push(pr); });
 
         const resDocs = await window.supabaseAPI.buscarDocumentosProformas(proformaIds);
@@ -295,16 +296,62 @@ async function carregarPendenciasSistema() {
         };
     }).filter(Boolean);
 
+    _pendEtapasAtrasadas = await _pendCarregarEtapasAtrasadas(usuario).catch(() => []);
+
     const resProdutos = await window.supabaseAPI.buscarProdutos();
     const produtos = resProdutos.sucesso ? (resProdutos.data || []) : [];
     _pendProdutosPendentes = produtos.filter(pr => pr.status === 'pendente');
+}
+
+// Processos ainda em andamento com alguma etapa cujo prazo já passou — mesmo
+// cálculo do card de Processo (automáticas + prazos pela previsão de embarque).
+async function _pendCarregarEtapasAtrasadas(usuario) {
+    if (typeof etapasPreparar !== 'function' || !usuario?.empresa_id) return [];
+    const { data: procs } = await supabaseClient.from('processos')
+        .select('*')   // * — inclui nf_remessa_data só depois de database-exportacao-indireta.sql
+        .eq('empresa_proprietaria_id', usuario.empresa_id)
+        .not('status', 'in', '(concluido,cancelado,excluido)');
+    const lista = (procs || []).filter(p => Array.isArray(p.etapas) && p.etapas.length);
+    if (!lista.length) return [];
+    const proformaIds = [...new Set(lista.map(p => p.proforma_id).filter(Boolean))];
+    const [{ data: pfs }, info] = await Promise.all([
+        proformaIds.length ? supabaseClient.from('proformas').select('id, codigo, previsao_embarque').in('id', proformaIds) : { data: [] },
+        etapasInfoDocumentos(lista),
+    ]);
+    const pfMap = Object.fromEntries((pfs || []).map(p => [p.id, p]));
+    return lista.map(p => {
+        const etapas = etapasPreparar(p, { ...(info[p.id] || {}), previsaoProforma: pfMap[p.proforma_id]?.previsao_embarque });
+        const atrasadas = etapasResumo(etapas).atrasadas;
+        return atrasadas.length ? { processo: p, proformaCodigo: pfMap[p.proforma_id]?.codigo || '', atrasadas } : null;
+    }).filter(Boolean).sort((a, b) => etapaSituacao(b.atrasadas[0]).dias - etapaSituacao(a.atrasadas[0]).dias);
+}
+
+function _pendCardEtapas(item) {
+    const p = item.processo;
+    const linhas = item.atrasadas.slice(0, 3).map(e =>
+        `<div class="pend-card-linha"><i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i> <span>${_pendEsc(e.nome)} — <strong>${_pendEsc(etapaSituacaoTexto(e))}</strong></span></div>`).join('');
+    const mais = item.atrasadas.length > 3 ? `<div class="pend-card-linha"><span>e mais ${item.atrasadas.length - 3}</span></div>` : '';
+    return `
+        <div class="pend-card pend-card-proforma">
+            <div class="pend-card-topo">
+                <div class="pendencia-icon" style="background:#dc262618; color:#dc2626;"><i class="fa-solid fa-list-check"></i></div>
+                <div class="pend-card-titulo-wrap">
+                    <div class="pend-card-titulo">${_pendEsc(p.numero_processo || '—')}</div>
+                    <div class="pend-card-sub">${item.proformaCodigo ? 'Proforma ' + _pendEsc(item.proformaCodigo) : 'Processo'}</div>
+                </div>
+            </div>
+            <div class="pend-card-corpo">${linhas}${mais}
+                <div class="pend-card-linha"><a href="formularios.html?tab=processo&id=${encodeURIComponent(p.id)}" target="_blank" rel="opener">Abrir Processo</a></div>
+            </div>
+            <div class="pend-card-rodape pend-tags"><span class="pend-tag pend-tag-atraso">${item.atrasadas.length} etapa${item.atrasadas.length > 1 ? 's' : ''} atrasada${item.atrasadas.length > 1 ? 's' : ''}</span></div>
+        </div>`;
 }
 
 function renderizarTarefas() {
     const container = document.getElementById('tasksContainer');
     if (!container) return;
 
-    const totalPendencias = _pendProformas.length + _pendProdutosPendentes.length;
+    const totalPendencias = _pendProformas.length + _pendProdutosPendentes.length + _pendEtapasAtrasadas.length;
     const totalPendente   = tarefas.filter(t => !t.concluida).length + totalPendencias;
 
     const badge = document.getElementById('tarefasCountBadge');
@@ -329,6 +376,13 @@ function renderizarTarefas() {
         container.appendChild(_pendGrupo(
             `<div class="tasks-group-header pendencias-header"><i class="fa-solid fa-triangle-exclamation"></i> Pendências do Sistema <span class="pendencias-count">${_pendProformas.length}</span></div>`,
             _pendProformas.map(_pendCardProforma).join('')));
+    }
+
+    // Grupo: Etapas atrasadas — 1 card por Processo
+    if (_pendEtapasAtrasadas.length > 0) {
+        container.appendChild(_pendGrupo(
+            `<div class="tasks-group-header pendencias-header"><i class="fa-solid fa-hourglass-end"></i> Etapas Atrasadas <span class="pendencias-count">${_pendEtapasAtrasadas.length}</span></div>`,
+            _pendEtapasAtrasadas.map(_pendCardEtapas).join('')));
     }
 
     // Grupo 3: Produtos Pendentes — não pertencem a uma Proforma

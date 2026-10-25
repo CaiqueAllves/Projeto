@@ -80,7 +80,7 @@ function salvarProposta(e) {
     // ── Destinatário ──────────────────────
     const btnCad = document.getElementById('prop-btn-emp-dest-cadastrada');
     if (btnCad?.classList.contains('ativo')) {
-        checar('prop-emp-dest-busca', 'Selecione o Importador.');
+        checar('prop-emp-dest-busca', _propEhIndireta() ? 'Selecione a Trading (compradora).' : 'Selecione o Importador.');
     } else {
         checar('prop-emp-dest-razao', 'Informe a Razão Social do Importador.');
     }
@@ -208,6 +208,7 @@ function _coletarDadosProposta() {
         destinatario_razao_social: g('prop-emp-dest-razao') || null,
         destinatario_doc:        g('prop-emp-dest-doc') || null,
         destinatario_doc_tipo:   g('prop-emp-dest-doc-tipo') || null,
+        importador_final_id:     _propEhIndireta() ? (g('prop-imp-final-id') || null) : null,
         validade_dias:           g('prop-validade-dias') || null,
         obs_status:              g('prop-obs-status') || null,
         ..._propContaEscolhida(emissorTipo),
@@ -608,9 +609,19 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
                 (e.nome_fantasia || '').toLowerCase().includes(q) ||
                 (e.documento     || '').includes(q))
             : _acEmpresas;
+        // Exportação indireta: a destinatária é a trading (modelo "Trading" no cadastro)
+        const indireta = _propEhIndireta();
+        const opcoes = indireta ? filtradas.filter(e => e.modelo === 'trading') : filtradas;
+        if (indireta && !opcoes.length) {
+            lista.innerHTML = `<div class="autocomplete-vazio">${_acEmpresas.some(e => e.modelo === 'trading')
+                ? 'Nenhuma trading encontrada' : 'Nenhuma trading cadastrada — cadastre a empresa com o modelo "Trading"'}</div>`;
+            _acPosicionar(input, lista);
+            lista.classList.add('aberta');
+            return;
+        }
 
-        lista.innerHTML = filtradas.length
-            ? filtradas.slice(0, 30).map(e => `
+        lista.innerHTML = opcoes.length
+            ? opcoes.slice(0, 30).map(e => `
                 <div class="autocomplete-item"
                      data-id="${e.id}"
                      data-razao="${escHtml(e.razao_social  || '')}"
@@ -686,6 +697,72 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
 
     document.addEventListener('click', e => {
         if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('aberta');
+    });
+    input.addEventListener('blur', () => setTimeout(() => lista.classList.remove('aberta'), 150));
+}
+
+// ========================================
+// PROPOSTA — EXPORTAÇÃO INDIRETA
+// ========================================
+// Na indireta a Proforma é a venda para a trading (destinatária/compradora);
+// o importador lá fora é opcional ("Importador final", proformas.importador_final_id).
+
+function _propEhIndireta() {
+    return document.getElementById('prop-tipo')?.value === 'exportacao_indireta';
+}
+
+function propAtualizarModoIndireta() {
+    const indireta = _propEhIndireta();
+    const label = document.querySelector('label[for="prop-emp-dest-busca"]');
+    if (label) label.innerHTML = `${indireta ? 'Trading / Comercial Exportadora' : 'Importador'} <span class="required">*</span>`;
+    const busca = document.getElementById('prop-emp-dest-busca');
+    if (busca) busca.placeholder = indireta ? 'Buscar trading cadastrada...' : 'Buscar empresa cadastrada...';
+    const grupo = document.getElementById('prop-imp-final-group');
+    if (grupo) grupo.style.display = indireta ? '' : 'none';
+    const aviso = document.getElementById('prop-indireta-aviso');
+    if (aviso) aviso.style.display = indireta ? '' : 'none';
+}
+
+async function _propPreencherImportadorFinal(d) {
+    const idEl = document.getElementById('prop-imp-final-id');
+    const buscaEl = document.getElementById('prop-imp-final-busca');
+    if (idEl) idEl.value = d.importador_final_id || '';
+    if (buscaEl) buscaEl.value = '';
+    if (d.importador_final_id && buscaEl) {
+        const { data: parc } = await supabaseClient.from('parceiros').select('razao_social, nome_fantasia').eq('id', d.importador_final_id).maybeSingle();
+        if (parc) buscaEl.value = parc.razao_social || parc.nome_fantasia || '';
+    }
+    propAtualizarModoIndireta();
+}
+
+function iniciarImportadorFinalProposta() {
+    const input = document.getElementById('prop-imp-final-busca');
+    const lista = document.getElementById('prop-imp-final-lista');
+    const idInput = document.getElementById('prop-imp-final-id');
+    if (!input || !lista) return;
+    document.getElementById('prop-tipo')?.addEventListener('change', propAtualizarModoIndireta);
+
+    async function renderLista(termo) {
+        await _acCarregarEmpresas();
+        const q = (termo || '').trim().toLowerCase();
+        const opcoes = _acEmpresas.filter(e => e.modelo !== 'trading' && e.modelo !== 'transportadora' && (!q
+            || (e.razao_social || '').toLowerCase().includes(q) || (e.nome_fantasia || '').toLowerCase().includes(q) || (e.documento || '').includes(q)));
+        lista.innerHTML = opcoes.length
+            ? opcoes.slice(0, 30).map(e => `<div class="autocomplete-item" data-id="${e.id}" data-razao="${escHtml(e.razao_social || '')}">
+                    <span class="ac-nome">${escHtml(e.razao_social || '')}</span>
+                    ${e.nome_fantasia ? `<span class="ac-fantasia">${escHtml(e.nome_fantasia)}</span>` : ''}</div>`).join('')
+            : '<div class="autocomplete-vazio">Nenhuma empresa encontrada</div>';
+        _acPosicionar(input, lista);
+        lista.classList.add('aberta');
+    }
+    input.addEventListener('input', () => { if (idInput) idInput.value = ''; renderLista(input.value); });
+    input.addEventListener('focus', () => renderLista(input.value));
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        input.value = item.dataset.razao;
+        if (idInput) idInput.value = item.dataset.id || '';
+        lista.classList.remove('aberta');
     });
     input.addEventListener('blur', () => setTimeout(() => lista.classList.remove('aberta'), 150));
 }
@@ -800,6 +877,7 @@ async function propCarregarEdicao(id) {
     _propContaSelecionar = d.conta_bancaria_id || '';
     propCarregarContasBancarias();
     _propPreencherCamposPdf(d);
+    await _propPreencherImportadorFinal(d);
 
     // Destinatário
     if (d.destinatario_id) {
@@ -916,6 +994,7 @@ async function propCarregarDuplicar(id) {
     _propContaSelecionar = d.conta_bancaria_id || '';
     propCarregarContasBancarias();
     _propPreencherCamposPdf(d);
+    await _propPreencherImportadorFinal(d);
 
     // Destinatário
     if (d.destinatario_id) {

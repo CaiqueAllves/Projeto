@@ -385,18 +385,22 @@
     margin-top: 16px;
     align-items: flex-start;
     overflow-x: auto;   /* colunas não cabem na tela: rola na horizontal */
+    /* ocupa a área até o fim (.content é coluna flex de altura fixa): a barra
+       de rolagem fica no pé da tela, não logo abaixo da coluna mais alta */
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .kanban-col {
-    /* largura mínima para os botões de ação do card (até 9) caberem numa linha */
-    flex: 1 0 360px;
-    min-width: 360px;
+    /* largura mínima para os 7 botões de ação do card caberem numa linha */
+    flex: 1 0 300px;
+    min-width: 300px;
     background: #f8fafc;
     border-radius: 14px;
     border: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 220px);
+    max-height: 100%;
 }
 
 .kanban-col-header {

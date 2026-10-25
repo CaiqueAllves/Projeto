@@ -30,6 +30,11 @@ async function salvarProcesso(e) {
         document.getElementById('proc-cliente')?.focus();
         return;
     }
+    if (tipo === 'exportacao_indireta' && !document.getElementById('proc-trading-id')?.value) {
+        mostrarNotificacao('Exportação indireta: selecione a Trading / Comercial Exportadora antes de salvar.', 'warning');
+        document.getElementById('proc-trading-busca')?.focus();
+        return;
+    }
     const procModal    = document.getElementById('proc-modal')?.value;
     const procIncoterm = document.getElementById('proc-incoterm')?.value;
     if (procModal && procModal !== 'maritimo' && INCOTERMS_MARITIMOS.includes(procIncoterm)) {
@@ -173,6 +178,7 @@ async function procCarregarEdicao(id) {
     set('proc-status',            p.status);
     fire('proc-status', 'change');
     set('proc-data-abertura',     p.data_abertura);
+    set('proc-data-previsao',     p.data_previsao);
     set('proc-data-embarque',     p.data_embarque);
     set('proc-data-chegada',      p.data_chegada);
     set('proc-data-cancelamento', p.data_cancelamento);
@@ -208,6 +214,11 @@ async function procCarregarEdicao(id) {
     set('proc-origem-coleta-complemento', oc.complemento);
     set('proc-origem-coleta-horario',     oc.horario);
     set('proc-origem-coleta-intervalo',   oc.intervalo);
+
+    // Exportação indireta: trading e NF de remessa
+    set('proc-nf-remessa-data', p.nf_remessa_data);
+    if (p.trading_id) await _procPreencherTrading(p.trading_id);
+    procAtualizarModoIndireta();
 
     // Destino
     if (p.empresa_parceira_id) {
@@ -248,6 +259,15 @@ async function procCarregarEdicao(id) {
     // Documentos
     const docs = p.documentos || {};
     Object.entries(docs).forEach(([chave, valor]) => set(`doc-num-${chave}`, valor));
+
+    // Sem previsão de embarque salva no Processo: usa a da Proforma (base dos prazos)
+    if (!p.data_previsao && p.proforma_id) {
+        const { data: pf } = await supabaseClient.from('proformas').select('previsao_embarque').eq('id', p.proforma_id).maybeSingle();
+        if (pf?.previsao_embarque) set('proc-data-previsao', pf.previsao_embarque);
+    }
+    // com Proforma, recalcula depois de saber se a Proforma Invoice está assinada
+    // (_docCarregarAnexosProcesso) — antes disso a etapa "Pedido Confirmado" cairia
+    if (!p.proforma_id) procReaplicarEtapas();
 
     // Transporte
     const t = p.transporte || {};
@@ -365,6 +385,8 @@ function _coletarDadosProcesso() {
         documento_tipo:          v('proc-documento-tipo'),
         documento:               v('proc-documento'),
         remetente_parceiro_id:   remetenteId,
+        trading_id:              document.getElementById('proc-trading-id')?.value || null,
+        nf_remessa_data:         document.getElementById('proc-nf-remessa-data')?.value || null,
         incoterm:                v('proc-incoterm'),
         modal:                   v('proc-modal'),
         observacoes:             v('proc-observacoes'),
@@ -372,6 +394,7 @@ function _coletarDadosProcesso() {
         // Status / prazos / container
         status:                  document.getElementById('proc-status')?.value || 'aberto',
         data_abertura:           document.getElementById('proc-data-abertura')?.value || null,
+        data_previsao:           document.getElementById('proc-data-previsao')?.value || null,
         data_embarque:           document.getElementById('proc-data-embarque')?.value || null,
         data_chegada:            document.getElementById('proc-data-chegada')?.value || null,
         data_cancelamento:       document.getElementById('proc-data-cancelamento')?.value || null,
@@ -462,6 +485,8 @@ function _coletarDadosProcesso() {
             apolice:    _docNumero('doc-num-apolice'),
             crt:        _docNumero('doc-num-crt'),
             micdta:     _docNumero('doc-num-micdta'),
+            nfremessa:  _docNumero('doc-num-nfremessa'),
+            memorando:  _docNumero('doc-num-memorando'),
         },
 
         // Transporte
@@ -821,31 +846,7 @@ function iniciarAutocompleteAcondicionamento() {
 // ETAPAS DO PROCESSO
 // ========================================
 
-const ETAPAS_PADRAO = {
-    exportacao_direta: [
-        'Pedido Confirmado',
-        'Licença de Exportação (LE)',
-        'Registro da DUE',
-        'Booking / Reserva',
-        'Embarque Confirmado',
-        'BL / AWB / CTR Emitido',
-        'Chegada no Destino',
-        'Desembaraço no Destino',
-        'Entrega ao Importador',
-    ],
-    exportacao_indireta: [
-        'Pedido Confirmado',
-        'Nota Fiscal de Exportação Emitida',
-        'Entrega à Trading / Comercial Exportadora',
-        'Licença de Exportação (LE)',
-        'Registro da DUE',
-        'Booking / Reserva',
-        'Embarque Confirmado',
-        'BL / AWB / CTR Emitido',
-        'Chegada no Destino',
-        'Desembaraço no Destino',
-    ],
-};
+// Listas padrão (tipo + modal), prazos e conclusão automática: etapas.js
 
 let _etapas = [];
 
@@ -865,8 +866,15 @@ function renderEtapas() {
             <div class="etapa-col-check">
                 <input type="checkbox" class="etapa-check" ${e.concluida ? 'checked' : ''}>
             </div>
-            <input type="text" class="etapa-nome" value="${escHtml(e.nome || '')}" placeholder="Nome da etapa">
-            <input type="date" class="etapa-data" value="${escHtml(e.data || '')}">
+            <div class="etapa-col-nome">
+                <input type="text" class="etapa-nome" value="${escHtml(e.nome || '')}" placeholder="Nome da etapa">
+                ${_etapaOrigemHtml(e)}
+            </div>
+            <label class="etapa-campo etapa-campo-data"><span>Concluída em</span>
+                <input type="date" class="etapa-data" value="${escHtml(e.data || '')}" title="Data em que foi concluída"></label>
+            <label class="etapa-campo etapa-campo-prazo"><span>Prazo</span>
+                <input type="date" class="etapa-prazo${etapaSituacao(e)?.atrasada ? ' atrasada' : ''}" value="${escHtml(e.prazo || '')}"
+                       title="${e.prazo_manual ? 'Prazo digitado (apague para voltar ao cálculo pela previsão de embarque)' : 'Prazo calculado pela previsão de embarque — pode alterar'}"></label>
             <input type="text" class="etapa-resp" value="${escHtml(e.responsavel || '')}" placeholder="Responsável">
             <button type="button" class="btn-remover-etapa" title="Remover">
                 <i class="fa-solid fa-xmark"></i>
@@ -878,7 +886,9 @@ function renderEtapas() {
             const row = chk.closest('.etapa-row');
             const id  = row.getAttribute('data-id');
             const et  = _etapas.find(e => e.id === id);
-            if (et) { et.concluida = chk.checked; row.classList.toggle('concluida', chk.checked); }
+            if (!et) return;
+            _etapas = _etapas.map(x => x.id === id ? etapaMarcar(x, chk.checked) : x);
+            renderEtapas();
         });
     });
     lista.querySelectorAll('.etapa-nome').forEach(inp => {
@@ -891,6 +901,15 @@ function renderEtapas() {
         inp.addEventListener('change', () => {
             const et = _etapas.find(e => e.id === inp.closest('.etapa-row').getAttribute('data-id'));
             if (et) et.data = inp.value;
+        });
+    });
+    lista.querySelectorAll('.etapa-prazo').forEach(inp => {
+        inp.addEventListener('change', () => {
+            const id = inp.closest('.etapa-row').getAttribute('data-id');
+            // prazo apagado volta para o cálculo automático
+            _etapas = _etapas.map(x => x.id === id ? { ...x, prazo: inp.value, prazo_manual: !!inp.value } : x);
+            procReaplicarEtapas();
+            renderEtapas();
         });
     });
     lista.querySelectorAll('.etapa-resp').forEach(inp => {
@@ -908,16 +927,123 @@ function renderEtapas() {
     });
 }
 
-function carregarEtapasPadrao(tipo) {
-    const padrao = ETAPAS_PADRAO[tipo];
-    if (!padrao) return;
-    const substituiu = _etapas.length > 0;
+// "automática — Nº DUE …" ou "por Fulano em 21/10" embaixo do nome (etapas.js)
+function _etapaOrigemHtml(e) {
+    const sit = etapaSituacao(e);
+    if (sit && (sit.atrasada || sit.vence)) {
+        return `<small class="etapa-origem ${sit.atrasada ? 'etapa-origem--atrasada' : 'etapa-origem--vence'}"><i class="fa-solid ${sit.atrasada ? 'fa-triangle-exclamation' : 'fa-hourglass-half'}"></i> ${escHtml(etapaSituacaoTexto(e))}</small>`;
+    }
+    if (!e.concluida || (!e.auto && !e.por)) return '';
+    const quando = e.em ? new Date(e.em).toLocaleDateString('pt-BR') : '';
+    return e.auto
+        ? `<small class="etapa-origem etapa-origem--auto" title="Concluída automaticamente"><i class="fa-solid fa-bolt"></i> automática — ${escHtml(e.auto)}</small>`
+        : `<small class="etapa-origem"><i class="fa-solid fa-user-check"></i> por ${escHtml(e.por)}${quando ? ' em ' + quando : ''}</small>`;
+}
+
+// Conclusão automática pelo que já está no formulário: Nº de documentos,
+// datas de embarque/chegada, Proforma Invoice assinada, DUE anexada.
+let _procProformaAssinada = false;
+function procReaplicarEtapas() {
+    if (typeof etapasAplicarAutomaticas !== 'function' || !_etapas.length) return;
+    const documentos = {};
+    ['le', 'due', 'nfe', 'bl', 'awb', 'crt', 'micdta', 'nfremessa', 'memorando'].forEach(k => { documentos[k] = _docNumero('doc-num-' + k); });
+    const nf_remessa_data = document.getElementById('proc-nf-remessa-data')?.value || null;
+    const data_embarque = document.getElementById('proc-data-embarque')?.value || null;
+    const data_chegada  = document.getElementById('proc-data-chegada')?.value || null;
+    const r = etapasAplicarAutomaticas(_etapas, etapasContexto({
+        documentos, data_embarque, data_chegada,
+        proformaAssinada: _procProformaAssinada,
+        dueAnexada: !!_docAnexosProcesso.due,
+        memorandoAnexado: !!_docAnexosProcesso.memorando,
+    }));
+    // prazos pela previsão de embarque (ou embarque/chegada já realizados)
+    const comPrazo = etapasCalcularPrazos(r.etapas, {
+        previsao: document.getElementById('proc-data-previsao')?.value || null,
+        data_embarque, data_chegada, nf_remessa_data, modal: document.getElementById('proc-modal')?.value || '',
+    });
+    if (r.mudou || comPrazo.some((e, i) => e !== r.etapas[i])) { _etapas = comPrazo; renderEtapas(); }
+}
+
+// ========================================
+// EXPORTAÇÃO INDIRETA — trading e documentos próprios
+// ========================================
+function procAtualizarModoIndireta() {
+    const indireta = document.getElementById('proc-tipo')?.value === 'exportacao_indireta';
+    const grupo = document.getElementById('proc-trading-group');
+    if (grupo) grupo.style.display = indireta ? '' : 'none';
+    document.querySelectorAll('.doc-indireta-field').forEach(el => { el.style.display = indireta ? '' : 'none'; });
+}
+
+async function _procPreencherTrading(id) {
+    const { data: t } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento').eq('id', id).maybeSingle();
+    const set = (sel, val) => { const el = document.getElementById(sel); if (el) el.value = val || ''; };
+    set('proc-trading-id', t?.id || id);
+    set('proc-trading-busca', t ? (t.razao_social || t.nome_fantasia) : '');
+    set('proc-trading-doc', t?.documento ? _mascaraDocBR(t.documento) : '');
+}
+
+function iniciarAutocompleteTrading() {
+    const input = document.getElementById('proc-trading-busca');
+    const lista = document.getElementById('proc-trading-lista');
+    if (!input || !lista) return;
+    async function renderLista(termo) {
+        await _acCarregarEmpresas();
+        const q = (termo || '').trim().toLowerCase();
+        const tradings = _acEmpresas.filter(e => e.modelo === 'trading');
+        const opcoes = tradings.filter(e => !q || (e.razao_social || '').toLowerCase().includes(q)
+            || (e.nome_fantasia || '').toLowerCase().includes(q) || (e.documento || '').includes(q));
+        lista.innerHTML = opcoes.length
+            ? opcoes.slice(0, 30).map(e => `<div class="autocomplete-item" data-id="${e.id}" data-razao="${escHtml(e.razao_social || '')}" data-doc="${escHtml(e.documento || '')}">
+                    <span class="ac-nome">${escHtml(e.razao_social || '')}</span>
+                    ${e.nome_fantasia ? `<span class="ac-fantasia">${escHtml(e.nome_fantasia)}</span>` : ''}</div>`).join('')
+            : `<div class="autocomplete-vazio">${tradings.length ? 'Nenhuma trading encontrada' : 'Nenhuma trading cadastrada — cadastre a empresa com o modelo "Trading"'}</div>`;
+        _acPosicionar(input, lista);
+        lista.classList.add('aberta');
+    }
+    input.addEventListener('input', () => {
+        document.getElementById('proc-trading-id').value = '';
+        document.getElementById('proc-trading-doc').value = '';
+        renderLista(input.value);
+    });
+    input.addEventListener('focus', () => renderLista(input.value));
+    lista.addEventListener('mousedown', e => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        input.value = item.dataset.razao;
+        document.getElementById('proc-trading-id').value = item.dataset.id || '';
+        document.getElementById('proc-trading-doc').value = item.dataset.doc ? _mascaraDocBR(item.dataset.doc) : '';
+        lista.classList.remove('aberta');
+    });
+    input.addEventListener('blur', () => setTimeout(() => lista.classList.remove('aberta'), 150));
+}
+
+function carregarEtapasPadrao(tipo, modal = document.getElementById('proc-modal')?.value || '') {
+    const padrao = etapasPadrao(tipo, modal);
+    if (!padrao.length) return false;
     _etapas = padrao.map(nome => ({ id: _etapaId(), nome, data: '', responsavel: '', concluida: false }));
     renderEtapas();
-    const tipoEl = document.getElementById('proc-tipo');
-    const tipoNome = tipoEl?.options[tipoEl.selectedIndex]?.text || tipo;
-    if (substituiu) {
-        mostrarNotificacao(`Etapas atualizadas para o tipo "${tipoNome}".`, 'info');
+    procReaplicarEtapas();
+    return true;
+}
+
+// Tipo ou modal mudou: lista sem andamento troca sozinha; com andamento, só
+// quando o próprio usuário mudou o campo e confirmou (mudança feita pelo
+// sistema ao carregar/preencher o formulário não mexe em etapas com andamento).
+async function procTrocarEtapasPadrao(ev) {
+    const tipo = document.getElementById('proc-tipo')?.value;
+    if (!tipo) return;
+    const modalEl = document.getElementById('proc-modal');
+    const modalNome = modalEl?.value ? modalEl.options[modalEl.selectedIndex]?.text : '';
+    const tinha = _etapas.length > 0;
+    if (tinha && !etapasIntocadas(_etapas)) {
+        if (!ev?.isTrusted) return;
+        const ok = await confirmarAcao(
+            `Trocar as etapas pela lista padrão${modalNome ? ' do modal ' + modalNome : ''}? As etapas atuais (datas, responsáveis e prazos digitados) serão substituídas — as concluídas automaticamente voltam sozinhas.`,
+            { titulo: 'Trocar etapas', confirmar: 'Trocar etapas', cancelar: 'Manter as atuais' });
+        if (!ok) return;
+    }
+    if (carregarEtapasPadrao(tipo) && tinha && ev?.isTrusted) {
+        mostrarNotificacao(`Etapas atualizadas${modalNome ? ' para o modal ' + modalNome : ''}.`, 'info');
     }
 }
 
@@ -963,6 +1089,11 @@ function iniciarEtapas() {
     document.getElementById('proc-destino-pais-lista')?.addEventListener('mousedown', () => setTimeout(atualizarResumoEtapas, 50));
     atualizarResumoEtapas();
 
+    // Nº de documento / datas mudaram: etapas automáticas acompanham
+    document.addEventListener('change', ev => {
+        if (ev.target?.matches?.('input[id^="doc-num-"], #proc-data-embarque, #proc-data-chegada, #proc-data-previsao, #proc-nf-remessa-data')) procReaplicarEtapas();
+    });
+
     document.getElementById('btn-add-etapa')?.addEventListener('click', () => {
         _etapas.push({ id: _etapaId(), nome: '', data: '', responsavel: '', concluida: false });
         renderEtapas();
@@ -970,9 +1101,10 @@ function iniciarEtapas() {
         rows[rows.length - 1]?.querySelector('.etapa-nome')?.focus();
     });
 
-    document.getElementById('proc-tipo')?.addEventListener('change', function () {
-        if (this.value) carregarEtapasPadrao(this.value);
-    });
+    document.getElementById('proc-tipo')?.addEventListener('change', procTrocarEtapasPadrao);
+    document.getElementById('proc-tipo')?.addEventListener('change', procAtualizarModoIndireta);
+    iniciarAutocompleteTrading();
+    document.getElementById('proc-modal')?.addEventListener('change', procTrocarEtapasPadrao);
 
     renderEtapas();
 }
@@ -1444,6 +1576,10 @@ async function _procPreencherDaProforma(id) {
             incotermEl.dispatchEvent(new Event('change'));
         }
 
+        // Previsão de embarque da Proforma (base dos prazos das etapas)
+        const previsaoEl = document.getElementById('proc-data-previsao');
+        if (previsaoEl && !previsaoEl.value && data.previsao_embarque) { previsaoEl.value = data.previsao_embarque; procReaplicarEtapas(); }
+
         // País de Origem / Destino
         const origemEl = document.getElementById('proc-origem-pais');
         if (origemEl && data.origem_pais) origemEl.value = data.origem_pais;
@@ -1494,11 +1630,16 @@ async function _procPreencherDaProforma(id) {
         // Destinatário — endereço registrado do parceiro de destino da proforma
         // (destinatario_id também referencia "parceiros"). Preenche o mesmo
         // endereço completo já cadastrado, em vez de deixar em branco.
-        if (data.destinatario_id) {
+        // Exportação indireta: a destinatária da Proforma é a trading (exportadora);
+        // o importador do Processo é o importador final da Proforma.
+        const indireta = data.tipo === 'exportacao_indireta';
+        if (indireta && data.destinatario_id) await _procPreencherTrading(data.destinatario_id);
+        const destinoId = indireta ? data.importador_final_id : data.destinatario_id;
+        if (destinoId) {
             const { data: destParceiro } = await supabaseClient
                 .from('parceiros')
                 .select('id, razao_social, nome_fantasia, documento, codigo, cep, estado, cidade, bairro, endereco, numero, complemento')
-                .eq('id', data.destinatario_id).single();
+                .eq('id', destinoId).single();
             if (destParceiro) {
                 const buscaEl = document.getElementById('proc-emp-dest-busca');
                 const idEl    = document.getElementById('proc-emp-dest-id');
@@ -1511,7 +1652,7 @@ async function _procPreencherDaProforma(id) {
 
                 _procPreencherEndereco('destino', destParceiro);
             }
-        } else if (data.destinatario_razao_social) {
+        } else if (!indireta && data.destinatario_razao_social) {
             // Proforma nasceu de um Pedido em modo texto-livre (sem destinatario_id) — só o nome
             const buscaEl = document.getElementById('proc-emp-dest-busca');
             if (buscaEl) buscaEl.value = data.destinatario_razao_social;
@@ -1962,6 +2103,7 @@ function _docProcessoAtual() { return document.getElementById('proc-id')?.value 
 
 async function _docCarregarAnexosProcesso(proformaId, processoId = null) {
     _docAnexosProcesso = {};
+    _procProformaAssinada = false;
     if (!proformaId) return;
     const [res, { count }] = await Promise.all([
         window.supabaseAPI.buscarDocumentosProformas([proformaId]),
@@ -1978,6 +2120,8 @@ async function _docCarregarAnexosProcesso(proformaId, processoId = null) {
         _docAnexosProcesso[reg.tipo_documento] = { path: reg.arquivo_path, nome: reg.arquivo_nome };
         _docAtualizarCampoVisual(reg.tipo_documento, reg.arquivo_nome);
     });
+    _procProformaAssinada = (res.data || []).some(reg => reg.tipo_documento === 'proforma' && reg.assinado);
+    procReaplicarEtapas();
 }
 
 function _docLimparAnexosVisuais() {
@@ -2036,6 +2180,7 @@ function docUpload(id) {
 
         _docAnexosProcesso[id] = { path, nome: file.name };
         _docAtualizarCampoVisual(id, file.name);
+        procReaplicarEtapas();
         mostrarNotificacao('Documento anexado.', 'sucesso');
     };
 }
@@ -2093,6 +2238,7 @@ async function docExcluir(id) {
     const fileInput = document.getElementById('doc-file-' + id);
     if (fileInput) fileInput.value = '';
     _docAtualizarCampoVisual(id, null);
+    procReaplicarEtapas();
     mostrarNotificacao('Anexo removido.', 'sucesso');
 }
 

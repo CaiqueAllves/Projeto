@@ -14,9 +14,9 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Formulários</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=be50fc33">
+    <link rel="stylesheet" href="style-base.css?v=1eac11cb">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-formularios.css?v=0404cf40">
+    <link rel="stylesheet" href="style-formularios.css?v=bbcdcdaa">
     <link rel="stylesheet" href="style-cadastro.css?v=f3e58ec0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
@@ -114,6 +114,14 @@
                                                 <i class="fa-solid fa-truck"></i>
                                                 <strong>Transportadora</strong>
                                                 <small>Brasil</small>
+                                            </div>
+                                        </label>
+                                        <label class="modelo-card">
+                                            <input type="radio" name="emp_modelo" value="trading" onchange="onModeloChange(this.value)">
+                                            <div class="modelo-card-inner">
+                                                <i class="fa-solid fa-handshake"></i>
+                                                <strong>Trading</strong>
+                                                <small>Comercial Exportadora</small>
                                             </div>
                                         </label>
                                         <label class="modelo-card">
@@ -908,6 +916,28 @@
                                         </div>
                                     </div>
 
+                                    <!-- Exportação indireta: trading que exporta (exportador da CI / Packing List) -->
+                                    <div class="form-group full-width" id="proc-trading-group" style="display:none;">
+                                        <div class="form-row-3">
+                                            <div class="form-group">
+                                                <label for="proc-trading-busca">Trading / Comercial Exportadora <span class="required">*</span></label>
+                                                <div class="autocomplete-wrapper">
+                                                    <input type="text" id="proc-trading-busca" name="trading_busca" placeholder="Buscar trading cadastrada..." autocomplete="off">
+                                                    <input type="hidden" id="proc-trading-id">
+                                                    <div class="autocomplete-list" id="proc-trading-lista"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="proc-trading-doc">CNPJ da Trading</label>
+                                                <input type="text" id="proc-trading-doc" readonly placeholder="Auto-preenchido">
+                                            </div>
+                                            <div class="form-group proc-trading-info">
+                                                <span class="rotulo">&nbsp;</span>
+                                                <small><i class="fa-solid fa-circle-info"></i> Na exportação indireta, a trading é a exportadora nos documentos de embarque.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Linha 4: Observações (largura total) -->
                                     <div class="form-group full-width prod-obs-wrapper">
                                         <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
@@ -1279,6 +1309,11 @@
                                         <input type="date" id="proc-data-abertura" name="data_abertura">
                                     </div>
 
+                                    <div class="form-group">
+                                        <label for="proc-data-previsao">Previsão de Embarque</label>
+                                        <input type="date" id="proc-data-previsao" name="data_previsao" title="Base para calcular o prazo de cada etapa">
+                                    </div>
+
                                     <div class="form-group" data-show-for="em_andamento,aguardando_documentos,concluido">
                                         <label for="proc-data-embarque">Data de Embarque</label>
                                         <input type="date" id="proc-data-embarque" name="data_embarque">
@@ -1329,7 +1364,8 @@
                                 <div class="etapas-header">
                                     <span class="etapa-col-check">Feito</span>
                                     <span class="etapa-col-nome">Etapa</span>
-                                    <span class="etapa-col-data">Data</span>
+                                    <span class="etapa-col-data">Concluída em</span>
+                                    <span class="etapa-col-prazo">Prazo</span>
                                     <span class="etapa-col-resp">Responsável</span>
                                     <span class="etapa-col-acao"></span>
                                 </div>
@@ -1469,6 +1505,37 @@
                                         <input type="text" id="doc-num-nfe" name="doc_num_nfe" placeholder="Ex: NF-000001">
                                         <input type="file" id="doc-file-nfe" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
                                         <span class="doc-filename" id="doc-filename-nfe"></span>
+                                    </div>
+
+                                    <!-- Documentos da exportação INDIRETA -->
+                                    <div class="form-group doc-campo doc-indireta-field" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-nfremessa">Nº NF de Remessa (fim específico) <small class="doc-modal-tag">Indireta</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('nfremessa')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('nfremessa')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('nfremessa')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-nfremessa" name="doc_num_nfremessa" placeholder="Ex: NF-000123">
+                                        <input type="file" id="doc-file-nfremessa" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-nfremessa"></span>
+                                        <label class="doc-subcampo" for="proc-nf-remessa-data">Data da NF de remessa <small>(a trading tem 180 dias para exportar e enviar o Memorando)</small></label>
+                                        <input type="date" id="proc-nf-remessa-data" name="nf_remessa_data">
+                                    </div>
+
+                                    <div class="form-group doc-campo doc-indireta-field" style="display:none;">
+                                        <div class="doc-label-row">
+                                            <label for="doc-num-memorando">Nº Memorando de Exportação <small class="doc-modal-tag">Indireta</small></label>
+                                            <div class="doc-acoes">
+                                                <button type="button" class="doc-btn doc-btn-upload" title="Anexar arquivo" onclick="docUpload('memorando')"><i class="fa-solid fa-upload"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-ver"    title="Visualizar"    onclick="docVer('memorando')"   ><i class="fa-solid fa-eye"></i></button>
+                                                <button type="button" class="doc-btn doc-btn-del"    title="Excluir arquivo" onclick="docExcluir('memorando')"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="doc-num-memorando" name="doc_num_memorando" placeholder="Ex: ME-2026-001">
+                                        <input type="file" id="doc-file-memorando" class="doc-file-input" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        <span class="doc-filename" id="doc-filename-memorando"></span>
                                     </div>
 
                                     <!-- Documentos exclusivos: AÉREO -->
@@ -1972,6 +2039,18 @@
                                         </div>
                                     </div>
 
+                                    <!-- Exportação indireta: importador final no exterior (a destinatária é a trading) -->
+                                    <div class="form-group" id="prop-imp-final-group" style="display:none;">
+                                        <label for="prop-imp-final-busca">Importador final <small>(exterior — opcional)</small></label>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" id="prop-imp-final-busca" name="imp_final_busca" placeholder="Buscar empresa estrangeira cadastrada..." autocomplete="off">
+                                            <input type="hidden" id="prop-imp-final-id">
+                                            <div class="autocomplete-list" id="prop-imp-final-lista"></div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group full-width prop-indireta-aviso" id="prop-indireta-aviso" style="display:none;">
+                                        <i class="fa-solid fa-circle-info"></i> Exportação indireta: a Proforma é a venda para a <strong>trading</strong> (compradora), que é quem exporta. Nos documentos de embarque a trading aparece como exportadora.
+                                    </div>
                                     <!-- Observações -->
                                     <div class="form-group full-width prod-obs-wrapper">
                                         <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
@@ -3278,23 +3357,24 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=66f24772"></script>
+<script src="supabase-api.js?v=94069b45"></script>
 <script src="auth.js?v=37c2c7b0"></script>
 <script src="navegador.js?v=1c5fb652"></script>
-<script src="doc-tipos.js?v=a2c88b3e"></script>
-<script src="formularios.js?v=17801776"></script>
+<script src="doc-tipos.js?v=b64b3ef0"></script>
+<script src="formularios.js?v=28131b3b"></script>
 <script src="cadastro-logo-contas.js?v=e016db4c"></script>
-<script src="formularios-empresa.js?v=87e01f2a"></script>
-<script src="formularios-processo.js?v=9b9cd142"></script>
-<script src="formularios-proforma.js?v=672060b0"></script>
+<script src="formularios-empresa.js?v=db43a39f"></script>
+<script src="etapas.js?v=b53c73d8"></script>
+<script src="formularios-processo.js?v=cbd5ca28"></script>
+<script src="formularios-proforma.js?v=04a95154"></script>
 <script src="formularios-produto.js?v=4ee0b3fc"></script>
 <script src="formularios-mobile.js?v=aeda52c3"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="pdf-kit.js?v=6ff65a4e"></script>
+<script src="pdf-kit.js?v=54796e7f"></script>
 <script src="pdf-processo.js?v=48b13492"></script>
-<script src="pdf-proforma.js?v=f4831a4d"></script>
-<script src="ci-colunas.js?v=40d80399"></script>
-<script src="pdf-documentos.js?v=c0b10d22"></script>
+<script src="pdf-proforma.js?v=82ded7bd"></script>
+<script src="ci-colunas.js?v=e3169275"></script>
+<script src="pdf-documentos.js?v=bf970247"></script>
 
 <script src="suporte.js?v=1debcf1b"></script>
 </body>

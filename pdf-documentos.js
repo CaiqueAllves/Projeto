@@ -27,7 +27,12 @@ async function _docPdfCarregarDados(tipo, processoId) {
     // Processos antigos (antes de gravar criado_por) usam quem criou a Proforma
     if (!proc.criado_por && prof?.criado_por) Object.assign(nomes, await window.supabaseAPI.buscarNomesUsuarios([prof.criado_por]));
 
-    const parceiroIds = [proc.emissor_tipo === 'terceiro' ? proc.remetente_parceiro_id : null, proc.empresa_parceira_id].filter(Boolean);
+    // Exportação indireta: quem exporta é a trading (Processo, ou a destinatária da
+    // Proforma); o importador é o do Processo ou o importador final da Proforma
+    const indireta = proc.tipo === 'exportacao_indireta';
+    const tradingId = indireta ? (proc.trading_id || prof?.destinatario_id || null) : null;
+    const importadorId = proc.empresa_parceira_id || (indireta ? prof?.importador_final_id : null) || null;
+    const parceiroIds = [proc.emissor_tipo === 'terceiro' ? proc.remetente_parceiro_id : null, importadorId, tradingId].filter(Boolean);
     const { data: parceiros } = parceiroIds.length
         ? await supabaseClient.from('parceiros').select('*').in('id', parceiroIds)
         : { data: [] };
@@ -37,18 +42,21 @@ async function _docPdfCarregarDados(tipo, processoId) {
         : { data: [] };
     const contatoDe = id => { const c = (contatos || []).find(x => String(x.parceiro_id) === String(id)); return c ? [c.nome, c.email || c.telefone].filter(Boolean).join(' · ') : ''; };
 
-    // Exportador: parceiro escolhido (Terceiro) ou a própria empresa (Usuário)
+    // Exportador: trading (indireta), parceiro escolhido (Terceiro) ou a própria empresa (Usuário)
     let exportador;
-    if (proc.emissor_tipo === 'terceiro' && proc.remetente_parceiro_id) {
+    if (tradingId && parc(tradingId)) {
+        exportador = parc(tradingId);
+        exportador._contato = contatoDe(tradingId);
+    } else if (proc.emissor_tipo === 'terceiro' && proc.remetente_parceiro_id) {
         exportador = parc(proc.remetente_parceiro_id);
     } else {
         const usuario = obterUsuarioLogado();
         const emp = await pdfEmpresaPropria(usuario.empresa_id);
         exportador = emp ? { ...emp, documento: emp.cnpj, pais: 'Brasil' } : null;
     }
-    const importador = parc(proc.empresa_parceira_id);
-    if (exportador && proc.emissor_tipo === 'terceiro') exportador._contato = contatoDe(proc.remetente_parceiro_id);
-    if (importador) importador._contato = contatoDe(proc.empresa_parceira_id);
+    const importador = parc(importadorId);
+    if (exportador && !tradingId && proc.emissor_tipo === 'terceiro') exportador._contato = contatoDe(proc.remetente_parceiro_id);
+    if (importador) importador._contato = contatoDe(importadorId);
 
     const itens = (Array.isArray(proc.itens) ? proc.itens : []).filter(it => (it.produto || '').trim());
     const prodIds = [...new Set(itens.map(it => it.produto_id).filter(Boolean))];
@@ -101,7 +109,8 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     const titulo = tipo === 'commercial' ? t.commercial_invoice : t.packing_list;
     const vv = s => (s === null || s === undefined || String(s).trim() === '') ? '' : String(s);
     const moeda = d.itens.find(it => it.moeda)?.moeda || proc.moeda || '';
-    const doc = pvNovoDocumento();
+    // Commercial Invoice em A4 deitado: cabem mais colunas escolhidas na janela
+    const doc = pvNovoDocumento({ paisagem: tipo === 'commercial' });
 
     const ex = d.exportador || {}, im = d.importador || {};
     const nomeEx = vv(ex.razao_social || ex.nome_fantasia) || '—', nomeIm = vv(im.razao_social || im.nome_fantasia) || '—';
@@ -138,13 +147,14 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
         linhas: [e.documento ? `${t.identificacao}: ${e.documento}` : '', [rua(e), cidade(e)].filter(Boolean).join(' · '),
                  [vv(e.pais), vv(e.cep)].filter(Boolean).join(' · '), e._contato ? `${t.contato}: ${e._contato}` : ''].filter(Boolean),
     });
-    Y = pvQuadros(doc, Y, [quadroEmpresa(t.exportador, nomeEx, ex), quadroEmpresa(t.importador, nomeIm, im)]);
-
-    // ── Pagamento (só CI; o embarque foi para a faixa de termos) ──
-    if (tipo === 'commercial') {
-        Y = pvQuadros(doc, Y, [{ titulo: t.condicoes_pagamento, chaves: [[t.forma, I.formaPagamento(prof?.forma_pagamento)], [t.prazo, I.prazoPagamento(prof?.prazo_pagamento)],
-                                                                     [t.pais_origem_merc, vv(proc.pais_origem) || '—']] }]);
-    }
+    // ── Exportador | Importador (+ Pagamento ao lado na CI, folha deitada) ──
+    const quadroPagamento = tipo === 'commercial'
+        ? { titulo: t.condicoes_pagamento, chaves: [[t.forma, I.formaPagamento(prof?.forma_pagamento)], [t.prazo, I.prazoPagamento(prof?.prazo_pagamento)],
+                                                    [t.pais_origem_merc, vv(proc.pais_origem) || '—']] }
+        : null;
+    Y = quadroPagamento
+        ? pvQuadros(doc, Y, [quadroEmpresa(t.exportador, nomeEx, ex), quadroEmpresa(t.importador, nomeIm, im), quadroPagamento], [0.35, 0.35, 0.30])
+        : pvQuadros(doc, Y, [quadroEmpresa(t.exportador, nomeEx, ex), quadroEmpresa(t.importador, nomeIm, im)]);
 
     // ── Volumes e pesos por item (embalagem de transporte "caixa") ──
     const soma = { vol: 0, pecas: 0, liq: 0, bruto: 0, m3: 0 };
@@ -174,12 +184,13 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
         const campos = (ci.campos || []);
         const extras = campos.filter(c => c.posicao === 'coluna').slice(0, CI_MAX_COLUNAS);
         const abaixo = campos.filter(c => !extras.includes(c));
-        // colunas extras dividem o que sobra além de 40mm para o produto (de 13 a 34mm cada)
-        const wExtra = extras.length ? Math.max(13, Math.min(34, (PV.CW - 102 - 40) / extras.length)) : 0;
+        // colunas extras dividem o que sobra além de 55mm para o produto (de 14 a 45mm cada)
+        const wExtra = extras.length ? Math.max(14, Math.min(45, (PV.CW - 102 - 55) / extras.length)) : 0;
         const linhas = d.itens.map((it, i) => {
             const p = d.produtos[it.produto_id] || {};
             const tot = (Number(it.qtd) || 0) * (Number(it.preco) || 0); total += tot;
-            const sub = abaixo.map(c => { const v = ciValorCampo(d, it, i, c, ci, I); return v ? `${ciRotulo(c, t)}: ${v}` : ''; }).filter(Boolean).join(' · ');
+            // campo escolhido sem valor sai como "—" (igual à coluna), em vez de sumir
+            const sub = abaixo.map(c => `${ciRotulo(c, t)}: ${ciValorCampo(d, it, i, c, ci, I) || '—'}`).join(' · ');
             return [String(i + 1), { txt: vv(p.sku) || '—', negrito: true, cor: PDF_CORES.AZUL }, { txt: vv(it.produto) || '—', sub },
                     ...extras.map(c => ciValorCampo(d, it, i, c, ci, I) || '—'),
                     { txt: I.num(it.qtd, 0), sub: vv(it.unidade) }, I.num(it.preco), { txt: I.num(tot), negrito: true }];

@@ -75,14 +75,14 @@ async function carregarProcessos() {
         if (proformaIds.length > 0) {
             const { data: profs } = await supabaseClient
                 .from('proformas')
-                .select('id, codigo, emissor_tipo, parceiro_id, parceiro_razao_social, destinatario_id, destinatario_razao_social')
+                .select('id, codigo, emissor_tipo, parceiro_id, parceiro_razao_social, destinatario_id, destinatario_razao_social, previsao_embarque')
                 .in('id', proformaIds);
             if (profs) profs.forEach(pr => { proformaMap[pr.id] = pr; });
         }
 
         // Nomes dos parceiros (Exportador terceiro e Importador)
         const parceiraIds = [...new Set([
-            ...processos.flatMap(p => [p.empresa_parceira_id, p.remetente_parceiro_id]),
+            ...processos.flatMap(p => [p.empresa_parceira_id, p.remetente_parceiro_id, p.trading_id]),
             ...Object.values(proformaMap).flatMap(pr => [pr.parceiro_id, pr.destinatario_id]),
         ].filter(Boolean))];
         let empresaMap = {};
@@ -105,8 +105,17 @@ async function carregarProcessos() {
             }
             return p.emissor_tipo === 'terceiro' ? '—' : '(Própria empresa)';
         };
+        // Na exportação indireta a destinatária da Proforma é a trading, não o importador
         const importadorDe = (p, prof) =>
-            empresaMap[p.empresa_parceira_id] || (prof && (empresaMap[prof.destinatario_id] || prof.destinatario_razao_social)) || '';
+            empresaMap[p.empresa_parceira_id] || (p.tipo !== 'exportacao_indireta' && prof && (empresaMap[prof.destinatario_id] || prof.destinatario_razao_social)) || '';
+
+        // Etapas com a conclusão automática aplicada (etapas.js): Nº de documentos,
+        // datas, Proforma Invoice assinada, DUE anexada
+        const infoDocs = typeof etapasInfoDocumentos === 'function' ? await etapasInfoDocumentos(processos).catch(() => ({})) : {};
+        // e prazos pela previsão de embarque (do Processo ou da Proforma)
+        const etapasDe = p => typeof etapasPreparar === 'function'
+            ? etapasPreparar(p, { ...(infoDocs[p.id] || {}), previsaoProforma: proformaMap[p.proforma_id]?.previsao_embarque })
+            : (p.etapas || []);
 
         _processosTodos = processos.map(p => ({
             id:                p.id,
@@ -115,9 +124,11 @@ async function carregarProcessos() {
             status:            p.status || 'aberta',
             empresaExportador: exportadorDe(p, proformaMap[p.proforma_id]),
             empresaImportador: importadorDe(p, proformaMap[p.proforma_id]),
+            empresaTrading:    p.tipo === 'exportacao_indireta'
+                ? (empresaMap[p.trading_id] || empresaMap[proformaMap[p.proforma_id]?.destinatario_id] || '') : '',
             pais_origem:       p.pais_origem || '',
             pais_destino:      p.pais_destino || '',
-            etapas:            p.etapas || [],
+            etapas:            etapasDe(p),
             modal:             p.modal || '',
             incoterm:          p.incoterm || '',
             moeda:             p.moeda || 'USD',
@@ -246,7 +257,7 @@ function _renderCard(p) {
     return `
     <div class="proc-card ${expandido ? 'proc-card-expandido' : ''}" id="proc-card-${escapeHtml(p.id)}" data-grupo="${coluna}">
         <div class="proc-card-top">
-            <span class="proc-card-codigo"><i class="fa-solid fa-hashtag proc-card-hash"></i>${escapeHtml(p.codigo.replace(/^PROC/,''))}</span>
+            <span class="proc-card-codigo"><i class="fa-solid fa-hashtag proc-card-hash"></i>${escapeHtml(p.codigo)}</span>
             <button class="proc-card-toggle" data-action="toggle-card" data-id="${escapeHtml(p.id)}" title="${expandido ? 'Recolher' : 'Expandir'}">
                 <i class="fa-solid fa-chevron-${expandido ? 'up' : 'down'}"></i>
             </button>
@@ -268,10 +279,16 @@ function _renderCard(p) {
             <span class="proc-card-label">Exportador:</span>
             <span class="proc-card-empresa-valor">${escapeHtml(exp)}</span>
         </div>
+        ${p.empresaTrading ? `
+        <div class="proc-card-empresa-linha">
+            <span class="proc-card-label">Trading:</span>
+            <span class="proc-card-empresa-valor">${escapeHtml(p.empresaTrading)}</span>
+        </div>` : ''}
         <div class="proc-card-empresa-linha">
             <span class="proc-card-label">Importador:</span>
             <span class="proc-card-empresa-valor">${imp ? escapeHtml(imp) : '—'}</span>
         </div>
+        ${_procEtapasCard(p)}
         ${expandido ? `
         <div class="proc-card-valor"><i class="fa-solid fa-sack-dollar"></i><span>${escapeHtml(valorTexto)}</span></div>
         <div class="proc-card-datas">
@@ -282,10 +299,8 @@ function _renderCard(p) {
                     onchange="procAlterarStatus('${escapeHtml(p.id)}', this)">
                 ${optStatus}
             </select>
-            ${p.proforma_id ? `<button class="btn-ver-processo" data-action="ver-proforma" data-id="${escapeHtml(p.proforma_id)}"><i class="fa-solid fa-file-invoice-dollar"></i> Ver Proforma ${escapeHtml(p.proforma_codigo || '')}</button>` : ''}
             <div class="proc-card-btns">
                 <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                <button class="btn-acao btn-pdf"     data-action="pdf"        data-id="${escapeHtml(p.id)}" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
                 ${p.proforma_id
                     ? `<button class="btn-acao btn-ver" data-action="documentos" data-id="${escapeHtml(p.id)}" data-proforma="${escapeHtml(p.proforma_id)}" data-codigo="${escapeHtml(p.numero_processo || '')}" title="Documentos do Processo"><i class="fa-solid fa-folder-open"></i></button>`
                     : `<button class="btn-acao btn-ver" disabled title="Processo sem Proforma de origem" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-folder-open"></i></button>`}
@@ -307,8 +322,34 @@ function _filtrarProcessos(filtro) {
     const proformaIdParam = new URLSearchParams(window.location.search).get('proforma_id');
     if (proformaIdParam) list = list.filter(p => p.proforma_id === proformaIdParam);
     if (status) list = list.filter(p => _getColuna(p.status || 'aberto') === status);
-    if (q) list = list.filter(p => `${p.codigo} ${p.tipo} ${p.empresaExportador} ${p.empresaImportador} ${p.pais_origem} ${p.pais_destino} ${p.status}`.toLowerCase().includes(q));
+    if (q) list = list.filter(p => `${p.codigo} ${p.tipo} ${p.empresaExportador} ${p.empresaTrading || ''} ${p.empresaImportador} ${p.pais_origem} ${p.pais_destino} ${p.status}`.toLowerCase().includes(q));
     return list;
+}
+
+// Progresso das etapas no card: barra + "4/9 · Próxima: Booking"
+function _procEtapasCard(p) {
+    if (typeof etapasResumo !== 'function') return '';
+    const r = etapasResumo(p.etapas);
+    if (!r.total) return '';
+    const texto = r.proxima ? `Próxima: ${r.proxima.nome}` : 'Todas as etapas concluídas';
+    const sit = r.proxima ? etapaSituacaoTexto(r.proxima) : '';
+    const atrasada = r.atrasadas.length > 0;
+    const alerta = atrasada
+        ? `<em class="proc-card-etapas-alerta"><i class="fa-solid fa-triangle-exclamation"></i> ${r.atrasadas.length} atrasada${r.atrasadas.length > 1 ? 's' : ''}</em>`
+        : (sit && /vence/.test(sit) ? `<em class="proc-card-etapas-vence">${escapeHtml(sit)}</em>` : '');
+    return `<div class="proc-card-etapas${r.proxima ? '' : ' completo'}${atrasada ? ' atrasada' : ''}" title="${escapeHtml(`${r.feitas} de ${r.total} etapas concluídas — ${texto}${sit ? ' (' + sit + ')' : ''}`)}">
+        <div class="proc-card-etapas-barra"><div style="width:${r.pct}%"></div></div>
+        <span><strong>${r.feitas}/${r.total}</strong> · ${escapeHtml(texto)}</span>
+        ${alerta}
+    </div>`;
+}
+
+// Etapa marcada no painel "Ver" (resumo.js): atualiza o card sem recarregar
+function procAtualizarEtapasCard(id, etapas) {
+    const p = _processosTodos.find(x => String(x.id) === String(id));
+    if (!p) return;
+    p.etapas = etapas;
+    renderTabela(document.getElementById('filtroProcessos')?.value || '');
 }
 
 function renderKanban(filtro) {
@@ -374,7 +415,6 @@ function renderLista(filtro) {
             <td><div class="proc-acoes">
                 ${p.proforma_id ? `<button class="btn-acao btn-ver" data-action="ver-proforma" data-id="${escapeHtml(p.proforma_id)}" title="Ver Proforma de origem"><i class="fa-solid fa-file-invoice-dollar"></i></button>` : ''}
                 <button class="btn-acao btn-ver"     data-action="visualizar" data-id="${escapeHtml(p.id)}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                <button class="btn-acao btn-pdf"     data-action="pdf"        data-id="${escapeHtml(p.id)}" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
                 ${p.proforma_id
                     ? `<button class="btn-acao btn-ver" data-action="documentos" data-id="${escapeHtml(p.id)}" data-proforma="${escapeHtml(p.proforma_id)}" data-codigo="${escapeHtml(p.numero_processo || '')}" title="Documentos do Processo"><i class="fa-solid fa-folder-open"></i></button>`
                     : `<button class="btn-acao btn-ver" disabled title="Processo sem Proforma de origem" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-folder-open"></i></button>`}
@@ -417,9 +457,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const action = btn.getAttribute('data-action');
         const id     = btn.getAttribute('data-id');
         if (action === 'editar')       window.open(`formularios.html?tab=processo&id=${id}`, '_blank');
-        if (action === 'visualizar')   window.open(`formularios.html?tab=processo&id=${id}&modo=visualizar`, '_blank');
-        if (action === 'pdf')          window.open(`formularios.html?tab=processo&id=${id}&modo=pdf`, '_blank');
-        if (action === 'ver-proforma') window.open(`formularios.html?tab=proposta&id=${id}&modo=visualizar`, '_blank');
+        if (action === 'visualizar')   abrirResumo('processo', id);
+        if (action === 'ver-proforma') abrirResumo('proforma', id);
         if (action === 'gerar-conta-pagar')   window.open(`contas-pagar.html?gerar_processo_id=${id}`, '_blank');
         if (action === 'gerar-conta-receber') window.open(`contas-receber.html?gerar_processo_id=${id}`, '_blank');
         if (action === 'excluir')      abrirModalExcluir(id);

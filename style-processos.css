@@ -465,10 +465,10 @@
 
 /* ── Colunas ────────────────────────────────── */
 .kanban-col {
-    /* largura mínima para os 8 botões de ação do card caberem numa linha;
+    /* largura mínima para os 7 botões de ação do card caberem numa linha;
        sem espaço para todas as colunas, o quadro rola na horizontal */
-    flex: 1 0 360px;
-    min-width: 360px;
+    flex: 1 0 300px;
+    min-width: 300px;
     background: #f8fafc;
     border-radius: 14px;
     border: 1px solid #e2e8f0;
@@ -747,3 +747,15 @@
     .kanban-col.kanban-col-active { display: flex; }
     .proc-lista-wrap { border-radius: 10px; }
 }
+
+/* Progresso das etapas no card (etapas.js) */
+.proc-card-etapas { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 2px; font-size: 11.5px; color: #64748b; min-width: 0; }
+.proc-card-etapas span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proc-card-etapas strong { color: #1e293b; }
+.proc-card-etapas-barra { height: 5px; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+.proc-card-etapas-barra div { height: 100%; background: #4776ec; border-radius: 999px; }
+.proc-card-etapas.completo .proc-card-etapas-barra div { background: #22c55e; }
+.proc-card-etapas.atrasada .proc-card-etapas-barra div { background: #dc2626; }
+.proc-card-etapas em { font-style: normal; font-size: 11px; font-weight: 600; }
+.proc-card-etapas-alerta { color: #dc2626; }
+.proc-card-etapas-vence { color: #b45309; }

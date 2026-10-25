@@ -76,7 +76,7 @@ async function salvarEmpresa(e) {
     if (!checar('emp-documento',     'Informe o Número de Identificação da empresa.')) return;
     if (!checar('emp-nome',          'Informe a Razão Social da empresa.')) return;
 
-    const isBrasil = modelo === 'empresa' || modelo === 'transportadora';
+    const isBrasil = modelo === 'empresa' || modelo === 'transportadora' || modelo === 'trading';
     if (!isBrasil && !checar('emp-pais', 'Informe o País da empresa.')) return;
     if (isBrasil  && !checar('emp-ie',   'Informe a Inscrição Estadual.')) return;
 
@@ -432,9 +432,15 @@ function onModeloChange(modelo) {
     if (secaoFrota)     secaoFrota.style.display      = isTransp ? '' : 'none';
     if (codigoGroup)    codigoGroup.style.display     = isTransp ? 'none' : '';
     if (rntrcGroup)     rntrcGroup.style.display      = isTransp ? '' : 'none';
-    if (imGroup)        imGroup.style.display         = modelo === 'empresa' ? '' : 'none';
+    if (imGroup)        imGroup.style.display         = (modelo === 'empresa' || modelo === 'trading') ? '' : 'none';
 
-    if (modelo === 'empresa' || modelo === 'transportadora') {
+    // Trading (exportação indireta) compra da empresa: já marca "Comprador"
+    if (modelo === 'trading') {
+        const comprador = document.querySelector('[name="tipo_comprador"]');
+        if (comprador && !comprador.checked) { comprador.checked = true; comprador.dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+
+    if (modelo === 'empresa' || modelo === 'transportadora' || modelo === 'trading') {
         // BR only — auto-set Brasil, hide country picker
         if (paisInput)  { paisInput.value = 'Brasil'; }
         if (paisCodigo) paisCodigo.value = 'BR';

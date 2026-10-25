@@ -1924,7 +1924,103 @@ form small {
 .ci-grade td:first-child { min-width: 160px; color: #1e293b; font-weight: 600; }
 .ci-grade input { width: 100%; min-width: 110px; padding: 6px 8px !important; }
 .ci-grade input.ajustado { border-color: #f59e0b !important; background: #fffbeb; }
+.ci-grade input.vazio:not(.ajustado) { border-color: #fca5a5; background: #fef2f2; }
+.ci-grade input.vazio::placeholder { color: #f87171; }
+.ci-vazios { font-size: 12px; color: #b91c1c; padding: 8px 4px 2px; }
+.ci-vazios:empty { display: none; }
+.ci-vazios i { margin-right: 4px; }
 .ci-dica { font-size: 12px; color: #94a3b8; }
 .ci-rodape { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid #e2e8f0; }
 .ci-aviso { margin-right: auto; font-size: 12px; color: #b45309; }
 .ci-btn { padding: 9px 16px; border: none; background: #3b5bdb; color: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; }
+
+/* ── Resumo (botão "Ver" de Proforma / Processo — resumo.js) ── */
+.resumo-overlay { position: fixed; inset: 0; z-index: 9000; background: rgba(15,23,42,0); pointer-events: none; transition: background .2s ease; }
+.resumo-overlay.aberto { background: rgba(15,23,42,.35); pointer-events: auto; }
+.resumo-painel { position: absolute; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: #fff; display: flex; flex-direction: column;
+    box-shadow: -12px 0 40px rgba(0,0,0,.18); transform: translateX(100%); transition: transform .25s ease; }
+.resumo-overlay.aberto .resumo-painel { transform: translateX(0); }
+body.resumo-aberto { overflow: hidden; }
+.resumo-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid #eef2f7; }
+.resumo-cab-txt { min-width: 0; }
+.resumo-cab-tipo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #4776ec; }
+.resumo-cab h2 { font-size: 20px; color: #1e293b; margin: 2px 0 8px; word-break: break-all; }
+.resumo-cab-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12.5px; color: #64748b; }
+.resumo-fechar { border: none; background: none; font-size: 20px; color: #64748b; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.resumo-fechar:hover { background: #f1f5f9; }
+.resumo-status { font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #eef3ff; color: #4776ec; }
+.resumo-status--aprovado, .resumo-status--concluido { background: #dcfce7; color: #15803d; }
+.resumo-status--pendente, .resumo-status--aguardando_documentos { background: #fef3c7; color: #b45309; }
+.resumo-status--encerrado, .resumo-status--recusado, .resumo-status--finalizado { background: #f1f5f9; color: #475569; }
+.resumo-status--cancelado { background: #fee2e2; color: #b91c1c; }
+.resumo-corpo { flex: 1; overflow-y: auto; padding: 6px 20px 16px; }
+.resumo-carregando { text-align: center; color: #94a3b8; padding: 50px 0; font-size: 22px; }
+.resumo-secao { padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
+.resumo-secao:last-child { border-bottom: none; }
+.resumo-secao h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #64748b; margin-bottom: 10px; }
+.resumo-secao h3 i { color: #4776ec; margin-right: 4px; }
+.resumo-partes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.resumo-parte { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.resumo-parte-rot { font-size: 11px; color: #94a3b8; font-weight: 600; }
+.resumo-parte strong { font-size: 14px; color: #1e293b; overflow-wrap: anywhere; }
+.resumo-parte small { font-size: 12px; color: #64748b; }
+.resumo-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+.resumo-campo { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.resumo-campo span { font-size: 11.5px; color: #94a3b8; }
+.resumo-campo strong { font-size: 13.5px; color: #1e293b; font-weight: 600; overflow-wrap: anywhere; }
+.resumo-tabela-wrap { overflow-x: auto; }
+.resumo-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; background: none; border-radius: 0; box-shadow: none; margin: 0; }
+.resumo-tabela th { text-align: left; font-size: 11px; color: #64748b; background: none; text-transform: none; letter-spacing: 0; font-weight: 600; padding: 6px 6px; border-bottom: 1px solid #e2e8f0; }
+.resumo-tabela td { padding: 7px 6px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+.resumo-tabela td small { display: block; color: #94a3b8; font-size: 11px; }
+.resumo-tabela .num { text-align: right; white-space: nowrap; }
+.resumo-total { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding: 8px 12px; background: #eef3ff; border-radius: 8px; font-size: 13px; color: #334155; }
+.resumo-total strong { font-size: 15px; color: #1e3a8a; }
+.resumo-contagem { font-size: 12.5px; color: #64748b; margin-bottom: 8px; }
+.resumo-nada { font-size: 13px; color: #94a3b8; }
+.resumo-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.resumo-link { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #dbe4ff; background: #f5f8ff; color: #4776ec; font-weight: 600; font-size: 12.5px;
+    padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.resumo-link:hover { background: #e8efff; }
+.resumo-link em { font-style: normal; font-weight: 500; color: #64748b; font-size: 11.5px; }
+.resumo-docs { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.resumo-docs li { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: #334155; }
+.resumo-docs li i { color: #94a3b8; margin-right: 4px; }
+.resumo-docs small { color: #94a3b8; font-size: 11px; }
+.resumo-tag { font-style: normal; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.resumo-tag--ok { background: #dcfce7; color: #15803d; }
+.resumo-tag--aviso { background: #fff7ed; color: #c2410c; }
+.resumo-progresso { height: 6px; background: #eef2f7; border-radius: 999px; overflow: hidden; margin-bottom: 6px; }
+.resumo-progresso div { height: 100%; background: #22c55e; border-radius: 999px; }
+.resumo-etapas { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.resumo-etapas li { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; color: #64748b; padding: 3px 6px; border-radius: 8px; }
+.resumo-etapas li.ok { color: #1e293b; }
+.resumo-etapas li.proxima { background: #f5f8ff; color: #1e293b; font-weight: 600; }
+.resumo-etapa-check { border: none; background: none; padding: 0 2px; font-size: 16px; line-height: 1.2; color: #cbd5e1; cursor: pointer; border-radius: 50%; }
+.resumo-etapa-check:hover { color: #4776ec; }
+.resumo-etapas li.ok .resumo-etapa-check { color: #22c55e; }
+.resumo-etapas li.proxima .resumo-etapa-check { color: #4776ec; }
+.resumo-etapa-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-top: 1px; }
+.resumo-etapa-origem { font-size: 11px; font-weight: 400; color: #94a3b8; }
+.resumo-etapa-origem.auto { color: #15803d; }
+.resumo-etapa-origem.atrasada { color: #dc2626; font-weight: 600; }
+.resumo-etapa-origem.vence { color: #b45309; }
+.resumo-etapas li.atrasada .resumo-etapa-check { color: #dc2626; }
+.resumo-alerta { font-size: 12.5px; color: #b91c1c; background: #fef2f2; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; font-weight: 600; }
+.resumo-etapa-origem i { font-size: 9.5px; }
+.resumo-etapa-data { color: #94a3b8; font-size: 11.5px; padding-top: 2px; white-space: nowrap; }
+.resumo-obs { font-size: 13px; color: #334155; white-space: pre-wrap; line-height: 1.5; }
+.resumo-obs + .resumo-obs { margin-top: 8px; }
+.resumo-rodape { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; border-top: 1px solid #eef2f7; background: #fafbfd; }
+.resumo-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e2e8f0; background: #fff; color: #334155; font-size: 13px; font-weight: 600;
+    padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.resumo-btn:hover { background: #f1f5f9; }
+.resumo-btn--principal { background: #4776ec; border-color: #4776ec; color: #fff; }
+.resumo-btn--principal:hover { background: #3a66d8; }
+@media (max-width: 600px) {
+    .resumo-painel { width: 100vw; }
+    .resumo-partes, .resumo-grade { grid-template-columns: 1fr; }
+    .resumo-rodape { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+    .resumo-btn { flex: 1 1 calc(50% - 8px); justify-content: center; }
+}
+.resumo-contagem strong { color: #1e293b; }

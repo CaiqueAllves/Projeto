@@ -10,7 +10,7 @@
 // (documento_modelos — database-ci-colunas-modelos.sql).
 // Usado por pdf-documentos.js (gerarEAnexarDocumentoProcesso).
 
-const CI_MAX_COLUNAS = 4;   // colunas extras que cabem na folha em pé
+const CI_MAX_COLUNAS = 6;   // colunas extras que cabem na folha deitada (A4 paisagem)
 
 // Campos do cadastro. t = chave do rótulo traduzido (pdf-kit.js → PDF_IDIOMAS)
 const CI_CAMPOS_PADRAO = [
@@ -191,8 +191,15 @@ async function ciAbrirJanelaColunas(processoId) {
                 <tbody>${d.itens.map((it, i) => `<tr><td>${escHtml(it.produto || '—')}</td>${campos.map(c => {
                     const v = ciValorCampo(d, it, i, c, cfg);
                     const ajustado = cfg.valores?.[i]?.[c.chave] !== undefined;
-                    return `<td><input type="text" data-i="${i}" data-campo="${escHtml(c.chave)}" value="${escHtml(v)}" class="${ajustado ? 'ajustado' : ''}" aria-label="${escHtml(c.rotulo)} de ${escHtml(it.produto || '')}"></td>`;
-                }).join('')}</tr>`).join('')}</tbody></table>`;
+                    return `<td><input type="text" data-i="${i}" data-campo="${escHtml(c.chave)}" value="${escHtml(v)}" class="${ajustado ? 'ajustado' : ''}${v ? '' : ' vazio'}" placeholder="sem valor" aria-label="${escHtml(c.rotulo)} de ${escHtml(it.produto || '')}"></td>`;
+                }).join('')}</tr>`).join('')}</tbody></table><div class="ci-vazios" id="ciVazios"></div>`;
+            contarVazios();
+        };
+        // Campo sem valor (nem no cadastro, nem digitado) sai como "—" no PDF
+        const contarVazios = () => {
+            const n = $('ciGrade').querySelectorAll('input.vazio').length;
+            const el = $('ciVazios');
+            if (el) el.innerHTML = n ? `<i class="fa-solid fa-triangle-exclamation"></i> ${n} campo${n > 1 ? 's' : ''} sem valor no cadastro do produto — preencha aqui ou ${n > 1 ? 'eles saem' : 'ele sai'} como "—" no documento.` : '';
         };
 
         const renderTudo = () => { renderModelos(); renderCampos(); renderGrade(); };
@@ -214,6 +221,8 @@ async function ciAbrirJanelaColunas(processoId) {
             const i = e.target.dataset.i, ch = e.target.dataset.campo;
             ((cfg.valores[i] ||= {}))[ch] = e.target.value;
             e.target.classList.add('ajustado');
+            e.target.classList.toggle('vazio', !e.target.value.trim());
+            contarVazios();
         });
         ov.addEventListener('click', async e => {
             const acao = e.target.closest('[data-acao]')?.dataset.acao;

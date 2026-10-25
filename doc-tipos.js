@@ -33,6 +33,12 @@ const DOC_TIPOS_MODAL = {
     ],
 };
 
+// Exportação indireta: só aparecem em Processo do tipo exportacao_indireta
+const DOC_TIPOS_INDIRETA = [
+    { id: 'nfremessa', label: 'Nº NF de Remessa (fim específico)' },
+    { id: 'memorando', label: 'Nº Memorando de Exportação' },
+];
+
 const DOC_MODAL_LABEL = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' };
 
 // Documentos de cada embarque: guardados por Processo (proforma_documentos.processo_id).
@@ -43,6 +49,7 @@ const DOC_TIPOS_DA_PROFORMA = ['proforma'];
 const DOC_TIPOS_POR_PROCESSO = [
     ...DOC_TIPOS_UNIVERSAIS.map(t => t.id).filter(id => !DOC_TIPOS_DA_PROFORMA.includes(id)),
     ...Object.values(DOC_TIPOS_MODAL).flat().map(t => t.id),
+    ...DOC_TIPOS_INDIRETA.map(t => t.id),
 ];
 function docEhPorProcesso(tipoId) {
     return DOC_TIPOS_POR_PROCESSO.includes(tipoId) || String(tipoId).startsWith('custom_');
@@ -95,12 +102,14 @@ function docTiposDaProforma(processosDaProforma, docsSalvos) {
             .forEach(t => tipos.push({ ...t, ...base, chave: docChave(t.id, pr.id) }));
         (DOC_TIPOS_MODAL[pr.modal] || [])
             .forEach(t => tipos.push({ ...t, ...base, modal: pr.modal, chave: docChave(t.id, pr.id) }));
+        if (pr.tipo === 'exportacao_indireta') DOC_TIPOS_INDIRETA
+            .forEach(t => tipos.push({ ...t, ...base, chave: docChave(t.id, pr.id) }));
         salvos.filter(r => String(r.tipo_documento).startsWith('custom_') && String(r.processo_id) === String(pr.id))
             .forEach(r => tipos.push({ id: r.tipo_documento, label: r.tipo_label || 'Documento', custom: true, ...base, chave: docChave(r.tipo_documento, pr.id) }));
     });
     // antigos sem processo_id, com 2+ Processos: o usuário escolhe de qual embarque são
     if (procs.length > 1) {
-        const rotulos = Object.fromEntries([...DOC_TIPOS_UNIVERSAIS, ...Object.values(DOC_TIPOS_MODAL).flat()].map(t => [t.id, t.label]));
+        const rotulos = Object.fromEntries([...DOC_TIPOS_UNIVERSAIS, ...Object.values(DOC_TIPOS_MODAL).flat(), ...DOC_TIPOS_INDIRETA].map(t => [t.id, t.label]));
         salvos.filter(r => !r.processo_id && DOC_TIPOS_POR_PROCESSO.includes(r.tipo_documento))
             .forEach(r => tipos.push({ id: r.tipo_documento, chave: r.tipo_documento, label: rotulos[r.tipo_documento] || r.tipo_documento, orfao: true, grupo: 'orfao' }));
     }

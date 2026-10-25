@@ -25,7 +25,8 @@ const HIST_CAMPOS = {
     documentos: 'Numeração de documentos', transporte: 'Transporte', etapas: 'Etapas',
     origem_endereco: 'Endereço de origem', destino_endereco: 'Endereço de destino', origem_coleta: 'Endereço de coleta',
     destino_responsavel: 'Responsável no destino', rota_intermediarios: 'Intermediários de rota',
-    data_abertura: 'Data de abertura', data_previsao: 'Previsão', data_embarque: 'Data de embarque',
+    data_abertura: 'Data de abertura', data_previsao: 'Previsão de embarque', data_embarque: 'Data de embarque',
+    trading_id: 'Trading', importador_final_id: 'Importador final', nf_remessa_data: 'Data da NF de remessa',
     data_chegada: 'Data de chegada', data_cancelamento: 'Data de cancelamento',
     container_tipo: 'Container', container_numero: 'Nº do container', navio: 'Navio', aeronave: 'Aeronave',
     sem_assinatura: 'Iniciado sem Proforma assinada',
@@ -36,7 +37,7 @@ const HIST_CAMPOS = {
 const HIST_OCULTOS = new Set(['id', 'empresa_id', 'empresa_proprietaria_id', 'criado_por', 'excluido_em', 'excluido_por',
     'arquivo_path', 'enviado_em', 'tipo_label', 'processo_id', 'pedido_id', 'processo_gerado_id', 'origem_pais_codigo',
     'destino_pais_codigo', 'sem_assinatura_confirmado_por', 'sem_assinatura_confirmado_em', 'idioma_outro', 'documento']);
-const HIST_PARCEIROS = new Set(['parceiro_id', 'remetente_parceiro_id', 'destinatario_id', 'empresa_parceira_id']);
+const HIST_PARCEIROS = new Set(['parceiro_id', 'remetente_parceiro_id', 'destinatario_id', 'empresa_parceira_id', 'trading_id', 'importador_final_id']);
 const HIST_STATUS = { pendente: 'Pendente', enviado: 'Enviado', aprovado: 'Aprovado', encerrado: 'Encerrado', excluido: 'Excluído',
     aberto: 'Aberto', em_andamento: 'Em andamento', aguardando_documentos: 'Aguard. documentos', concluido: 'Concluído', cancelado: 'Cancelado' };
 const HIST_VALORES = {
@@ -45,7 +46,8 @@ const HIST_VALORES = {
     emissor_tipo: { usuario: 'Usuário (própria empresa)', terceiro: 'Terceiro' },
 };
 const HIST_DOCS = { proforma: 'Proforma Invoice', commercial: 'Commercial Invoice', packing: 'Packing List', due: 'DUE',
-    le: 'Licença de Exportação', certorigem: 'Certificado de Origem', ctn: 'Conhecimento de Transporte', nfe: 'Nota Fiscal' };
+    le: 'Licença de Exportação', certorigem: 'Certificado de Origem', ctn: 'Conhecimento de Transporte', nfe: 'Nota Fiscal',
+    nfremessa: 'NF de Remessa (fim específico)', memorando: 'Memorando de Exportação' };
 const HIST_ACOES = {
     criado:     ['fa-plus',          '#16a34a', 'Criou'],
     alterado:   ['fa-pen',           '#4776ec', 'Alterou'],
@@ -176,6 +178,52 @@ function _histDiffObjeto(campo, de, para) {
         });
 }
 
+// Etapas do Processo (lista JSON): uma frase por fato — concluída (por quem ou
+// automaticamente), reaberta, adicionada, removida, renomeada, prazo/data/
+// responsável alterados. Campos técnicos (auto, em, data_auto...) não aparecem;
+// prazos recalculados pela previsão viram uma linha só.
+function _histDiffEtapas(de, para) {
+    // registro antigo: lista grande gravada como "(alterado)" (antes de database-historico-etapas.sql)
+    const semDetalhe = v => v !== null && v !== undefined && !Array.isArray(v);
+    if (semDetalhe(de) || semDetalhe(para)) return ['<li><i class="fa-solid fa-list-check"></i> Etapas atualizadas <em>(detalhe não registrado)</em></li>'];
+    const a = Array.isArray(de) ? de.filter(Boolean) : [], b = Array.isArray(para) ? para.filter(Boolean) : [];
+    const chave = e => e.id || e.nome;
+    const mapA = new Map(a.map(e => [chave(e), e])), mapB = new Map(b.map(e => [chave(e), e]));
+    const nome = e => `<strong>${_histEsc(e.nome || 'Etapa sem nome')}</strong>`;
+    const dt = v => v ? _histEsc(new Date(String(v).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR')) : '<em>vazio</em>';
+    const comuns = b.filter(e => mapA.has(chave(e)));
+    // lista inteira trocada (ex.: mudou o modal ou o tipo)
+    if (a.length && b.length && !comuns.length) {
+        return [`<li><i class="fa-solid fa-list-check"></i> Lista de etapas trocada pela padrão (${a.length} → ${b.length} etapas)</li>`];
+    }
+    const l = [];
+    let recalculados = 0;
+    b.forEach(nova => {
+        const velha = mapA.get(chave(nova));
+        if (!velha) { l.push(`<li><i class="fa-solid fa-plus"></i> Etapa adicionada: ${nome(nova)}</li>`); return; }
+        if ((velha.nome || '') !== (nova.nome || '')) l.push(`<li>Etapa renomeada: ${_histEsc(velha.nome || '—')} <i class="fa-solid fa-arrow-right-long"></i> ${nome(nova)}</li>`);
+        if (!velha.concluida && nova.concluida) {
+            const como = nova.auto ? ` automaticamente <em>(${_histEsc(nova.auto)})</em>` : (nova.por ? ` por <strong>${_histEsc(nova.por)}</strong>` : '');
+            l.push(`<li><i class="fa-solid fa-circle-check" style="color:#16a34a"></i> ${nome(nova)} concluída${como}${nova.data ? ` em ${dt(nova.data)}` : ''}</li>`);
+        } else if (velha.concluida && !nova.concluida) {
+            l.push(`<li><i class="fa-solid fa-rotate-left" style="color:#ea580c"></i> ${nome(nova)} reaberta${velha.auto && !nova.manual ? ' <em>(a informação que a concluía foi removida)</em>' : ''}</li>`);
+        } else if ((velha.data || '') !== (nova.data || '') && nova.concluida && !nova.data_auto) {
+            l.push(`<li>Data de conclusão de ${nome(nova)}: ${dt(velha.data)} <i class="fa-solid fa-arrow-right-long"></i> ${dt(nova.data)}</li>`);
+        }
+        if ((velha.prazo || '') !== (nova.prazo || '')) {
+            if (nova.prazo_manual) l.push(`<li>Prazo de ${nome(nova)}: ${dt(velha.prazo)} <i class="fa-solid fa-arrow-right-long"></i> ${dt(nova.prazo)}</li>`);
+            else if (velha.prazo_manual) l.push(`<li>Prazo de ${nome(nova)} voltou ao cálculo automático (${dt(nova.prazo)})</li>`);
+            else recalculados++;
+        }
+        if ((velha.responsavel || '') !== (nova.responsavel || '')) {
+            l.push(`<li>Responsável de ${nome(nova)}: ${velha.responsavel ? _histEsc(velha.responsavel) : '<em>vazio</em>'} <i class="fa-solid fa-arrow-right-long"></i> ${nova.responsavel ? _histEsc(nova.responsavel) : '<em>vazio</em>'}</li>`);
+        }
+    });
+    a.filter(e => !mapB.has(chave(e))).forEach(e => l.push(`<li><i class="fa-solid fa-minus"></i> Etapa removida: ${nome(e)}</li>`));
+    if (recalculados) l.push(`<li><i class="fa-regular fa-calendar"></i> Prazos recalculados pela previsão de embarque (${recalculados} etapa${recalculados > 1 ? 's' : ''})</li>`);
+    return l;
+}
+
 // Aviso "iniciado sem a Proforma assinada" (aceite registrado no Processo)
 function _histSemAssinatura(pr) {
     if (!pr?.sem_assinatura) return '';
@@ -296,7 +344,7 @@ async function abrirHistorico(tipo, registroId, codigo) {
             </div>`;
         }
         const [icone, cor, rotulo] = HIST_ACOES[h.acao] || ['fa-circle', '#64748b', h.acao];
-        const titulo = h.tabela === 'proforma_documentos'
+        let titulo = h.tabela === 'proforma_documentos'
             ? `${rotulo}: ${_histEsc(HIST_DOCS[h.codigo] || h.codigo || '')}`
             : (h.acao === 'criado' ? (tipo === 'processo' ? 'Processo criado' : 'Proforma criada') : rotulo);
         let linhas = Object.entries(h.alteracoes || {})
@@ -309,9 +357,14 @@ async function abrirHistorico(tipo, registroId, codigo) {
                     const l = _histDiffObjeto(c, d?.de, d?.para);
                     if (l.length) return l;
                 }
+                if (c === 'etapas') return _histDiffEtapas(d?.de, d?.para);
                 if (c === 'sem_assinatura' && d?.para === true) return [_histSemAssinatura(procAtual || { sem_assinatura: true })];
                 return [`<li><strong>${_histEsc(rot)}:</strong> ${_histValor(c, d?.de, nomes)} <i class="fa-solid fa-arrow-right-long"></i> ${_histValor(c, d?.para, nomes)}</li>`];
             }).join('');
+        // alteração sem nada visível (só campos técnicos): não polui a linha do tempo
+        if (h.acao === 'alterado' && !linhas) return '';
+        const camposVisiveis = Object.keys(h.alteracoes || {}).filter(c => !HIST_OCULTOS.has(c));
+        if (h.acao === 'alterado' && h.tabela === 'processos' && camposVisiveis.length === 1 && camposVisiveis[0] === 'etapas') titulo = 'Atualizou as etapas';
         if (tipo === 'processo' && h.acao === 'criado') {
             linhas = `<li>Origem: <strong>Proforma ${_histEsc(proformaOrigem?.codigo || '—')}</strong></li>`
                 + (procAtual?.sem_assinatura ? _histSemAssinatura(procAtual) : (procAtual?.proforma_id ? '<li>Iniciado com a Proforma assinada</li>' : ''))

@@ -627,6 +627,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     iniciarAutocompletePaisDestinoProposta();
     iniciarAutocompletePropCliente();
     iniciarAutocompleteEmpresaDestinoProposta();
+    iniciarImportadorFinalProposta();
     iniciarAutocompleteAeroportos();
     iniciarAutocompletePortos();
     // Linha de produto em branco só numa Proforma nova. Na edição/duplicação
@@ -645,13 +646,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (_urlTab === 'processo' && _urlId) {
         await procCarregarEdicao(_urlId);
         if (_urlModo === 'visualizar') procAplicarModoVisualizacao();
-        if (_urlModo === 'pdf') {
-            procAplicarModoVisualizacao();
-            setTimeout(() => {
-                if (typeof gerarPDFProcesso === 'function') gerarPDFProcesso();
-                setTimeout(() => window.close(), 800);
-            }, 600);
-        }
     }
 
     // Produto — pré-preencher ao editar via ?tab=produto&id=...

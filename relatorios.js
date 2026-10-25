@@ -715,7 +715,7 @@ function baixarPDF() {
     let conteudoTabela = '';
     let totalRegistros = empresas.length;
 
-    const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora', outros: 'Outro' }[m] || m);
+    const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora', trading: 'Trading', outros: 'Outro' }[m] || m);
 
     if (EXT_REL[tipoRelatorioAtual]) {
         const r = _extConteudoPDF(tipoRelatorioAtual);
@@ -755,7 +755,7 @@ function baixarPDF() {
             return false;
         });
         if (modelosSel.length) lista = lista.filter(e => modelosSel.includes(_modeloEmpresa(e)));
-        const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora', outros: 'Outro' }[m] || m);
+        const _modeloLabel = m => ({ empresa: 'Nacional', company: 'Estrangeira', transportadora: 'Transportadora', trading: 'Trading', outros: 'Outro' }[m] || m);
         conteudoTabela = `
             <table>
                 <thead><tr><th>Empresa</th><th>Tipo</th><th>Modelo</th><th>País</th><th>Documento</th></tr></thead>

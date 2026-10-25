@@ -38,7 +38,7 @@ async function _pdfProformaCompletar(d) {
     const vazio = v => v === null || v === undefined || String(v).trim() === '';
     const endereco = e => [[e.endereco, e.numero].filter(Boolean).join(', '), e.complemento].filter(Boolean).join(' - ');
     try {
-        const ids = [d.emissor_tipo === 'terceiro' ? d.parceiro_id : null, d.destinatario_id].filter(Boolean);
+        const ids = [d.emissor_tipo === 'terceiro' ? d.parceiro_id : null, d.destinatario_id, d.importador_final_id].filter(Boolean);
         const { data: parcs } = ids.length ? await supabaseClient.from('parceiros').select('*').in('id', ids) : { data: [] };
         const parc = id => (parcs || []).find(p => String(p.id) === String(id));
         // 1º contato cadastrado de cada empresa (Exportador terceiro e Importador)
@@ -64,6 +64,9 @@ async function _pdfProformaCompletar(d) {
             if (vazio(d.estado))    d.estado    = exp.estado;
             if (vazio(d.cep))       d.cep       = exp.cep;
         }
+        // exportação indireta: importador lá fora (a destinatária é a trading)
+        const impFinal = parc(d.importador_final_id);
+        if (impFinal) d._importador_final = [impFinal.razao_social || impFinal.nome_fantasia, impFinal.pais].filter(Boolean).join(' · ');
         const imp = parc(d.destinatario_id);
         if (imp) {
             if (vazio(d.destinatario_razao_social)) d.destinatario_razao_social = imp.razao_social || imp.nome_fantasia;
@@ -184,13 +187,15 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
         [t.modal, I.modal(d.modal)], [t.moeda, moeda], [t.tipo, I.tipo(d.tipo), 1.2], [t.proposito, I.proposito(d.proposito)],
     ]);
 
-    // ── Exportador | Importador ──
+    // ── Exportador | Importador (indireta: Vendedor | Comprador — quem exporta é a trading) ──
+    const indireta = d.tipo === 'exportacao_indireta';
     const cidadeImp = [vv(d.destinatario_cidade), vv(d.destinatario_estado)].filter(Boolean).join(' / ');
     Y = pvQuadros(doc, Y, [
-        { titulo: t.exportador, nome: nomeExp, ultimaCinza: !!d._contato_exp,
+        { titulo: indireta ? t.vendedor : t.exportador, nome: nomeExp, ultimaCinza: !!d._contato_exp,
           linhas: [d.documento ? `${t.identificacao}: ${d.documento}` : '', [vv(d.endereco), cidadeExp].filter(Boolean).join(' · '),
                    [vv(d.origem_pais), vv(d.cep)].filter(Boolean).join(' · '), d._contato_exp ? `${t.contato}: ${d._contato_exp}` : ''].filter(Boolean) },
-        { titulo: t.importador, nome: vv(d.destinatario_razao_social) || '—', ultimaCinza: !!d._contato_imp,
+        // exportação indireta: a destinatária é a trading (compradora), não o importador
+        { titulo: indireta ? t.comprador : t.importador, nome: vv(d.destinatario_razao_social) || '—', ultimaCinza: !!d._contato_imp,
           linhas: [d.destinatario_doc ? `${t.identificacao_fiscal}: ${d.destinatario_doc}` : '', [vv(d.destinatario_endereco), cidadeImp].filter(Boolean).join(' · '),
                    [vv(d.destinatario_pais || d.destino_pais), vv(d.destinatario_cep)].filter(Boolean).join(' · '), d._contato_imp ? `${t.contato}: ${d._contato_imp}` : ''].filter(Boolean) },
     ]);
@@ -201,6 +206,8 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
             [t.origem, [vv(d.origem_pais), vv(pontoOrigem)].filter(Boolean).join(' · ')],
             [t.destino, [vv(d.destino_pais), vv(pontoDestino)].filter(Boolean).join(' · ')],
             ...(d.previsao_embarque ? [[t.previsao_embarque, I.data(d.previsao_embarque)]] : []),
+            ...(indireta && d._importador_final ? [[t.importador_final, d._importador_final]] : []),
+            ...(indireta ? [[t.operacao, t.fim_especifico]] : []),
         ] },
         { titulo: t.condicoes_pagamento, chaves: [
             [t.forma, I.formaPagamento(d.forma_pagamento)],
@@ -245,8 +252,8 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
 
     // ── Assinaturas (no pé da página) ──
     pvAssinaturas(doc, Y, [
-        { nome: nomeExp, rotulo: t.assinatura_exportador },
-        { nome: vv(d.destinatario_razao_social) || '—', rotulo: t.assinatura_aceite },
+        { nome: nomeExp, rotulo: indireta ? t.assinatura_vendedor : t.assinatura_exportador },
+        { nome: vv(d.destinatario_razao_social) || '—', rotulo: indireta ? t.assinatura_aceite_comprador : t.assinatura_aceite },
     ]);
 
     pvRodape(doc, { t, textoDireita: `${t.proforma_invoice} ${codigo}` });

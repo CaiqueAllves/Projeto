@@ -1300,7 +1300,7 @@ form {
 
 .etapas-header {
     display: grid;
-    grid-template-columns: 50px 1fr 140px 160px 36px;
+    grid-template-columns: 50px 1fr 140px 140px 150px 36px;
     gap: 8px;
     padding: 6px 10px;
     background: #f8faff;
@@ -1315,7 +1315,7 @@ form {
 
 .etapa-row {
     display: grid;
-    grid-template-columns: 50px 1fr 140px 160px 36px;
+    grid-template-columns: 50px 1fr 140px 140px 150px 36px;
     gap: 8px;
     align-items: center;
     padding: 6px 10px;
@@ -1338,6 +1338,14 @@ form {
     accent-color: var(--azul);
 }
 
+.etapa-col-nome { display: flex; flex-direction: column; min-width: 0; }
+.etapa-origem { font-size: 11px; color: #64748b; padding: 0 10px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.etapa-origem i { font-size: 10px; margin-right: 3px; }
+.etapa-origem--auto { color: #15803d; }
+.etapa-origem--atrasada { color: #dc2626; font-weight: 600; }
+.etapa-origem--vence { color: #b45309; }
+.etapa-prazo.atrasada { color: #dc2626; font-weight: 600; }
+
 .etapa-row.concluida .etapa-nome {
     text-decoration: line-through;
     color: var(--texto-claro);
@@ -1345,6 +1353,7 @@ form {
 
 .etapa-nome,
 .etapa-data,
+.etapa-prazo,
 .etapa-resp {
     padding: 6px 10px;
     border: 1px solid transparent;
@@ -1360,6 +1369,7 @@ form {
 
 .etapa-nome:focus,
 .etapa-data:focus,
+.etapa-prazo:focus,
 .etapa-resp:focus {
     outline: none;
     border-color: var(--azul);
@@ -3877,3 +3887,28 @@ input.transp-campo-auto { background: #f8fafc; color: #334155; cursor: default; 
     border-radius: 8px;
     cursor: pointer;
 }
+
+/* Datas da etapa: rótulo só aparece no celular (no computador o cabeçalho já diz) */
+.etapa-campo { display: block; min-width: 0; margin: 0; }
+.etapa-campo span { display: none; }
+/* Etapas no celular: nome em cima; concluída em / prazo / responsável embaixo */
+@media (max-width: 768px) {
+    .etapas-header { display: none; }
+    .etapa-row { grid-template-columns: 32px 1fr 1fr 28px; grid-template-areas: 'chk nome nome rm' '. data prazo .' '. resp resp .'; gap: 4px 6px; padding: 8px 4px; }
+    .etapa-row .etapa-col-check { grid-area: chk; align-self: start; padding-top: 8px; }
+    .etapa-row .etapa-col-nome  { grid-area: nome; }
+    .etapa-row .etapa-campo-data  { grid-area: data; }
+    .etapa-row .etapa-campo-prazo { grid-area: prazo; }
+    .etapa-row .etapa-resp      { grid-area: resp; }
+    .etapa-row .btn-remover-etapa { grid-area: rm; align-self: start; }
+    .etapa-campo span { display: block; font-size: 11px; font-weight: 600; color: #94a3b8; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .etapa-row .etapa-data, .etapa-row .etapa-prazo { font-size: 12.5px; padding: 4px 6px; border-color: #e2e8f0; }
+}
+
+/* Exportação indireta (Proforma / Processo) */
+.prop-indireta-aviso { display: block; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 13px; color: #1e3a8a; line-height: 1.45; }
+.prop-indireta-aviso i { color: #4776ec; margin-right: 4px; }
+.proc-trading-info small { display: block; font-size: 12px; color: #64748b; line-height: 1.4; padding-top: 10px; }
+.proc-trading-info small i { color: #4776ec; margin-right: 3px; }
+.doc-subcampo { display: block; font-size: 12px; font-weight: 600; color: #475569; margin: 8px 0 4px; }
+.doc-subcampo small { font-weight: 400; color: #94a3b8; }
