@@ -25,6 +25,12 @@ const P = (campo) => `X"'><img src=x onerror="__xss.push('${campo}')">`;
       const itens = (pf.itens || []).map(i => ({ ...i, produto: m + P('pf.item.produto') }));
       await upd('proformas', ids.proforma, { codigo: m + P('pf.codigo'), origem_pais: P('pf.origem'), destino_pais: P('pf.destino'), parceiro_razao_social: P('pf.parceiro_razao'), incoterm_local: P('pf.incoterm_local'), observacoes: P('pf.obs'), itens });
       await upd('processos', ids.processos[0], { numero_processo: m + P('proc.numero'), fronteira_saida: P('proc.fronteira'), container_numero: P('proc.container'), observacoes: P('proc.obs'), itens: itens.map(i => ({ ...i, qtd: 50 })) });
+      // etapas (painel "Ver", card, Pendências do Início, Histórico) e exportação indireta
+      const etapas = [{ id: 'x1', nome: 'Pedido Confirmado' + P('etapa.nome'), concluida: false, prazo: '2026-01-01', prazo_manual: true, responsavel: P('etapa.resp') },
+                      { id: 'x2', nome: P('etapa.nome2'), concluida: true, auto: P('etapa.auto'), por: P('etapa.por'), data: '2026-01-02' }];
+      await upd('processos', ids.processos[0], { etapas, tipo: 'exportacao_indireta', trading_id: ids.exp, documentos: { nfremessa: P('proc.nfremessa'), memorando: P('proc.memorando') } });
+      await upd('processos', ids.processos[0], { etapas: etapas.map(e => ({ ...e, nome: e.nome + P('etapa.renomeada') })) });
+      await upd('proformas', ids.proforma, { tipo: 'exportacao_indireta', importador_final_id: ids.exp });
       const u = obterUsuarioLogado();
       const cr = await supabaseClient.from('contas_receber').insert({ empresa_id: u.empresa_id, descricao: m + P('cr.descricao'), valor: 10, data_vencimento: '2026-12-01', status: 'pendente', proforma_id: ids.proforma }).select('id').single();
       if (cr.error) err.push('cr: ' + cr.error.message); 
@@ -61,6 +67,10 @@ const P = (campo) => `X"'><img src=x onerror="__xss.push('${campo}')">`;
     await visitar('proforma.html?semabas=1', `profVerDocumentos('${ids.proforma}')`, 'documentos');
     await visitar('proforma.html?semabas=1', `abrirHistorico('proforma','${ids.proforma}','x')`, 'histórico');
     await visitar('processos.html?semabas=1');
+    await visitar('processos.html?semabas=1', `abrirResumo('processo','${ids.processos[0]}')`, 'painel Ver processo');
+    await visitar('proforma.html?semabas=1', `abrirResumo('proforma','${ids.proforma}')`, 'painel Ver proforma');
+    await visitar('processos.html?semabas=1', `abrirHistorico('processo','${ids.processos[0]}','x')`, 'histórico processo');
+    await visitar('processos.html?semabas=1', `void ciAbrirJanelaColunas('${ids.processos[0]}')`, 'janela colunas CI');
     await visitar('processos.html?semabas=1', () => { document.querySelectorAll('.view-btn, [data-view]').forEach(b => b.click()); }, 'outra visão');
     for (const t of ['produtos.html', 'cadastros.html', 'contas-pagar.html', 'contas-receber.html', 'fluxo-caixa.html', 'dre.html', 'pipeline.html', 'proposta.html', 'pipeline-financeiro.html', 'inicio.html', 'relatorios.html', 'relatorios-proforma.html', 'relatorios-processos.html', 'relatorios-produtos.html', 'relatorios-financeiro.html', 'relatorios-comercial.html'])
       await visitar(t + '?semabas=1');

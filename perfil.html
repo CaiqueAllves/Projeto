@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
     <link rel="stylesheet" href="style-permissoes.css?v=22176f74">
     <link rel="stylesheet" href="style-perfil.css?v=272e6ee6">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
 
@@ -398,94 +398,39 @@
 
                             <div class="seg-divider"><span>Alterar Senha</span></div>
 
-                            <!-- STEP 1: Escolha do canal + Solicitar -->
-                            <div id="segStep1">
-                                <!-- Seletor de canal -->
-                                <div class="seg-canal-selector">
-                                    <button class="seg-canal-btn active" id="btnCanalEmail" onclick="selecionarCanal('email')">
-                                        <i class="fa-solid fa-envelope"></i> E-mail
-                                    </button>
-                                    <button class="seg-canal-btn" id="btnCanalSms" onclick="selecionarCanal('sms')">
-                                        <i class="fa-solid fa-mobile-screen"></i> Celular
-                                    </button>
-                                </div>
-
-                                <!-- Info canal email -->
-                                <div class="seg-email-card" id="segCanalEmailCard">
-                                    <div class="seg-email-icon">
-                                        <i class="fa-solid fa-envelope"></i>
-                                    </div>
-                                    <div class="seg-email-texto">
-                                        <div class="seg-email-label">Código de verificação será enviado para o e-mail</div>
-                                        <div class="seg-email-valor" id="segEmailMasked">—</div>
-                                    </div>
-                                </div>
-
-                                <!-- Info canal celular -->
-                                <div class="seg-email-card" id="segCanalSmsCard" style="display:none;">
-                                    <div class="seg-email-icon" style="background:#f0fdf4; color:#22c55e;">
-                                        <i class="fa-solid fa-mobile-screen"></i>
-                                    </div>
-                                    <div class="seg-email-texto">
-                                        <div class="seg-email-label">Código de verificação será enviado via SMS para</div>
-                                        <div class="seg-email-valor" id="segTelMasked">—</div>
-                                    </div>
-                                </div>
-
-                                <div class="seg-senha-regras">
-                                    <i class="fa-solid fa-circle-info"></i>
-                                    O código é válido por 10 minutos e expira após o uso.
-                                </div>
-                                <div class="perfil-form-footer">
-                                    <button class="btn-salvar btn-solicitar" id="btnSolicitarCodigo" onclick="solicitarCodigo()">
-                                        <i class="fa-solid fa-paper-plane"></i> Enviar Código
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- STEP 2: Inserir código + nova senha -->
-                            <div id="segStep2" style="display:none;">
-                                <div class="seg-codigo-aviso">
-                                    <i class="fa-solid fa-envelope-circle-check"></i>
-                                    Código enviado para <strong id="segEmailDisplay">—</strong>. Válido por 10 minutos.
-                                </div>
+                            <!-- Troca de senha: a senha atual é conferida no servidor (Edge Function alterar-senha) -->
+                            <div id="segTrocaSenha">
                                 <div class="perfil-form-grid perfil-form-grid-senha">
-                                    <div class="perfil-form-group perfil-form-group-codigo">
-                                        <label for="inputCodigo">Código de Verificação</label>
-                                        <input type="text" id="inputCodigo" placeholder="000000" maxlength="6"
-                                               style="letter-spacing:6px; font-size:20px; font-weight:700; text-align:center;">
+                                    <div class="perfil-form-group">
+                                        <label for="inputSenhaAtual">Senha Atual</label>
+                                        <div class="input-senha-wrap">
+                                            <input type="password" id="inputSenhaAtual" placeholder="Sua senha atual" autocomplete="current-password">
+                                            <i class="fa-solid fa-eye toggle-senha" onclick="toggleSenha('inputSenhaAtual', this)"></i>
+                                        </div>
                                     </div>
                                     <div class="perfil-form-group">
                                         <label for="inputNovaSenha">Nova Senha</label>
                                         <div class="input-senha-wrap">
-                                            <input type="password" id="inputNovaSenha" placeholder="Mínimo 6 caracteres">
+                                            <input type="password" id="inputNovaSenha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
                                             <i class="fa-solid fa-eye toggle-senha" onclick="toggleSenha('inputNovaSenha', this)"></i>
                                         </div>
                                     </div>
                                     <div class="perfil-form-group">
                                         <label for="inputConfirmarSenha">Confirmar Nova Senha</label>
                                         <div class="input-senha-wrap">
-                                            <input type="password" id="inputConfirmarSenha" placeholder="Repita a senha">
+                                            <input type="password" id="inputConfirmarSenha" placeholder="Repita a nova senha" autocomplete="new-password">
                                             <i class="fa-solid fa-eye toggle-senha" onclick="toggleSenha('inputConfirmarSenha', this)"></i>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="seg-senha-regras">
                                     <i class="fa-solid fa-circle-info"></i>
-                                    A senha deve ter no mínimo 6 caracteres.
+                                    A nova senha deve ter no mínimo 6 caracteres. Após 5 tentativas com a senha atual errada, o acesso fica bloqueado por 15 minutos.
                                 </div>
-                                <div class="seg-step2-footer">
-                                    <button class="btn-cancelar-codigo" onclick="voltarStep1()">
-                                        <i class="fa-solid fa-arrow-left"></i> Cancelar
+                                <div class="perfil-form-footer">
+                                    <button class="btn-salvar" id="btnTrocarSenha" onclick="confirmarSenha()">
+                                        <i class="fa-solid fa-check"></i> Alterar Senha
                                     </button>
-                                    <div class="seg-step2-footer-right">
-                                        <button class="btn-reenviar" onclick="reenviarCodigo()">
-                                            <i class="fa-solid fa-rotate-right"></i> Reenviar
-                                        </button>
-                                        <button class="btn-salvar" onclick="confirmarSenha()">
-                                            <i class="fa-solid fa-check"></i> Confirmar Alteração
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
 
@@ -648,12 +593,11 @@
 <div class="toast" id="toast"></div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
-<script src="supabase-api.js?v=94069b45"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js" integrity="sha384-qGFE4FIJLgCFuYs3nzg39XpCtvT5AZUhaBdjB3e1+vpKQa03AkyWOyBSFb9OcQ/g" crossorigin="anonymous"></script>
+<script src="supabase-api.js?v=056c6d75"></script>
 <script src="auth.js?v=37c2c7b0"></script>
-<script src="navegador.js?v=1c5fb652"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="perfil.js?v=2041b0d9"></script>
+<script src="navegador.js?v=43ffeccc"></script>
+<script src="perfil.js?v=0716a071"></script>
 
 <script src="suporte.js?v=1debcf1b"></script>
 </body>

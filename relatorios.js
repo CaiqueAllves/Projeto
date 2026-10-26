@@ -11,11 +11,8 @@ let todasProdutos  = [];
 const HISTORICO_KEY = 'relatoriosHistorico';
 
 // Helpers — campos booleanos da tabela
-const _eCliente     = e => !!e.is_cliente;
 const _eFornecedor  = e => !!e.is_fornecedor;
 const _eFabricante  = e => !!e.is_fabricante;
-const _eTransp      = e => !!e.is_transportadora;
-const _eRemetente   = e => !!e.is_remetente;
 const _tiposStr     = e => {
     const t = [];
     if (e.is_fabricante)     t.push('Fabricante');

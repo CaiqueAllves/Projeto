@@ -13,8 +13,6 @@ let _cadFiltro = 'todos';
 let _cadAbertoId = null;
 
 const _cadEsc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-// anexo_url é gravável pelo usuário que abriu o chamado — só https vira link (bloqueia javascript:)
-const _cadUrlSegura = u => /^https:\/\//i.test(String(u || '')) ? _cadEsc(u) : '#';
 // Bucket privado: o anexo (caminho ou URL antiga) vira link temporário via
 // hidratarArquivosPrivados (supabase-api.js) — o href/src só recebe o que o
 // Storage devolve, então um valor gravado pelo usuário não vira javascript:.

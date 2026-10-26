@@ -9,6 +9,11 @@ let todasEmpresas = [];
 // xlsx (~600KB) e pdf.js (~350KB) só servem pro upload de Excel/PDF — antes
 // carregavam sempre que a tela abria, mesmo pra quem só veio cadastrar uma
 // empresa manualmente. Passam a carregar só na hora do upload de verdade.
+const LIBS_SRI = {
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js': 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e',
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js': 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw',
+};
 const LIBS_SOB_DEMANDA = {
     xlsx:  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
     pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
@@ -20,6 +25,8 @@ function carregarLibSobDemanda(nome) {
     _libsCarregadas[nome] = new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = LIBS_SOB_DEMANDA[nome];
+        // conferência de integridade (SRI): arquivo do CDN alterado não executa
+        if (LIBS_SRI[script.src]) { script.integrity = LIBS_SRI[script.src]; script.crossOrigin = 'anonymous'; }
         script.onload = () => {
             if (nome === 'pdfjs') {
                 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';

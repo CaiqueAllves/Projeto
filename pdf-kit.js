@@ -345,34 +345,6 @@ function pdfCarregarImagem(url) {
     return _pdfImagensCache[url];
 }
 
-// Bloco "Dados bancários" (Proforma e Commercial Invoice). dados = cópia
-// guardada na Proforma (proformas.dados_bancarios). Devolve o novo Y.
-// Altura útil: com o rodapé discreto (10mm) o conteúdo vai até ~196mm
-const PDF_LIMITE_DISCRETO = 196;
-
-function pdfDadosBancarios(doc, { dados, Y, ML = 14, t = PDF_IDIOMAS.pt, beneficiarioPadrao = '', limite = PDF_LIMITE_DISCRETO }) {
-    if (!dados) return Y;
-    const W = doc.internal.pageSize.getWidth();
-    const campos = [
-        [t.beneficiario, dados.beneficiario || beneficiarioPadrao],
-        [t.banco, dados.banco], [t.agencia, dados.agencia], [t.conta, dados.conta],
-        [t.moeda, dados.moeda], [t.swift, dados.swift], [t.iban, dados.iban], [t.endereco_banco, dados.endereco_banco],
-    ].filter(([, v]) => v && String(v).trim());
-    if (!campos.length) return Y;
-    const cols = 4, colW = (W - ML * 2) / cols, linhas = Math.ceil(campos.length / cols), altLinha = 8.5;
-    if (Y + 9 + linhas * altLinha > limite) { doc.addPage(); Y = 20; }
-    doc.setFillColor(...PDF_CORES.AZUL); doc.rect(ML, Y, 3, 6, 'F');
-    doc.setFillColor(...PDF_CORES.AZUL_CLARO); doc.rect(ML + 3, Y, W - ML * 2 - 3, 6, 'F');
-    _pdfTexto(doc, 'bold', 7.5, PDF_CORES.AZUL, t.dados_bancarios, ML + 7, Y + 4.2);
-    Y += 10;
-    campos.forEach(([rot, v], i) => {
-        const x = ML + (i % cols) * colW, y = Y + Math.floor(i / cols) * altLinha;
-        _pdfTexto(doc, 'bold', 5.8, PDF_CORES.CINZA, rot.toUpperCase(), x + 2, y);
-        _pdfTexto(doc, 'normal', 7.5, PDF_CORES.PRETO, doc.setFontSize(7.5).splitTextToSize(String(v), colW - 6)[0], x + 2, y + 4.3);
-    });
-    return Y + linhas * altLinha + 1;
-}
-
 // Dados da própria empresa (Exportador = "Usuário"). logo_url só existe depois
 // de database-logo-marcas-contas-bancarias.sql — sem a coluna, busca sem ela.
 async function pdfEmpresaPropria(empresaId) {

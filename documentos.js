@@ -1006,19 +1006,6 @@ async function docConfirmarAssinaturaModal() {
     mostrarNotificacao('Assinatura registrada.', 'sucesso');
 }
 
-async function docBaixarAssinatura(path, nome) {
-    const { data, error } = await supabaseClient.storage.from(BUCKET_DOC_ASSINATURA).download(path);
-    if (error) { mostrarNotificacao('Erro ao baixar documento.', 'erro'); return; }
-    const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = nome;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
 async function docDesmarcarAssinatura(proformaId, chave) {
     const { tipoId, processoId } = _docParseChave(chave);
     const tipoLabelAtual = _docReg(proformaId, chave)?.tipo_label || null;
@@ -1095,16 +1082,3 @@ async function docExcluirPersonalizado(proformaId, chave, registroId) {
     mostrarNotificacao('Documento removido.', 'sucesso');
 }
 
-function docFiltrar(filtro) {
-    _docFiltroAtual = filtro;
-    ['docFiltroTodos', 'docFiltroPendentes', 'docFiltroAssinados'].forEach(id => {
-        document.getElementById(id)?.classList.remove('active');
-    });
-    const mapa = { todos: 'docFiltroTodos', pendentes: 'docFiltroPendentes', assinados: 'docFiltroAssinados' };
-    document.getElementById(mapa[filtro])?.classList.add('active');
-    docRenderizar();
-}
-
-function docBuscar() {
-    docRenderizar();
-}

@@ -1201,6 +1201,4 @@ async function propIniciarItens() {
 }
 
 // Compatibilidade com os chamadores antigos da Proforma.
-function propAdicionarItem()   { return itemAdicionar('prop'); }
 function propRenderizarItens() { itensRenderizar('prop'); }
-function propRecalcularTotais() { itensRecalcular('prop'); }

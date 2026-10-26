@@ -27,16 +27,6 @@ function _hashSenha(senha) {
     return dcodeIO.bcrypt.hashSync(senha, 10);
 }
 
-// Compatibilidade com contas que ainda têm a senha em texto puro (de antes
-// desta migração): se o valor salvo não tem cara de hash bcrypt, compara
-// direto. loginSupabase() re-hasheia automaticamente assim que reconhece
-// esse caso, então cada conta migra sozinha no próximo login bem-sucedido.
-function _senhaCorreta(senha, hashSalvo) {
-    if (!hashSalvo) return false;
-    if (!/^\$2[aby]\$/.test(hashSalvo)) return hashSalvo === senha;
-    return dcodeIO.bcrypt.compareSync(senha, hashSalvo);
-}
-
 // ========================================
 // LOGIN
 // ========================================
@@ -638,20 +628,24 @@ async function atualizarDadosPessoais(id, dados) {
     }
 }
 
-async function redefinirSenha(id, novaSenha) {
+// Troca da própria senha: a senha atual é conferida no servidor (Edge Function
+// alterar-senha); o banco recusa gravar senha_hash direto pelo navegador
+// (database-senha-somente-servidor.sql).
+async function alterarSenhaPropria(senhaAtual, novaSenha) {
     try {
-        const usuario = obterUsuarioLogado();
-        if (!usuario) return { sucesso: false, mensagem: 'Não autenticado' };
-
-        const { error } = await supabaseClient
-            .from('usuarios')
-            .update({ senha_hash: _hashSenha(novaSenha) })
-            .eq('id', id)
-            .eq('empresa_id', usuario.empresa_id);
-        if (error) return { sucesso: false, mensagem: error.message };
-        return { sucesso: true };
+        const { data } = await supabaseClient.auth.getSession();
+        const token = data?.session?.access_token;
+        if (!token) return { sucesso: false, mensagem: 'Sessão expirada. Entre de novo.' };
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/alterar-senha`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ senhaAtual, novaSenha }),
+        });
+        const r = await res.json().catch(() => ({}));
+        if (res.status === 404) return { sucesso: false, mensagem: 'A troca de senha ainda não foi ativada no servidor (Edge Function alterar-senha).' };
+        return { sucesso: !!r.sucesso, mensagem: r.mensagem || (res.ok ? '' : 'Não foi possível trocar a senha.') };
     } catch (err) {
-        return { sucesso: false, mensagem: err.message };
+        return { sucesso: false, mensagem: 'Não foi possível trocar a senha: ' + err.message };
     }
 }
 
@@ -2438,7 +2432,7 @@ window.supabaseAPI = {
     atualizarDadosPessoais,
     buscarDadosPlano,
     buscarDadosPerfilCompleto,
-    redefinirSenha,
+    alterarSenhaPropria,
     buscarProcessos,
     buscarProcessoPorId,
     salvarProcesso,

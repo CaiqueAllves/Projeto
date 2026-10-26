@@ -2,16 +2,6 @@
 // PERFIL DO USUÁRIO
 // ========================================
 
-// ── EmailJS ─────────────────────────────
-// 1. Acesse https://www.emailjs.com e crie uma conta gratuita
-// 2. Adicione um serviço de e-mail (Gmail, Outlook, etc.)
-// 3. Crie um template com as variáveis: {{to_name}}, {{to_email}}, {{codigo}}
-// 4. Substitua os valores abaixo pelos seus IDs
-const EMAILJS_PUBLIC_KEY  = 'SEU_PUBLIC_KEY';    // Account → API Keys
-const EMAILJS_SERVICE_ID  = 'SEU_SERVICE_ID';    // Email Services → Service ID
-const EMAILJS_TEMPLATE_ID = 'SEU_TEMPLATE_ID';   // Email Templates → Template ID
-// ────────────────────────────────────────
-
 const PLANOS = {
     basico: {
         nome: 'Básico', icone: 'fa-seedling', cor: '#64748b', corFundo: '#f1f5f9',
@@ -41,9 +31,6 @@ const PLANOS = {
 
 let usuarioAtual = null;
 let dadosPerfil = null;
-let codigoAtivo = null;
-let codigoExpiry = null;
-let canalAtivo = 'email'; // 'email' | 'sms'
 
 document.addEventListener('DOMContentLoaded', async function () {
     usuarioAtual = obterUsuarioLogado();
@@ -79,20 +66,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     try { preencherEmpresa(); }    catch(e) { console.error('[Perfil] preencherEmpresa:', e); }
     try { preencherVincularEmpresa(); } catch(e) { console.error('[Perfil] preencherVincularEmpresa:', e); }
     atualizarTopbar(); // atualiza avatar no topbar após ter dadosPerfil
-
-    // Preencher dados mascarados nos canais de segurança
-    const email = dadosPerfil?.email || usuarioAtual.email || '';
-    const telefone = dadosPerfil?.telefone || '';
-    document.getElementById('segEmailMasked').textContent = email ? mascararEmail(email) : 'Não cadastrado';
-
-    const telMasked = document.getElementById('segTelMasked');
-    if (telefone) {
-        telMasked.textContent = mascararTelefone(telefone);
-    } else {
-        telMasked.textContent = 'Não cadastrado';
-        document.getElementById('btnCanalSms').disabled = true;
-        document.getElementById('btnCanalSms').title = 'Cadastre um telefone nos Dados Pessoais';
-    }
 
     const isAdmin = usuarioAtual.perfil === 'admin';
     if (isAdmin) {
@@ -789,102 +762,19 @@ function carregarFoto(avatarUrl) {
 }
 
 // ========================================
-// SEGURANÇA - TROCA DE SENHA POR CÓDIGO
+// SEGURANÇA - TROCA DE SENHA
 // ========================================
-
-function selecionarCanal(canal) {
-    canalAtivo = canal;
-    document.getElementById('btnCanalEmail').classList.toggle('active', canal === 'email');
-    document.getElementById('btnCanalSms').classList.toggle('active', canal === 'sms');
-    document.getElementById('segCanalEmailCard').style.display = canal === 'email' ? 'flex' : 'none';
-    document.getElementById('segCanalSmsCard').style.display = canal === 'sms' ? 'flex' : 'none';
-}
-
-async function solicitarCodigo() {
-    const email    = dadosPerfil?.email || usuarioAtual.email || '';
-    const telefone = dadosPerfil?.telefone || '';
-
-    if (canalAtivo === 'email' && !email) {
-        mostrarToast('E-mail não encontrado na conta.', 'erro'); return;
-    }
-    if (canalAtivo === 'sms' && !telefone) {
-        mostrarToast('Cadastre um telefone nos Dados Pessoais primeiro.', 'erro'); return;
-    }
-
-    codigoAtivo  = Math.floor(100000 + Math.random() * 900000).toString();
-    codigoExpiry = Date.now() + 10 * 60 * 1000; // 10 min
-
-    const btn = document.getElementById('btnSolicitarCodigo');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
-
-    const destino = canalAtivo === 'email'
-        ? mascararEmail(email)
-        : mascararTelefone(telefone);
-
-    if (canalAtivo === 'email') {
-        try {
-            emailjs.init(EMAILJS_PUBLIC_KEY);
-            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-                to_name:  dadosPerfil?.nome_completo || usuarioAtual.nome || 'Usuário',
-                to_email: email,
-                codigo:   codigoAtivo,
-            });
-        } catch (err) {
-            console.error('[EmailJS] Falha ao enviar e-mail:', err);
-            // Fallback: exibe o código no console para testes enquanto EmailJS não está configurado
-            console.info(`[DEV] Código de verificação: ${codigoAtivo}`);
-        }
-    } else {
-        // SMS: integração futura (Twilio, etc.)
-        console.info(`[DEV] Código SMS: ${codigoAtivo}`);
-    }
-
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Código';
-
-    document.getElementById('segStep1').style.display = 'none';
-    document.getElementById('segStep2').style.display = 'block';
-    document.getElementById('segEmailDisplay').textContent = destino;
-
-    mostrarToast(`Código enviado ${canalAtivo === 'email' ? 'por e-mail' : 'via SMS'} para ${destino}`, 'sucesso');
-}
-
-async function reenviarCodigo() {
-    document.getElementById('segStep2').style.display = 'none';
-    document.getElementById('segStep1').style.display = 'block';
-    codigoAtivo  = null;
-    codigoExpiry = null;
-    document.getElementById('inputCodigo').value = '';
-    document.getElementById('inputNovaSenha').value = '';
-    document.getElementById('inputConfirmarSenha').value = '';
-    await solicitarCodigo();
-}
-
-function voltarStep1() {
-    document.getElementById('segStep2').style.display = 'none';
-    document.getElementById('segStep1').style.display = 'block';
-    codigoAtivo = null;
-    codigoExpiry = null;
-    document.getElementById('inputCodigo').value = '';
-    document.getElementById('inputNovaSenha').value = '';
-    document.getElementById('inputConfirmarSenha').value = '';
-}
+// Pede a senha atual, conferida no servidor (Edge Function alterar-senha,
+// via alterarSenhaPropria em supabase-api.js). Antes era um "código por
+// e-mail" gerado e conferido no próprio navegador — dava para pular.
 
 async function confirmarSenha() {
-    const codigo = document.getElementById('inputCodigo').value.trim();
+    const senhaAtual = document.getElementById('inputSenhaAtual').value;
     const novaSenha = document.getElementById('inputNovaSenha').value;
     const confirmar = document.getElementById('inputConfirmarSenha').value;
 
-    if (!codigo || !novaSenha || !confirmar) {
+    if (!senhaAtual || !novaSenha || !confirmar) {
         mostrarToast('Preencha todos os campos.', 'erro'); return;
-    }
-    if (!codigoAtivo || Date.now() > codigoExpiry) {
-        mostrarToast('Código expirado. Solicite um novo.', 'erro');
-        voltarStep1(); return;
-    }
-    if (codigo !== codigoAtivo) {
-        mostrarToast('Código de verificação incorreto.', 'erro'); return;
     }
     if (novaSenha !== confirmar) {
         mostrarToast('As senhas não coincidem.', 'erro'); return;
@@ -892,11 +782,27 @@ async function confirmarSenha() {
     if (novaSenha.length < 6) {
         mostrarToast('A senha deve ter no mínimo 6 caracteres.', 'erro'); return;
     }
+    if (novaSenha === senhaAtual) {
+        mostrarToast('A nova senha deve ser diferente da atual.', 'erro'); return;
+    }
 
-    const res = await redefinirSenha(usuarioAtual.id, novaSenha);
+    const btn = document.getElementById('btnTrocarSenha');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Alterando...';
+    const res = await alterarSenhaPropria(senhaAtual, novaSenha);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Alterar Senha';
     if (res.sucesso) {
-        voltarStep1();
-        mostrarToast('Senha alterada com sucesso!', 'sucesso');
+        ['inputSenhaAtual', 'inputNovaSenha', 'inputConfirmarSenha'].forEach(id => { document.getElementById(id).value = ''; });
+        // Trocar a senha encerra as sessões (Supabase Auth): volta ao login
+        mostrarToast('Senha alterada com sucesso! Entre de novo com a nova senha.', 'sucesso');
+        btn.disabled = true;
+        setTimeout(async () => {
+            try { await supabaseClient.auth.signOut(); } catch (_) { /* sessão já encerrada */ }
+            sessionStorage.removeItem('usuarioLogado');
+            sessionStorage.removeItem('abas_abertas_v2');
+            (window.top || window).location.href = 'login.html?senha_alterada=1';
+        }, 2200);
     } else {
         mostrarToast(res.mensagem || 'Erro ao alterar senha.', 'erro');
     }

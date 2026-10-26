@@ -353,7 +353,6 @@ function destacarMenuAtivo() {
     // Mapeamento de páginas para menu
     const mapeamento = {
         'inicio.html':    'menu-inicio',
-        'dashboard.html': 'menu-inicio',
         '':               'menu-inicio',
 
         // Operacional

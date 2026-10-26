@@ -13,7 +13,9 @@ const BOASVINDAS_EMAILJS_TEMPLATE_ID = 'template_q18po1k';
 function _boasVindasCarregarEmailJS(callback) {
     if (window.emailjs) { callback(); return; }
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js';
+    script.integrity = 'sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS';   // conferência de integridade (SRI)
+    script.crossOrigin = 'anonymous';
     script.onload  = () => { emailjs.init(BOASVINDAS_EMAILJS_PUBLIC_KEY); callback(); };
     script.onerror = () => callback(new Error('Falha ao carregar EmailJS'));
     document.head.appendChild(script);
@@ -406,6 +408,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // de deixar a tela anterior quebrada sem explicação.
     if (new URLSearchParams(window.location.search).get('sessao_expirada') === '1') {
         mostrarNotificacao('Sua sessão expirou por segurança. Faça login novamente.', 'info');
+    }
+    if (new URLSearchParams(window.location.search).get('senha_alterada') === '1') {
+        mostrarNotificacao('Senha alterada. Entre com a nova senha.', 'sucesso');
     }
 
     const cpfInput = document.getElementById('cpf');

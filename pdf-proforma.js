@@ -12,6 +12,8 @@ function carregarJsPDFSobDemanda() {
     _jspdfCarregado = new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.integrity = 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk';   // SRI
+        script.crossOrigin = 'anonymous';
         script.onload = resolve;
         script.onerror = () => { _jspdfCarregado = null; reject(new Error('Falha ao carregar jsPDF')); };
         document.head.appendChild(script);
