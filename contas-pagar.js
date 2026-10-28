@@ -159,7 +159,7 @@ function cpRenderizar() {
     const tbody = document.getElementById('cpTbody');
 
     if (!_cpFiltradas.length) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="fin-vazio">
+        tbody.innerHTML = `<tr><td colspan="7"><div class="fin-vazio">
             <i class="fa-solid fa-file-invoice-dollar"></i>
             <p>Nenhuma conta encontrada</p></div></td></tr>`;
         _cpAtualizarResumo();
@@ -173,26 +173,30 @@ function cpRenderizar() {
             ? new Date(c.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')
             : '—';
 
+        // A Vencer (amarelo) · Em Atraso (vermelho) · Pago (verde)
         const badgeMap = {
-            pendente:  '<span class="fin-badge pendente"><i class="fa-solid fa-clock"></i> Pendente</span>',
-            vencido:   '<span class="fin-badge vencido"><i class="fa-solid fa-circle-exclamation"></i> Vencido</span>',
+            pendente:  '<span class="fin-badge pendente"><i class="fa-solid fa-clock"></i> A Vencer</span>',
+            vencido:   '<span class="fin-badge vencido"><i class="fa-solid fa-circle-exclamation"></i> Em Atraso</span>',
             pago:      '<span class="fin-badge pago"><i class="fa-solid fa-circle-check"></i> Pago</span>',
             cancelado: '<span class="fin-badge cancelado"><i class="fa-solid fa-ban"></i> Cancelado</span>',
         };
 
-        const podePagar = c.status === 'pendente' || c.status === 'vencido';
 
         return `<tr>
-            <td><strong>${_cpEsc(c.descricao)}</strong>${c.plano_contas ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(_cpRotuloConta(c.plano_contas))}</span>` : (c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_cpEsc(c.categoria)}</span>` : '')}${c.proformas?.codigo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_cpEsc(c.proformas.codigo)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_cpEsc(c.processos.numero_processo)}</span>` : ''}</td>
+            <td><strong>${_cpEsc(c.descricao)}</strong>${c.proformas?.codigo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_cpEsc(c.proformas.codigo)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_cpEsc(c.processos.numero_processo)}</span>` : ''}</td>
             <td>${_cpEsc(parceiro)}</td>
             <td class="td-valor">${valor}</td>
             <td>${venc}</td>
             <td>${badgeMap[c.status] || escHtml(c.status)}</td>
+            <td class="fin-td-plano">${c.plano_contas ? _cpEsc(_cpRotuloConta(c.plano_contas)) : (c.categoria ? _cpEsc(c.categoria) : '—')}</td>
             <td>
                 <div class="fin-acoes">
-                    <button class="fin-btn-acao fin-btn-editar" onclick="cpAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                    ${podePagar ? `<button class="fin-btn-acao fin-btn-pagar" onclick="cpMarcarPago('${c.id}')" title="Marcar como pago"><i class="fa-solid fa-circle-check"></i></button>` : ''}
-                    <button class="fin-btn-acao fin-btn-excluir so-excluir" onclick="cpAbrirModalExcluir('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    <button class="fin-btn-acao fin-btn-ver" onclick="cpVer('${c.id}')" title="Ver"><i class="fa-solid fa-eye"></i></button>
+                    <button class="fin-btn-acao fin-btn-historico" onclick="cpHistorico('${c.id}')" title="Histórico"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                    ${finContaPodeAlterar(c)
+                        ? `<button class="fin-btn-acao fin-btn-editar" onclick="cpAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>`
+                        : `<button class="fin-btn-acao fin-btn-travado" onclick="finContaAvisoTravada('alterar')" title="Conta baixada — só o administrador altera"><i class="fa-solid fa-lock"></i></button>`}
+                    ${finContaPodeExcluir(c) ? `<button class="fin-btn-acao fin-btn-excluir" onclick="cpAbrirModalExcluir('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
                 </div>
             </td>
         </tr>`;
@@ -248,34 +252,16 @@ function cpFiltrar() {
     }, 200);
 }
 
-// ── Marcar como pago rapidamente ───────────────────────────────────────────
-
-
-async function cpMarcarPago(id) {
-    const c = _cpTodas.find(x => x.id === id);
-    if (!c) return;
-    if (!finLancPodePagar()) { mostrarNotificacao('Só usuários com acesso ao Financeiro ou administradores podem registrar o pagamento.', 'warning'); return; }
-    const hoje = new Date().toISOString().split('T')[0];
-    c.status = 'pago';
-    c.data_pagamento = hoje;
-    cpRenderizar();
-    // moeda estrangeira: guarda a PTAX do dia do pagamento (sem a coluna, grava sem)
-    const campos = { status: 'pago', data_pagamento: hoje };
-    if (c.moeda && c.moeda !== 'BRL' && !c.cambio) {
-        const cot = await finCotacaoPtax(c.moeda, hoje);
-        if (cot) campos.cambio = cot.taxa;
-    }
-    const r = await atualizarContaPagar(id, campos);
-    if (r && !r.sucesso && campos.cambio && /cambio/i.test(r.mensagem || '')) {
-        delete campos.cambio;
-        await atualizarContaPagar(id, campos);
-    }
-}
-
 // ── Modal criar/editar ─────────────────────────────────────────────────────
 
-function cpAbrirModal(id = null, prefill = null) {
+function cpAbrirModal(id = null, prefill = null, soVer = false, avisado = false) {
     const c = id ? _cpTodas.find(x => x.id === id) : null;
+    if (c && !soVer && !finContaPodeAlterar(c)) { finContaAvisoTravada('alterar'); return cpVer(id); }
+    if (c && !soVer && !avisado && finContaBaixada(c)) {
+        finContaConfirmarEdicao().then(ok => { if (ok) cpAbrirModal(id, prefill, false, true); });
+        return;
+    }
+    finLancModoVer('cp', false);
 
     document.getElementById('cpEditId').value = c?.id || '';
     document.getElementById('cpModalTitulo').innerHTML = c
@@ -289,6 +275,7 @@ function cpAbrirModal(id = null, prefill = null) {
     // Reseta o Processo antes de recalcular pra este registro — evita herdar
     // o estado (habilitado/desabilitado) de uma abertura anterior do modal.
     _cpResetProcesso();
+    finCICarregar('cp', c?.commercial_invoice);
     const proformaId = c?.proforma_id || prefill?.proformaId || '';
     document.getElementById('cpProformaNome').value = c?.proformas?.codigo || prefill?.proformaNome || '';
     document.getElementById('cpProformaId').value   = proformaId;
@@ -305,6 +292,7 @@ function cpAbrirModal(id = null, prefill = null) {
                 document.getElementById('cpProcessoId').value   = processoSalvoId;
                 document.getElementById('cpProcessoNome').value = processoSalvoNome || document.getElementById('cpProcessoNome').value;
             }
+            finCIAtualizar('cp');
         });
     } else {
         // Processo sem Proforma de origem: o vínculo com o Processo não pode se perder
@@ -312,6 +300,7 @@ function cpAbrirModal(id = null, prefill = null) {
         if (procId) {
             document.getElementById('cpProcessoId').value   = procId;
             document.getElementById('cpProcessoNome').value = c?.processos?.numero_processo || prefill?.processoNome || '';
+            finCIAtualizar('cp', undefined, procId);
         }
     }
 
@@ -328,17 +317,25 @@ function cpAbrirModal(id = null, prefill = null) {
     finLinhaCarregar('cpPag', pago
         ? { data: c.data_pagamento || '', moeda: c.moeda, valor: c.valor, cambio: c.cambio }
         : { moeda: c?.moeda_previsto || c?.moeda || prefill?.moeda });
-    document.getElementById('cpMeioPagamento').value   = c?.meio_pagamento || '';
+    finMeioCarregar('cp', c?.meio_pagamento);
     document.getElementById('cpNumeroDocumento').value = c?.numero_documento || '';
     finComprovanteCarregar('cp', c);
     finLancAplicarPermissao('cp');
+    finLancLimitarDataRealizada('cp');
     finSecaoPagDefinir('cp', pago && c.data_pagamento ? { data: c.data_pagamento, valor: c.valor, moeda: c.moeda } : null, 'pago');
     document.getElementById('cpObservacoes').value    = c?.observacoes || '';
 
     const obsToggle = document.querySelector('#cpModalOverlay .pl-obs-toggle[onclick*="ToggleObs"]');
     if (obsToggle) { obsToggle.classList.remove('aberto'); obsToggle.nextElementSibling.style.display = 'none'; }
 
+    finLancMaiusculasAplicar('cp');
     document.getElementById('cpModalOverlay').classList.add('ativo');
+}
+
+// Ver: o mesmo formulário, só para leitura (sem Salvar)
+function cpVer(id) {
+    cpAbrirModal(id, null, true);
+    finLancModoVer('cp', true, 'Visualizar Conta a Pagar');
 }
 
 function cpFecharModal() {
@@ -359,6 +356,7 @@ async function cpSalvar() {
     if (!exigirEmpresaVinculada()) return;
     const id        = document.getElementById('cpEditId').value || null;
     const atual     = id ? _cpTodas.find(x => x.id === id) : null;
+    if (atual && !finContaPodeAlterar(atual)) return finContaAvisoTravada('alterar');
     const descricao = document.getElementById('cpDescricao').value.trim();
     const conta     = finPlanoConta('cp');
     const prev      = finLinhaLer('cpPrev');
@@ -372,7 +370,32 @@ async function cpSalvar() {
     const podePagar = finLancPodePagar();
     if (podePagar && (pag.data || pag.valor) && !(pag.data && pag.valor)) {
         finSecaoPagAlternar('cp', true);
-        mostrarNotificacao('Pagamento realizado: preencha a Data de Pagamento e o Valor (ou deixe os dois em branco).', 'warning');
+        mostrarNotificacao('Informações de Pagamento (área Fiscal): preencha a Data de Pagamento e o Valor (ou deixe os dois em branco).', 'warning');
+        return;
+    }
+
+    // Custas do Processo: pagamento só depois do embarque confirmado
+    if (podePagar && pag.data && pag.valor && finEmbarqueBloqueiaPagamento('cp')) {
+        finSecaoPagAlternar('cp', true);
+        mostrarNotificacao('O pagamento das custas só pode ser confirmado depois da confirmação do embarque (Data de Embarque no Processo).', 'warning');
+        return;
+    }
+    // Trava: só vira Paga com o comprovante anexado
+    if (podePagar && pag.data && pag.valor && !finComprovanteTem('cp')) {
+        finSecaoPagAlternar('cp', true);
+        mostrarNotificacao('Anexe o comprovante para registrar o pagamento. Sem comprovante, a conta não pode ser considerada paga.', 'warning');
+        return;
+    }
+    if (podePagar && pag.data && pag.data > finHojeLocal()) {
+        finSecaoPagAlternar('cp', true);
+        mostrarNotificacao('A Data de Pagamento não pode ser no futuro — informe a data em que ele realmente aconteceu.', 'warning');
+        document.getElementById('cpPagData').focus();
+        return;
+    }
+    if (podePagar && finMeioLer('cp') === 'outro') {
+        finSecaoPagAlternar('cp', true);
+        mostrarNotificacao('Descreva o meio de pagamento escolhido como "Outro".', 'warning');
+        document.getElementById('cpMeioOutro').focus();
         return;
     }
 
@@ -395,6 +418,7 @@ async function cpSalvar() {
         parceiro_id:     document.getElementById('cpFornecedorId').value || null,
         proforma_id:     document.getElementById('cpProformaId').value || null,
         processo_id:     document.getElementById('cpProcessoId').value || null,
+        commercial_invoice: finCILer('cp'),
         plano_conta_id:  conta.id,
         categoria:       _cpCategoriaDaConta(conta) || null,
         // previsão (seção 1)
@@ -411,7 +435,7 @@ async function cpSalvar() {
         status:          finLancStatus(realizado, 'pago', prev.data, atual?.status),
         observacoes:     document.getElementById('cpObservacoes').value.trim() || null,
         ...(podePagar ? {
-            meio_pagamento:   document.getElementById('cpMeioPagamento').value || null,
+            meio_pagamento:   finMeioLer('cp'),
             numero_documento: document.getElementById('cpNumeroDocumento').value.trim() || null,
             ...comp.campos,
         } : {}),
@@ -527,6 +551,7 @@ function cpMostrarProforma(termo) {
 }
 
 async function cpSelecionarProforma(id, codigo) {
+    _finCISalvo['cp'] = '';   // outra Proforma: a CI vem do Processo dela
     document.getElementById('cpProformaId').value   = id;
     document.getElementById('cpProformaNome').value = codigo;
     document.getElementById('cpAutoProforma').innerHTML = '';
@@ -555,6 +580,7 @@ function _cpResetProcesso() {
     document.getElementById('cpProcessoId').value = '';
     document.getElementById('cpAutoProcesso').innerHTML = '';
     _cpProformaProcessos = [];
+    finCICarregar('cp', '');
 }
 
 async function _cpDerivarDaProforma(proformaId) {
@@ -597,7 +623,7 @@ async function _cpDerivarDaProforma(proformaId) {
 
         let query = supabaseClient
             .from('processos')
-            .select('id, numero_processo')
+            .select('id, numero_processo, documentos')
             .eq('proforma_id', proformaId)
             .order('numero_processo', { ascending: false });
         if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
@@ -615,6 +641,7 @@ async function _cpDerivarDaProforma(proformaId) {
             processoInput.disabled = false;
             processoInput.placeholder = 'Selecione um dos processos desta proforma...';
         }
+        finCIAtualizar('cp', _cpProformaProcessos);
     } catch (e) {}
 }
 
@@ -634,6 +661,7 @@ function _cpRenderizarProcessos(termo) {
 
 function cpBuscarProcesso(termo) {
     document.getElementById('cpProcessoId').value = '';
+    finCIAtualizar('cp');
     _cpRenderizarProcessos(termo);
 }
 
@@ -645,6 +673,7 @@ function cpSelecionarProcesso(id, numero) {
     document.getElementById('cpProcessoId').value   = id;
     document.getElementById('cpProcessoNome').value = numero;
     document.getElementById('cpAutoProcesso').innerHTML = '';
+    finCIAtualizar('cp');
 }
 
 document.addEventListener('click', e => {
@@ -664,10 +693,13 @@ document.addEventListener('click', e => {
 
 // ── Modal excluir ──────────────────────────────────────────────────────────
 
-function cpAbrirModalExcluir(id) {
-    if (!usuarioPodeExcluir()) return avisoSemPermissaoExcluir();
-    _cpExcluirId = id;
+async function cpAbrirModalExcluir(id) {
     const c = _cpTodas.find(x => x.id === id);
+    if (finContaBaixada(c) && !finContaPodeExcluir(c)) return finContaAvisoTravada('excluir');
+    if (!finContaPodeExcluir(c)) return finContaAvisoSemExcluir();
+    if (finContaBaixada(c) && !(await confirmarAcao('Esta conta já teve o pagamento confirmado e tem comprovante anexado. Excluí-la apaga um lançamento fechado (fica registrado no Histórico).',
+        { titulo: 'Excluir conta já paga?', confirmar: 'Continuar', cancelar: 'Não', perigo: true }))) return;
+    _cpExcluirId = id;
     document.getElementById('cpExcluirNome').textContent = c?.descricao || '';
     document.getElementById('cpModalExcluirOverlay').classList.add('ativo');
 }
@@ -707,3 +739,9 @@ function _cpEsc(str) {
 // Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
 // automático não deve sobreviver a um logout explícito). cpfSalvo é mantido
 // de propósito, só pra não precisar redigitar o CPF na próxima vez.
+
+// Histórico da conta: quem criou, registrou o pagamento, trocou o comprovante... (historico.js)
+function cpHistorico(id) {
+    const c = (_cpTodas || []).find(x => String(x.id) === String(id));
+    abrirHistoricoConta('pagar', id, c?.descricao || '');
+}

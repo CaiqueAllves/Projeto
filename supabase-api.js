@@ -1897,11 +1897,17 @@ const _FIN_CAMPOS_PREVISTO = ['valor_previsto', 'cambio_previsto', 'previsto_em'
 // Formulário novo (database-financeiro-pagamento.sql): moeda da previsão,
 // meio de pagamento, nº da nota/fatura e comprovante. Antes do SQL, grava sem.
 const _FIN_CAMPOS_PAGAMENTO = ['moeda_previsto', 'meio_pagamento', 'numero_documento', 'comprovante_path', 'comprovante_nome'];
+// Commercial Invoice vinculada (database-historico-contas.sql). Antes do SQL, grava sem.
+const _FIN_CAMPOS_CI = ['commercial_invoice'];
 function _finAplicarPrevisto(payload, dados) {
-    [..._FIN_CAMPOS_PREVISTO, ..._FIN_CAMPOS_PAGAMENTO].forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
+    [..._FIN_CAMPOS_PREVISTO, ..._FIN_CAMPOS_PAGAMENTO, ..._FIN_CAMPOS_CI].forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
 }
 async function _finGravarComFallback(gravar, payload) {
     let result = await gravar(payload);
+    if (result.error && /commercial_invoice/i.test(result.error.message || '')) {
+        _FIN_CAMPOS_CI.forEach(k => delete payload[k]);
+        result = await gravar(payload);
+    }
     if (result.error && /moeda_previsto|meio_pagamento|numero_documento|comprovante/i.test(result.error.message || '')) {
         _FIN_CAMPOS_PAGAMENTO.forEach(k => delete payload[k]);
         result = await gravar(payload);

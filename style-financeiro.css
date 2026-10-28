@@ -1002,3 +1002,23 @@
     .fin-linha-valores { grid-template-columns: 1fr 1fr; }
     .fin-linha-valores .fin-form-group:first-child { grid-column: 1 / -1; }
 }
+.fin-form-group[hidden] { display: none; }   /* ex.: descrição do meio de pagamento "Outro" */
+
+/* Tabela "A Fazer" (Contas a Pagar / Receber) */
+.fin-tabela-titulo { display: flex; align-items: center; gap: 8px; padding: 14px 20px 10px; font-size: 14px; font-weight: 700; color: #1e3a8a; border-bottom: 1px solid #f0f2f5; }
+.fin-tabela-titulo i { color: #4776ec; }
+.fin-td-plano { font-size: 12px; color: #475569; max-width: 260px; }
+.fin-btn-ver { background: #eef3ff; color: #4776ec; }
+.fin-btn-ver:hover { background: #dbe6ff; }
+.fin-btn-historico { background: #f3e8ff; color: #9333ea; }
+.fin-btn-historico:hover { background: #e9d5ff; }
+.fin-btn-travado { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+/* Modo Ver: formulário só para leitura */
+.fin-modo-ver .fin-modal-body input, .fin-modo-ver .fin-modal-body select, .fin-modo-ver .fin-modal-body textarea,
+.fin-modo-ver .fin-comp-remover { pointer-events: none; background: #f8fafc !important; }
+.fin-modo-ver .fin-modal-body input[type="file"] { display: none; }
+.fin-form-row > .fin-form-group { min-width: 0; }
+.fin-form-group select { max-width: 100%; }
+.fin-embarque-info { display: block; margin: -6px 0 12px; font-size: 12px; color: #1e40af; }
+.fin-embarque-info[hidden] { display: none; }
+.fin-embarque-info i { margin-right: 4px; }

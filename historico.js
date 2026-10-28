@@ -381,3 +381,130 @@ async function abrirHistorico(tipo, registroId, codigo) {
             </div>`;
     }).join('');
 }
+
+// ========================================
+// HISTÓRICO DAS CONTAS A PAGAR / RECEBER (database-historico-contas.sql)
+// ========================================
+// tipo = 'pagar' | 'receber'. Uma frase por fato (pagamento registrado,
+// comprovante anexado/trocado/removido, valor/data alterados...), sempre com
+// quem fez e quando. Só quem tem o Financeiro consegue ler (RLS).
+const _HIST_CONTA_CAMPOS = {
+    descricao: 'Descrição', parceiro_id: 'Empresa', proforma_id: 'Proforma', processo_id: 'Processo', commercial_invoice: 'Commercial Invoice',
+    plano_conta_id: 'Plano de Contas', data_vencimento: 'Previsão de pagamento',
+    valor_previsto: 'Valor previsto', moeda_previsto: 'Moeda prevista', cambio_previsto: 'Câmbio previsto',
+    valor: 'Valor', moeda: 'Moeda', cambio: 'Câmbio', data_pagamento: 'Data de pagamento', data_recebimento: 'Data de recebimento',
+    meio_pagamento: 'Meio de pagamento', numero_documento: 'Nº da nota fiscal / fatura', observacoes: 'Observações', status: 'Status',
+};
+const _HIST_CONTA_STATUS = { pendente: 'A Vencer', vencido: 'Em Atraso', pago: 'Pago', recebido: 'Recebido', cancelado: 'Cancelado' };
+const _HIST_CONTA_MEIOS = { deposito: 'Depósito bancário', transferencia: 'Transferência / PIX', boleto: 'Boleto', dinheiro: 'Dinheiro',
+    'cartao-credito': 'Cartão de crédito', 'cartao-debito': 'Cartão de débito', swift: 'Remessa internacional (SWIFT)',
+    'carta-credito': 'Carta de crédito', cheque: 'Cheque', outro: 'Outro' };
+
+function _histContaValor(campo, v, ref) {
+    if (v === null || v === undefined || v === '') return '<em>vazio</em>';
+    if (/^data_/.test(campo)) return _histEsc(new Date(String(v).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR'));
+    if (/^valor/.test(campo)) {
+        const moeda = (campo === 'valor_previsto' ? ref.moeda_previsto : ref.moeda) || 'BRL';
+        return _histEsc(typeof finFormatarValor === 'function' ? finFormatarValor(v, moeda) : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+    }
+    if (/^cambio/.test(campo)) return _histEsc(Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 6 }));
+    if (campo === 'status') return _histEsc(_HIST_CONTA_STATUS[v] || v);
+    if (campo === 'meio_pagamento') {
+        const s = String(v);
+        return _histEsc(/^outro:/i.test(s) ? 'Outro — ' + s.replace(/^outro:\s*/i, '') : (_HIST_CONTA_MEIOS[s] || s));
+    }
+    if (ref._nomes?.[campo]?.[v]) return _histEsc(ref._nomes[campo][v]);
+    return _histEsc(String(v).length > 120 ? String(v).slice(0, 120) + '…' : v);
+}
+
+async function abrirHistoricoConta(tipo, registroId, descricao) {
+    const ov = _histModal();
+    const tabela = tipo === 'pagar' ? 'contas_pagar' : 'contas_receber';
+    const campoData = tipo === 'pagar' ? 'data_pagamento' : 'data_recebimento';
+    const palavra = tipo === 'pagar' ? 'Pagamento' : 'Recebimento';
+    document.getElementById('histTitulo').textContent = `Histórico — Conta a ${tipo === 'pagar' ? 'Pagar' : 'Receber'} ${descricao || ''}`;
+    const corpo = document.getElementById('histCorpo');
+    corpo.innerHTML = '<div class="hist-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>';
+    ov.classList.add('aberto');
+
+    const [{ data, error }, { data: atual }] = await Promise.all([
+        supabaseClient.from('historico_alteracoes').select('*').eq('registro_id', registroId).eq('tabela', tabela)
+            .order('criado_em', { ascending: false }).limit(300),
+        supabaseClient.from(tabela).select('*').eq('id', registroId).maybeSingle(),
+    ]);
+    if (error) { corpo.innerHTML = `<div class="hist-vazio">Não foi possível carregar o histórico: ${_histEsc(error.message)}</div>`; return; }
+    if (!data?.length) {
+        corpo.innerHTML = '<div class="hist-vazio">Nenhuma alteração registrada ainda. O histórico das contas começa a valer a partir da ativação (database-historico-contas.sql).</div>';
+        return;
+    }
+
+    // nomes: empresa, plano de contas, proforma, processo citados nas alterações
+    const ids = { parceiro_id: new Set(), plano_conta_id: new Set(), proforma_id: new Set(), processo_id: new Set() };
+    data.forEach(h => Object.entries(h.alteracoes || {}).forEach(([c, d]) => {
+        if (ids[c]) [d?.de, d?.para].filter(Boolean).forEach(v => ids[c].add(v));
+    }));
+    const nomes = { parceiro_id: {}, plano_conta_id: {}, proforma_id: {}, processo_id: {} };
+    const buscar = async (campo, t, sel, rotulo) => {
+        if (!ids[campo].size) return;
+        const { data: rs } = await supabaseClient.from(t).select(sel).in('id', [...ids[campo]]);
+        (rs || []).forEach(r => { nomes[campo][r.id] = rotulo(r); });
+    };
+    await Promise.all([
+        buscar('parceiro_id', 'parceiros', 'id, razao_social, nome_fantasia', r => r.nome_fantasia || r.razao_social),
+        buscar('plano_conta_id', 'plano_contas', 'id, codigo, subfator_nome', r => `${r.codigo} — ${r.subfator_nome}`),
+        buscar('proforma_id', 'proformas', 'id, codigo', r => r.codigo),
+        buscar('processo_id', 'processos', 'id, numero_processo', r => r.numero_processo),
+    ]);
+
+    const OCULTOS = new Set(['id', 'empresa_id', 'criado_por', 'criado_em', 'atualizado_em', 'comprovante_path', 'categoria', 'previsto_em',
+        'valor_revisado', 'cambio_revisado', 'revisado_em', 'pedido_id']);
+    const realizados = ['pago', 'recebido'];
+
+    corpo.innerHTML = data.map(h => {
+        const alt = h.alteracoes || {};
+        const para = (c) => alt[c]?.para !== undefined ? alt[c].para : atual?.[c];
+        const ref = { moeda: para('moeda'), moeda_previsto: para('moeda_previsto'), _nomes: nomes };
+        const frases = [];
+        let icone = 'fa-pen', cor = '#9333ea', titulo = 'Alterou';
+        const usados = new Set();
+
+        if (h.acao === 'criado') {
+            icone = 'fa-plus'; cor = '#16a34a'; titulo = 'Conta criada';
+        } else if (h.acao === 'removido') {
+            icone = 'fa-trash'; cor = '#64748b'; titulo = 'Conta excluída';
+        } else {
+            const de = alt.status?.de, ate = alt.status?.para;
+            if (ate && realizados.includes(ate) && !realizados.includes(de)) {
+                icone = 'fa-circle-check'; cor = '#16a34a'; titulo = `${palavra} registrado`;
+                const meio = para('meio_pagamento');
+                frases.push(`<strong>${palavra} em ${_histContaValor(campoData, para(campoData), ref)}</strong> — ${_histContaValor('valor', para('valor'), ref)}`
+                    + (meio ? ` · ${_histContaValor('meio_pagamento', meio, ref)}` : '') + (para('numero_documento') ? ` · NF ${_histEsc(para('numero_documento'))}` : ''));
+                ['status', campoData, 'valor', 'moeda', 'cambio', 'meio_pagamento', 'numero_documento'].forEach(c => usados.add(c));
+            } else if (de && realizados.includes(de) && ate && !realizados.includes(ate)) {
+                icone = 'fa-rotate-left'; cor = '#ea580c'; titulo = `${palavra} desfeito`;
+                usados.add('status'); usados.add(campoData);
+            }
+            if (alt.comprovante_nome) {
+                const a = alt.comprovante_nome.de, b = alt.comprovante_nome.para;
+                frases.push(!a ? `<i class="fa-solid fa-paperclip"></i> Comprovante anexado: <strong>${_histEsc(b)}</strong>`
+                    : !b ? `<i class="fa-solid fa-trash"></i> Comprovante removido: ${_histEsc(a)}`
+                    : `<i class="fa-solid fa-arrow-right-arrow-left"></i> Comprovante trocado: ${_histEsc(a)} <i class="fa-solid fa-arrow-right-long"></i> <strong>${_histEsc(b)}</strong>`);
+                usados.add('comprovante_nome');
+            }
+            Object.entries(alt).forEach(([c, d]) => {
+                if (OCULTOS.has(c) || usados.has(c) || !_HIST_CONTA_CAMPOS[c]) return;
+                frases.push(`<strong>${_histEsc(_HIST_CONTA_CAMPOS[c])}:</strong> ${_histContaValor(c, d?.de, ref)} <i class="fa-solid fa-arrow-right-long"></i> ${_histContaValor(c, d?.para, ref)}`);
+            });
+            if (!frases.length) return '';   // só campos técnicos
+        }
+        return `
+            <div class="hist-item">
+                <div class="hist-ponto" style="background:${cor}"><i class="fa-solid ${icone}"></i></div>
+                <div class="hist-conteudo">
+                    <div class="hist-linha1"><strong>${_histEsc(titulo)}</strong><span>${_histDataHora(h.criado_em)}</span></div>
+                    <div class="hist-quem"><i class="fa-solid fa-user"></i> ${_histEsc(h.usuario_nome || '—')}</div>
+                    ${frases.length ? `<ul class="hist-campos">${frases.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}
+                </div>
+            </div>`;
+    }).join('') || '<div class="hist-vazio">Nenhuma alteração registrada ainda.</div>';
+}

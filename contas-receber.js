@@ -172,7 +172,7 @@ function crRenderizar() {
     const tbody = document.getElementById('crTbody');
 
     if (!_crFiltradas.length) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="fin-vazio">
+        tbody.innerHTML = `<tr><td colspan="7"><div class="fin-vazio">
             <i class="fa-solid fa-file-invoice-dollar"></i>
             <p>Nenhuma conta encontrada</p></div></td></tr>`;
         _crAtualizarResumo();
@@ -186,26 +186,30 @@ function crRenderizar() {
             ? new Date(c.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')
             : '—';
 
+        // A Vencer (amarelo) · Em Atraso (vermelho) · Recebido (verde)
         const badgeMap = {
-            pendente:  '<span class="fin-badge pendente"><i class="fa-solid fa-clock"></i> Pendente</span>',
-            vencido:   '<span class="fin-badge vencido"><i class="fa-solid fa-circle-exclamation"></i> Vencido</span>',
+            pendente:  '<span class="fin-badge pendente"><i class="fa-solid fa-clock"></i> A Vencer</span>',
+            vencido:   '<span class="fin-badge vencido"><i class="fa-solid fa-circle-exclamation"></i> Em Atraso</span>',
             recebido:  '<span class="fin-badge recebido"><i class="fa-solid fa-circle-check"></i> Recebido</span>',
             cancelado: '<span class="fin-badge cancelado"><i class="fa-solid fa-ban"></i> Cancelado</span>',
         };
 
-        const podeReceber = c.status === 'pendente' || c.status === 'vencido';
 
         return `<tr>
-            <td><strong>${_crEsc(c.descricao)}</strong>${c.plano_contas?.subfator_nome ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.plano_contas.conta_codigo)} — ${_crEsc(c.plano_contas.subfator_nome)}</span>` : (c.categoria ? `<br><span style="font-size:11px;color:#94a3b8">${_crEsc(c.categoria)}</span>` : '')}${c.proformas?.codigo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_crEsc(c.proformas.codigo)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_crEsc(c.processos.numero_processo)}</span>` : ''}</td>
+            <td><strong>${_crEsc(c.descricao)}</strong>${c.proformas?.codigo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-file-invoice-dollar"></i> Proforma ${_crEsc(c.proformas.codigo)}</span>` : ''}${c.processos?.numero_processo ? `<br><span class="fin-badge-vinculo"><i class="fa-solid fa-diagram-project"></i> Processo ${_crEsc(c.processos.numero_processo)}</span>` : ''}</td>
             <td>${_crEsc(cliente)}</td>
             <td class="td-valor entrada">${valor}</td>
             <td>${venc}</td>
             <td>${badgeMap[c.status] || escHtml(c.status)}</td>
+            <td class="fin-td-plano">${c.plano_contas?.subfator_nome ? `${_crEsc(c.plano_contas.codigo || c.plano_contas.conta_codigo)} — ${_crEsc(c.plano_contas.subfator_nome)}` : (c.categoria ? _crEsc(c.categoria) : '—')}</td>
             <td>
                 <div class="fin-acoes">
-                    <button class="fin-btn-acao fin-btn-editar" onclick="crAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                    ${podeReceber ? `<button class="fin-btn-acao fin-btn-pagar" onclick="crMarcarRecebido('${c.id}')" title="Marcar como recebido"><i class="fa-solid fa-circle-check"></i></button>` : ''}
-                    <button class="fin-btn-acao fin-btn-excluir so-excluir" onclick="crAbrirModalExcluir('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    <button class="fin-btn-acao fin-btn-ver" onclick="crVer('${c.id}')" title="Ver"><i class="fa-solid fa-eye"></i></button>
+                    <button class="fin-btn-acao fin-btn-historico" onclick="crHistorico('${c.id}')" title="Histórico"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                    ${finContaPodeAlterar(c)
+                        ? `<button class="fin-btn-acao fin-btn-editar" onclick="crAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>`
+                        : `<button class="fin-btn-acao fin-btn-travado" onclick="finContaAvisoTravada('alterar')" title="Conta baixada — só o administrador altera"><i class="fa-solid fa-lock"></i></button>`}
+                    ${finContaPodeExcluir(c) ? `<button class="fin-btn-acao fin-btn-excluir" onclick="crAbrirModalExcluir('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
                 </div>
             </td>
         </tr>`;
@@ -251,29 +255,14 @@ function crFiltrar() {
 }
 
 
-async function crMarcarRecebido(id) {
-    const c = _crTodas.find(x => x.id === id);
-    if (!c) return;
-    if (!finLancPodePagar()) { mostrarNotificacao('Só usuários com acesso ao Financeiro ou administradores podem registrar o recebimento.', 'warning'); return; }
-    const hoje = new Date().toISOString().split('T')[0];
-    c.status = 'recebido';
-    c.data_recebimento = hoje;
-    crRenderizar();
-    // moeda estrangeira: guarda a PTAX do dia do recebimento (sem a coluna, grava sem)
-    const campos = { status: 'recebido', data_recebimento: hoje };
-    if (c.moeda && c.moeda !== 'BRL' && !c.cambio) {
-        const cot = await finCotacaoPtax(c.moeda, hoje);
-        if (cot) campos.cambio = cot.taxa;
-    }
-    const r = await atualizarContaReceber(id, campos);
-    if (r && !r.sucesso && campos.cambio && /cambio/i.test(r.mensagem || '')) {
-        delete campos.cambio;
-        await atualizarContaReceber(id, campos);
-    }
-}
-
-function crAbrirModal(id = null, prefill = null) {
+function crAbrirModal(id = null, prefill = null, soVer = false, avisado = false) {
     const c = id ? _crTodas.find(x => x.id === id) : null;
+    if (c && !soVer && !finContaPodeAlterar(c)) { finContaAvisoTravada('alterar'); return crVer(id); }
+    if (c && !soVer && !avisado && finContaBaixada(c)) {
+        finContaConfirmarEdicao().then(ok => { if (ok) crAbrirModal(id, prefill, false, true); });
+        return;
+    }
+    finLancModoVer('cr', false);
     document.getElementById('crEditId').value = c?.id || '';
     document.getElementById('crModalTitulo').innerHTML = c
         ? '<i class="fa-solid fa-pen"></i> Editar Conta a Receber'
@@ -283,6 +272,7 @@ function crAbrirModal(id = null, prefill = null) {
     // Reseta o estado derivado antes de recalcular pra este registro — evita
     // herdar o travamento de Cliente/Processo de uma abertura anterior do modal.
     _crResetCamposDerivados();
+    finCICarregar('cr', c?.commercial_invoice);
     const proformaId = c?.proforma_id || prefill?.proformaId || '';
     document.getElementById('crProformaNome').value = c?.proformas?.codigo || prefill?.proformaNome || '';
     document.getElementById('crProformaId').value   = proformaId;
@@ -297,6 +287,7 @@ function crAbrirModal(id = null, prefill = null) {
                 document.getElementById('crProcessoId').value   = processoSalvoId;
                 document.getElementById('crProcessoNome').value = processoSalvoNome || document.getElementById('crProcessoNome').value;
             }
+            finCIAtualizar('cr');
         });
     } else {
         document.getElementById('crClienteNome').value = c?.parceiros?.nome_fantasia || c?.parceiros?.razao_social || prefill?.clienteNome || '';
@@ -306,6 +297,7 @@ function crAbrirModal(id = null, prefill = null) {
         if (procId) {
             document.getElementById('crProcessoId').value   = procId;
             document.getElementById('crProcessoNome').value = c?.processos?.numero_processo || prefill?.processoNome || '';
+            finCIAtualizar('cr', undefined, procId);
         }
     }
 
@@ -322,17 +314,25 @@ function crAbrirModal(id = null, prefill = null) {
     finLinhaCarregar('crPag', recebido
         ? { data: c.data_recebimento || '', moeda: c.moeda, valor: c.valor, cambio: c.cambio }
         : { moeda: c?.moeda_previsto || c?.moeda || prefill?.moeda });
-    document.getElementById('crMeioPagamento').value   = c?.meio_pagamento || '';
+    finMeioCarregar('cr', c?.meio_pagamento);
     document.getElementById('crNumeroDocumento').value = c?.numero_documento || '';
     finComprovanteCarregar('cr', c);
     finLancAplicarPermissao('cr');
+    finLancLimitarDataRealizada('cr');
     finSecaoPagDefinir('cr', recebido && c.data_recebimento ? { data: c.data_recebimento, valor: c.valor, moeda: c.moeda } : null, 'recebido');
 
     document.getElementById('crObservacoes').value     = c?.observacoes || '';
     const obsToggle = document.querySelector('#crModalOverlay .pl-obs-toggle[onclick*="ToggleObs"]');
     if (obsToggle) { obsToggle.classList.remove('aberto'); obsToggle.nextElementSibling.style.display = 'none'; }
 
+    finLancMaiusculasAplicar('cr');
     document.getElementById('crModalOverlay').classList.add('ativo');
+}
+
+// Ver: o mesmo formulário, só para leitura (sem Salvar)
+function crVer(id) {
+    crAbrirModal(id, null, true);
+    finLancModoVer('cr', true, 'Visualizar Conta a Receber');
 }
 
 function crFecharModal() {
@@ -353,6 +353,7 @@ async function crSalvar() {
     if (!exigirEmpresaVinculada()) return;
     const id        = document.getElementById('crEditId').value || null;
     const atual     = id ? _crTodas.find(x => x.id === id) : null;
+    if (atual && !finContaPodeAlterar(atual)) return finContaAvisoTravada('alterar');
     const descricao = document.getElementById('crDescricao').value.trim();
     const conta     = finPlanoConta('cr');
     const prev      = finLinhaLer('crPrev');
@@ -366,7 +367,26 @@ async function crSalvar() {
     const podePagar = finLancPodePagar();
     if (podePagar && (pag.data || pag.valor) && !(pag.data && pag.valor)) {
         finSecaoPagAlternar('cr', true);
-        mostrarNotificacao('Recebimento realizado: preencha a Data de Recebimento e o Valor (ou deixe os dois em branco).', 'warning');
+        mostrarNotificacao('Informações de Pagamento (área Fiscal): preencha a Data de Recebimento e o Valor (ou deixe os dois em branco).', 'warning');
+        return;
+    }
+
+    // Trava: só vira Recebida com o comprovante anexado
+    if (podePagar && pag.data && pag.valor && !finComprovanteTem('cr')) {
+        finSecaoPagAlternar('cr', true);
+        mostrarNotificacao('Anexe o comprovante para registrar o recebimento. Sem comprovante, a conta não pode ser considerada recebida.', 'warning');
+        return;
+    }
+    if (podePagar && pag.data && pag.data > finHojeLocal()) {
+        finSecaoPagAlternar('cr', true);
+        mostrarNotificacao('A Data de Recebimento não pode ser no futuro — informe a data em que ele realmente aconteceu.', 'warning');
+        document.getElementById('crPagData').focus();
+        return;
+    }
+    if (podePagar && finMeioLer('cr') === 'outro') {
+        finSecaoPagAlternar('cr', true);
+        mostrarNotificacao('Descreva o meio de pagamento escolhido como "Outro".', 'warning');
+        document.getElementById('crMeioOutro').focus();
         return;
     }
 
@@ -389,6 +409,7 @@ async function crSalvar() {
         parceiro_id:      document.getElementById('crClienteId').value || null,
         proforma_id:      document.getElementById('crProformaId').value || null,
         processo_id:      document.getElementById('crProcessoId').value || null,
+        commercial_invoice: finCILer('cr'),
         plano_conta_id:   conta.id,
         // previsão (seção 1)
         data_vencimento:  prev.data,
@@ -404,7 +425,7 @@ async function crSalvar() {
         status:           finLancStatus(realizado, 'recebido', prev.data, atual?.status),
         observacoes:      document.getElementById('crObservacoes').value.trim() || null,
         ...(podePagar ? {
-            meio_pagamento:   document.getElementById('crMeioPagamento').value || null,
+            meio_pagamento:   finMeioLer('cr'),
             numero_documento: document.getElementById('crNumeroDocumento').value.trim() || null,
             ...comp.campos,
         } : {}),
@@ -514,6 +535,7 @@ function crMostrarProforma(termo) {
 }
 
 async function crSelecionarProforma(id, codigo) {
+    _finCISalvo['cr'] = '';   // outra Proforma: a CI vem do Processo dela
     document.getElementById('crProformaId').value   = id;
     document.getElementById('crProformaNome').value = codigo;
     document.getElementById('crAutoProforma').innerHTML = '';
@@ -534,6 +556,7 @@ function _crResetCamposDerivados() {
     document.getElementById('crProcessoId').value = '';
     document.getElementById('crAutoProcesso').innerHTML = '';
     _crProformaProcessos = [];
+    finCICarregar('cr', '');
 }
 
 // Proforma é o campo-âncora (opcional): sem ela, Cliente fica livre pra
@@ -587,7 +610,7 @@ async function _crDerivarDaProforma(proformaId) {
 
         let query = supabaseClient
             .from('processos')
-            .select('id, numero_processo')
+            .select('id, numero_processo, documentos')
             .eq('proforma_id', proformaId)
             .order('numero_processo', { ascending: false });
         if (usuario?.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
@@ -605,6 +628,7 @@ async function _crDerivarDaProforma(proformaId) {
             processoInput.disabled = false;
             processoInput.placeholder = 'Selecione um dos processos desta proforma...';
         }
+        finCIAtualizar('cr', _crProformaProcessos);
     } catch (e) {}
 }
 
@@ -624,6 +648,7 @@ function _crRenderizarProcessos(termo) {
 
 function crBuscarProcesso(termo) {
     document.getElementById('crProcessoId').value = '';
+    finCIAtualizar('cr');
     _crRenderizarProcessos(termo);
 }
 
@@ -635,6 +660,7 @@ function crSelecionarProcesso(id, numero) {
     document.getElementById('crProcessoId').value   = id;
     document.getElementById('crProcessoNome').value = numero;
     document.getElementById('crAutoProcesso').innerHTML = '';
+    finCIAtualizar('cr');
 }
 
 document.addEventListener('click', e => {
@@ -652,10 +678,13 @@ document.addEventListener('click', e => {
     }
 });
 
-function crAbrirModalExcluir(id) {
-    if (!usuarioPodeExcluir()) return avisoSemPermissaoExcluir();
-    _crExcluirId = id;
+async function crAbrirModalExcluir(id) {
     const c = _crTodas.find(x => x.id === id);
+    if (finContaBaixada(c) && !finContaPodeExcluir(c)) return finContaAvisoTravada('excluir');
+    if (!finContaPodeExcluir(c)) return finContaAvisoSemExcluir();
+    if (finContaBaixada(c) && !(await confirmarAcao('Esta conta já teve o pagamento confirmado e tem comprovante anexado. Excluí-la apaga um lançamento fechado (fica registrado no Histórico).',
+        { titulo: 'Excluir conta já paga?', confirmar: 'Continuar', cancelar: 'Não', perigo: true }))) return;
+    _crExcluirId = id;
     document.getElementById('crExcluirNome').textContent = c?.descricao || '';
     document.getElementById('crModalExcluirOverlay').classList.add('ativo');
 }
@@ -695,3 +724,9 @@ function _crEscAttr(str) {
 // Sair sempre encerra a sessão de vez, mesmo com "Lembrar-me" ativo (login
 // automático não deve sobreviver a um logout explícito). cpfSalvo é mantido
 // de propósito, só pra não precisar redigitar o CPF na próxima vez.
+
+// Histórico da conta: quem criou, registrou o pagamento, trocou o comprovante... (historico.js)
+function crHistorico(id) {
+    const c = (_crTodas || []).find(x => String(x.id) === String(id));
+    abrirHistoricoConta('receber', id, c?.descricao || '');
+}

@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css?v=fcfe125a">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=dff65131">
+    <link rel="stylesheet" href="style-financeiro.css?v=c6fbbf8d">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -80,8 +80,8 @@
                     </div>
                     <select class="filter-select" id="filtroStatus" onchange="cpFiltrar()" style="margin-left:10px;">
                         <option value="">Todos os status</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="vencido">Vencido</option>
+                        <option value="pendente">A Vencer</option>
+                        <option value="vencido">Em Atraso</option>
                         <option value="pago">Pago</option>
                         <option value="cancelado">Cancelado</option>
                     </select>
@@ -101,19 +101,21 @@
 
             <!-- Tabela -->
             <div class="fin-table-wrap">
+                <div class="fin-tabela-titulo"><i class="fa-solid fa-list-check"></i> A Fazer</div>
                 <table class="fin-table">
                     <thead>
                         <tr>
                             <th>Descrição</th>
-                            <th>Fornecedor</th>
+                            <th>Empresa</th>
                             <th>Valor</th>
                             <th>Vencimento</th>
                             <th>Status</th>
+                            <th>Plano de Contas</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="cpTbody">
-                        <tr><td colspan="6" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                        <tr><td colspan="7" style="padding:60px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -158,6 +160,10 @@
                     <input type="hidden" id="cpProcessoId">
                     <div class="pl-autocomplete" id="cpAutoProcesso"></div>
                 </div>
+                <div class="fin-form-group">
+                    <label for="cpCommercialInvoice">Vincular a Commercial Invoice</label>
+                    <select id="cpCommercialInvoice" disabled onchange="finCIAlterado('cp')"><option value="">Nenhuma Commercial Invoice</option></select>
+                </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
@@ -185,11 +191,12 @@
                     <input type="text" id="cpPrevCambio" placeholder="1,0000" inputmode="decimal" autocomplete="off">
                 </div>
                 <div class="fin-form-group">
-                    <label for="cpPrevBRL">Valor em Real</label>
+                    <label for="cpPrevBRL">Valor em Reais</label>
                     <input type="text" id="cpPrevBRL" readonly tabindex="-1" placeholder="R$ 0,00">
                 </div>
             </div>
             <small class="fin-cambio-info fin-linha-info" id="cpPrevInfo"></small>
+            <small class="fin-embarque-info" id="cpEmbarqueInfo" hidden></small>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
                     <label for="cpDescricao">Descrição <span style="color:#ef4444">*</span></label>
@@ -198,9 +205,10 @@
             </div>
 
             <div class="fin-secao-pagamento" id="cpSecaoPagamento">
-                <button type="button" class="fin-secao-titulo fin-secao-toggle" id="cpPagToggle" aria-expanded="false" aria-controls="cpPagCorpo" onclick="finSecaoPagAlternar('cp')"><i class="fa-solid fa-money-check-dollar"></i> Pagamento realizado <small class="fin-pag-resumo" id="cpPagResumo"></small><i class="fa-solid fa-chevron-down fin-secao-seta"></i></button>
+                <button type="button" class="fin-secao-titulo fin-secao-toggle" id="cpPagToggle" aria-expanded="false" aria-controls="cpPagCorpo" onclick="finSecaoPagAlternar('cp')"><i class="fa-solid fa-money-check-dollar"></i> Informações de Pagamento (área Fiscal) <small class="fin-pag-resumo" id="cpPagResumo"></small><i class="fa-solid fa-chevron-down fin-secao-seta"></i></button>
                 <div class="fin-pag-corpo" id="cpPagCorpo" hidden>
                 <div class="fin-pag-aviso" id="cpPagAviso" hidden><i class="fa-solid fa-lock"></i> Só usuários com acesso ao Financeiro ou administradores podem registrar o pagamento.</div>
+                <div class="fin-pag-aviso" id="cpPagEmbarqueAviso" hidden><i class="fa-solid fa-ship"></i> <span></span></div>
             <div class="fin-form-row fin-linha-valores">
                 <div class="fin-form-group">
                     <label for="cpPagData">Data de Pagamento</label>
@@ -219,15 +227,19 @@
                     <input type="text" id="cpPagCambio" placeholder="1,0000" inputmode="decimal" autocomplete="off">
                 </div>
                 <div class="fin-form-group">
-                    <label for="cpPagBRL">Valor em Real</label>
+                    <label for="cpPagBRL">Valor em Reais</label>
                     <input type="text" id="cpPagBRL" readonly tabindex="-1" placeholder="R$ 0,00">
                 </div>
             </div>
             <small class="fin-cambio-info fin-linha-info" id="cpPagInfo"></small>
                 <div class="fin-form-row">
-                    <div class="fin-form-group fin-full">
+                    <div class="fin-form-group">
                         <label for="cpMeioPagamento">Meio de Pagamento</label>
-                        <select id="cpMeioPagamento"><option value="">Selecione...</option><option value="deposito">Depósito bancário</option><option value="transferencia">Transferência / PIX</option><option value="boleto">Boleto</option><option value="dinheiro">Dinheiro</option><option value="cartao-credito">Cartão de crédito</option><option value="cartao-debito">Cartão de débito</option><option value="swift">Remessa internacional (SWIFT)</option><option value="carta-credito">Carta de crédito</option><option value="cheque">Cheque</option><option value="outro">Outro</option></select>
+                        <select id="cpMeioPagamento" onchange="finMeioAlterado('cp')"><option value="">Selecione...</option><option value="deposito">Depósito bancário</option><option value="transferencia">Transferência / PIX</option><option value="boleto">Boleto</option><option value="dinheiro">Dinheiro</option><option value="cartao-credito">Cartão de crédito</option><option value="cartao-debito">Cartão de débito</option><option value="swift">Remessa internacional (SWIFT)</option><option value="carta-credito">Carta de crédito</option><option value="cheque">Cheque</option><option value="outro">Outro</option></select>
+                    </div>
+                    <div class="fin-form-group" id="cpMeioOutroGrupo" hidden>
+                        <label for="cpMeioOutro">Descreva o meio de pagamento</label>
+                        <input type="text" id="cpMeioOutro" placeholder="Ex: compensação entre contas" maxlength="80">
                     </div>
                 </div>
                 <div class="fin-form-row">
@@ -243,7 +255,7 @@
                         </div>
                     </div>
                 </div>
-                <small class="fin-cambio-info">Preencha a data e o valor quando o pagamento acontecer — a conta passa a <strong>Paga</strong> sozinha.</small>
+                <small class="fin-cambio-info">Preencha a data, o valor e anexe o comprovante quando o pagamento acontecer — a conta passa a <strong>Paga</strong> sozinha.</small>
                 </div>
             </div>
 
@@ -292,12 +304,13 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=de0b24ee"></script>
+<script src="supabase-api.js?v=93662f8c"></script>
 <script src="auth.js?v=443d3cf2"></script>
 <script src="navegador.js?v=43ffeccc"></script>
 <script src="fin-moeda.js?v=7894e64c"></script>
-<script src="fin-lancamento.js?v=518568c5"></script>
-<script src="contas-pagar.js?v=987bddc7"></script>
+<script src="fin-lancamento.js?v=f5a4c01d"></script>
+<script src="historico.js?v=4c4cd14d"></script>
+<script src="contas-pagar.js?v=f6766bcd"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

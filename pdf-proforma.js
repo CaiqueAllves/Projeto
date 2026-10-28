@@ -258,6 +258,9 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
         { nome: vv(d.destinatario_razao_social) || '—', rotulo: indireta ? t.assinatura_aceite_comprador : t.assinatura_aceite },
     ]);
 
+    // Termos e Condições Gerais de Venda Internacional (pdf-termos.js) nas páginas finais
+    if (typeof pvTermosGerais === 'function') pvTermosGerais(doc);
+
     pvRodape(doc, { t, textoDireita: `${t.proforma_invoice} ${codigo}` });
 
     if (opcoes.retornarBlob) return doc.output('blob');

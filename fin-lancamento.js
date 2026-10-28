@@ -36,6 +36,41 @@ function finLancPodePagar() {
     return typeof usuarioTemModulo === 'function' ? usuarioTemModulo('financeiro') !== false : true;
 }
 
+// Travas da conta (mesma regra das policies em database-historico-contas.sql):
+//   antes da baixa → exclui quem lançou ou o Financeiro;
+//   depois da baixa (pago/recebido) → alterar ou excluir só o administrador (master).
+function finContaBaixada(c) {
+    return !!c && (c.status === 'pago' || c.status === 'recebido' || !!c.data_pagamento || !!c.data_recebimento);
+}
+function _finEhAdmin() {
+    const u = typeof obterUsuarioLogado === 'function' ? obterUsuarioLogado() : null;
+    return u?.perfil === 'admin';
+}
+function finContaPodeAlterar(c) {
+    return !finContaBaixada(c) || _finEhAdmin();
+}
+function finContaPodeExcluir(c) {
+    if (!c) return false;
+    if (finContaBaixada(c)) return _finEhAdmin();
+    const u = typeof obterUsuarioLogado === 'function' ? obterUsuarioLogado() : null;
+    return finLancPodePagar() || (!!u?.id && String(c.criado_por || '') === String(u.id));
+}
+function finContaAvisoTravada(acao) {
+    mostrarNotificacao(`Conta já baixada (pagamento confirmado): só o administrador pode ${acao}.`, 'warning');
+    return false;
+}
+// Editar conta já baixada (só o administrador chega aqui): janela de aviso antes
+function finContaConfirmarEdicao() {
+    return confirmarAcao(
+        'Esta conta já teve o pagamento confirmado (baixa feita pelo Financeiro). Alterar valores, datas ou o comprovante muda um lançamento fechado'
+        + ' — a alteração fica registrada no Histórico com o seu nome.',
+        { titulo: 'Alterar conta já paga?', confirmar: 'Sim, alterar', cancelar: 'Não' });
+}
+function finContaAvisoSemExcluir() {
+    mostrarNotificacao('Só quem lançou a conta ou o Financeiro pode excluí-la.', 'warning');
+    return false;
+}
+
 function finLancMascara(el) {
     const cursor = el.selectionStart, antes = el.value.length;
     let raw = el.value.replace(/[^\d,]/g, '');
@@ -131,6 +166,40 @@ function finMoedasPreencher(ids, moedas) {
     ids.forEach(id => { const s = _flEl(id); if (s && html) s.innerHTML = html; });
 }
 
+// ── Meio de pagamento: "Outro" abre um campo para descrever ──
+// Gravado junto em meio_pagamento como "outro: DESCRIÇÃO" (sem coluna nova).
+function finMeioAlterado(px) {
+    const outro = _flEl(px + 'MeioPagamento')?.value === 'outro';
+    _flEl(px + 'MeioOutroGrupo').hidden = !outro;
+    if (outro) _flEl(px + 'MeioOutro')?.focus();
+}
+
+function finMeioCarregar(px, valor) {
+    const v = String(valor || '');
+    const outro = /^outro(:|$)/i.test(v);
+    _flEl(px + 'MeioPagamento').value = outro ? 'outro' : v;
+    _flEl(px + 'MeioOutro').value = outro ? v.replace(/^outro:?\s*/i, '') : '';
+    _flEl(px + 'MeioOutroGrupo').hidden = !outro;
+}
+
+function finMeioLer(px) {
+    const v = _flEl(px + 'MeioPagamento')?.value || '';
+    if (v !== 'outro') return v || null;
+    const desc = (_flEl(px + 'MeioOutro')?.value || '').trim().toUpperCase();
+    return desc ? `outro: ${desc}` : 'outro';
+}
+
+// ── Modo "Ver" (só leitura): esconde o Salvar e trava os campos; as seções
+// recolhíveis e o link do comprovante continuam funcionando ──
+function finLancModoVer(px, ligar, titulo) {
+    const modal = document.querySelector(`#${px}ModalOverlay .fin-modal`);
+    if (!modal) return;
+    modal.classList.toggle('fin-modo-ver', !!ligar);
+    const salvar = _flEl(px + 'BtnSalvar');
+    if (salvar) salvar.hidden = !!ligar;
+    if (ligar && titulo) _flEl(px + 'ModalTitulo').innerHTML = `<i class="fa-solid fa-eye"></i> ${escHtml(titulo)}`;
+}
+
 // ── Plano de Contas → Categoria ──
 const _flPlano = {};
 
@@ -175,7 +244,7 @@ function finPlanoConta(px) {
 const _flComp = {};
 
 function finComprovanteCarregar(px, c) {
-    _flComp[px] = { path: c?.comprovante_path || null, nome: c?.comprovante_nome || null, remover: false };
+    _flComp[px] = { path: c?.comprovante_path || null, nome: c?.comprovante_nome || null, remover: false, baixada: finContaBaixada(c) };
     _flEl(px + 'Comprovante').value = '';
     _finComprovanteRender(px);
 }
@@ -203,8 +272,20 @@ async function finComprovanteAbrir(ev, px) {
     window.open(data.signedUrl, '_blank', 'noopener');
 }
 
-function finComprovanteRemover(px) {
-    if (_flComp[px]) _flComp[px].remover = true;
+// Conta já baixada: o comprovante é o que confirma o pagamento — avisa antes
+// de tirar (sem ele a conta não pode continuar como paga).
+async function finComprovanteRemover(px) {
+    const st = _flComp[px];
+    if (!st) return;
+    if (st.baixada) {
+        if (!_finEhAdmin()) return finContaAvisoTravada('remover ou trocar o comprovante');
+        const ok = await confirmarAcao(
+            'Este comprovante confirma um pagamento já baixado. Ao removê-lo, a conta só poderá ser salva com um novo comprovante'
+            + ' (ou com o pagamento desfeito). A alteração fica registrada no Histórico.',
+            { titulo: 'Remover comprovante de conta paga?', confirmar: 'Sim, remover', cancelar: 'Não', perigo: true });
+        if (!ok) return;
+    }
+    st.remover = true;
     _finComprovanteRender(px);
 }
 
@@ -224,6 +305,12 @@ async function finComprovanteParaSalvar(px, tabela) {
     }
     if (st.remover) return { campos: { comprovante_path: null, comprovante_nome: null }, apagarDepois: st.path };
     return { campos: {}, apagarDepois: null };
+}
+
+// Há comprovante para esta conta? (arquivo escolhido agora ou já anexado e não removido)
+function finComprovanteTem(px) {
+    const st = _flComp[px] || {};
+    return !!_flEl(px + 'Comprovante')?.files?.length || (!!st.path && !st.remover);
 }
 
 function finComprovanteApagar(path) {
@@ -260,6 +347,16 @@ function finLancAplicarPermissao(px) {
     return pode;
 }
 
+// Data de pagamento/recebimento realizado não pode ser futura (data local de hoje)
+function finHojeLocal() {
+    const d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function finLancLimitarDataRealizada(px) {
+    const el = _flEl(px + 'PagData');
+    if (el) el.max = finHojeLocal();
+}
+
 // Status automático: realizado → pago/recebido; previsão vencida → vencido
 function finLancStatus(realizado, statusRealizado, dataPrevista, statusAtual) {
     if (statusAtual === 'cancelado') return 'cancelado';
@@ -267,3 +364,149 @@ function finLancStatus(realizado, statusRealizado, dataPrevista, statusAtual) {
     const hoje = new Date().toISOString().slice(0, 10);
     return dataPrevista && dataPrevista < hoje ? 'vencido' : 'pendente';
 }
+
+// ── Commercial Invoice vinculada ──────────────────────────────────────────
+// Lista as Commercial Invoices dos Processos disponíveis (nº em
+// processos.documentos.commercial — 1 por Processo). Escolher a CI escolhe o
+// Processo; escolher o Processo seleciona a CI dele. Grava o nº em
+// commercial_invoice.
+const _finCIProcessos = {};
+const _finCISalvo = {};
+
+// processos: lista nova (id, numero_processo, documentos); undefined = mantém
+async function finCIAtualizar(px, processos, buscarProcessoId) {
+    if (buscarProcessoId) {
+        const { data } = await supabaseClient.from('processos').select('id, numero_processo, documentos').eq('id', buscarProcessoId).maybeSingle();
+        processos = data ? [data] : [];
+    }
+    if (processos !== undefined) _finCIProcessos[px] = processos || [];
+    const sel = document.getElementById(px + 'CommercialInvoice');
+    if (!sel) return;
+    const lista = (_finCIProcessos[px] || []).filter(p => String(p.documentos?.commercial || '').trim());
+    const procId = document.getElementById(px + 'ProcessoId').value;
+    const doProc = lista.find(p => String(p.id) === String(procId));
+    const salvo = _finCISalvo[px] || '';
+    const opcoes = lista.map(p => ({ valor: String(p.documentos.commercial).trim(), proc: p }));
+    if (salvo && !opcoes.some(o => o.valor === salvo)) opcoes.unshift({ valor: salvo, proc: null });
+    sel.innerHTML = `<option value="">${opcoes.length ? 'Selecione...' : 'Nenhuma Commercial Invoice'}</option>`
+        + opcoes.map(o => `<option value="${escHtml(o.valor)}" data-proc="${o.proc ? escHtml(o.proc.id) : ''}" data-proc-nome="${o.proc ? escHtml(o.proc.numero_processo || '') : ''}">${escHtml(o.valor)}${o.proc ? ' — ' + escHtml(o.proc.numero_processo || '') : ''}</option>`).join('');
+    // a CI do Processo escolhido; senão a que estava gravada
+    sel.value = doProc ? String(doProc.documentos.commercial).trim() : salvo;
+    sel.disabled = !opcoes.length;
+    finEmbarqueAtualizar(px);
+}
+
+function finCIAlterado(px) {
+    const sel = document.getElementById(px + 'CommercialInvoice');
+    _finCISalvo[px] = sel.value;
+    const op = sel.selectedOptions[0];
+    if (op?.dataset.proc) {
+        document.getElementById(px + 'ProcessoId').value = op.dataset.proc;
+        document.getElementById(px + 'ProcessoNome').value = op.dataset.procNome || '';
+    }
+}
+
+function finCICarregar(px, valor) {
+    _finCISalvo[px] = String(valor || '').trim();
+    _finCIProcessos[px] = [];
+    finCIAtualizar(px);
+}
+
+function finCILer(px) {
+    return document.getElementById(px + 'CommercialInvoice')?.value || null;
+}
+
+// ── Embarque confirmado → Financeiro (database-embarque-contas.sql) ───────
+// A confirmação do embarque é a Data de Embarque do Processo vinculado:
+//   Contas a Receber → vencimento = embarque + prazo da Proforma (À vista = 0);
+//     antes do embarque, a previsão digitada vale só como estimativa.
+//   Contas a Pagar (custas) → o pagamento só pode ser confirmado depois do embarque.
+const _finEmb = {};
+
+function _finDiasPrazo(prazo) {
+    if (prazo === 'avista') return 0;
+    return /^\d{1,4}$/.test(String(prazo || '')) ? Number(prazo) : null;
+}
+function _finSomarDias(iso, dias) {
+    const d = new Date(String(iso).slice(0, 10) + 'T12:00:00');
+    d.setDate(d.getDate() + dias);
+    return d.toISOString().slice(0, 10);
+}
+const _finDataBR = iso => new Date(String(iso).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR');
+
+async function finEmbarqueAtualizar(px) {
+    const procId = _flEl(px + 'ProcessoId')?.value || '';
+    const token = (_finEmb[px]?.token || 0) + 1;
+    _finEmb[px] = { token, procId, bloqueiaPagamento: false };
+    let proc = null, prazo = null;
+    if (procId) {
+        const { data } = await supabaseClient.from('processos').select('numero_processo, data_embarque, proforma_id').eq('id', procId).maybeSingle();
+        if (data?.proforma_id) {
+            const { data: prof } = await supabaseClient.from('proformas').select('prazo_pagamento').eq('id', data.proforma_id).maybeSingle();
+            prazo = prof?.prazo_pagamento ?? null;
+        }
+        proc = data;
+    }
+    if (_finEmb[px].token !== token) return;   // processo trocado no meio da busca
+
+    const info = _flEl(px + 'EmbarqueInfo');
+    const baixada = !!_flComp[px]?.baixada;
+    const embarque = proc?.data_embarque ? String(proc.data_embarque).slice(0, 10) : '';
+    const numero = escHtml(proc?.numero_processo || '');
+    let texto = '';
+
+    if (px === 'cr' && proc) {
+        const dias = _finDiasPrazo(prazo);
+        const prazoTxt = dias === 0 ? 'à vista' : `+ ${dias} dias`;
+        if (dias !== null && embarque) {
+            if (!baixada) {
+                const venc = _finSomarDias(embarque, dias);
+                const campo = _flEl('crPrevData');
+                if (campo && campo.value !== venc) campo.value = venc;
+            }
+            texto = `<i class="fa-solid fa-ship"></i> Vencimento conta do embarque confirmado em ${_finDataBR(embarque)} (${prazoTxt}, prazo da Proforma).`;
+        } else if (dias !== null) {
+            texto = `<i class="fa-solid fa-ship"></i> Embarque do Processo ${numero} ainda não confirmado: a previsão é estimativa — o vencimento será recalculado na Data de Embarque (${prazoTxt}).`;
+        }
+    }
+    if (px === 'cp' && proc && !embarque && !baixada) {
+        _finEmb[px].bloqueiaPagamento = true;
+        texto = `<i class="fa-solid fa-ship"></i> Custas do Processo ${numero}: o pagamento só pode ser confirmado depois da confirmação do embarque.`;
+    }
+    if (info) { info.innerHTML = texto; info.hidden = !texto; }
+
+    const aviso = _flEl(px + 'PagEmbarqueAviso');
+    if (aviso) {
+        aviso.querySelector('span').textContent = `Pagamento liberado após a confirmação do embarque do Processo ${proc?.numero_processo || ''} (Data de Embarque no Processo).`;
+        aviso.hidden = !_finEmb[px].bloqueiaPagamento;
+    }
+    if (_finEmb[px].bloqueiaPagamento) {
+        document.querySelectorAll(`#${px}PagCorpo input, #${px}PagCorpo select, #${px}PagCorpo button`).forEach(el => { el.disabled = true; });
+    } else if (px === 'cp' && !_flEl(px + 'ModalOverlay')?.querySelector('.fin-modo-ver')) {
+        finLancAplicarPermissao(px);
+    }
+}
+
+function finEmbarqueBloqueiaPagamento(px) {
+    return !!_finEmb[px]?.bloqueiaPagamento;
+}
+
+// ── Caixa alta (padrão dos formulários do sistema — formularios.js/_ativarMaiusculas) ──
+// Textos do formulário de Conta em MAIÚSCULAS ao digitar e ao abrir uma conta
+// antiga para editar (a gravação leva o que está nos campos). Valores e câmbio
+// (inputmode decimal) ficam de fora.
+function _finCamposTexto(px) {
+    return [...document.querySelectorAll(`#${px}ModalOverlay input[type="text"], #${px}ModalOverlay textarea`)]
+        .filter(el => !el.readOnly && el.inputMode !== 'decimal' && !el.dataset.noCaps);
+}
+function finLancMaiusculasAplicar(px) {
+    _finCamposTexto(px).forEach(el => { if (el.value) el.value = el.value.toUpperCase(); });
+}
+document.addEventListener('DOMContentLoaded', () => {
+    ['cp', 'cr'].forEach(px => _finCamposTexto(px).forEach(el =>
+        el.addEventListener('input', () => {
+            const ini = el.selectionStart, fim = el.selectionEnd;
+            const maiusc = el.value.toUpperCase();
+            if (maiusc !== el.value) { el.value = maiusc; try { el.setSelectionRange(ini, fim); } catch (_) {} }
+        })));
+});
