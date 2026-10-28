@@ -378,6 +378,20 @@ async function processarUpload(input) {
     );
 }
 
+// ── Modelo de planilha (1 empresa por arquivo) ───────────────
+// Arquivo pronto e formatado em exemplos/ (gerado por
+// scripts/gerar-modelo-empresa.py): coluna A = campo, B = valor — o formato
+// "rótulo | valor" que _uploadParsearExcel lê.
+function baixarModeloEmpresaExcel() {
+    const a = document.createElement('a');
+    a.href = 'exemplos/modelo-cadastro-empresa.xlsx';
+    a.download = 'modelo-cadastro-empresa.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    mostrarNotificacao('Modelo baixado. Preencha a coluna "Valor" e envie pelo botão Upload (1 empresa por arquivo).', 'info');
+}
+
 // ── Leitura Excel ─────────────────────────────────────────────
 
 async function _uploadLerExcel(arquivo) {
@@ -400,8 +414,10 @@ async function _uploadLerExcel(arquivo) {
 function _uploadParsearExcel(rows) {
     if (!rows || !rows.length) return {};
 
+    // "Razão Social *" / "Estado (UF)" → "razao social" / "estado"
     const norm = s => String(s || '').toLowerCase()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
 
     const ALIASES = {
         'razao social': 'razao_social', 'razao': 'razao_social', 'empresa': 'razao_social',
@@ -418,7 +434,18 @@ function _uploadParsearExcel(rows) {
         'site': 'site', 'website': 'site',
         'email': 'email_contato', 'e-mail': 'email_contato',
         'telefone': 'telefone_contato', 'fone': 'telefone_contato', 'celular': 'telefone_contato',
-        'horario': 'horario_atendimento', 'horario atendimento': 'horario_atendimento',
+        'horario': 'horario_atendimento', 'horario atendimento': 'horario_atendimento', 'horario de atendimento': 'horario_atendimento',
+        'pais': 'pais', 'country': 'pais',
+        // classificação, contato e complementos (2026-10-27)
+        'modelo': 'modelo', 'modelo da empresa': 'modelo',
+        'tipo': 'tipos', 'tipos': 'tipos', 'tipo de empresa': 'tipos',
+        'codigo interno': 'codigo', 'codigo': 'codigo',
+        'inscricao municipal': 'inscricao_municipal', 'im': 'inscricao_municipal',
+        'nome do contato': 'contato_nome', 'contato': 'contato_nome',
+        'cargo': 'contato_cargo', 'area': 'contato_cargo',
+        'rede social': 'rede_social', 'instagram': 'rede_social',
+        'tags': 'tags', 'tag': 'tags',
+        'observacoes': 'observacoes', 'observacao': 'observacoes', 'obs': 'observacoes',
     };
 
     // Formato chave/valor (col A = label, col B = valor)
@@ -428,7 +455,11 @@ function _uploadParsearExcel(rows) {
         const valor = String(row[1] || '').trim();
         if (chave && valor && ALIASES[chave]) kv[ALIASES[chave]] = valor;
     });
-    if (Object.keys(kv).length >= 2) return _uploadNormalizar(kv);
+    // modelo do sistema (cabeçalho "Campo | Valor"): vale o que veio, mesmo pouco —
+    // nunca cai na leitura de texto livre (que pegaria a coluna de exemplos)
+    const ehModelo = rows.some(r => norm(r[0]) === 'campo' && norm(r[1]) === 'valor');
+    if (Object.keys(kv).length >= 2 || (ehModelo && Object.keys(kv).length)) return _uploadNormalizar(kv);
+    if (ehModelo) return {};
 
     // Formato tabular (linha 0 = cabeçalhos, linha 1 = dados)
     let headerIdx = -1, headerMap = {};

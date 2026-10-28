@@ -14,9 +14,9 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Contas a Receber</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=1eac11cb">
+    <link rel="stylesheet" href="style-base.css?v=fcfe125a">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=97ee7401">
+    <link rel="stylesheet" href="style-financeiro.css?v=dff65131">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -132,26 +132,25 @@
         <div class="fin-modal-body">
             <input type="hidden" id="crEditId">
 
+            <div class="fin-secao-titulo"><i class="fa-solid fa-file-lines"></i> Dados gerais</div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label for="crDescricao">Descrição <span style="color:#ef4444">*</span></label>
-                    <input type="text" id="crDescricao" placeholder="Ex: Exportação de calçados — Proforma #001">
+                    <label for="crBloco">Plano de Contas <span style="color:#ef4444">*</span></label>
+                    <select id="crBloco"><option value="">Selecione o bloco...</option></select>
                 </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label for="crProformaNome">Vincular a Proforma</label>
-                    <input type="text" id="crProformaNome" placeholder="Buscar proforma por código..." autocomplete="off" oninput="crBuscarProforma(this.value)" onfocus="crMostrarProforma(this.value)">
-                    <input type="hidden" id="crProformaId">
-                    <div class="pl-autocomplete" id="crAutoProforma"></div>
+                    <label for="crConta">Categoria <span style="color:#ef4444">*</span></label>
+                    <select id="crConta" disabled><option value="">Escolha o Plano de Contas primeiro</option></select>
                 </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
-                    <label for="crClienteNome">Cliente / Parceiro</label>
-                    <input type="text" id="crClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="crBuscarParceiro(this.value)" onfocus="crMostrarParceiro(this.value)">
-                    <input type="hidden" id="crClienteId">
-                    <div class="pl-autocomplete" id="crAutoParceiro"></div>
+                    <label for="crProformaNome">Vincular a Proforma</label>
+                    <input type="text" id="crProformaNome" placeholder="Buscar proforma por código..." autocomplete="off" oninput="crBuscarProforma(this.value)" onfocus="crMostrarProforma(this.value)">
+                    <input type="hidden" id="crProformaId">
+                    <div class="pl-autocomplete" id="crAutoProforma"></div>
                 </div>
                 <div class="fin-form-group">
                     <label for="crProcessoNome">Vincular a Processo</label>
@@ -161,52 +160,93 @@
                 </div>
             </div>
             <div class="fin-form-row">
-                <div class="fin-form-group">
-                    <label for="crValor">Valor <span style="color:#ef4444">*</span></label>
-                    <input type="text" id="crValor" placeholder="0,00" inputmode="decimal" oninput="crMascaraMonetaria(this)">
-                </div>
-                <div class="fin-form-group">
-                    <label for="crMoeda">Moeda</label>
-                    <select id="crMoeda">
-                        <option value="BRL">BRL</option>
-                    </select>
-                </div>
-            </div>
-            <div class="fin-form-row" id="crCambioGrupo" hidden>
                 <div class="fin-form-group fin-full">
-                    <label for="crCambio">Câmbio (R$ por 1 <span id="crCambioMoeda">USD</span>)</label>
-                    <input type="text" id="crCambio" placeholder="0,0000" inputmode="decimal" autocomplete="off">
-                    <small class="fin-cambio-info" id="crCambioInfo"></small>
+                    <label for="crClienteNome">Cliente</label>
+                    <input type="text" id="crClienteNome" placeholder="Buscar cliente..." autocomplete="off" oninput="crBuscarParceiro(this.value)" onfocus="crMostrarParceiro(this.value)">
+                    <input type="hidden" id="crClienteId">
+                    <div class="pl-autocomplete" id="crAutoParceiro"></div>
                 </div>
             </div>
+            <div class="fin-form-row fin-linha-valores">
+                <div class="fin-form-group">
+                    <label for="crPrevData" title="Previsão de Data de Recebimento">Previsão de Recebimento <span style="color:#ef4444">*</span></label>
+                    <input type="date" id="crPrevData">
+                </div>
+                <div class="fin-form-group">
+                    <label for="crPrevMoeda">Moeda</label>
+                    <select id="crPrevMoeda"><option value="BRL">BRL</option></select>
+                </div>
+                <div class="fin-form-group">
+                    <label for="crPrevValor">Valor <span style="color:#ef4444">*</span></label>
+                    <input type="text" id="crPrevValor" placeholder="0,00" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="fin-form-group">
+                    <label for="crPrevCambio">Câmbio</label>
+                    <input type="text" id="crPrevCambio" placeholder="1,0000" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="fin-form-group">
+                    <label for="crPrevBRL">Valor em Real</label>
+                    <input type="text" id="crPrevBRL" readonly tabindex="-1" placeholder="R$ 0,00">
+                </div>
+            </div>
+            <small class="fin-cambio-info fin-linha-info" id="crPrevInfo"></small>
             <div class="fin-form-row">
-                <div class="fin-form-group">
-                    <label for="crVencimento">Vencimento <span style="color:#ef4444">*</span></label>
-                    <input type="date" id="crVencimento">
-                </div>
-                <div class="fin-form-group">
-                    <label for="crDataRecebimento">Data de Recebimento</label>
-                    <input type="date" id="crDataRecebimento">
+                <div class="fin-form-group fin-full">
+                    <label for="crDescricao">Descrição <span style="color:#ef4444">*</span></label>
+                    <input type="text" id="crDescricao" placeholder="Ex: Exportação de calçados — Proforma PI202600001">
                 </div>
             </div>
-            <div class="fin-form-row">
+
+            <div class="fin-secao-pagamento" id="crSecaoPagamento">
+                <button type="button" class="fin-secao-titulo fin-secao-toggle" id="crPagToggle" aria-expanded="false" aria-controls="crPagCorpo" onclick="finSecaoPagAlternar('cr')"><i class="fa-solid fa-hand-holding-dollar"></i> Recebimento realizado <small class="fin-pag-resumo" id="crPagResumo"></small><i class="fa-solid fa-chevron-down fin-secao-seta"></i></button>
+                <div class="fin-pag-corpo" id="crPagCorpo" hidden>
+                <div class="fin-pag-aviso" id="crPagAviso" hidden><i class="fa-solid fa-lock"></i> Só usuários com acesso ao Financeiro ou administradores podem registrar o recebimento.</div>
+            <div class="fin-form-row fin-linha-valores">
                 <div class="fin-form-group">
-                    <label for="crStatus">Status</label>
-                    <select id="crStatus" onchange="crAoMudarStatus()">
-                        <option value="pendente">Pendente</option>
-                        <option value="recebido">Recebido</option>
-                        <option value="vencido">Vencido</option>
-                        <option value="cancelado">Cancelado</option>
-                    </select>
+                    <label for="crPagData">Data de Recebimento</label>
+                    <input type="date" id="crPagData">
                 </div>
                 <div class="fin-form-group">
-                    <label for="crPlanoContaNome">Conta (Plano de Contas)</label>
-                    <input type="text" id="crPlanoContaNome" placeholder="Buscar conta..." autocomplete="off" oninput="crBuscarPlanoConta(this.value)" onfocus="crMostrarPlanoConta(this.value)">
-                    <input type="hidden" id="crPlanoContaId">
-                    <div class="pl-autocomplete" id="crAutoPlanoConta"></div>
+                    <label for="crPagMoeda">Moeda</label>
+                    <select id="crPagMoeda"><option value="BRL">BRL</option></select>
+                </div>
+                <div class="fin-form-group">
+                    <label for="crPagValor">Valor</label>
+                    <input type="text" id="crPagValor" placeholder="0,00" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="fin-form-group">
+                    <label for="crPagCambio">Câmbio</label>
+                    <input type="text" id="crPagCambio" placeholder="1,0000" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="fin-form-group">
+                    <label for="crPagBRL">Valor em Real</label>
+                    <input type="text" id="crPagBRL" readonly tabindex="-1" placeholder="R$ 0,00">
                 </div>
             </div>
-            <div id="crPrevistoBox"></div>
+            <small class="fin-cambio-info fin-linha-info" id="crPagInfo"></small>
+                <div class="fin-form-row">
+                    <div class="fin-form-group fin-full">
+                        <label for="crMeioPagamento">Meio de Recebimento</label>
+                        <select id="crMeioPagamento"><option value="">Selecione...</option><option value="deposito">Depósito bancário</option><option value="transferencia">Transferência / PIX</option><option value="boleto">Boleto</option><option value="dinheiro">Dinheiro</option><option value="cartao-credito">Cartão de crédito</option><option value="cartao-debito">Cartão de débito</option><option value="swift">Remessa internacional (SWIFT)</option><option value="carta-credito">Carta de crédito</option><option value="cheque">Cheque</option><option value="outro">Outro</option></select>
+                    </div>
+                </div>
+                <div class="fin-form-row">
+                    <div class="fin-form-group">
+                        <label for="crNumeroDocumento">Número da Nota Fiscal / Fatura</label>
+                        <input type="text" id="crNumeroDocumento" placeholder="Comprovante Fiscal">
+                    </div>
+                    <div class="fin-form-group">
+                        <label for="crComprovante">Anexo</label>
+                        <div class="fin-comp-campo">
+                            <input type="file" id="crComprovante" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                            <span class="fin-comp-atual" id="crComprovanteAtual"></span>
+                        </div>
+                    </div>
+                </div>
+                <small class="fin-cambio-info">Preencha a data e o valor quando o recebimento acontecer — a conta passa a <strong>Recebida</strong> sozinha.</small>
+                </div>
+            </div>
+
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full pl-obs-wrapper">
                     <div class="pl-obs-toggle" onclick="crToggleObs(this)">
@@ -252,12 +292,12 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=056c6d75"></script>
-<script src="auth.js?v=37c2c7b0"></script>
+<script src="supabase-api.js?v=de0b24ee"></script>
+<script src="auth.js?v=443d3cf2"></script>
 <script src="navegador.js?v=43ffeccc"></script>
-<script src="fin-moeda.js?v=0f017527"></script>
-<script src="fin-previsto.js?v=ed820757"></script>
-<script src="contas-receber.js?v=ac031186"></script>
+<script src="fin-moeda.js?v=7894e64c"></script>
+<script src="fin-lancamento.js?v=518568c5"></script>
+<script src="contas-receber.js?v=8e7ef3ed"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

@@ -217,7 +217,7 @@
 .fin-modal {
     background: white;
     border-radius: 16px;
-    width: 540px;
+    width: 820px;   /* formulário de Contas a Pagar/Receber (exclusão tem largura própria) */
     max-width: 95vw;
     max-height: 90vh;
     overflow-y: auto;
@@ -966,4 +966,39 @@
 @media (max-width: 640px) {
     .fin-prev-linha { grid-template-columns: 1fr 1fr; }
     .fin-prev-tit { grid-column: 1 / -1; padding-bottom: 0; }
+}
+
+/* ── Formulário de lançamento (Contas a Pagar / Receber — fin-lancamento.js) ── */
+.fin-secao-titulo { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .5px;
+    text-transform: uppercase; color: #1e3a8a; margin: 4px 0 14px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+.fin-secao-titulo i { color: #4776ec; }
+.fin-linha-valores { display: grid; grid-template-columns: 1.5fr 1.2fr 1fr .8fr 1fr; gap: 12px; margin-bottom: 4px; align-items: end; }
+.fin-linha-valores > .fin-form-group { min-width: 0; }
+.fin-linha-valores input, .fin-linha-valores select { width: 100%; min-width: 0; box-sizing: border-box; }
+.fin-linha-valores label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fin-linha-valores input[readonly] { background: #f8fafc; color: #1e3a8a; font-weight: 600; }
+.fin-linha-valores input:disabled, .fin-linha-valores select:disabled { background: #f1f5f9; color: #94a3b8; }
+.fin-linha-info { display: block; min-height: 16px; margin: 0 0 12px; }
+.fin-secao-pagamento { margin: 22px 0 14px; padding: 16px 16px 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; }
+.fin-secao-pagamento .fin-secao-titulo { margin-top: 0; }
+.fin-secao-toggle { width: 100%; background: none; border: none; border-bottom: 1px solid transparent; padding: 0 0 2px; margin-bottom: 0;
+    cursor: pointer; font-family: inherit; text-align: left; }
+.fin-secao-pagamento.aberta .fin-secao-toggle { border-bottom-color: #e2e8f0; padding-bottom: 8px; margin-bottom: 14px; }
+.fin-secao-seta { margin-left: auto; color: #94a3b8 !important; transition: transform .2s ease; }
+.fin-secao-pagamento.aberta .fin-secao-seta { transform: rotate(180deg); }
+.fin-pag-resumo { font-size: 11.5px; font-weight: 500; text-transform: none; letter-spacing: 0; color: #15803d; }
+.fin-secao-pagamento { padding-bottom: 14px; }
+.fin-secao-pagamento.aberta { padding-bottom: 6px; }
+.fin-secao-pagamento > .fin-cambio-info { display: block; margin: -4px 0 10px; }
+.fin-pag-aviso { font-size: 12.5px; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.fin-pag-aviso i { margin-right: 4px; }
+.fin-comp-campo { display: flex; align-items: center; gap: 8px; min-height: 38px; }
+.fin-comp-campo input[type="file"] { font-size: 12.5px; width: 100%; height: auto; min-height: 38px; padding: 6px 8px; border: 1.5px dashed #cbd5e1; border-radius: 8px; background: #fff; cursor: pointer; box-sizing: border-box; }
+.fin-comp-atual { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.fin-comp-atual:empty { display: none; }
+.fin-comp-link { color: #4776ec; font-weight: 600; font-size: 13px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fin-comp-remover { border: none; background: #fee2e2; color: #b91c1c; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; flex-shrink: 0; }
+@media (max-width: 768px) {
+    .fin-linha-valores { grid-template-columns: 1fr 1fr; }
+    .fin-linha-valores .fin-form-group:first-child { grid-column: 1 / -1; }
 }

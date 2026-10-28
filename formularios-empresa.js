@@ -1263,10 +1263,25 @@ function _empPreencherDoUpload(dados) {
         el.value = el.type === 'text' && !el.readOnly && !el.dataset.noCaps ? v.toUpperCase() : v;
     };
 
-    // Modelo: empresa nacional (padrão) ou company se país estrangeiro
-    const modelo = dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase()) ? 'company' : 'empresa';
+    // Modelo: o informado na planilha; sem ele, empresa nacional (padrão) ou company se país estrangeiro
+    const norm = v => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    const modeloTxt = norm(dados.modelo);
+    const modeloInformado = !modeloTxt ? null
+        : /transport/.test(modeloTxt) ? 'transportadora'
+        : /trading|comercial export/.test(modeloTxt) ? 'trading'
+        : /company|estrangeir/.test(modeloTxt) ? 'company'
+        : /outro/.test(modeloTxt) ? 'outros'
+        : /fabric|fornec|empresa|nacional/.test(modeloTxt) ? 'empresa' : null;
+    const modelo = modeloInformado || (dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase()) ? 'company' : 'empresa');
     const modeloRadio = document.querySelector(`[name="emp_modelo"][value="${modelo}"]`);
     if (modeloRadio) { modeloRadio.checked = true; onModeloChange(modelo); }
+
+    // Tipo: "Fabricante, Comprador" → marca as caixas
+    norm(dados.tipos).split(/[,;/]+/).map(t => t.trim()).forEach(t => {
+        const tipo = /fabric/.test(t) ? 'fabricante' : /fornec/.test(t) ? 'fornecedor' : /compr/.test(t) ? 'comprador' : /import/.test(t) ? 'importador' : null;
+        const caixa = tipo && document.querySelector(`[name="tipo_${tipo}"]`);
+        if (caixa && !caixa.checked) { caixa.checked = true; caixa.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
 
     // Tipo de identificação — disparar change para habilitar o campo documento
     const tipoCadEl = document.getElementById('emp-tipo-cadastro');
@@ -1286,6 +1301,20 @@ function _empPreencherDoUpload(dados) {
     set('emp-bairro',      dados.bairro);
     set('emp-endereco',    dados.endereco);
     set('emp-complemento', dados.complemento);
+    set('emp-codigo',      dados.codigo);
+    set('emp-im',          dados.inscricao_municipal);
+    set('emp-site',        dados.site);
+    set('emp-horario',     dados.horario_atendimento);
+    set('emp-rede-social', dados.rede_social);
+    const obsEl = document.getElementById('emp-obs');
+    if (obsEl && dados.observacoes) obsEl.value = String(dados.observacoes).trim().toUpperCase();
+    // Tags: até 4, separadas por ; ou vírgula (minúsculas, como no formulário)
+    if (dados.tags && typeof _empTagsArray !== 'undefined') {
+        String(dados.tags).split(/[;,]/).map(t => t.trim().toLowerCase()).filter(Boolean).forEach(t => {
+            if (_empTagsArray.length < 4 && !_empTagsArray.includes(t)) _empTagsArray.push(t);
+        });
+        empRenderizarTags();
+    }
 
     // País (autocomplete — preencher o campo de texto)
     if (dados.pais && !['BR','BRASIL'].includes((dados.pais || '').toUpperCase())) {
@@ -1310,8 +1339,10 @@ function _empPreencherDoUpload(dados) {
 
     // Contato (e-mail e telefone do 1º contato)
     const primeiroContato = document.querySelector('#emp-contato-rows .contato-lista-row');
-    if (primeiroContato && (dados.email_contato || dados.telefone_contato)) {
+    if (primeiroContato && (dados.email_contato || dados.telefone_contato || dados.contato_nome || dados.contato_cargo)) {
         const ins = primeiroContato.querySelectorAll('input');
+        if (ins[0] && dados.contato_cargo) ins[0].value = String(dados.contato_cargo).toUpperCase();
+        if (ins[1] && dados.contato_nome)  ins[1].value = String(dados.contato_nome).toUpperCase();
         if (ins[2] && dados.email_contato)    ins[2].value = dados.email_contato.toLowerCase();
         if (ins[3] && dados.telefone_contato) ins[3].value = String(dados.telefone_contato).replace(/\D/g, '');
     }

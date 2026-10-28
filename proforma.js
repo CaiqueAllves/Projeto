@@ -78,13 +78,14 @@ function _profBotaoProcesso(p, status) {
 function _profBotaoContaReceber(p) {
     const temProcesso = p._processos && p._processos.length > 0;
     return temProcesso
-        ? `<button class="btn-acao btn-editar so-financeiro" onclick="profGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
+        ? `<button class="btn-acao btn-editar" onclick="profGerarContaReceber('${p.id}')" title="Gerar Conta a Receber"><i class="fa-solid fa-sack-dollar"></i></button>`
         : `<button class="btn-acao btn-editar" disabled title="Gere um Processo antes de criar a Conta a Receber" style="opacity:.4;cursor:not-allowed;"><i class="fa-solid fa-sack-dollar"></i></button>`;
 }
 
+// Formulário de Conta a Receber numa janela sobre a tela (auth.js): quem é do
+// Operacional lança a previsão sem acesso à tela do Financeiro
 function profGerarContaReceber(id) {
-    if (usuarioTemModulo('financeiro') === false) return mostrarNotificacao('Você não tem acesso ao módulo Financeiro.', 'warning');
-    window.open(`contas-receber.html?gerar_proforma_id=${id}`, '_blank');
+    abrirJanelaConta('receber', `gerar_proforma_id=${encodeURIComponent(id)}`);
 }
 
 // Abre o formulário de cadastro em branco, pré-preenchido com os dados desta

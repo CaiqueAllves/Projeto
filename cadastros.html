@@ -14,9 +14,9 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Empresas</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=1eac11cb">
+    <link rel="stylesheet" href="style-base.css?v=fcfe125a">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-cadastro.css?v=f3e58ec0">
+    <link rel="stylesheet" href="style-cadastro.css?v=2c563d82">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -62,6 +62,9 @@
                 <div class="header-right">
                     <button class="btn-cadastrar" onclick="window.open('formularios.html?tab=empresa', '_blank')">
                         <i class="fa-solid fa-plus"></i> Cadastrar
+                    </button>
+                    <button class="btn-modelo" onclick="baixarModeloEmpresaExcel()" title="Planilha modelo para cadastrar uma empresa pelo Upload">
+                        <i class="fa-solid fa-download"></i> Modelo
                     </button>
                     <button class="btn-upload" onclick="document.getElementById('uploadInput').click()">
                         <i class="fa-solid fa-upload"></i> Upload
@@ -114,9 +117,9 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=056c6d75"></script>
-<script src="auth.js?v=37c2c7b0"></script>
-<script src="cadastros.js?v=0fb6b787"></script>
+<script src="supabase-api.js?v=de0b24ee"></script>
+<script src="auth.js?v=443d3cf2"></script>
+<script src="cadastros.js?v=f0e83591"></script>
 <script src="navegador.js?v=43ffeccc"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 

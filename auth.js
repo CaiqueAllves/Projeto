@@ -359,6 +359,32 @@ function avisoSemPermissaoExcluir() {
     return false;
 }
 
+const _AUTH_JANELA_CONTA = new URLSearchParams(location.search).get('janela') === '1';
+
+// Formulário de Conta a Pagar/Receber numa janela sobre a tela atual (cards de
+// Proforma e Processo) — sem levar para a tela do Financeiro, que quem é só do
+// Operacional não acessa. tipo = 'pagar' | 'receber'; params = query string
+// (gerar_processo_id=... / gerar_proforma_id=...). A página da conta, em modo
+// janela (?janela=1), mostra só o formulário e avisa aqui ao fechar/salvar.
+function abrirJanelaConta(tipo, params) {
+    document.getElementById('janelaConta')?.remove();
+    const ov = document.createElement('div');
+    ov.id = 'janelaConta';
+    ov.className = 'janela-conta';
+    const fr = document.createElement('iframe');
+    fr.src = `contas-${tipo === 'pagar' ? 'pagar' : 'receber'}.html?janela=1&semabas=1&${params || ''}`;
+    fr.title = tipo === 'pagar' ? 'Nova Conta a Pagar' : 'Nova Conta a Receber';
+    ov.appendChild(fr);
+    document.body.appendChild(ov);
+    const aoMensagem = (ev) => {
+        if (ev.source !== fr.contentWindow || ev.data?.tipo !== 'fin-janela') return;
+        window.removeEventListener('message', aoMensagem);
+        ov.remove();
+        if (ev.data.salvo) mostrarNotificacao(tipo === 'pagar' ? 'Conta a Pagar lançada.' : 'Conta a Receber lançada.', 'success');
+    };
+    window.addEventListener('message', aoMensagem);
+}
+
 function _authAplicarPermissoes(u) {
     const corpo = document.body;
     if (!corpo || !u) return;
@@ -373,6 +399,10 @@ function _authAplicarPermissoes(u) {
         // menu: tira o módulo do seletor (no iPhone, display:none em <option> não funciona)
         document.querySelectorAll(`#modSelect option[value="${modulo}"]`).forEach(o => o.remove());
         if (sessionStorage.getItem('modulo_ativo') === modulo && typeof setModulo === 'function') setModulo('operacional');
+
+        // formulário de Contas aberto em janela (abrirJanelaConta) por quem é do
+        // Operacional: só o formulário aparece — o banco só deixa criar previsão
+        if (_AUTH_JANELA_CONTA && ['contas-pagar.html', 'contas-receber.html'].includes(pagina)) continue;
 
         // tela do módulo aberta direto (favorito, aba antiga, link)
         if (cfg.paginas.includes(pagina) && !document.getElementById('permSemAcesso')) {

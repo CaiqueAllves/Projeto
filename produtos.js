@@ -96,7 +96,21 @@ const PROD_MODELO_CAMPOS = [
     { secao: 'Estoque',        coluna: 'Data Validade',          campo: 'data_validade',        obrigatorio: false, tipo: 'Data',   exemplo: '01/08/2027',                          obs: 'Formato DD/MM/AAAA.' },
     { secao: 'Estoque',        coluna: 'Observações de Estoque', campo: 'obs_estoque',          obrigatorio: false, tipo: 'Texto',  exemplo: 'Armazenado no galpão B',              obs: 'Localização, controle, observações (opcional).' },
 
+    // ── Características e Composição (2026-10-27) ──
+    { secao: 'Características', coluna: 'Características',        campo: 'caracteristicas_txt',  obrigatorio: false, tipo: 'Texto',  exemplo: 'Cor: Azul; Tamanho: M',               obs: 'Pares "nome: valor" separados por ponto e vírgula (ex: Teor alcoólico: 12%). Podem sair como coluna na Commercial Invoice.' },
+    { secao: 'Características', coluna: 'Tamanho',                campo: 'car_tamanho',          obrigatorio: false, tipo: 'Texto',  exemplo: 'M',                                   obs: 'Vestuário/calçados: tamanho (P, M, G, 38, 40...). Vira a característica "Tamanho".' },
+    { secao: 'Características', coluna: 'Teor Alcoólico (%)',     campo: 'car_teor_alcoolico',   obrigatorio: false, tipo: 'Texto',  exemplo: '13%',                                 obs: 'Bebidas: teor alcoólico (ex: 13%). Vira a característica "Teor Alcoólico".' },
+    { secao: 'Características', coluna: 'Composição',             campo: 'composicao_txt',       obrigatorio: false, tipo: 'Texto',  exemplo: 'Algodão 95%; Elastano 5%',            obs: 'Ingredientes/matérias-primas com o percentual, separados por ponto e vírgula. Sai na Commercial Invoice e no Packing List.' },
+
     // ── Logística ──
+    { secao: 'Logística',      coluna: 'Tipo de Embalagem',      campo: 'emb_tipo',             obrigatorio: false, tipo: 'Texto',  exemplo: 'Caixa de papelão',                    obs: 'Embalagem de transporte (caixa, fardo, saco...).' },
+    { secao: 'Logística',      coluna: 'Qtd por Caixa',          campo: 'emb_quantidade',       obrigatorio: false, tipo: 'Número', exemplo: '10',                                  obs: 'Quantas unidades cabem em uma embalagem de transporte — o Packing List calcula os volumes por ela.' },
+    { secao: 'Logística',      coluna: 'Peso Líquido Caixa (kg)', campo: 'emb_peso_liquido',    obrigatorio: false, tipo: 'Número', exemplo: '10,0',                                obs: 'Peso líquido de uma caixa cheia, em kg.' },
+    { secao: 'Logística',      coluna: 'Peso Bruto Caixa (kg)',  campo: 'emb_peso_bruto',       obrigatorio: false, tipo: 'Número', exemplo: '11,2',                                obs: 'Peso bruto de uma caixa cheia (com a embalagem), em kg.' },
+    { secao: 'Logística',      coluna: 'Comprimento Caixa (cm)', campo: 'emb_comprimento',      obrigatorio: false, tipo: 'Número', exemplo: '40',                                  obs: 'Medidas da caixa em cm — usadas na cubagem (m³).' },
+    { secao: 'Logística',      coluna: 'Largura Caixa (cm)',     campo: 'emb_largura',          obrigatorio: false, tipo: 'Número', exemplo: '30',                                  obs: '' },
+    { secao: 'Logística',      coluna: 'Altura Caixa (cm)',      campo: 'emb_altura',           obrigatorio: false, tipo: 'Número', exemplo: '20',                                  obs: '' },
+    { secao: 'Logística',      coluna: 'Peso Líquido Unitário (kg)', campo: 'unit_peso_liquido', obrigatorio: false, tipo: 'Número', exemplo: '0,25',                               obs: 'Peso líquido de uma unidade do produto, em kg (embalagem unitária).' },
     { secao: 'Logística',      coluna: 'Observações de Logística', campo: 'obs_logistica',      obrigatorio: false, tipo: 'Texto',  exemplo: 'Frágil — manusear com cuidado',       obs: 'Embalagem, transporte, manuseio (opcional).' },
 ];
 
@@ -113,19 +127,15 @@ function fecharModalModeloProduto() {
 // extensão em processarUploadProdutos), então um .csv baixado aqui não
 // poderia ser reenviado pela mesma tela. SheetJS já está carregado nesta
 // página (usado pelo upload), então gerar .xlsx tem custo zero a mais.
-async function baixarModeloProdutoExcel() {
-    try {
-        await carregarLibSobDemanda('xlsx');
-    } catch (e) { notify('Não foi possível carregar o gerador de planilha. Tente novamente.', 'error'); return; }
-
-    const header = PROD_MODELO_CAMPOS.map(c => c.coluna);
-    const exemplo = PROD_MODELO_CAMPOS.map(c => c.exemplo);
-    const ws = XLSX.utils.aoa_to_sheet([header, exemplo]);
-    ws['!cols'] = header.map(h => ({ wch: Math.max(h.length, 14) }));
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Modelo Produtos');
-    XLSX.writeFile(wb, 'modelo-importacao-produtos.xlsx');
+// Modelo pronto e formatado em exemplos/ (gerado por scripts/gerar-modelo-produtos.py
+// a partir de PROD_MODELO_CAMPOS): cabeçalho na linha 4, um produto por linha
+function baixarModeloProdutoExcel() {
+    const a = document.createElement('a');
+    a.href = 'exemplos/modelo-cadastro-produtos.xlsx';
+    a.download = 'modelo-cadastro-produtos.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     fecharModalModeloProduto();
 }
 
@@ -356,8 +366,9 @@ function _prodUploadLerExcelIdiomas(arquivo) {
                         idioma: idi.idioma,
                         idioma_outro: idi.idioma_outro,
                         idioma_texto: String(rows[i][idxIdioma] || '').trim(),
-                        nome: idxNome !== -1 ? String(rows[i][idxNome] || '').trim() : '',
-                        descricao: idxDesc !== -1 ? String(rows[i][idxDesc] || '').trim() : '',
+                        // maiúsculas, como no formulário (nome/descrição por idioma)
+                        nome: idxNome !== -1 ? String(rows[i][idxNome] || '').trim().toUpperCase() : '',
+                        descricao: idxDesc !== -1 ? String(rows[i][idxDesc] || '').trim().toUpperCase() : '',
                     });
                 }
                 resolve(linhas);
@@ -666,7 +677,45 @@ const PROD_UPLOAD_ALIASES = {
     'estoque maximo': 'estoque_maximo',
     'obs estoque': 'obs_estoque', 'observacoes de estoque': 'obs_estoque',
     'obs logistica': 'obs_logistica', 'observacoes de logistica': 'obs_logistica',
+
+    // Características, Composição e Embalagens (2026-10-27) — os nomes do
+    // modelo vêm com a unidade entre parênteses, que _prodUploadNorm remove
+    'caracteristicas': 'caracteristicas_txt', 'caracteristica': 'caracteristicas_txt',
+    'tamanho': 'car_tamanho', 'tam': 'car_tamanho',
+    'teor alcoolico': 'car_teor_alcoolico', 'teor de alcool': 'car_teor_alcoolico', 'graduacao alcoolica': 'car_teor_alcoolico', 'teor': 'car_teor_alcoolico',
+    'composicao': 'composicao_txt',
+    'tipo de embalagem': 'emb_tipo', 'embalagem': 'emb_tipo', 'tipo embalagem': 'emb_tipo',
+    'qtd por caixa': 'emb_quantidade', 'quantidade por caixa': 'emb_quantidade', 'unidades por caixa': 'emb_quantidade',
+    'peso liquido caixa': 'emb_peso_liquido', 'peso bruto caixa': 'emb_peso_bruto',
+    'comprimento caixa': 'emb_comprimento', 'largura caixa': 'emb_largura', 'altura caixa': 'emb_altura',
+    'peso liquido unitario': 'unit_peso_liquido', 'peso unitario': 'unit_peso_liquido',
 };
+
+// "Cor: Azul; Tamanho: M" → [{ nome: 'COR', valor: 'AZUL' }, ...] (maiúsculas, como no formulário)
+function _prodUploadCaracteristicas(txt) {
+    return String(txt || '').split(';').map(par => {
+        const i = par.indexOf(':');
+        const nome = (i >= 0 ? par.slice(0, i) : par).trim().toUpperCase();
+        const valor = (i >= 0 ? par.slice(i + 1) : '').trim().toUpperCase();
+        return nome ? { nome, valor } : null;
+    }).filter(Boolean).slice(0, 20);
+}
+
+// "Algodão 95%; Elastano 5%" → [{ ingrediente: 'ALGODÃO', concentracao_pct: 95 }, ...]
+function _prodUploadComposicao(txt) {
+    return String(txt || '').split(';').map(item => {
+        const m = item.trim().match(/^(.*?)[\s:–-]*(\d+(?:[.,]\d+)?)\s*%?\s*$/);
+        const ingrediente = (m ? m[1] : item).trim().replace(/[\s:–-]+$/, '').toUpperCase();
+        if (!ingrediente) return null;
+        return { ingrediente, concentracao_pct: m ? Number(m[2].replace(',', '.')) : null };
+    }).filter(Boolean).slice(0, 30);
+}
+
+// Mesma regra do formulário de Produto: texto em MAIÚSCULAS, menos os campos
+// marcados data-no-caps lá (tags, referências, lote, link da imagem) e os de
+// código (status, idioma). Sem isso a planilha gravava em minúsculas.
+const PROD_UPLOAD_MAIUSCULAS = ['sku', 'nome', 'descricao', 'categoria', 'tipo', 'marca', 'unidade_medida', 'ncm', 'cest',
+    'gtin', 'naladi_nesh', 'dun14', 'moeda', 'obs_preco', 'obs_estoque', 'obs_logistica'];
 
 // Campos que aceitam Sim/Não em vez de texto/número.
 const PROD_UPLOAD_CAMPOS_BOOLEANOS = { controla_estoque: true, venda_sem_estoque: false };
@@ -698,8 +747,10 @@ function _prodUploadResolverIdioma(txt) {
     return cod ? { idioma: cod, idioma_outro: null } : { idioma: 'outro', idioma_outro: bruto };
 }
 
+// "SKU *" / "Nome (obrigatório)" → "sku" / "nome" (modelo marca os obrigatórios com *)
 function _prodUploadNorm(s) {
-    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
 }
 
 function _prodUploadParaNumero(v) {
@@ -757,6 +808,7 @@ function _prodUploadParsearExcelLote(rows) {
             if (v) p[campo] = v;
         });
         if (!p.sku || !p.nome) continue;
+        PROD_UPLOAD_MAIUSCULAS.forEach(campo => { if (typeof p[campo] === 'string') p[campo] = p[campo].toUpperCase(); });
 
         if (p.preco_custo != null) p.preco_custo = _prodUploadParaNumero(p.preco_custo);
         if (p.preco_venda != null) p.preco_venda = _prodUploadParaNumero(p.preco_venda);
@@ -771,6 +823,30 @@ function _prodUploadParsearExcelLote(rows) {
         Object.entries(PROD_UPLOAD_CAMPOS_BOOLEANOS).forEach(([campo, padrao]) => {
             p[campo] = _prodUploadParaBooleano(p[campo], padrao);
         });
+        // Características (coluna do produto), Composição e Embalagens (tabelas
+        // à parte — gravadas por salvarProdutosEmLote depois de criar o produto)
+        const caracs = p.caracteristicas_txt ? _prodUploadCaracteristicas(p.caracteristicas_txt) : [];
+        // colunas próprias de Tamanho e Teor Alcoólico → características com esses nomes
+        // (substituem uma de mesmo nome digitada em "Características")
+        [['car_tamanho', 'TAMANHO'], ['car_teor_alcoolico', 'TEOR ALCOÓLICO']].forEach(([campo, nome]) => {
+            if (!p[campo]) return;
+            let valor = String(p[campo]).trim().toUpperCase();
+            if (campo === 'car_teor_alcoolico' && /^\d+(?:[.,]\d+)?$/.test(valor)) valor += '%';
+            const i = caracs.findIndex(c => c.nome.normalize('NFD').replace(/[̀-ͯ]/g, '') === nome.normalize('NFD').replace(/[̀-ͯ]/g, ''));
+            if (i >= 0) caracs[i].valor = valor; else caracs.push({ nome, valor });
+            delete p[campo];
+        });
+        if (caracs.length) p.caracteristicas = caracs;
+        if (p.composicao_txt) p._composicao = _prodUploadComposicao(p.composicao_txt);
+        delete p.caracteristicas_txt; delete p.composicao_txt;
+        const num = v => (v === undefined || v === '' ? null : _prodUploadParaNumero(v));
+        const caixa = { tipo_embalagem: p.emb_tipo ? String(p.emb_tipo).toUpperCase() : null, quantidade: num(p.emb_quantidade),
+            peso_liquido: num(p.emb_peso_liquido), peso_bruto: num(p.emb_peso_bruto),
+            comprimento: num(p.emb_comprimento), largura: num(p.emb_largura), altura: num(p.emb_altura) };
+        if (Object.values(caixa).some(v => v !== null && v !== undefined)) p._embCaixa = caixa;
+        if (num(p.unit_peso_liquido) !== null) p._embUnitaria = { peso_liquido: num(p.unit_peso_liquido) };
+        ['emb_tipo', 'emb_quantidade', 'emb_peso_liquido', 'emb_peso_bruto', 'emb_comprimento', 'emb_largura', 'emb_altura', 'unit_peso_liquido'].forEach(k => delete p[k]);
+
         // Tags: uma célula só, separada por ; ou vírgula → array de minúsculas
         p.tags = p.tags
             ? String(p.tags).split(/[;,]/).map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, 10)
@@ -844,6 +920,10 @@ async function _prodUploadImportarLote(produtos) {
     }
     if (res.falhas?.length) {
         res.falhas.forEach(f => console.warn('[Produtos] Bloco falhou:', f.skus, f.mensagem));
+    }
+    if (res.avisosExtras?.length) {
+        res.avisosExtras.forEach(a => console.warn('[Produtos] Composição/embalagens:', a));
+        notify('Produtos importados, mas parte da composição ou das embalagens não foi gravada. Confira no cadastro do produto.', 'aviso');
     }
 
     if (res.totalSucesso) carregarProdutos();

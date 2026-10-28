@@ -435,10 +435,13 @@ async function _prodPreencherEdicao(dados) {
 async function _prodPreencherDoUpload(dados) {
     if (!dados || !Object.keys(dados).length) return;
 
+    // mesma regra do formulário (_ativarMaiusculas): texto em maiúsculas, menos data-no-caps
     const set = (id, val) => {
         if (val === undefined || val === null || val === '') return;
         const el = document.getElementById(id);
-        if (el) el.value = val;
+        if (!el) return;
+        const caps = el.matches('input[type="text"], input[type="tel"], textarea') && !el.readOnly && !el.dataset.noCaps;
+        el.value = caps ? String(val).toUpperCase() : val;
     };
 
     set('prod-sku', dados.sku);

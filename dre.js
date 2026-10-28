@@ -411,10 +411,12 @@ async function _dreVersao(contas, tipo, versao) {
         const taxaSalva = versao === 'revisado'
             ? (c.cambio_revisado ?? c.cambio_previsto ?? c.cambio)
             : (c.cambio_previsto ?? c.cambio);
-        let brl = finValorEmReais(valor, c.moeda, taxaSalva);
+        // a previsão pode ter moeda diferente do pagamento (database-financeiro-pagamento.sql)
+        const moedaPrev = c.moeda_previsto || c.moeda;
+        let brl = finValorEmReais(valor, moedaPrev, taxaSalva);
         if (brl === null) {
             const data = (versao === 'revisado' ? c.revisado_em : null) || c.previsto_em || String(c.criado_em || '').slice(0, 10) || c.data_vencimento;
-            const cot = await finCotacaoPtax(c.moeda, data);
+            const cot = await finCotacaoPtax(moedaPrev, data);
             brl = cot ? (Number(valor) || 0) * cot.taxa : null;
         }
         out.push({ ...c, status: statusFinal, _valorBRL: brl });

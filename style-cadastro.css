@@ -1511,3 +1511,24 @@ form {
     .emp-card-btn--editar { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
     .emp-card-btn--excluir { flex: 0 0 44px; border-color: #fecaca; background: #fef2f2; color: #dc2626; }
 }
+
+/* Botão "Modelo" (planilha de importação) — Empresas e Produtos */
+.btn-modelo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-modelo:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #1e293b;
+}

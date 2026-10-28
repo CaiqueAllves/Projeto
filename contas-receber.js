@@ -9,25 +9,23 @@ let _crExcluirId = null;
 document.addEventListener('DOMContentLoaded', async () => {
     _crCarregarUsuario();
     await _crCarregarMoedas();
-    finCambioIniciar('cr', ['crDataRecebimento', 'crVencimento']);
+    finLinhaIniciar('crPrev');
+    finLinhaIniciar('crPag');
     await _crCarregarPlanoContas();
-    await crCarregar();
+    finPlanoMontar('cr', _crPlanoContasTodas);
+    if (!FIN_JANELA) await crCarregar();
     await _crVerificarGeracaoViaUrl();
 });
 
 // ── Moedas (tabela apoio_moedas) ─────────────────────────────────────────────
 
 async function _crCarregarMoedas() {
-    const sel = document.getElementById('crMoeda');
-    if (!sel) return;
     try {
         const { data } = await supabaseClient
             .from('apoio_moedas')
             .select('codigo, descricao, sigla')
             .order('descricao', { ascending: true });
-        if (data?.length) {
-            sel.innerHTML = data.map(m => `<option value="${escHtml(m.sigla || m.codigo)}">${_crEsc(m.descricao || '')}</option>`).join('');
-        }
+        if (data?.length) finMoedasPreencher(['crPrevMoeda', 'crPagMoeda'], data);
     } catch (e) {
         console.warn('[Contas a Receber] Falha ao carregar moedas:', e);
     }
@@ -45,11 +43,8 @@ function crToggleObs(toggle) {
 // ── Plano de Contas (Bloco 1 — Receitas + ganhos do Bloco 5) ───────
 // Ver database/database-plano-contas-receitas.sql e, para os ganhos
 // financeiros/cambiais (variação positiva, juros/multa recebidos...),
-// database-plano-contas-comercial-financeiro.sql. Dropdown de busca
-// customizado (não <select>, pra não estourar a largura do modal com
-// os rótulos longos de Conta) — agrupa visualmente por Conta (ex:
-// "01.01 — Exportação de Serviços") com os Subfatores dentro de cada
-// grupo, mesmo padrão dos outros campos de busca (Parceiro/Pedido).
+// database-plano-contas-comercial-financeiro.sql. No formulário: Plano de
+// Contas = bloco, Categoria = conta do bloco (fin-lancamento.js).
 let _crPlanoContasTodas = [];
 
 async function _crCarregarPlanoContas() {
@@ -61,46 +56,6 @@ async function _crCarregarPlanoContas() {
     }
 }
 
-function _crRenderPlanoContaLista(termo) {
-    const box = document.getElementById('crAutoPlanoConta');
-    const t = (termo || '').toLowerCase().trim();
-    const filtradas = !t
-        ? _crPlanoContasTodas
-        : _crPlanoContasTodas.filter(c =>
-            c.subfator_nome.toLowerCase().includes(t) ||
-            c.codigo.toLowerCase().includes(t) ||
-            c.conta_nome.toLowerCase().includes(t));
-
-    if (!filtradas.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma conta encontrada</div>'; return; }
-
-    let blocoAtual = null, grupoAtual = null;
-    const variosBlocos = new Set(filtradas.map(c => c.bloco)).size > 1;
-    box.innerHTML = filtradas.map(c => {
-        const cabBloco = variosBlocos && c.bloco !== blocoAtual ? `<div class="pl-auto-group pl-auto-bloco">${_crEsc(c.bloco + '. ' + c.bloco_nome)}</div>` : '';
-        blocoAtual = c.bloco;
-        const chave = `${c.conta_codigo} — ${c.conta_nome}`;
-        const header = chave !== grupoAtual ? `<div class="pl-auto-group">${_crEsc(chave)}</div>` : '';
-        grupoAtual = chave;
-        return `${cabBloco}${header}<div class="pl-auto-item" onclick="crSelecionarPlanoConta('${c.id}', '${_crEscAttr(c.codigo)} — ${_crEscAttr(c.subfator_nome)}')">
-            <span class="pl-auto-nome">${_crEsc(c.codigo)} — ${_crEsc(c.subfator_nome)}</span>
-        </div>`;
-    }).join('');
-}
-
-function crBuscarPlanoConta(termo) {
-    document.getElementById('crPlanoContaId').value = '';
-    _crRenderPlanoContaLista(termo);
-}
-
-function crMostrarPlanoConta(termo) {
-    _crRenderPlanoContaLista(termo);
-}
-
-function crSelecionarPlanoConta(id, label) {
-    document.getElementById('crPlanoContaId').value   = id;
-    document.getElementById('crPlanoContaNome').value = label;
-    document.getElementById('crAutoPlanoConta').innerHTML = '';
-}
 
 // ── Abertura pré-preenchida a partir de Proforma/Processo (módulos Comercial/Operacional) ──
 
@@ -295,21 +250,11 @@ function crFiltrar() {
     }, 200);
 }
 
-// Marcar "Recebido" no select do modal sem preencher a Data de Recebimento
-// deixava a conta fora do card "Recebido este mês" pra sempre (garantia
-// equivalente também existe em salvarContaReceber, supabase-api.js — essa
-// aqui só evita o usuário nem perceber que devia preencher a data).
-function crAoMudarStatus() {
-    const dataEl = document.getElementById('crDataRecebimento');
-    if (document.getElementById('crStatus').value === 'recebido' && !dataEl.value) {
-        dataEl.value = new Date().toISOString().slice(0, 10);
-        finCambioAtualizar('cr');
-    }
-}
 
 async function crMarcarRecebido(id) {
     const c = _crTodas.find(x => x.id === id);
     if (!c) return;
+    if (!finLancPodePagar()) { mostrarNotificacao('Só usuários com acesso ao Financeiro ou administradores podem registrar o recebimento.', 'warning'); return; }
     const hoje = new Date().toISOString().split('T')[0];
     c.status = 'recebido';
     c.data_recebimento = hoje;
@@ -364,23 +309,26 @@ function crAbrirModal(id = null, prefill = null) {
         }
     }
 
-    document.getElementById('crValor').value           = (c?.valor ?? prefill?.valor) ? _crFormatarMonetario(c?.valor ?? prefill?.valor) : '';
-    const selMoeda = document.getElementById('crMoeda');
-    selMoeda.value = finMoedaParaOpcao(selMoeda, c?.moeda || prefill?.moeda) || 'BRL';
-    document.getElementById('crVencimento').value      = c?.data_vencimento || '';
-    document.getElementById('crDataRecebimento').value = c?.data_recebimento || '';
-    document.getElementById('crStatus').value          = c?.status || 'pendente';
-
-    finCambioCarregar('cr', c?.cambio);
-    finPrevistoCarregar('cr', c);
-    const planoConta = c?.plano_conta_id
-        ? _crPlanoContasTodas.find(p => p.id === c.plano_conta_id)
-        : null;
-    document.getElementById('crPlanoContaId').value   = c?.plano_conta_id || '';
-    document.getElementById('crPlanoContaNome').value = planoConta ? `${planoConta.codigo} — ${planoConta.subfator_nome}` : '';
+    finPlanoDefinir('cr', c?.plano_conta_id || '');
+    // Seção 1 = previsão (contas antigas sem previsto: os valores da conta)
+    finLinhaCarregar('crPrev', {
+        data: c?.data_vencimento || '',
+        moeda: c?.moeda_previsto || c?.moeda || prefill?.moeda,
+        valor: c ? (c.valor_previsto ?? c.valor) : (prefill?.valor || null),
+        cambio: c ? (c.cambio_previsto ?? c.cambio) : null,
+    });
+    // Seção 2 = recebimento realizado (só se já foi recebido)
+    const recebido = !!c && (c.status === 'recebido' || !!c.data_recebimento);
+    finLinhaCarregar('crPag', recebido
+        ? { data: c.data_recebimento || '', moeda: c.moeda, valor: c.valor, cambio: c.cambio }
+        : { moeda: c?.moeda_previsto || c?.moeda || prefill?.moeda });
+    document.getElementById('crMeioPagamento').value   = c?.meio_pagamento || '';
+    document.getElementById('crNumeroDocumento').value = c?.numero_documento || '';
+    finComprovanteCarregar('cr', c);
+    finLancAplicarPermissao('cr');
+    finSecaoPagDefinir('cr', recebido && c.data_recebimento ? { data: c.data_recebimento, valor: c.valor, moeda: c.moeda } : null, 'recebido');
 
     document.getElementById('crObservacoes').value     = c?.observacoes || '';
-    // Observações (a seção Previsto/Revisado também usa .pl-obs-toggle)
     const obsToggle = document.querySelector('#crModalOverlay .pl-obs-toggle[onclick*="ToggleObs"]');
     if (obsToggle) { obsToggle.classList.remove('aberto'); obsToggle.nextElementSibling.style.display = 'none'; }
 
@@ -388,32 +336,14 @@ function crAbrirModal(id = null, prefill = null) {
 }
 
 function crFecharModal() {
+    if (FIN_JANELA) return finJanelaFechar(false);
     document.getElementById('crModalOverlay').classList.remove('ativo');
     document.getElementById('crAutoParceiro').innerHTML = '';
     document.getElementById('crAutoProforma').innerHTML   = '';
     document.getElementById('crAutoProcesso').innerHTML = '';
-    document.getElementById('crAutoPlanoConta').innerHTML = '';
 }
 
-// ── Máscara monetária (Valor) — mesmo padrão de propMascaraMonetaria (proposta.js) ──
-
-function crMascaraMonetaria(el) {
-    const cursor = el.selectionStart;
-    const oldLen = el.value.length;
-    let raw = el.value.replace(/[^\d,]/g, '');
-    const partes = raw.split(',');
-    if (partes.length > 2) raw = partes[0] + ',' + partes.slice(1).join('');
-    const p = raw.split(',');
-    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    el.value = p.join(',');
-    const diff = el.value.length - oldLen;
-    el.setSelectionRange(cursor + diff, cursor + diff);
-}
-
-function _crValorMonetario(el) {
-    if (!el) return 0;
-    return parseFloat((el.value || '').replace(/\./g, '').replace(',', '.')) || 0;
-}
+// (máscara dos campos de valor: finLancMascara, fin-lancamento.js)
 
 function _crFormatarMonetario(num) {
     return Number(num || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -421,36 +351,75 @@ function _crFormatarMonetario(num) {
 
 async function crSalvar() {
     if (!exigirEmpresaVinculada()) return;
+    const id        = document.getElementById('crEditId').value || null;
+    const atual     = id ? _crTodas.find(x => x.id === id) : null;
     const descricao = document.getElementById('crDescricao').value.trim();
-    const valor     = _crValorMonetario(document.getElementById('crValor'));
-    const venc      = document.getElementById('crVencimento').value;
-    if (!descricao || !valor || !venc) { mostrarNotificacao('Preencha Descrição, Valor e Vencimento.', 'warning'); return; }
+    const conta     = finPlanoConta('cr');
+    const prev      = finLinhaLer('crPrev');
+    const pag       = finLinhaLer('crPag');
+
+    if (!conta) { mostrarNotificacao('Escolha o Plano de Contas e a Categoria.', 'warning'); return; }
+    if (!descricao || !prev.valor || !prev.data) {
+        mostrarNotificacao('Preencha a Previsão de Data de Recebimento, o Valor e a Descrição.', 'warning');
+        return;
+    }
+    const podePagar = finLancPodePagar();
+    if (podePagar && (pag.data || pag.valor) && !(pag.data && pag.valor)) {
+        finSecaoPagAlternar('cr', true);
+        mostrarNotificacao('Recebimento realizado: preencha a Data de Recebimento e o Valor (ou deixe os dois em branco).', 'warning');
+        return;
+    }
 
     const btn = document.getElementById('crBtnSalvar');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
 
+    let comp = { campos: {}, apagarDepois: null };
+    if (podePagar) {
+        try { comp = await finComprovanteParaSalvar('cr', 'receber'); }
+        catch (e) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar'; mostrarNotificacao(e.message, 'error'); return; }
+    }
+
+    // Sem acesso ao Financeiro, o recebimento já registrado fica como estava
+    const recebidoAntes = !!atual && (atual.status === 'recebido' || !!atual.data_recebimento);
+    const realizado = podePagar ? !!(pag.data && pag.valor) : recebidoAntes;
+    const real = podePagar ? pag : { data: atual?.data_recebimento, moeda: atual?.moeda, valor: atual?.valor, cambio: atual?.cambio };
     const dados = {
         descricao,
         parceiro_id:      document.getElementById('crClienteId').value || null,
         proforma_id:      document.getElementById('crProformaId').value || null,
         processo_id:      document.getElementById('crProcessoId').value || null,
-        valor,
-        moeda:            document.getElementById('crMoeda').value,
-        data_vencimento:  venc,
-        data_recebimento: document.getElementById('crDataRecebimento').value || null,
-        status:           document.getElementById('crStatus').value,
-        plano_conta_id:   document.getElementById('crPlanoContaId').value || null,
-        cambio:           finCambioParaSalvar('cr'),
-        ...(await finPrevistoParaSalvar('cr', valor, finCambioParaSalvar('cr'))),
+        plano_conta_id:   conta.id,
+        // previsão (seção 1)
+        data_vencimento:  prev.data,
+        moeda_previsto:   prev.moeda,
+        valor_previsto:   prev.valor,
+        cambio_previsto:  prev.cambio,
+        previsto_em:      atual?.previsto_em || new Date().toISOString().slice(0, 10),
+        // valor da conta = o recebido (realizado) ou, enquanto não recebido, o previsto
+        valor:            realizado ? real.valor : prev.valor,
+        moeda:            realizado ? real.moeda : prev.moeda,
+        cambio:           realizado ? real.cambio : prev.cambio,
+        data_recebimento: realizado ? real.data : null,
+        status:           finLancStatus(realizado, 'recebido', prev.data, atual?.status),
         observacoes:      document.getElementById('crObservacoes').value.trim() || null,
+        ...(podePagar ? {
+            meio_pagamento:   document.getElementById('crMeioPagamento').value || null,
+            numero_documento: document.getElementById('crNumeroDocumento').value.trim() || null,
+            ...comp.campos,
+        } : {}),
     };
 
-    const id  = document.getElementById('crEditId').value || null;
     const res = await salvarContaReceber(dados, id);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar';
-    if (!res.sucesso) { mostrarNotificacao('Erro: ' + res.mensagem, 'error'); return; }
+    if (!res.sucesso) {
+        if (comp.campos.comprovante_path) finComprovanteApagar(comp.campos.comprovante_path);
+        mostrarNotificacao('Erro: ' + res.mensagem, 'error');
+        return;
+    }
+    finComprovanteApagar(comp.apagarDepois);
+    if (FIN_JANELA) return finJanelaFechar(true);
     crFecharModal();
     await crCarregar();
 }
@@ -607,12 +576,13 @@ async function _crDerivarDaProforma(proformaId) {
         // Sugere Valor/Moeda da proforma — só se o campo ainda estiver vazio,
         // pra não sobrescrever um valor já digitado ou o de uma conta já salva
         // (crAbrirModal preenche o valor salvo antes de chamar esta função).
-        const valorInput = document.getElementById('crValor');
+        const valorInput = document.getElementById('crPrevValor');
         if (!valorInput.value.trim() && proforma?.valor_total) {
             valorInput.value = _crFormatarMonetario(proforma.valor_total);
-            const selMoeda = document.getElementById('crMoeda');
+            const selMoeda = document.getElementById('crPrevMoeda');
             const moeda = finMoedaParaOpcao(selMoeda, proforma.moeda_principal);
-            if (moeda) { selMoeda.value = moeda; finCambioAtualizar('cr', { forcar: true }); }
+            if (moeda) selMoeda.value = moeda;
+            _finLinhaCambio('crPrev', { forcar: true });
         }
 
         let query = supabaseClient
@@ -678,10 +648,6 @@ document.addEventListener('click', e => {
     }
     if (!e.target.closest('#crAutoProcesso') && !e.target.closest('#crProcessoNome')) {
         const box = document.getElementById('crAutoProcesso');
-        if (box) box.innerHTML = '';
-    }
-    if (!e.target.closest('#crAutoPlanoConta') && !e.target.closest('#crPlanoContaNome')) {
-        const box = document.getElementById('crAutoPlanoConta');
         if (box) box.innerHTML = '';
     }
 });

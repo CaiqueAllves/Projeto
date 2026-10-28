@@ -9,19 +9,20 @@ let _cpExcluirId = null;
 document.addEventListener('DOMContentLoaded', async () => {
     _cpCarregarUsuario();
     await _cpCarregarMoedas();
-    finCambioIniciar('cp', ['cpDataPagamento', 'cpVencimento']);
+    finLinhaIniciar('cpPrev');
+    finLinhaIniciar('cpPag');
     await _cpCarregarPlanoContas();
-    await cpCarregar();
+    finPlanoMontar('cp', _cpPlanoContas);
+    if (!FIN_JANELA) await cpCarregar();
     await _cpVerificarGeracaoViaUrl();
 });
 
 // ── Plano de Contas (Blocos 2 a 5 — custos) ──────────────────────────────────
 // database-plano-contas-aquisicoes-operacional.sql (2 e 4) e
 // database-plano-contas-comercial-financeiro.sql (3 e 5; os ganhos do Bloco 5
-// ficam em Contas a Receber). Mesma busca
-// agrupada de Contas a Receber; escolher a conta já preenche a Categoria
-// (resumo usado nos relatórios antigos), que continua editável para
-// despesas de blocos ainda não implantados (impostos, bancárias...).
+// ficam em Contas a Receber). No formulário: Plano de Contas = bloco,
+// Categoria = conta do bloco (fin-lancamento.js); a coluna categoria antiga
+// (resumo dos relatórios) é derivada da conta ao salvar.
 let _cpPlanoContas = [];
 
 async function _cpCarregarPlanoContas() {
@@ -49,58 +50,16 @@ function _cpCategoriaDaConta(c) {
     return ['04.04', '04.08', '04.10', '04.12'].includes(c.conta_codigo) ? 'frete' : 'operacional';
 }
 
-function _cpRenderPlanoContaLista(termo) {
-    const box = document.getElementById('cpAutoPlanoConta');
-    if (!_cpPlanoContas.length) { box.innerHTML = '<div class="pl-auto-vazio">Plano de contas indisponível</div>'; return; }
-    const t = (termo || '').toLowerCase().trim();
-    const filtradas = !t ? _cpPlanoContas : _cpPlanoContas.filter(c =>
-        c.subfator_nome.toLowerCase().includes(t) || c.codigo.toLowerCase().includes(t) ||
-        c.conta_nome.toLowerCase().includes(t) || (c.descricao || '').toLowerCase().includes(t));
-    if (!filtradas.length) { box.innerHTML = '<div class="pl-auto-vazio">Nenhuma conta encontrada</div>'; return; }
-    let blocoAtual = null, grupoAtual = null;
-    box.innerHTML = filtradas.map(c => {
-        const cabBloco = c.bloco !== blocoAtual ? `<div class="pl-auto-group pl-auto-bloco">${_cpEsc(c.bloco + '. ' + c.bloco_nome)}</div>` : '';
-        blocoAtual = c.bloco;
-        const chave = `${c.conta_codigo} — ${c.conta_nome}`;
-        const cabGrupo = chave !== grupoAtual ? `<div class="pl-auto-group">${_cpEsc(chave)}</div>` : '';
-        grupoAtual = chave;
-        return `${cabBloco}${cabGrupo}<div class="pl-auto-item" data-id="${_cpEsc(c.id)}" onclick="cpSelecionarPlanoConta(this.dataset.id)" title="${_cpEsc(c.descricao || '')}">
-            <span class="pl-auto-nome">${_cpEsc(_cpRotuloConta(c))}</span>
-        </div>`;
-    }).join('');
-}
-
-function cpBuscarPlanoConta(termo) {
-    document.getElementById('cpPlanoContaId').value = '';
-    _cpRenderPlanoContaLista(termo);
-}
-
-function cpMostrarPlanoConta(termo) {
-    _cpRenderPlanoContaLista(termo);
-}
-
-function cpSelecionarPlanoConta(id) {
-    const c = _cpPlanoContas.find(x => x.id === id);
-    document.getElementById('cpPlanoContaId').value   = id;
-    document.getElementById('cpPlanoContaNome').value = _cpRotuloConta(c);
-    document.getElementById('cpAutoPlanoConta').innerHTML = '';
-    const cat = _cpCategoriaDaConta(c);
-    if (cat) document.getElementById('cpCategoria').value = cat;
-}
 
 // ── Moedas (tabela apoio_moedas) ─────────────────────────────────────────────
 
 async function _cpCarregarMoedas() {
-    const sel = document.getElementById('cpMoeda');
-    if (!sel) return;
     try {
         const { data } = await supabaseClient
             .from('apoio_moedas')
             .select('codigo, descricao, sigla')
             .order('descricao', { ascending: true });
-        if (data?.length) {
-            sel.innerHTML = data.map(m => `<option value="${escHtml(m.sigla || m.codigo)}">${_cpEsc(m.descricao || '')}</option>`).join('');
-        }
+        if (data?.length) finMoedasPreencher(['cpPrevMoeda', 'cpPagMoeda'], data);
     } catch (e) {
         console.warn('[Contas a Pagar] Falha ao carregar moedas:', e);
     }
@@ -291,21 +250,11 @@ function cpFiltrar() {
 
 // ── Marcar como pago rapidamente ───────────────────────────────────────────
 
-// Marcar "Pago" no select do modal sem preencher a Data de Pagamento
-// deixava a conta fora do card "Pago este mês" pra sempre (garantia
-// equivalente também existe em salvarContaPagar, supabase-api.js — essa
-// aqui só evita o usuário nem perceber que devia preencher a data).
-function cpAoMudarStatus() {
-    const dataEl = document.getElementById('cpDataPagamento');
-    if (document.getElementById('cpStatus').value === 'pago' && !dataEl.value) {
-        dataEl.value = new Date().toISOString().slice(0, 10);
-        finCambioAtualizar('cp');
-    }
-}
 
 async function cpMarcarPago(id) {
     const c = _cpTodas.find(x => x.id === id);
     if (!c) return;
+    if (!finLancPodePagar()) { mostrarNotificacao('Só usuários com acesso ao Financeiro ou administradores podem registrar o pagamento.', 'warning'); return; }
     const hoje = new Date().toISOString().split('T')[0];
     c.status = 'pago';
     c.data_pagamento = hoje;
@@ -366,21 +315,26 @@ function cpAbrirModal(id = null, prefill = null) {
         }
     }
 
-    document.getElementById('cpValor').value          = (c?.valor ?? prefill?.valor) ? _cpFormatarMonetario(c?.valor ?? prefill?.valor) : '';
-    const selMoeda = document.getElementById('cpMoeda');
-    selMoeda.value = finMoedaParaOpcao(selMoeda, c?.moeda || prefill?.moeda) || 'BRL';
-    document.getElementById('cpVencimento').value     = c?.data_vencimento || '';
-    document.getElementById('cpDataPagamento').value  = c?.data_pagamento  || '';
-    document.getElementById('cpStatus').value         = c?.status || 'pendente';
-    document.getElementById('cpCategoria').value      = c?.categoria || '';
-    finCambioCarregar('cp', c?.cambio);
-    finPrevistoCarregar('cp', c);
-    const planoConta = c?.plano_conta_id ? (_cpPlanoContas.find(p => p.id === c.plano_conta_id) || c.plano_contas) : null;
-    document.getElementById('cpPlanoContaId').value   = c?.plano_conta_id || '';
-    document.getElementById('cpPlanoContaNome').value = _cpRotuloConta(planoConta);
+    finPlanoDefinir('cp', c?.plano_conta_id || '');
+    // Seção 1 = previsão (contas antigas sem previsto: os valores da conta)
+    finLinhaCarregar('cpPrev', {
+        data: c?.data_vencimento || '',
+        moeda: c?.moeda_previsto || c?.moeda || prefill?.moeda,
+        valor: c ? (c.valor_previsto ?? c.valor) : (prefill?.valor || null),
+        cambio: c ? (c.cambio_previsto ?? c.cambio) : null,
+    });
+    // Seção 2 = pagamento realizado (só se já foi pago)
+    const pago = !!c && (c.status === 'pago' || !!c.data_pagamento);
+    finLinhaCarregar('cpPag', pago
+        ? { data: c.data_pagamento || '', moeda: c.moeda, valor: c.valor, cambio: c.cambio }
+        : { moeda: c?.moeda_previsto || c?.moeda || prefill?.moeda });
+    document.getElementById('cpMeioPagamento').value   = c?.meio_pagamento || '';
+    document.getElementById('cpNumeroDocumento').value = c?.numero_documento || '';
+    finComprovanteCarregar('cp', c);
+    finLancAplicarPermissao('cp');
+    finSecaoPagDefinir('cp', pago && c.data_pagamento ? { data: c.data_pagamento, valor: c.valor, moeda: c.moeda } : null, 'pago');
     document.getElementById('cpObservacoes').value    = c?.observacoes || '';
 
-    // Observações (a seção Previsto/Revisado também usa .pl-obs-toggle)
     const obsToggle = document.querySelector('#cpModalOverlay .pl-obs-toggle[onclick*="ToggleObs"]');
     if (obsToggle) { obsToggle.classList.remove('aberto'); obsToggle.nextElementSibling.style.display = 'none'; }
 
@@ -388,31 +342,14 @@ function cpAbrirModal(id = null, prefill = null) {
 }
 
 function cpFecharModal() {
+    if (FIN_JANELA) return finJanelaFechar(false);
     document.getElementById('cpModalOverlay').classList.remove('ativo');
     document.getElementById('cpAutoParceiro').innerHTML = '';
     document.getElementById('cpAutoProforma').innerHTML   = '';
     document.getElementById('cpAutoProcesso').innerHTML = '';
 }
 
-// ── Máscara monetária (Valor) — mesmo padrão de propMascaraMonetaria (proposta.js) ──
-
-function cpMascaraMonetaria(el) {
-    const cursor = el.selectionStart;
-    const oldLen = el.value.length;
-    let raw = el.value.replace(/[^\d,]/g, '');
-    const partes = raw.split(',');
-    if (partes.length > 2) raw = partes[0] + ',' + partes.slice(1).join('');
-    const p = raw.split(',');
-    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    el.value = p.join(',');
-    const diff = el.value.length - oldLen;
-    el.setSelectionRange(cursor + diff, cursor + diff);
-}
-
-function _cpValorMonetario(el) {
-    if (!el) return 0;
-    return parseFloat((el.value || '').replace(/\./g, '').replace(',', '.')) || 0;
-}
+// (máscara dos campos de valor: finLancMascara, fin-lancamento.js)
 
 function _cpFormatarMonetario(num) {
     return Number(num || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -420,12 +357,22 @@ function _cpFormatarMonetario(num) {
 
 async function cpSalvar() {
     if (!exigirEmpresaVinculada()) return;
+    const id        = document.getElementById('cpEditId').value || null;
+    const atual     = id ? _cpTodas.find(x => x.id === id) : null;
     const descricao = document.getElementById('cpDescricao').value.trim();
-    const valor     = _cpValorMonetario(document.getElementById('cpValor'));
-    const venc      = document.getElementById('cpVencimento').value;
+    const conta     = finPlanoConta('cp');
+    const prev      = finLinhaLer('cpPrev');
+    const pag       = finLinhaLer('cpPag');
 
-    if (!descricao || !valor || !venc) {
-        mostrarNotificacao('Preencha Descrição, Valor e Vencimento.', 'warning');
+    if (!conta) { mostrarNotificacao('Escolha o Plano de Contas e a Categoria.', 'warning'); return; }
+    if (!descricao || !prev.valor || !prev.data) {
+        mostrarNotificacao('Preencha a Previsão de Data de Pagamento, o Valor e a Descrição.', 'warning');
+        return;
+    }
+    const podePagar = finLancPodePagar();
+    if (podePagar && (pag.data || pag.valor) && !(pag.data && pag.valor)) {
+        finSecaoPagAlternar('cp', true);
+        mostrarNotificacao('Pagamento realizado: preencha a Data de Pagamento e o Valor (ou deixe os dois em branco).', 'warning');
         return;
     }
 
@@ -433,30 +380,55 @@ async function cpSalvar() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
 
+    let comp = { campos: {}, apagarDepois: null };
+    if (podePagar) {
+        try { comp = await finComprovanteParaSalvar('cp', 'pagar'); }
+        catch (e) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar'; mostrarNotificacao(e.message, 'error'); return; }
+    }
+
+    // Sem acesso ao Financeiro, o pagamento já registrado fica como estava
+    const pagoAntes = !!atual && (atual.status === 'pago' || !!atual.data_pagamento);
+    const realizado = podePagar ? !!(pag.data && pag.valor) : pagoAntes;
+    const real = podePagar ? pag : { data: atual?.data_pagamento, moeda: atual?.moeda, valor: atual?.valor, cambio: atual?.cambio };
     const dados = {
         descricao,
-        parceiro_id:    document.getElementById('cpFornecedorId').value || null,
-        proforma_id:    document.getElementById('cpProformaId').value || null,
-        processo_id:    document.getElementById('cpProcessoId').value || null,
-        valor,
-        moeda:          document.getElementById('cpMoeda').value,
-        data_vencimento: venc,
-        data_pagamento:  document.getElementById('cpDataPagamento').value || null,
-        status:         document.getElementById('cpStatus').value,
-        categoria:      document.getElementById('cpCategoria').value || null,
-        plano_conta_id: document.getElementById('cpPlanoContaId').value || null,
-        cambio:         finCambioParaSalvar('cp'),
-        ...(await finPrevistoParaSalvar('cp', valor, finCambioParaSalvar('cp'))),
-        observacoes:    document.getElementById('cpObservacoes').value.trim() || null,
+        parceiro_id:     document.getElementById('cpFornecedorId').value || null,
+        proforma_id:     document.getElementById('cpProformaId').value || null,
+        processo_id:     document.getElementById('cpProcessoId').value || null,
+        plano_conta_id:  conta.id,
+        categoria:       _cpCategoriaDaConta(conta) || null,
+        // previsão (seção 1)
+        data_vencimento: prev.data,
+        moeda_previsto:  prev.moeda,
+        valor_previsto:  prev.valor,
+        cambio_previsto: prev.cambio,
+        previsto_em:     atual?.previsto_em || new Date().toISOString().slice(0, 10),
+        // valor da conta = o pago (realizado) ou, enquanto não pago, o previsto
+        valor:           realizado ? real.valor : prev.valor,
+        moeda:           realizado ? real.moeda : prev.moeda,
+        cambio:          realizado ? real.cambio : prev.cambio,
+        data_pagamento:  realizado ? real.data : null,
+        status:          finLancStatus(realizado, 'pago', prev.data, atual?.status),
+        observacoes:     document.getElementById('cpObservacoes').value.trim() || null,
+        ...(podePagar ? {
+            meio_pagamento:   document.getElementById('cpMeioPagamento').value || null,
+            numero_documento: document.getElementById('cpNumeroDocumento').value.trim() || null,
+            ...comp.campos,
+        } : {}),
     };
 
-    const id  = document.getElementById('cpEditId').value || null;
     const res = await salvarContaPagar(dados, id);
 
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar';
 
-    if (!res.sucesso) { mostrarNotificacao('Erro: ' + res.mensagem, 'error'); return; }
+    if (!res.sucesso) {
+        if (comp.campos.comprovante_path) finComprovanteApagar(comp.campos.comprovante_path);
+        mostrarNotificacao('Erro: ' + res.mensagem, 'error');
+        return;
+    }
+    finComprovanteApagar(comp.apagarDepois);
+    if (FIN_JANELA) return finJanelaFechar(true);
     cpFecharModal();
     await cpCarregar();
 }
@@ -567,9 +539,9 @@ async function cpSelecionarProforma(id, codigo) {
 // (frete, despachante, seguro...), não só quem remeteu a mercadoria. Então o
 // Remetente da proforma (parceiro_id, BIGINT — quando emissor_tipo='terceiro')
 // só é usado como sugestão (preenche cpFornecedorId se nada tiver sido
-// escolhido ainda), o campo continua editável/buscável normalmente. Valor/
-// Moeda também são só sugestão (vêm do valor_total da proforma, mas uma
-// conta pode ser só uma parcela/taxa dela). Já o Processo é sempre restrito
+// escolhido ainda), o campo continua editável/buscável normalmente. Só a
+// Moeda é sugerida — o valor fica em branco (o total da proforma é de venda,
+// não um custo). Já o Processo é sempre restrito
 // aos processos desta proforma (mesmo padrão 0/1/vários usado em Contas a
 // Receber): 0 → trava vazio, 1 → preenche sozinho e trava, >1 → usuário
 // escolhe entre eles.
@@ -598,7 +570,7 @@ async function _cpDerivarDaProforma(proformaId) {
 
         const { data: proforma } = await supabaseClient
             .from('proformas')
-            .select('emissor_tipo, parceiro_id, parceiro_razao_social, valor_total, moeda_principal')
+            .select('emissor_tipo, parceiro_id, parceiro_razao_social, moeda_principal')
             .eq('id', proformaId)
             .single();
 
@@ -614,15 +586,13 @@ async function _cpDerivarDaProforma(proformaId) {
             fornecedorInput.value = nomeSugerido;
         }
 
-        // Sugere Valor/Moeda da proforma — só se o campo ainda estiver vazio,
-        // pra não sobrescrever um valor já digitado ou o de uma conta já salva
-        // (cpAbrirModal preenche o valor salvo antes de chamar esta função).
-        const valorInput = document.getElementById('cpValor');
-        if (!valorInput.value.trim() && proforma?.valor_total) {
-            valorInput.value = _cpFormatarMonetario(proforma.valor_total);
-            const selMoeda = document.getElementById('cpMoeda');
+        // Só a moeda da proforma é sugerida (se o valor ainda estiver vazio): o
+        // total da proforma é o valor de VENDA, não um custo — o valor da conta
+        // a pagar fica em branco para o usuário informar.
+        if (!document.getElementById('cpPrevValor').value.trim() && proforma?.moeda_principal) {
+            const selMoeda = document.getElementById('cpPrevMoeda');
             const moeda = finMoedaParaOpcao(selMoeda, proforma.moeda_principal);
-            if (moeda) { selMoeda.value = moeda; finCambioAtualizar('cp', { forcar: true }); }
+            if (moeda) { selMoeda.value = moeda; _finLinhaCambio('cpPrev', { forcar: true }); }
         }
 
         let query = supabaseClient
@@ -688,10 +658,6 @@ document.addEventListener('click', e => {
     }
     if (!e.target.closest('#cpAutoProcesso') && !e.target.closest('#cpProcessoNome')) {
         const box = document.getElementById('cpAutoProcesso');
-        if (box) box.innerHTML = '';
-    }
-    if (!e.target.closest('#cpAutoPlanoConta') && !e.target.closest('#cpPlanoContaNome')) {
-        const box = document.getElementById('cpAutoPlanoConta');
         if (box) box.innerHTML = '';
     }
 });

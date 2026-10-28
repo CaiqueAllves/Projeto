@@ -2024,3 +2024,10 @@ body.resumo-aberto { overflow: hidden; }
     .resumo-btn { flex: 1 1 calc(50% - 8px); justify-content: center; }
 }
 .resumo-contagem strong { color: #1e293b; }
+
+/* ── Janela do formulário de Conta (abrirJanelaConta — auth.js) ── */
+.janela-conta { position: fixed; inset: 0; z-index: 9500; background: transparent; }
+.janela-conta iframe { width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal; }
+/* a página de Contas dentro da janela: só o formulário, fundo transparente */
+html.fin-janela, html.fin-janela body { background: transparent !important; }
+html.fin-janela body > *:not(.fin-modal-overlay):not(.notificacao) { display: none !important; }

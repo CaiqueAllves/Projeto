@@ -1281,12 +1281,31 @@ async function salvarProduto(dados) {
 // duplicado, por ex.), só o bloco dela falha — as outras linhas continuam
 // indo normalmente, mais perto do comportamento "linha por linha" de antes
 // do que um insert único all-or-nothing pra planilha inteira.
+// Composição e Embalagens (caixa / unitária) vindas da planilha ficam em
+// tabelas à parte: gravadas depois dos produtos do bloco, casando pelo SKU.
+// Falha aqui não desfaz o produto — volta como aviso.
+async function _prodLoteGravarExtras(bloco, criados, empresaId) {
+    const idDoSku = Object.fromEntries(criados.map(c => [String(c.sku), c.id]));
+    const comp = [], embs = [];
+    bloco.forEach(p => {
+        const produto_id = idDoSku[String(p.sku)];
+        if (!produto_id) return;
+        (p._composicao || []).forEach(c => comp.push({ produto_id, empresa_id: empresaId, ingrediente: c.ingrediente, concentracao_pct: c.concentracao_pct }));
+        if (p._embCaixa) embs.push({ produto_id, empresa_id: empresaId, tipo: 'caixa', nome: p._embCaixa.tipo_embalagem || 'CAIXA', medidas_caixa: [], ...p._embCaixa });
+        if (p._embUnitaria) embs.push({ produto_id, empresa_id: empresaId, tipo: 'unitaria', nome: 'UNIDADE', medidas_caixa: [], ...p._embUnitaria });
+    });
+    const erros = [];
+    if (comp.length) { const { error } = await supabaseClient.from('produto_composicao').insert(comp); if (error) erros.push('composição: ' + error.message); }
+    if (embs.length) { const { error } = await supabaseClient.from('produto_embalagens').insert(embs); if (error) erros.push('embalagens: ' + error.message); }
+    return erros.length ? erros.join(' | ') : null;
+}
+
 async function salvarProdutosEmLote(produtosArray, tamanhoBloco = 40) {
     const usuario = obterUsuarioLogado();
     if (!usuario) return { sucesso: false, mensagem: 'Não autenticado', totalSucesso: 0, totalFalha: produtosArray.length, falhas: [] };
 
     let totalSucesso = 0;
-    const falhas = [];
+    const falhas = [], avisosExtras = [];
 
     for (let i = 0; i < produtosArray.length; i += tamanhoBloco) {
         const bloco = produtosArray.slice(i, i + tamanhoBloco);
@@ -1301,11 +1320,13 @@ async function salvarProdutosEmLote(produtosArray, tamanhoBloco = 40) {
             falhas.push({ skus: bloco.map(p => p.sku), mensagem: error.message });
         } else {
             totalSucesso += data?.length || rows.length;
+            const extra = await _prodLoteGravarExtras(bloco, data || [], usuario.empresa_id);
+            if (extra) avisosExtras.push(extra);
         }
     }
 
     const totalFalha = produtosArray.length - totalSucesso;
-    return { sucesso: totalSucesso > 0, totalSucesso, totalFalha, falhas };
+    return { sucesso: totalSucesso > 0, totalSucesso, totalFalha, falhas, avisosExtras };
 }
 
 // Atualiza preco_venda ou preco_custo (+ moeda) de produtos JÁ CADASTRADOS,
@@ -1589,15 +1610,32 @@ async function buscarTenantEmpresa() {
 // PROPOSTAS
 // ========================================
 
-async function contarPropostas() {
+// Código da Proforma: PI + ano + 5 dígitos (PI202600017). Antes era
+// PRO + ano + 6 dígitos (PRO2026000016) — a sequência continua a mesma
+// (contador 'proforma'), só muda o formato.
+const PROFORMA_PREFIXO = 'PI';
+function formatarCodigoProforma(ano, n) {
+    return `${PROFORMA_PREFIXO}${ano}${String(n).padStart(5, '0')}`;
+}
+// número depois do ano, nos dois formatos (PRO2026000016 / PI202600017)
+function _numeroDoCodigoProforma(codigo, ano) {
+    const m = new RegExp(`^(?:PRO|PI)${ano}(\\d+)$`).exec(String(codigo || ''));
+    return m ? parseInt(m[1], 10) : NaN;
+}
+
+// Prévia do próximo código (mostrada no formulário antes de salvar; o número
+// oficial sai do contador atômico na gravação)
+async function previaCodigoProforma() {
+    const ano = new Date().getFullYear();
     try {
-        const ano = new Date().getFullYear();
-        const { count } = await supabaseClient
-            .from('proformas')
-            .select('*', { count: 'exact', head: true })
-            .like('codigo', `PRO${ano}%`);
-        return count || 0;
-    } catch { return 0; }
+        const usuario = obterUsuarioLogado();
+        const [{ data: cont }, maior] = await Promise.all([
+            supabaseClient.from('contadores_numeracao').select('ultimo')
+                .eq('empresa_id', usuario.empresa_id).eq('tipo', 'proforma').eq('ano', ano).maybeSingle(),
+            _maiorNumeroProforma(ano),
+        ]);
+        return formatarCodigoProforma(ano, Math.max(Number(cont?.ultimo) || 0, maior) + 1);
+    } catch { return formatarCodigoProforma(ano, 1); }
 }
 
 // Número de Proforma/Processo pelo contador atômico (proximo_numero_sequencial
@@ -1611,6 +1649,9 @@ async function _inserirComNumero(tabela, campo, tipo, prefixo, payload, numeroLe
         if (tentativa < 3) {
             const r = await gerarNumeroSequencial(tipo, prefixo);
             numero = r.sucesso ? r.numero : await numeroLegado();
+            // Proforma: o contador devolve 6 dígitos (PI2026000017) → PI + ano + 5 dígitos
+            const m = tipo === 'proforma' && r.sucesso ? /^[A-Z]+(\d{4})(\d+)$/.exec(numero) : null;
+            if (m) numero = formatarCodigoProforma(m[1], parseInt(m[2], 10));
         } else {
             numero = await numeroLegado();
         }
@@ -1622,15 +1663,18 @@ async function _inserirComNumero(tabela, campo, tipo, prefixo, payload, numeroLe
     return { data: null, error: ultimoErro };
 }
 
-async function _maiorCodigoProforma() {
+async function _maiorNumeroProforma(ano) {
     const usuario = obterUsuarioLogado();
-    const ano = new Date().getFullYear();
     const { data } = await supabaseClient.from('proformas').select('codigo')
-        .eq('empresa_id', usuario.empresa_id).like('codigo', `PRO${ano}%`)
-        .order('codigo', { ascending: false }).limit(50);
-    const nums = (data || []).map(p => parseInt(String(p.codigo).slice(`PRO${ano}`.length), 10))
-        .filter(n => !isNaN(n) && n < 1e6);
-    return `PRO${ano}${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(6, '0')}`;
+        .eq('empresa_id', usuario.empresa_id).or(`codigo.like.PRO${ano}%,codigo.like.${PROFORMA_PREFIXO}${ano}%`)
+        .order('created_at', { ascending: false }).limit(200);
+    const nums = (data || []).map(p => _numeroDoCodigoProforma(p.codigo, ano)).filter(n => !isNaN(n) && n < 1e6);
+    return nums.length ? Math.max(...nums) : 0;
+}
+
+async function _maiorCodigoProforma() {
+    const ano = new Date().getFullYear();
+    return formatarCodigoProforma(ano, (await _maiorNumeroProforma(ano)) + 1);
 }
 
 // Conta para pagamento da Proforma (database-logo-marcas-contas-bancarias.sql).
@@ -1696,9 +1740,9 @@ async function salvarPropostaDB(dados) {
                 obs_status:              dados.obs_status               || null,
                 ..._proformaCamposBanco(dados),
             };
-        let { data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', 'PRO', payloadProforma, _maiorCodigoProforma);
+        let { data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', PROFORMA_PREFIXO, payloadProforma, _maiorCodigoProforma);
         if (error && _erroColunasBanco(error)) {
-            ({ data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', 'PRO', _semCamposBanco(payloadProforma), _maiorCodigoProforma));
+            ({ data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', PROFORMA_PREFIXO, _semCamposBanco(payloadProforma), _maiorCodigoProforma));
         }
 
         if (error) return { sucesso: false, mensagem: error.message };
@@ -1850,11 +1894,18 @@ const _cpSemPlano = err => /plano_conta|plano_contas|natureza|cambio|relationshi
 // Previsto × Revisado (database-financeiro-previsto-revisado.sql): copia os
 // campos informados para o payload; antes do SQL, a gravação tenta sem eles.
 const _FIN_CAMPOS_PREVISTO = ['valor_previsto', 'cambio_previsto', 'previsto_em', 'valor_revisado', 'cambio_revisado', 'revisado_em'];
+// Formulário novo (database-financeiro-pagamento.sql): moeda da previsão,
+// meio de pagamento, nº da nota/fatura e comprovante. Antes do SQL, grava sem.
+const _FIN_CAMPOS_PAGAMENTO = ['moeda_previsto', 'meio_pagamento', 'numero_documento', 'comprovante_path', 'comprovante_nome'];
 function _finAplicarPrevisto(payload, dados) {
-    _FIN_CAMPOS_PREVISTO.forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
+    [..._FIN_CAMPOS_PREVISTO, ..._FIN_CAMPOS_PAGAMENTO].forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
 }
 async function _finGravarComFallback(gravar, payload) {
     let result = await gravar(payload);
+    if (result.error && /moeda_previsto|meio_pagamento|numero_documento|comprovante/i.test(result.error.message || '')) {
+        _FIN_CAMPOS_PAGAMENTO.forEach(k => delete payload[k]);
+        result = await gravar(payload);
+    }
     if (result.error && /previsto|revisado/i.test(result.error.message || '')) {
         _FIN_CAMPOS_PREVISTO.forEach(k => delete payload[k]);
         result = await gravar(payload);
@@ -1938,9 +1989,11 @@ async function salvarContaPagar(dados, id = null) {
         };
         if (!id) { payload.empresa_id = usuario.empresa_id; payload.criado_por = usuario.id; }
         _finAplicarPrevisto(payload, dados);
+        // Operacional sem o Financeiro só cria (previsão) e não lê a conta de volta (RLS)
+        const semLeitura = !id && typeof usuarioTemModulo === 'function' && usuarioTemModulo('financeiro') === false;
         const gravar = (p) => id
             ? supabaseClient.from('contas_pagar').update(p).eq('id', id).select().single()
-            : supabaseClient.from('contas_pagar').insert(p).select().single();
+            : (semLeitura ? supabaseClient.from('contas_pagar').insert(p) : supabaseClient.from('contas_pagar').insert(p).select().single());
         // antes dos SQLs (previsto / câmbio / plano de contas) as colunas não existem
         let result = await _finGravarComFallback(gravar, payload);
         if (result.error && _cpSemPlano(result.error)) {
@@ -2038,9 +2091,11 @@ async function salvarContaReceber(dados, id = null) {
         };
         if (!id) { payload.empresa_id = usuario.empresa_id; payload.criado_por = usuario.id; }
         _finAplicarPrevisto(payload, dados);
+        // Operacional sem o Financeiro só cria (previsão) e não lê a conta de volta (RLS)
+        const semLeitura = !id && typeof usuarioTemModulo === 'function' && usuarioTemModulo('financeiro') === false;
         const gravar = (p) => id
             ? supabaseClient.from('contas_receber').update(p).eq('id', id).select().single()
-            : supabaseClient.from('contas_receber').insert(p).select().single();
+            : (semLeitura ? supabaseClient.from('contas_receber').insert(p) : supabaseClient.from('contas_receber').insert(p).select().single());
         // antes dos SQLs (previsto / câmbio) as colunas não existem
         const result = await _finGravarComFallback(gravar, payload);
         if (result.error) return { sucesso: false, mensagem: result.error.message };
@@ -2457,7 +2512,7 @@ window.supabaseAPI = {
     buscarProforma: buscarProformaDB,
     atualizarProforma: atualizarProformaDB,
     marcarProformaFinalizada: marcarProformaFinalizadaDB,
-    contarPropostas,
+    previaCodigoProforma,
     // Comercial
     buscarOportunidades,
     buscarHistoricoOportunidade,

@@ -76,7 +76,8 @@ async function finCotacaoPtax(moeda, dataISO) {
 // Valor da conta em R$ (null quando é moeda estrangeira sem taxa)
 function finValorEmReais(valor, moeda, cambio) {
     const v = Number(valor) || 0;
-    if (!moeda || String(moeda).toUpperCase() === 'BRL') return v;
+    // Real: taxa 1, a não ser que uma taxa tenha sido informada no lançamento
+    if (!moeda || String(moeda).toUpperCase() === 'BRL') return Number(cambio) > 0 ? v * Number(cambio) : v;
     return Number(cambio) > 0 ? v * Number(cambio) : null;
 }
 

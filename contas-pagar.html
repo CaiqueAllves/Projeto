@@ -14,9 +14,9 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Contas a Pagar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=1eac11cb">
+    <link rel="stylesheet" href="style-base.css?v=fcfe125a">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=97ee7401">
+    <link rel="stylesheet" href="style-financeiro.css?v=dff65131">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -132,26 +132,25 @@
         <div class="fin-modal-body">
             <input type="hidden" id="cpEditId">
 
+            <div class="fin-secao-titulo"><i class="fa-solid fa-file-lines"></i> Dados gerais</div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label for="cpDescricao">Descrição <span style="color:#ef4444">*</span></label>
-                    <input type="text" id="cpDescricao" placeholder="Ex: Frete internacional DHL">
+                    <label for="cpBloco">Plano de Contas <span style="color:#ef4444">*</span></label>
+                    <select id="cpBloco"><option value="">Selecione o bloco...</option></select>
                 </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label for="cpProformaNome">Vincular a Proforma</label>
-                    <input type="text" id="cpProformaNome" placeholder="Buscar proforma por código..." autocomplete="off" oninput="cpBuscarProforma(this.value)" onfocus="cpMostrarProforma(this.value)">
-                    <input type="hidden" id="cpProformaId">
-                    <div class="pl-autocomplete" id="cpAutoProforma"></div>
+                    <label for="cpConta">Categoria <span style="color:#ef4444">*</span></label>
+                    <select id="cpConta" disabled><option value="">Escolha o Plano de Contas primeiro</option></select>
                 </div>
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
-                    <label for="cpFornecedorNome">Fornecedor / Parceiro</label>
-                    <input type="text" id="cpFornecedorNome" placeholder="Buscar parceiro..." autocomplete="off" oninput="cpBuscarParceiro(this.value)" onfocus="cpMostrarParceiro(this.value)">
-                    <input type="hidden" id="cpFornecedorId">
-                    <div class="pl-autocomplete" id="cpAutoParceiro"></div>
+                    <label for="cpProformaNome">Vincular a Proforma</label>
+                    <input type="text" id="cpProformaNome" placeholder="Buscar proforma por código..." autocomplete="off" oninput="cpBuscarProforma(this.value)" onfocus="cpMostrarProforma(this.value)">
+                    <input type="hidden" id="cpProformaId">
+                    <div class="pl-autocomplete" id="cpAutoProforma"></div>
                 </div>
                 <div class="fin-form-group">
                     <label for="cpProcessoNome">Vincular a Processo</label>
@@ -161,69 +160,93 @@
                 </div>
             </div>
             <div class="fin-form-row">
-                <div class="fin-form-group">
-                    <label for="cpValor">Valor <span style="color:#ef4444">*</span></label>
-                    <input type="text" id="cpValor" placeholder="0,00" inputmode="decimal" oninput="cpMascaraMonetaria(this)">
-                </div>
-                <div class="fin-form-group">
-                    <label for="cpMoeda">Moeda</label>
-                    <select id="cpMoeda">
-                        <option value="BRL">BRL</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                    </select>
-                </div>
-            </div>
-            <div class="fin-form-row" id="cpCambioGrupo" hidden>
                 <div class="fin-form-group fin-full">
-                    <label for="cpCambio">Câmbio (R$ por 1 <span id="cpCambioMoeda">USD</span>)</label>
-                    <input type="text" id="cpCambio" placeholder="0,0000" inputmode="decimal" autocomplete="off">
-                    <small class="fin-cambio-info" id="cpCambioInfo"></small>
+                    <label for="cpFornecedorNome">Fornecedor</label>
+                    <input type="text" id="cpFornecedorNome" placeholder="Buscar fornecedor..." autocomplete="off" oninput="cpBuscarParceiro(this.value)" onfocus="cpMostrarParceiro(this.value)">
+                    <input type="hidden" id="cpFornecedorId">
+                    <div class="pl-autocomplete" id="cpAutoParceiro"></div>
                 </div>
             </div>
-            <div class="fin-form-row">
+            <div class="fin-form-row fin-linha-valores">
                 <div class="fin-form-group">
-                    <label for="cpVencimento">Vencimento <span style="color:#ef4444">*</span></label>
-                    <input type="date" id="cpVencimento">
+                    <label for="cpPrevData" title="Previsão de Data de Pagamento">Previsão de Pagamento <span style="color:#ef4444">*</span></label>
+                    <input type="date" id="cpPrevData">
                 </div>
                 <div class="fin-form-group">
-                    <label for="cpDataPagamento">Data de Pagamento</label>
-                    <input type="date" id="cpDataPagamento">
-                </div>
-            </div>
-            <div class="fin-form-row">
-                <div class="fin-form-group">
-                    <label for="cpStatus">Status</label>
-                    <select id="cpStatus" onchange="cpAoMudarStatus()">
-                        <option value="pendente">Pendente</option>
-                        <option value="pago">Pago</option>
-                        <option value="vencido">Vencido</option>
-                        <option value="cancelado">Cancelado</option>
-                    </select>
+                    <label for="cpPrevMoeda">Moeda</label>
+                    <select id="cpPrevMoeda"><option value="BRL">BRL</option></select>
                 </div>
                 <div class="fin-form-group">
-                    <label for="cpCategoria">Categoria</label>
-                    <select id="cpCategoria">
-                        <option value="">Selecione...</option>
-                        <option value="frete">Frete</option>
-                        <option value="imposto">Imposto / Taxa</option>
-                        <option value="fornecedor">Fornecedor</option>
-                        <option value="operacional">Operacional</option>
-                        <option value="comercial">Comercial</option>
-                        <option value="financeiro">Financeiro / Bancário</option>
-                        <option value="outro">Outro</option>
-                    </select>
+                    <label for="cpPrevValor">Valor <span style="color:#ef4444">*</span></label>
+                    <input type="text" id="cpPrevValor" placeholder="0,00" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="fin-form-group">
+                    <label for="cpPrevCambio">Câmbio</label>
+                    <input type="text" id="cpPrevCambio" placeholder="1,0000" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="fin-form-group">
+                    <label for="cpPrevBRL">Valor em Real</label>
+                    <input type="text" id="cpPrevBRL" readonly tabindex="-1" placeholder="R$ 0,00">
                 </div>
             </div>
+            <small class="fin-cambio-info fin-linha-info" id="cpPrevInfo"></small>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label for="cpPlanoContaNome">Conta (Plano de Contas)</label>
-                    <input type="text" id="cpPlanoContaNome" placeholder="Buscar conta (Aquisições, Comercial, Operacional, Financeiro)..." autocomplete="off" oninput="cpBuscarPlanoConta(this.value)" onfocus="cpMostrarPlanoConta(this.value)">
-                    <input type="hidden" id="cpPlanoContaId">
-                    <div class="pl-autocomplete" id="cpAutoPlanoConta"></div>
+                    <label for="cpDescricao">Descrição <span style="color:#ef4444">*</span></label>
+                    <input type="text" id="cpDescricao" placeholder="Ex: Frete internacional DHL">
                 </div>
             </div>
-            <div id="cpPrevistoBox"></div>
+
+            <div class="fin-secao-pagamento" id="cpSecaoPagamento">
+                <button type="button" class="fin-secao-titulo fin-secao-toggle" id="cpPagToggle" aria-expanded="false" aria-controls="cpPagCorpo" onclick="finSecaoPagAlternar('cp')"><i class="fa-solid fa-money-check-dollar"></i> Pagamento realizado <small class="fin-pag-resumo" id="cpPagResumo"></small><i class="fa-solid fa-chevron-down fin-secao-seta"></i></button>
+                <div class="fin-pag-corpo" id="cpPagCorpo" hidden>
+                <div class="fin-pag-aviso" id="cpPagAviso" hidden><i class="fa-solid fa-lock"></i> Só usuários com acesso ao Financeiro ou administradores podem registrar o pagamento.</div>
+            <div class="fin-form-row fin-linha-valores">
+                <div class="fin-form-group">
+                    <label for="cpPagData">Data de Pagamento</label>
+                    <input type="date" id="cpPagData">
+                </div>
+                <div class="fin-form-group">
+                    <label for="cpPagMoeda">Moeda</label>
+                    <select id="cpPagMoeda"><option value="BRL">BRL</option></select>
+                </div>
+                <div class="fin-form-group">
+                    <label for="cpPagValor">Valor</label>
+                    <input type="text" id="cpPagValor" placeholder="0,00" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="fin-form-group">
+                    <label for="cpPagCambio">Câmbio</label>
+                    <input type="text" id="cpPagCambio" placeholder="1,0000" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="fin-form-group">
+                    <label for="cpPagBRL">Valor em Real</label>
+                    <input type="text" id="cpPagBRL" readonly tabindex="-1" placeholder="R$ 0,00">
+                </div>
+            </div>
+            <small class="fin-cambio-info fin-linha-info" id="cpPagInfo"></small>
+                <div class="fin-form-row">
+                    <div class="fin-form-group fin-full">
+                        <label for="cpMeioPagamento">Meio de Pagamento</label>
+                        <select id="cpMeioPagamento"><option value="">Selecione...</option><option value="deposito">Depósito bancário</option><option value="transferencia">Transferência / PIX</option><option value="boleto">Boleto</option><option value="dinheiro">Dinheiro</option><option value="cartao-credito">Cartão de crédito</option><option value="cartao-debito">Cartão de débito</option><option value="swift">Remessa internacional (SWIFT)</option><option value="carta-credito">Carta de crédito</option><option value="cheque">Cheque</option><option value="outro">Outro</option></select>
+                    </div>
+                </div>
+                <div class="fin-form-row">
+                    <div class="fin-form-group">
+                        <label for="cpNumeroDocumento">Número da Nota Fiscal / Fatura</label>
+                        <input type="text" id="cpNumeroDocumento" placeholder="Comprovante Fiscal">
+                    </div>
+                    <div class="fin-form-group">
+                        <label for="cpComprovante">Anexo</label>
+                        <div class="fin-comp-campo">
+                            <input type="file" id="cpComprovante" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                            <span class="fin-comp-atual" id="cpComprovanteAtual"></span>
+                        </div>
+                    </div>
+                </div>
+                <small class="fin-cambio-info">Preencha a data e o valor quando o pagamento acontecer — a conta passa a <strong>Paga</strong> sozinha.</small>
+                </div>
+            </div>
+
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full pl-obs-wrapper">
                     <div class="pl-obs-toggle" onclick="cpToggleObs(this)">
@@ -269,12 +292,12 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=056c6d75"></script>
-<script src="auth.js?v=37c2c7b0"></script>
+<script src="supabase-api.js?v=de0b24ee"></script>
+<script src="auth.js?v=443d3cf2"></script>
 <script src="navegador.js?v=43ffeccc"></script>
-<script src="fin-moeda.js?v=0f017527"></script>
-<script src="fin-previsto.js?v=ed820757"></script>
-<script src="contas-pagar.js?v=2e468a39"></script>
+<script src="fin-moeda.js?v=7894e64c"></script>
+<script src="fin-lancamento.js?v=518568c5"></script>
+<script src="contas-pagar.js?v=987bddc7"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

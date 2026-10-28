@@ -459,8 +459,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (action === 'editar')       window.open(`formularios.html?tab=processo&id=${id}`, '_blank');
         if (action === 'visualizar')   abrirResumo('processo', id);
         if (action === 'ver-proforma') abrirResumo('proforma', id);
-        if (action === 'gerar-conta-pagar')   window.open(`contas-pagar.html?gerar_processo_id=${id}`, '_blank');
-        if (action === 'gerar-conta-receber') window.open(`contas-receber.html?gerar_processo_id=${id}`, '_blank');
+        // formulário de Conta numa janela sobre a tela (auth.js) — o Operacional lança
+        // a previsão sem precisar de acesso à tela do Financeiro
+        if (action === 'gerar-conta-pagar')   abrirJanelaConta('pagar', `gerar_processo_id=${encodeURIComponent(id)}`);
+        if (action === 'gerar-conta-receber') abrirJanelaConta('receber', `gerar_processo_id=${encodeURIComponent(id)}`);
         if (action === 'excluir')      abrirModalExcluir(id);
         if (action === 'historico')    abrirHistorico('processo', id, btn.getAttribute('data-codigo'));
         if (action === 'documentos')   docAbrirJanela({ proformaId: btn.getAttribute('data-proforma'), processoId: id, titulo: `Documentos — Processo ${btn.getAttribute('data-codigo') || ''}` });

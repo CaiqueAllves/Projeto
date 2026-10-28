@@ -1051,11 +1051,9 @@ async function propCarregarDuplicar(id) {
     mostrarNotificacao('Dados da proforma original copiados. Confira antes de salvar.', 'sucesso');
 }
 
+// Prévia do código (PI + ano + 5 dígitos); o número oficial sai ao salvar
 async function propGerarCodigo() {
-    const now  = new Date();
-    const ano  = String(now.getFullYear());
-    const cont = await window.supabaseAPI.contarPropostas().catch(() => 0);
-    const codigo  = `PRO${ano}${String(cont + 1).padStart(6, '0')}`;
+    const codigo  = await window.supabaseAPI.previaCodigoProforma();
     const hidden  = document.getElementById('prop-codigo');
     const display = document.getElementById('prop-codigo-display');
     if (hidden)  hidden.value        = codigo;

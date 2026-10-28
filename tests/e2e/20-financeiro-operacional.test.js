@@ -18,7 +18,7 @@ module.exports = {
             const ler = (pfx) => page.evaluate((pfx) => {
                 const v = id => document.getElementById(pfx + id)?.value || '';
                 return { proforma: v('ProformaId'), processo: v('ProcessoId'), processoNome: v('ProcessoNome'),
-                         cliente: v('ClienteNome') || v('FornecedorNome'), moeda: v('Moeda'), valor: v('Valor') };
+                         cliente: v('ClienteNome') || v('FornecedorNome'), moeda: v('PrevMoeda'), valor: v('PrevValor') };   // seção 1 (previsão) do formulário
             }, pfx);
 
             // Conta a Receber aberta pelo Processo
