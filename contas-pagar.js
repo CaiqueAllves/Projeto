@@ -188,7 +188,7 @@ function cpRenderizar() {
             <td class="td-valor">${valor}</td>
             <td>${venc}</td>
             <td>${badgeMap[c.status] || escHtml(c.status)}</td>
-            <td class="fin-td-plano">${c.plano_contas ? _cpEsc(_cpRotuloConta(c.plano_contas)) : (c.categoria ? _cpEsc(c.categoria) : '—')}</td>
+            <td class="fin-td-plano">${c.plano_contas ? _cpEsc(_cpRotuloConta(c.plano_contas)) : (c.categoria ? _cpEsc(c.categoria) : '—')}${c.categoria_detalhe ? `<span class="fin-td-detalhe">${_cpEsc(c.categoria_detalhe)}</span>` : ''}</td>
             <td>
                 <div class="fin-acoes">
                     <button class="fin-btn-acao fin-btn-ver" onclick="cpVer('${c.id}')" title="Ver"><i class="fa-solid fa-eye"></i></button>
@@ -196,6 +196,7 @@ function cpRenderizar() {
                     ${finContaPodeAlterar(c)
                         ? `<button class="fin-btn-acao fin-btn-editar" onclick="cpAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>`
                         : `<button class="fin-btn-acao fin-btn-travado" onclick="finContaAvisoTravada('alterar')" title="Conta baixada — só o administrador altera"><i class="fa-solid fa-lock"></i></button>`}
+                    ${finContaPodeAnexar(c) ? `<button class="fin-btn-acao fin-btn-ver" onclick="cpAnexar('${c.id}')" title="Anexar comprovante"><i class="fa-solid fa-paperclip"></i></button>` : ''}
                     ${finContaPodeExcluir(c) ? `<button class="fin-btn-acao fin-btn-excluir" onclick="cpAbrirModalExcluir('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
                 </div>
             </td>
@@ -305,6 +306,7 @@ function cpAbrirModal(id = null, prefill = null, soVer = false, avisado = false)
     }
 
     finPlanoDefinir('cp', c?.plano_conta_id || '');
+    finCategoriaDetalheCarregar('cp', c?.categoria_detalhe);
     // Seção 1 = previsão (contas antigas sem previsto: os valores da conta)
     finLinhaCarregar('cpPrev', {
         data: c?.data_vencimento || '',
@@ -338,6 +340,12 @@ function cpVer(id) {
     finLancModoVer('cp', true, 'Visualizar Conta a Pagar');
 }
 
+// Conta baixada: o Financeiro só acrescenta comprovantes
+function cpAnexar(id) {
+    cpAbrirModal(id, null, true);
+    finContaModoAnexo('cp', 'Anexar comprovante');
+}
+
 function cpFecharModal() {
     if (FIN_JANELA) return finJanelaFechar(false);
     document.getElementById('cpModalOverlay').classList.remove('ativo');
@@ -354,6 +362,10 @@ function _cpFormatarMonetario(num) {
 
 async function cpSalvar() {
     if (!exigirEmpresaVinculada()) return;
+    if (finContaEmModoAnexo('cp')) {
+        if (await finContaAnexoSalvar('cp', 'pagar')) { cpFecharModal(); await cpCarregar(); }
+        return;
+    }
     const id        = document.getElementById('cpEditId').value || null;
     const atual     = id ? _cpTodas.find(x => x.id === id) : null;
     if (atual && !finContaPodeAlterar(atual)) return finContaAvisoTravada('alterar');
@@ -363,14 +375,20 @@ async function cpSalvar() {
     const pag       = finLinhaLer('cpPag');
 
     if (!conta) { mostrarNotificacao('Escolha o Plano de Contas e a Categoria.', 'warning'); return; }
+    const categoriaDetalhe = finCategoriaDetalheLer('cp');
+    if (finCategoriaPedeDetalhe(conta) && !categoriaDetalhe) {
+        document.getElementById('cpCategoriaDetalhe').focus();
+        mostrarNotificacao('Descreva a categoria escolhida — essa informação vai para os relatórios.', 'warning');
+        return;
+    }
     if (!descricao || !prev.valor || !prev.data) {
-        mostrarNotificacao('Preencha a Previsão de Data de Pagamento, o Valor e a Descrição.', 'warning');
+        mostrarNotificacao('Preencha a Previsão, o Valor e a Descrição.', 'warning');
         return;
     }
     const podePagar = finLancPodePagar();
     if (podePagar && (pag.data || pag.valor) && !(pag.data && pag.valor)) {
         finSecaoPagAlternar('cp', true);
-        mostrarNotificacao('Informações de Pagamento (área Fiscal): preencha a Data de Pagamento e o Valor (ou deixe os dois em branco).', 'warning');
+        mostrarNotificacao('Financeiro: preencha a Data de Execução e o Valor (ou deixe os dois em branco).', 'warning');
         return;
     }
 
@@ -388,7 +406,7 @@ async function cpSalvar() {
     }
     if (podePagar && pag.data && pag.data > finHojeLocal()) {
         finSecaoPagAlternar('cp', true);
-        mostrarNotificacao('A Data de Pagamento não pode ser no futuro — informe a data em que ele realmente aconteceu.', 'warning');
+        mostrarNotificacao('A Data de Execução não pode ser no futuro — informe a data em que ele realmente aconteceu.', 'warning');
         document.getElementById('cpPagData').focus();
         return;
     }
@@ -403,7 +421,7 @@ async function cpSalvar() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
 
-    let comp = { campos: {}, apagarDepois: null };
+    let comp = { campos: {}, apagarDepois: [], enviados: [] };
     if (podePagar) {
         try { comp = await finComprovanteParaSalvar('cp', 'pagar'); }
         catch (e) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar'; mostrarNotificacao(e.message, 'error'); return; }
@@ -419,6 +437,7 @@ async function cpSalvar() {
         proforma_id:     document.getElementById('cpProformaId').value || null,
         processo_id:     document.getElementById('cpProcessoId').value || null,
         commercial_invoice: finCILer('cp'),
+        categoria_detalhe: categoriaDetalhe,
         plano_conta_id:  conta.id,
         categoria:       _cpCategoriaDaConta(conta) || null,
         // previsão (seção 1)
@@ -447,7 +466,7 @@ async function cpSalvar() {
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar';
 
     if (!res.sucesso) {
-        if (comp.campos.comprovante_path) finComprovanteApagar(comp.campos.comprovante_path);
+        finComprovanteApagar(comp.enviados);
         mostrarNotificacao('Erro: ' + res.mensagem, 'error');
         return;
     }

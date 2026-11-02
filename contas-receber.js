@@ -201,7 +201,7 @@ function crRenderizar() {
             <td class="td-valor entrada">${valor}</td>
             <td>${venc}</td>
             <td>${badgeMap[c.status] || escHtml(c.status)}</td>
-            <td class="fin-td-plano">${c.plano_contas?.subfator_nome ? `${_crEsc(c.plano_contas.codigo || c.plano_contas.conta_codigo)} — ${_crEsc(c.plano_contas.subfator_nome)}` : (c.categoria ? _crEsc(c.categoria) : '—')}</td>
+            <td class="fin-td-plano">${c.plano_contas?.subfator_nome ? `${_crEsc(c.plano_contas.codigo || c.plano_contas.conta_codigo)} — ${_crEsc(c.plano_contas.subfator_nome)}` : (c.categoria ? _crEsc(c.categoria) : '—')}${c.categoria_detalhe ? `<span class="fin-td-detalhe">${_crEsc(c.categoria_detalhe)}</span>` : ''}</td>
             <td>
                 <div class="fin-acoes">
                     <button class="fin-btn-acao fin-btn-ver" onclick="crVer('${c.id}')" title="Ver"><i class="fa-solid fa-eye"></i></button>
@@ -209,6 +209,7 @@ function crRenderizar() {
                     ${finContaPodeAlterar(c)
                         ? `<button class="fin-btn-acao fin-btn-editar" onclick="crAbrirModal('${c.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>`
                         : `<button class="fin-btn-acao fin-btn-travado" onclick="finContaAvisoTravada('alterar')" title="Conta baixada — só o administrador altera"><i class="fa-solid fa-lock"></i></button>`}
+                    ${finContaPodeAnexar(c) ? `<button class="fin-btn-acao fin-btn-ver" onclick="crAnexar('${c.id}')" title="Anexar comprovante"><i class="fa-solid fa-paperclip"></i></button>` : ''}
                     ${finContaPodeExcluir(c) ? `<button class="fin-btn-acao fin-btn-excluir" onclick="crAbrirModalExcluir('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
                 </div>
             </td>
@@ -302,6 +303,7 @@ function crAbrirModal(id = null, prefill = null, soVer = false, avisado = false)
     }
 
     finPlanoDefinir('cr', c?.plano_conta_id || '');
+    finCategoriaDetalheCarregar('cr', c?.categoria_detalhe);
     // Seção 1 = previsão (contas antigas sem previsto: os valores da conta)
     finLinhaCarregar('crPrev', {
         data: c?.data_vencimento || '',
@@ -335,6 +337,12 @@ function crVer(id) {
     finLancModoVer('cr', true, 'Visualizar Conta a Receber');
 }
 
+// Conta baixada: o Financeiro só acrescenta comprovantes
+function crAnexar(id) {
+    crAbrirModal(id, null, true);
+    finContaModoAnexo('cr', 'Anexar comprovante');
+}
+
 function crFecharModal() {
     if (FIN_JANELA) return finJanelaFechar(false);
     document.getElementById('crModalOverlay').classList.remove('ativo');
@@ -351,6 +359,10 @@ function _crFormatarMonetario(num) {
 
 async function crSalvar() {
     if (!exigirEmpresaVinculada()) return;
+    if (finContaEmModoAnexo('cr')) {
+        if (await finContaAnexoSalvar('cr', 'receber')) { crFecharModal(); await crCarregar(); }
+        return;
+    }
     const id        = document.getElementById('crEditId').value || null;
     const atual     = id ? _crTodas.find(x => x.id === id) : null;
     if (atual && !finContaPodeAlterar(atual)) return finContaAvisoTravada('alterar');
@@ -360,14 +372,20 @@ async function crSalvar() {
     const pag       = finLinhaLer('crPag');
 
     if (!conta) { mostrarNotificacao('Escolha o Plano de Contas e a Categoria.', 'warning'); return; }
+    const categoriaDetalhe = finCategoriaDetalheLer('cr');
+    if (finCategoriaPedeDetalhe(conta) && !categoriaDetalhe) {
+        document.getElementById('crCategoriaDetalhe').focus();
+        mostrarNotificacao('Descreva a categoria escolhida — essa informação vai para os relatórios.', 'warning');
+        return;
+    }
     if (!descricao || !prev.valor || !prev.data) {
-        mostrarNotificacao('Preencha a Previsão de Data de Recebimento, o Valor e a Descrição.', 'warning');
+        mostrarNotificacao('Preencha a Previsão, o Valor e a Descrição.', 'warning');
         return;
     }
     const podePagar = finLancPodePagar();
     if (podePagar && (pag.data || pag.valor) && !(pag.data && pag.valor)) {
         finSecaoPagAlternar('cr', true);
-        mostrarNotificacao('Informações de Pagamento (área Fiscal): preencha a Data de Recebimento e o Valor (ou deixe os dois em branco).', 'warning');
+        mostrarNotificacao('Financeiro: preencha a Data de Execução e o Valor (ou deixe os dois em branco).', 'warning');
         return;
     }
 
@@ -379,7 +397,7 @@ async function crSalvar() {
     }
     if (podePagar && pag.data && pag.data > finHojeLocal()) {
         finSecaoPagAlternar('cr', true);
-        mostrarNotificacao('A Data de Recebimento não pode ser no futuro — informe a data em que ele realmente aconteceu.', 'warning');
+        mostrarNotificacao('A Data de Execução não pode ser no futuro — informe a data em que ele realmente aconteceu.', 'warning');
         document.getElementById('crPagData').focus();
         return;
     }
@@ -394,7 +412,7 @@ async function crSalvar() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
 
-    let comp = { campos: {}, apagarDepois: null };
+    let comp = { campos: {}, apagarDepois: [], enviados: [] };
     if (podePagar) {
         try { comp = await finComprovanteParaSalvar('cr', 'receber'); }
         catch (e) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar'; mostrarNotificacao(e.message, 'error'); return; }
@@ -410,6 +428,7 @@ async function crSalvar() {
         proforma_id:      document.getElementById('crProformaId').value || null,
         processo_id:      document.getElementById('crProcessoId').value || null,
         commercial_invoice: finCILer('cr'),
+        categoria_detalhe: categoriaDetalhe,
         plano_conta_id:   conta.id,
         // previsão (seção 1)
         data_vencimento:  prev.data,
@@ -435,7 +454,7 @@ async function crSalvar() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar';
     if (!res.sucesso) {
-        if (comp.campos.comprovante_path) finComprovanteApagar(comp.campos.comprovante_path);
+        finComprovanteApagar(comp.enviados);
         mostrarNotificacao('Erro: ' + res.mensagem, 'error');
         return;
     }

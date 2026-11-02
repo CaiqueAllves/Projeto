@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css?v=fcfe125a">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=c6fbbf8d">
+    <link rel="stylesheet" href="style-financeiro.css?v=dd85f08d">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -147,6 +147,12 @@
                     <select id="cpConta" disabled><option value="">Escolha o Plano de Contas primeiro</option></select>
                 </div>
             </div>
+            <div class="fin-form-row" id="cpCategoriaDetalheLinha" hidden>
+                <div class="fin-form-group fin-full">
+                    <label for="cpCategoriaDetalhe">Descreva a categoria <span style="color:#ef4444">*</span></label>
+                    <input type="text" id="cpCategoriaDetalhe" maxlength="120" placeholder="Ex: Taxa de inspeção" autocomplete="off">
+                </div>
+            </div>
             <div class="fin-form-row">
                 <div class="fin-form-group">
                     <label for="cpProformaNome">Vincular a Proforma</label>
@@ -167,15 +173,15 @@
             </div>
             <div class="fin-form-row">
                 <div class="fin-form-group fin-full">
-                    <label for="cpFornecedorNome">Fornecedor</label>
-                    <input type="text" id="cpFornecedorNome" placeholder="Buscar fornecedor..." autocomplete="off" oninput="cpBuscarParceiro(this.value)" onfocus="cpMostrarParceiro(this.value)">
+                    <label for="cpFornecedorNome">Cliente / Fornecedor</label>
+                    <input type="text" id="cpFornecedorNome" placeholder="Buscar cliente ou fornecedor..." autocomplete="off" oninput="cpBuscarParceiro(this.value)" onfocus="cpMostrarParceiro(this.value)">
                     <input type="hidden" id="cpFornecedorId">
                     <div class="pl-autocomplete" id="cpAutoParceiro"></div>
                 </div>
             </div>
             <div class="fin-form-row fin-linha-valores">
                 <div class="fin-form-group">
-                    <label for="cpPrevData" title="Previsão de Data de Pagamento">Previsão de Pagamento <span style="color:#ef4444">*</span></label>
+                    <label for="cpPrevData" title="Previsão">Previsão <span style="color:#ef4444">*</span></label>
                     <input type="date" id="cpPrevData">
                 </div>
                 <div class="fin-form-group">
@@ -205,13 +211,13 @@
             </div>
 
             <div class="fin-secao-pagamento" id="cpSecaoPagamento">
-                <button type="button" class="fin-secao-titulo fin-secao-toggle" id="cpPagToggle" aria-expanded="false" aria-controls="cpPagCorpo" onclick="finSecaoPagAlternar('cp')"><i class="fa-solid fa-money-check-dollar"></i> Informações de Pagamento (área Fiscal) <small class="fin-pag-resumo" id="cpPagResumo"></small><i class="fa-solid fa-chevron-down fin-secao-seta"></i></button>
+                <button type="button" class="fin-secao-titulo fin-secao-toggle" id="cpPagToggle" aria-expanded="false" aria-controls="cpPagCorpo" onclick="finSecaoPagAlternar('cp')"><i class="fa-solid fa-money-check-dollar"></i> Financeiro <small class="fin-pag-resumo" id="cpPagResumo"></small><i class="fa-solid fa-chevron-down fin-secao-seta"></i></button>
                 <div class="fin-pag-corpo" id="cpPagCorpo" hidden>
                 <div class="fin-pag-aviso" id="cpPagAviso" hidden><i class="fa-solid fa-lock"></i> Só usuários com acesso ao Financeiro ou administradores podem registrar o pagamento.</div>
                 <div class="fin-pag-aviso" id="cpPagEmbarqueAviso" hidden><i class="fa-solid fa-ship"></i> <span></span></div>
             <div class="fin-form-row fin-linha-valores">
                 <div class="fin-form-group">
-                    <label for="cpPagData">Data de Pagamento</label>
+                    <label for="cpPagData">Data de Execução</label>
                     <input type="date" id="cpPagData">
                 </div>
                 <div class="fin-form-group">
@@ -253,6 +259,9 @@
                             <input type="file" id="cpComprovante" accept=".pdf,.jpg,.jpeg,.png,.webp">
                             <span class="fin-comp-atual" id="cpComprovanteAtual"></span>
                         </div>
+                        <div class="fin-comp-extras" id="cpComprovantesExtras"></div>
+                        <button type="button" class="fin-comp-add" id="cpComprovanteAdd" onclick="document.getElementById('cpComprovanteExtra').click()"><i class="fa-solid fa-plus"></i> Adicionar comprovante</button>
+                        <input type="file" id="cpComprovanteExtra" hidden accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Comprovante adicional" onchange="finComprovanteExtraEscolhido('cp', this)">
                     </div>
                 </div>
                 <small class="fin-cambio-info">Preencha a data, o valor e anexe o comprovante quando o pagamento acontecer — a conta passa a <strong>Paga</strong> sozinha.</small>
@@ -304,13 +313,13 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=93662f8c"></script>
+<script src="supabase-api.js?v=3d018a22"></script>
 <script src="auth.js?v=443d3cf2"></script>
 <script src="navegador.js?v=43ffeccc"></script>
 <script src="fin-moeda.js?v=7894e64c"></script>
-<script src="fin-lancamento.js?v=f5a4c01d"></script>
-<script src="historico.js?v=4c4cd14d"></script>
-<script src="contas-pagar.js?v=f6766bcd"></script>
+<script src="fin-lancamento.js?v=2090cf26"></script>
+<script src="historico.js?v=44fe843c"></script>
+<script src="contas-pagar.js?v=d29a6951"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

@@ -176,12 +176,11 @@ async function salvarEmpresa(e) {
             _empContatoCount = 0;
             document.getElementById('emp-contato-rows').innerHTML = '';
             empContatoIniciar();
-        } else {
-            // Edição sempre abre numa aba nova (via editarEmpresa() em
-            // cadastros.js) — fecha sozinha depois de dar tempo do usuário
-            // ler a confirmação, em vez de deixar a aba parada sem próxima ação.
-            _agendarFechamentoAutomatico();
         }
+        // Cadastro e edição abrem numa aba nova (cadastros.js) — fecha sozinha
+        // depois de dar tempo de ler a confirmação. "Manter aberta" cancela, e
+        // o formulário já limpo permite cadastrar outra empresa.
+        _agendarFechamentoAutomatico(3);
     } else {
         mostrarNotificacao('Erro ao salvar: ' + (res.mensagem || 'Tente novamente.'), 'erro');
     }

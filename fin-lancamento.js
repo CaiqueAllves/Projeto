@@ -195,6 +195,7 @@ function finLancModoVer(px, ligar, titulo) {
     const modal = document.querySelector(`#${px}ModalOverlay .fin-modal`);
     if (!modal) return;
     modal.classList.toggle('fin-modo-ver', !!ligar);
+    modal.classList.remove('fin-modo-anexo');
     const salvar = _flEl(px + 'BtnSalvar');
     if (salvar) salvar.hidden = !!ligar;
     if (ligar && titulo) _flEl(px + 'ModalTitulo').innerHTML = `<i class="fa-solid fa-eye"></i> ${escHtml(titulo)}`;
@@ -216,7 +217,7 @@ function finPlanoMontar(px, contas) {
 function _finPlanoCategorias(px, contaId) {
     const bloco = _flEl(px + 'Bloco').value;
     const sel = _flEl(px + 'Conta');
-    if (!bloco) { sel.innerHTML = '<option value="">Escolha o Plano de Contas primeiro</option>'; sel.disabled = true; return; }
+    if (!bloco) { sel.innerHTML = '<option value="">Escolha o Plano de Contas primeiro</option>'; sel.disabled = true; finCategoriaDetalheSincronizar(px); return; }
     const grupos = new Map();
     _flPlano[px].filter(c => String(c.bloco) === bloco).forEach(c => {
         const g = `${c.conta_codigo} — ${c.conta_nome}`;
@@ -227,6 +228,8 @@ function _finPlanoCategorias(px, contaId) {
         `<optgroup label="${escHtml(g)}">${lista.map(c => `<option value="${escHtml(c.id)}" title="${escHtml(c.descricao || '')}">${escHtml(c.codigo + ' — ' + c.subfator_nome)}</option>`).join('')}</optgroup>`).join('');
     sel.disabled = false;
     sel.value = contaId || '';
+    sel.onchange = () => finCategoriaDetalheSincronizar(px);
+    finCategoriaDetalheSincronizar(px);
 }
 
 function finPlanoDefinir(px, contaId) {
@@ -240,13 +243,39 @@ function finPlanoConta(px) {
     return (_flPlano[px] || []).find(x => x.id === id) || null;
 }
 
+// Categorias "Outros/Outras...": abre um campo para descrever (categoria_detalhe),
+// que aparece na tabela, no Histórico e em Relatórios Financeiros.
+function finCategoriaPedeDetalhe(conta) {
+    return /\boutr[oa]s\b/i.test(conta?.subfator_nome || '');
+}
+function finCategoriaDetalheSincronizar(px) {
+    const linha = _flEl(px + 'CategoriaDetalheLinha');
+    if (!linha) return;
+    const pede = finCategoriaPedeDetalhe(finPlanoConta(px));
+    linha.hidden = !pede;
+    if (!pede) _flEl(px + 'CategoriaDetalhe').value = '';
+}
+function finCategoriaDetalheCarregar(px, valor) {
+    const el = _flEl(px + 'CategoriaDetalhe');
+    if (el) el.value = finCategoriaPedeDetalhe(finPlanoConta(px)) ? (valor || '') : '';
+}
+function finCategoriaDetalheLer(px) {
+    if (!finCategoriaPedeDetalhe(finPlanoConta(px))) return null;
+    return (_flEl(px + 'CategoriaDetalhe')?.value || '').trim().toUpperCase() || null;
+}
+
 // ── Comprovante ──
+// Principal (comprovante_path/nome) + até 2 adicionais (comprovantes_extras).
+const FIN_COMPROVANTES_EXTRAS_MAX = 2;
+const _FIN_COMP_TIPOS = /\.(pdf|jpe?g|png|webp)$/i;
 const _flComp = {};
 
 function finComprovanteCarregar(px, c) {
-    _flComp[px] = { path: c?.comprovante_path || null, nome: c?.comprovante_nome || null, remover: false, baixada: finContaBaixada(c) };
+    _flComp[px] = { path: c?.comprovante_path || null, nome: c?.comprovante_nome || null, remover: false, baixada: finContaBaixada(c),
+        extras: (Array.isArray(c?.comprovantes_extras) ? c.comprovantes_extras : []).filter(e => e?.path).map(e => ({ path: e.path, nome: e.nome })) };
     _flEl(px + 'Comprovante').value = '';
     _finComprovanteRender(px);
+    _finComprovanteExtrasRender(px);
 }
 
 function _finComprovanteRender(px) {
@@ -263,11 +292,53 @@ function _finComprovanteRender(px) {
     }
 }
 
-async function finComprovanteAbrir(ev, px) {
+// Adicionais: cada um é um link (já salvo) ou o nome do arquivo escolhido
+function _finComprovanteExtrasRender(px) {
+    const st = _flComp[px] || {};
+    const box = _flEl(px + 'ComprovantesExtras');
+    if (!box) return;
+    const trava = finLancPodePagar() ? '' : ' disabled';
+    box.innerHTML = (st.extras || []).map((e, i) => e.remover ? '' : `<span class="fin-comp-atual fin-comp-extra">
+        ${e.file ? `<span class="fin-comp-link" title="Será enviado ao salvar"><i class="fa-solid fa-paperclip"></i> ${escHtml(e.nome)}</span>`
+            : `<a href="#" class="fin-comp-link" data-px="${escHtml(px)}" data-i="${i}" onclick="finComprovanteAbrir(event, this.dataset.px, this.dataset.i)"><i class="fa-solid fa-paperclip"></i> ${escHtml(e.nome || 'comprovante')}</a>`}
+        <button type="button" class="fin-comp-remover${e.file ? ' fin-comp-remover--novo' : ''}" data-px="${escHtml(px)}" data-i="${i}" onclick="finComprovanteExtraRemover(this.dataset.px, this.dataset.i)" title="Remover comprovante"${trava}><i class="fa-solid fa-xmark"></i></button>
+    </span>`).join('');
+    const add = _flEl(px + 'ComprovanteAdd');
+    if (add) add.hidden = (st.extras || []).filter(e => !e.remover).length >= FIN_COMPROVANTES_EXTRAS_MAX;
+}
+
+function finComprovanteExtraEscolhido(px, input) {
+    const file = input.files?.[0];
+    input.value = '';
+    const st = _flComp[px];
+    if (!file || !st) return;
+    if (st.baixada && !_finEhAdmin() && !st.modoAnexo) return finContaAvisoTravada('anexar comprovante');
+    if (!_FIN_COMP_TIPOS.test(file.name)) return mostrarNotificacao('Anexe um arquivo PDF, JPG, PNG ou WEBP.', 'warning');
+    if (file.size > 10 * 1024 * 1024) return mostrarNotificacao('O comprovante deve ter no máximo 10 MB.', 'warning');
+    if (st.extras.filter(e => !e.remover).length >= FIN_COMPROVANTES_EXTRAS_MAX) return;
+    st.extras.push({ file, nome: file.name });
+    _finComprovanteExtrasRender(px);
+}
+
+async function finComprovanteExtraRemover(px, i) {
+    const st = _flComp[px], e = st?.extras?.[i];
+    if (!e) return;
+    if (st.baixada && !e.file) {
+        if (!_finEhAdmin()) return finContaAvisoTravada('remover ou trocar o comprovante');
+        const ok = await confirmarAcao('Este comprovante faz parte de um pagamento já baixado. A alteração fica registrada no Histórico.',
+            { titulo: 'Remover comprovante de conta paga?', confirmar: 'Sim, remover', cancelar: 'Não', perigo: true });
+        if (!ok) return;
+    }
+    if (e.file) st.extras.splice(i, 1); else e.remover = true;
+    _finComprovanteExtrasRender(px);
+}
+
+async function finComprovanteAbrir(ev, px, i) {
     ev.preventDefault();
     const st = _flComp[px];
-    if (!st?.path) return;
-    const { data, error } = await supabaseClient.storage.from(FIN_BUCKET_COMPROVANTES).createSignedUrl(st.path, 120);
+    const path = i === undefined ? st?.path : st?.extras?.[i]?.path;
+    if (!path) return;
+    const { data, error } = await supabaseClient.storage.from(FIN_BUCKET_COMPROVANTES).createSignedUrl(path, 120);
     if (error || !data?.signedUrl) return mostrarNotificacao('Não foi possível abrir o comprovante.', 'error');
     window.open(data.signedUrl, '_blank', 'noopener');
 }
@@ -289,32 +360,111 @@ async function finComprovanteRemover(px) {
     _finComprovanteRender(px);
 }
 
-// Envia o arquivo escolhido (se houver). Devolve { campos, apagarDepois } —
-// apagarDepois = arquivo antigo, removido só depois que a conta for salva.
+async function _finComprovanteEnviar(file, tabela, seq) {
+    if (file.size > 10 * 1024 * 1024) throw new Error('O comprovante deve ter no máximo 10 MB.');
+    const u = obterUsuarioLogado();
+    const nomeSeguro = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${u.empresa_id}/${tabela}/${Date.now()}_${seq}_${nomeSeguro}`;
+    const { error } = await supabaseClient.storage.from(FIN_BUCKET_COMPROVANTES).upload(path, file, { contentType: file.type || undefined });
+    if (error) throw new Error('Não foi possível enviar o comprovante: ' + error.message);
+    return path;
+}
+
+// Envia os arquivos escolhidos. Devolve { campos, apagarDepois, enviados }:
+// apagarDepois = arquivos antigos, removidos só depois que a conta for salva;
+// enviados = arquivos novos, para apagar se a gravação da conta falhar.
 async function finComprovanteParaSalvar(px, tabela) {
     const st = _flComp[px] || {};
-    const file = _flEl(px + 'Comprovante')?.files?.[0];
-    if (file) {
-        if (file.size > 10 * 1024 * 1024) throw new Error('O comprovante deve ter no máximo 10 MB.');
-        const u = obterUsuarioLogado();
-        const nomeSeguro = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const path = `${u.empresa_id}/${tabela}/${Date.now()}_${nomeSeguro}`;
-        const { error } = await supabaseClient.storage.from(FIN_BUCKET_COMPROVANTES).upload(path, file, { contentType: file.type || undefined });
-        if (error) throw new Error('Não foi possível enviar o comprovante: ' + error.message);
-        return { campos: { comprovante_path: path, comprovante_nome: file.name }, apagarDepois: st.path };
+    const res = { campos: {}, apagarDepois: [], enviados: [] };
+    try {
+        const file = _flEl(px + 'Comprovante')?.files?.[0];
+        if (file) {
+            const path = await _finComprovanteEnviar(file, tabela, 0);
+            res.enviados.push(path);
+            res.campos.comprovante_path = path;
+            res.campos.comprovante_nome = file.name;
+            if (st.path) res.apagarDepois.push(st.path);
+        } else if (st.remover) {
+            res.campos.comprovante_path = null;
+            res.campos.comprovante_nome = null;
+            res.apagarDepois.push(st.path);
+        }
+        const extras = st.extras || [];
+        if (extras.some(e => e.file || e.remover)) {
+            const lista = [];
+            for (const [i, e] of extras.entries()) {
+                if (e.remover) { res.apagarDepois.push(e.path); continue; }
+                if (e.file) {
+                    const path = await _finComprovanteEnviar(e.file, tabela, i + 1);
+                    res.enviados.push(path);
+                    lista.push({ path, nome: e.nome });
+                } else lista.push({ path: e.path, nome: e.nome });
+            }
+            res.campos.comprovantes_extras = lista.length ? lista : null;
+        }
+    } catch (err) {
+        finComprovanteApagar(res.enviados);
+        throw err;
     }
-    if (st.remover) return { campos: { comprovante_path: null, comprovante_nome: null }, apagarDepois: st.path };
-    return { campos: {}, apagarDepois: null };
+    return res;
+}
+
+// Conta baixada, Financeiro sem ser administrador: abre o formulário só para ler
+// e libera apenas acrescentar comprovantes (fin_conta_baixada_trava, no banco).
+function finContaPodeAnexar(c) {
+    if (!finContaBaixada(c) || _finEhAdmin() || !finLancPodePagar()) return false;
+    const extras = Array.isArray(c.comprovantes_extras) ? c.comprovantes_extras.length : 0;
+    return !c.comprovante_path || extras < FIN_COMPROVANTES_EXTRAS_MAX;
+}
+function finContaModoAnexo(px, titulo) {
+    finLancModoVer(px, true, titulo);
+    _flEl(px + 'ModalTitulo').querySelector('i').className = 'fa-solid fa-paperclip';
+    document.querySelector(`#${px}ModalOverlay .fin-modal`).classList.add('fin-modo-anexo');
+    _flEl(px + 'BtnSalvar').hidden = false;
+    _flComp[px].modoAnexo = true;
+    finSecaoPagAlternar(px, true);
+}
+function finContaEmModoAnexo(px) {
+    return !!_flComp[px]?.modoAnexo;
+}
+// Grava só os comprovantes novos. tipo = 'pagar' | 'receber'. true = salvou
+async function finContaAnexoSalvar(px, tipo) {
+    const st = _flComp[px];
+    if (!_flEl(px + 'Comprovante')?.files?.length && !st.extras.some(e => e.file)) {
+        mostrarNotificacao('Escolha o comprovante para anexar.', 'warning');
+        return false;
+    }
+    const btn = _flEl(px + 'BtnSalvar'), rotulo = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    try {
+        const comp = await finComprovanteParaSalvar(px, tipo);
+        const res = await anexarComprovantesConta(tipo, _flEl(px + 'EditId').value, comp.campos);
+        if (!res.sucesso) {
+            finComprovanteApagar(comp.enviados);
+            mostrarNotificacao('Erro: ' + res.mensagem, 'error');
+            return false;
+        }
+        mostrarNotificacao('Comprovante anexado.', 'success');
+        return true;
+    } catch (e) {
+        mostrarNotificacao(e.message, 'error');
+        return false;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = rotulo;
+    }
 }
 
 // Há comprovante para esta conta? (arquivo escolhido agora ou já anexado e não removido)
 function finComprovanteTem(px) {
     const st = _flComp[px] || {};
-    return !!_flEl(px + 'Comprovante')?.files?.length || (!!st.path && !st.remover);
+    return !!_flEl(px + 'Comprovante')?.files?.length || (!!st.path && !st.remover) || (st.extras || []).some(e => !e.remover);
 }
 
-function finComprovanteApagar(path) {
-    if (path) supabaseClient.storage.from(FIN_BUCKET_COMPROVANTES).remove([path]).catch(() => {});
+function finComprovanteApagar(paths) {
+    const lista = (Array.isArray(paths) ? paths : [paths]).filter(Boolean);
+    if (lista.length) supabaseClient.storage.from(FIN_BUCKET_COMPROVANTES).remove(lista).catch(() => {});
 }
 
 // ── Seção 2 recolhível: aberta quando já há pagamento/recebimento registrado ──
@@ -471,17 +621,20 @@ async function finEmbarqueAtualizar(px) {
     }
     if (px === 'cp' && proc && !embarque && !baixada) {
         _finEmb[px].bloqueiaPagamento = true;
-        texto = `<i class="fa-solid fa-ship"></i> Custas do Processo ${numero}: o pagamento só pode ser confirmado depois da confirmação do embarque.`;
+        texto = `<i class="fa-solid fa-ship"></i> Custas do Processo ${numero}: o pagamento só pode ser confirmado depois da confirmação do embarque. O comprovante já pode ser anexado.`;
     }
     if (info) { info.innerHTML = texto; info.hidden = !texto; }
 
     const aviso = _flEl(px + 'PagEmbarqueAviso');
     if (aviso) {
-        aviso.querySelector('span').textContent = `Pagamento liberado após a confirmação do embarque do Processo ${proc?.numero_processo || ''} (Data de Embarque no Processo).`;
+        aviso.querySelector('span').textContent = `Pagamento liberado após a confirmação do embarque do Processo ${proc?.numero_processo || ''} (Data de Embarque no Processo). O comprovante já pode ser anexado.`;
         aviso.hidden = !_finEmb[px].bloqueiaPagamento;
     }
     if (_finEmb[px].bloqueiaPagamento) {
-        document.querySelectorAll(`#${px}PagCorpo input, #${px}PagCorpo select, #${px}PagCorpo button`).forEach(el => { el.disabled = true; });
+        // só a baixa fica travada: o comprovante pode ser guardado antes do embarque
+        document.querySelectorAll(`#${px}PagCorpo input, #${px}PagCorpo select, #${px}PagCorpo button`).forEach(el => {
+            if (!el.closest('.fin-form-group')?.querySelector('.fin-comp-campo')) el.disabled = true;
+        });
     } else if (px === 'cp' && !_flEl(px + 'ModalOverlay')?.querySelector('.fin-modo-ver')) {
         finLancAplicarPermissao(px);
     }

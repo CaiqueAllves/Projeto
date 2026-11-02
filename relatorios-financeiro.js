@@ -93,12 +93,47 @@ async function rfCarregar() {
                 : '—';
             return `<tr>
                 <td><strong>${_rfEsc(c.descricao)}</strong></td>
-                <td><span style="font-size:11px;color:#94a3b8">${_rfEsc(c.plano_contas ? `${c.plano_contas.codigo} — ${c.plano_contas.subfator_nome}` : (c.categoria || '—'))}</span></td>
+                <td><span style="font-size:11px;color:#94a3b8">${_rfEsc(c.plano_contas ? `${c.plano_contas.codigo} — ${c.plano_contas.subfator_nome}` : (c.categoria || '—'))}${c.categoria_detalhe ? ' · ' + _rfEsc(c.categoria_detalhe) : ''}</span></td>
                 <td>${venc}</td>
                 <td class="td-valor saida">${_rfFmt(c.valor)}</td>
             </tr>`;
         }).join('')
         : '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px">Sem despesas no período</td></tr>';
+
+    await _rfRenderizarOutros(pagar, receber);
+}
+
+// Categorias "Outros": agrupa pelo detalhe digitado no formulário da conta,
+// em R$ (câmbio da conta ou PTAX da data). Canceladas ficam de fora.
+let _rfOutrosToken = 0;
+async function _rfRenderizarOutros(pagar, receber) {
+    const token = ++_rfOutrosToken;
+    const filtrar = lista => lista.filter(c => c.categoria_detalhe && c.status !== 'cancelado').map(c => ({ ...c }));
+    const [p, r] = await Promise.all([
+        finConverterContas(filtrar(pagar), 'data_pagamento'),
+        finConverterContas(filtrar(receber), 'data_recebimento'),
+    ]);
+    if (token !== _rfOutrosToken) return;   // período trocado no meio da conversão
+
+    const grupos = new Map();
+    const somar = (lista, tipo) => lista.forEach(c => {
+        const categoria = c.plano_contas ? `${c.plano_contas.codigo} — ${c.plano_contas.subfator_nome}` : (c.categoria || '—');
+        const chave = [tipo, categoria, c.categoria_detalhe].join('|');
+        const g = grupos.get(chave) || { tipo, categoria, detalhe: c.categoria_detalhe, qtd: 0, total: 0, semCambio: 0 };
+        g.qtd++;
+        if (c._valorBRL === null) g.semCambio++; else g.total += c._valorBRL;
+        grupos.set(chave, g);
+    });
+    somar(p, 'A Pagar');
+    somar(r, 'A Receber');
+
+    document.getElementById('rfTbodyOutros').innerHTML = [...grupos.values()].sort((a, b) => b.total - a.total).map(g => `<tr>
+            <td>${g.tipo}</td>
+            <td><span style="font-size:11px;color:#94a3b8">${_rfEsc(g.categoria)}</span></td>
+            <td><strong>${_rfEsc(g.detalhe)}</strong></td>
+            <td>${g.qtd}</td>
+            <td class="td-valor ${g.tipo === 'A Pagar' ? 'saida' : 'entrada'}">${_rfFmt(g.total)}${g.semCambio ? ` <span title="${g.semCambio} conta(s) sem câmbio fora do total" style="color:#94a3b8">*</span>` : ''}</td>
+        </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">Nenhuma conta com detalhe no período</td></tr>';
 }
 
 function _rfBadge(s) {

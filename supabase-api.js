@@ -1690,6 +1690,10 @@ function _proformaCamposBanco(dados) {
 }
 function _erroColunasBanco(error) { return new RegExp(_PROFORMA_CAMPOS_NOVOS.join('|'), 'i').test(error?.message || ''); }
 function _semCamposBanco(p) { const c = { ...p }; _PROFORMA_CAMPOS_NOVOS.forEach(k => delete c[k]); return c; }
+// CEP do Importador (database-proforma-destinatario-cep.sql): à parte da lista
+// acima, para a falta desta coluna não derrubar os outros campos ao salvar.
+function _erroColunaCepDest(error) { return /destinatario_cep/i.test(error?.message || ''); }
+function _semCepDest(p) { const c = { ...p }; delete c.destinatario_cep; return c; }
 
 async function salvarPropostaDB(dados) {
     try {
@@ -1736,11 +1740,15 @@ async function salvarPropostaDB(dados) {
                 destinatario_razao_social: dados.destinatario_razao_social || null,
                 destinatario_doc:        dados.destinatario_doc         || null,
                 destinatario_doc_tipo:   dados.destinatario_doc_tipo    || null,
+                destinatario_cep:        dados.destinatario_cep         || null,
                 validade_dias:           dados.validade_dias            || null,
                 obs_status:              dados.obs_status               || null,
                 ..._proformaCamposBanco(dados),
             };
         let { data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', PROFORMA_PREFIXO, payloadProforma, _maiorCodigoProforma);
+        if (error && _erroColunaCepDest(error)) {
+            ({ data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', PROFORMA_PREFIXO, _semCepDest(payloadProforma), _maiorCodigoProforma));
+        }
         if (error && _erroColunasBanco(error)) {
             ({ data, error } = await _inserirComNumero('proformas', 'codigo', 'proforma', PROFORMA_PREFIXO, _semCamposBanco(payloadProforma), _maiorCodigoProforma));
         }
@@ -1823,12 +1831,14 @@ async function atualizarProformaDB(id, dados) {
                 destinatario_razao_social: dados.destinatario_razao_social || null,
                 destinatario_doc:         dados.destinatario_doc         || null,
                 destinatario_doc_tipo:    dados.destinatario_doc_tipo    || null,
+                destinatario_cep:         dados.destinatario_cep         || null,
                 validade_dias:            dados.validade_dias            || null,
                 obs_status:               dados.obs_status               || null,
                 ..._proformaCamposBanco(dados),
             };
         const atualizar = p => supabaseClient.from('proformas').update(p).eq('id', id).select('*').single();
         let { data, error } = await atualizar(payloadProforma);
+        if (error && _erroColunaCepDest(error)) ({ data, error } = await atualizar(_semCepDest(payloadProforma)));
         if (error && _erroColunasBanco(error)) ({ data, error } = await atualizar(_semCamposBanco(payloadProforma)));
         if (error) return { sucesso: false, mensagem: error.message };
         return { sucesso: true, data };
@@ -1899,11 +1909,17 @@ const _FIN_CAMPOS_PREVISTO = ['valor_previsto', 'cambio_previsto', 'previsto_em'
 const _FIN_CAMPOS_PAGAMENTO = ['moeda_previsto', 'meio_pagamento', 'numero_documento', 'comprovante_path', 'comprovante_nome'];
 // Commercial Invoice vinculada (database-historico-contas.sql). Antes do SQL, grava sem.
 const _FIN_CAMPOS_CI = ['commercial_invoice'];
+// Detalhe da categoria "Outros" e anexos adicionais (database-contas-detalhe-anexos.sql)
+const _FIN_CAMPOS_DETALHE = ['categoria_detalhe', 'comprovantes_extras'];
 function _finAplicarPrevisto(payload, dados) {
-    [..._FIN_CAMPOS_PREVISTO, ..._FIN_CAMPOS_PAGAMENTO, ..._FIN_CAMPOS_CI].forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
+    [..._FIN_CAMPOS_PREVISTO, ..._FIN_CAMPOS_PAGAMENTO, ..._FIN_CAMPOS_CI, ..._FIN_CAMPOS_DETALHE].forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
 }
 async function _finGravarComFallback(gravar, payload) {
     let result = await gravar(payload);
+    if (result.error && /categoria_detalhe|comprovantes_extras/i.test(result.error.message || '')) {
+        _FIN_CAMPOS_DETALHE.forEach(k => delete payload[k]);
+        result = await gravar(payload);
+    }
     if (result.error && /commercial_invoice/i.test(result.error.message || '')) {
         _FIN_CAMPOS_CI.forEach(k => delete payload[k]);
         result = await gravar(payload);
@@ -2018,6 +2034,19 @@ async function atualizarContaPagar(id, dados) {
             .update({ ...dados, atualizado_em: new Date().toISOString() })
             .eq('id', id);
         if (error) return { sucesso: false, mensagem: error.message };
+        return { sucesso: true };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// Conta baixada: acrescenta comprovantes sem tocar no resto da conta.
+// tipo = 'pagar' | 'receber'; campos = só os de comprovante
+async function anexarComprovantesConta(tipo, id, campos) {
+    try {
+        const tabela = tipo === 'pagar' ? 'contas_pagar' : 'contas_receber';
+        const { data, error } = await supabaseClient.from(tabela)
+            .update({ ...campos, atualizado_em: new Date().toISOString() }).eq('id', id).select('id');
+        if (error) return { sucesso: false, mensagem: error.message };
+        if (!data?.length) return { sucesso: false, mensagem: 'Sem permissão para anexar nesta conta.' };
         return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }

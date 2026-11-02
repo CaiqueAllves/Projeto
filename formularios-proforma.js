@@ -208,6 +208,7 @@ function _coletarDadosProposta() {
         destinatario_razao_social: g('prop-emp-dest-razao') || null,
         destinatario_doc:        g('prop-emp-dest-doc') || null,
         destinatario_doc_tipo:   g('prop-emp-dest-doc-tipo') || null,
+        destinatario_cep:        g('prop-emp-dest-cep').trim() || null,
         importador_final_id:     _propEhIndireta() ? (g('prop-imp-final-id') || null) : null,
         validade_dias:           g('prop-validade-dias') || null,
         obs_status:              g('prop-obs-status') || null,
@@ -335,6 +336,7 @@ function iniciarResumoProposta() {
     document.getElementById('prop-tipo')?.addEventListener('change', atualizar);
     document.getElementById('prop-origem-pais')?.addEventListener('input', atualizar);
     document.getElementById('prop-destino-pais')?.addEventListener('input', atualizar);
+    document.getElementById('prop-destino-pais')?.addEventListener('change', atualizar);
     document.getElementById('prop-incoterm')?.addEventListener('change', atualizar);
     document.getElementById('prop-modal')?.addEventListener('change', atualizar);
     document.getElementById('prop-emp-dest-busca')?.addEventListener('input', atualizar);
@@ -576,9 +578,25 @@ function propToggleEmpresaDestino(modo) {
     ['prop-emp-dest-busca', 'prop-emp-dest-id'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
     });
-    ['prop-emp-dest-auto-doc', 'prop-emp-dest-auto-id'].forEach(id => {
+    ['prop-emp-dest-auto-doc', 'prop-emp-dest-auto-id', 'prop-emp-dest-cep'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
     });
+}
+
+// CEP de 8 dígitos com máscara; código postal estrangeiro fica como no cadastro
+function _propCepExibir(cep) {
+    const v = String(cep || '').trim(), dig = v.replace(/\D/g, '');
+    return dig.length === 8 && /^[\d.\s-]+$/.test(v) ? `${dig.slice(0, 5)}-${dig.slice(5)}` : v;
+}
+
+// Proforma salva sem CEP (anterior ao campo): mostra o do cadastro da empresa
+async function _propCarregarCepDest(d) {
+    const el = document.getElementById('prop-emp-dest-cep');
+    if (!el) return;
+    if (d.destinatario_cep) { el.value = _propCepExibir(d.destinatario_cep); return; }
+    if (!d.destinatario_id) return;
+    const { data } = await supabaseClient.from('parceiros').select('cep').eq('id', d.destinatario_id).maybeSingle();
+    if (data?.cep && !el.value) el.value = _propCepExibir(data.cep);
 }
 
 function propAbrirCadastroNovaEmpresa() {
@@ -628,6 +646,8 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
                      data-fantasia="${escHtml(e.nome_fantasia || '')}"
                      data-doc="${escHtml(e.documento || '')}"
                      data-tipo="${escHtml(e.tipo_cadastro || '')}"
+                     data-cep="${escHtml(e.cep || '')}"
+                     data-pais="${escHtml(e.pais || '')}"
                      data-idint="${escHtml(e.codigo || '')}">
                     <span class="ac-nome">${escHtml(e.razao_social || '')}</span>
                     ${e.nome_fantasia ? `<span class="ac-fantasia">${escHtml(e.nome_fantasia)}</span>` : ''}
@@ -654,17 +674,26 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
         const docEl = document.getElementById('prop-emp-dest-doc');
         const idEl  = document.getElementById('prop-emp-dest-auto-id');
         const idGrp = document.getElementById('prop-emp-dest-auto-id-group');
+        const cepEl = document.getElementById('prop-emp-dest-cep');
 
         if (validarDocDestino(doc)) {
             input.value = '';
             if (idInput) idInput.value = '';
             if (docEl)   docEl.value   = '';
+            if (cepEl)   cepEl.value   = '';
             if (idEl)    idEl.value    = '';
             if (idGrp)   idGrp.style.display = 'none';
             return;
         }
 
         if (docEl) docEl.value = doc ? _mascaraDocBR(doc) : '';
+        if (cepEl) cepEl.value = _propCepExibir(item.dataset.cep);
+        // País de Destino = país do cadastro, editável. Na exportação indireta a
+        // compradora é a trading no Brasil e o destino é outro: fica à mão.
+        if (!_propEhIndireta() && item.dataset.pais) {
+            _preencherPaisPorPrefixo('prop-destino', item.dataset.pais).then(() =>
+                document.getElementById('prop-destino-pais')?.dispatchEvent(new Event('change')));
+        }
         const tipoDestEl = document.getElementById('prop-emp-dest-doc-tipo');
         const tipoCad = (item.dataset.tipo || '').toLowerCase();
         if (tipoDestEl && doc) tipoDestEl.value = ['cnpj', 'cpf', 'tin', 'ein', 'vat'].includes(tipoCad) ? tipoCad : _tipoDocBR(doc);
@@ -676,6 +705,8 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
         if (idInput) idInput.value = '';
         const docEl = document.getElementById('prop-emp-dest-doc');
         if (docEl) docEl.value = '';
+        const cepEl = document.getElementById('prop-emp-dest-cep');
+        if (cepEl) cepEl.value = '';
         validarDocDestino('');
         renderLista(input.value);
     });
@@ -909,6 +940,7 @@ async function propCarregarEdicao(id) {
         const docGroup = document.getElementById('prop-emp-dest-doc-group');
         if (docGroup) docGroup.style.display = '';
     }
+    await _propCarregarCepDest(d);
 
     // Itens
     if (Array.isArray(d.itens) && d.itens.length > 0) {
@@ -1026,6 +1058,7 @@ async function propCarregarDuplicar(id) {
         const docGroup = document.getElementById('prop-emp-dest-doc-group');
         if (docGroup) docGroup.style.display = '';
     }
+    await _propCarregarCepDest(d);
 
     // Validade — recalcula a data a partir de HOJE (o prazo em dias é o
     // mesmo, mas a contagem começa na duplicata, não na proforma original).
@@ -1130,7 +1163,8 @@ function iniciarAutocompletePaisDestinoProposta() {
         lista.classList.add('aberta');
     }
 
-    input.addEventListener('input', () => mostrar());
+    // digitou outro país: o código do anterior não vale mais (a lista define o novo)
+    input.addEventListener('input', () => { if (codigo) codigo.value = ''; mostrar(); });
     input.addEventListener('focus', () => mostrar());
     lista.addEventListener('mousedown', e => {
         const item = e.target.closest('.autocomplete-item');

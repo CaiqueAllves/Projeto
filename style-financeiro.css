@@ -1022,3 +1022,15 @@
 .fin-embarque-info { display: block; margin: -6px 0 12px; font-size: 12px; color: #1e40af; }
 .fin-embarque-info[hidden] { display: none; }
 .fin-embarque-info i { margin-right: 4px; }
+.fin-form-row[hidden] { display: none; }
+.fin-comp-extras { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.fin-comp-extras:empty { display: none; }
+.fin-comp-add { align-self: flex-start; margin-top: 6px; padding: 4px 10px; border: 1px dashed #93b4f5; border-radius: 6px; background: #f5f8ff; color: #4776ec; font-size: 12px; font-weight: 600; cursor: pointer; }
+.fin-comp-add:hover:not(:disabled) { background: #e8efff; }
+.fin-comp-add:disabled { opacity: .5; cursor: not-allowed; }
+.fin-comp-add[hidden], .fin-modo-ver .fin-comp-add { display: none; }
+.fin-td-detalhe { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: #475569; }
+#cpPagCorpo .fin-form-row:has(.fin-comp-campo) > .fin-form-group, #crPagCorpo .fin-form-row:has(.fin-comp-campo) > .fin-form-group { align-self: flex-start; }
+.fin-modal.fin-modo-anexo .fin-modal-body input[type="file"]:not([hidden]) { display: block; pointer-events: auto; background: #fff !important; }
+.fin-modal.fin-modo-anexo .fin-comp-add:not([hidden]) { display: inline-block; }
+.fin-modal.fin-modo-anexo .fin-comp-remover--novo { pointer-events: auto; background: #fee2e2 !important; }

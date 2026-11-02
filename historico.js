@@ -390,9 +390,9 @@ async function abrirHistorico(tipo, registroId, codigo) {
 // quem fez e quando. Só quem tem o Financeiro consegue ler (RLS).
 const _HIST_CONTA_CAMPOS = {
     descricao: 'Descrição', parceiro_id: 'Empresa', proforma_id: 'Proforma', processo_id: 'Processo', commercial_invoice: 'Commercial Invoice',
-    plano_conta_id: 'Plano de Contas', data_vencimento: 'Previsão de pagamento',
+    plano_conta_id: 'Plano de Contas', categoria_detalhe: 'Detalhe da categoria', data_vencimento: 'Previsão',
     valor_previsto: 'Valor previsto', moeda_previsto: 'Moeda prevista', cambio_previsto: 'Câmbio previsto',
-    valor: 'Valor', moeda: 'Moeda', cambio: 'Câmbio', data_pagamento: 'Data de pagamento', data_recebimento: 'Data de recebimento',
+    valor: 'Valor', moeda: 'Moeda', cambio: 'Câmbio', data_pagamento: 'Data de execução', data_recebimento: 'Data de execução',
     meio_pagamento: 'Meio de pagamento', numero_documento: 'Nº da nota fiscal / fatura', observacoes: 'Observações', status: 'Status',
 };
 const _HIST_CONTA_STATUS = { pendente: 'A Vencer', vencido: 'Em Atraso', pago: 'Pago', recebido: 'Recebido', cancelado: 'Cancelado' };
@@ -490,6 +490,13 @@ async function abrirHistoricoConta(tipo, registroId, descricao) {
                     : !b ? `<i class="fa-solid fa-trash"></i> Comprovante removido: ${_histEsc(a)}`
                     : `<i class="fa-solid fa-arrow-right-arrow-left"></i> Comprovante trocado: ${_histEsc(a)} <i class="fa-solid fa-arrow-right-long"></i> <strong>${_histEsc(b)}</strong>`);
                 usados.add('comprovante_nome');
+            }
+            if (alt.comprovantes_extras) {
+                const nomes = v => (Array.isArray(v) ? v : []).map(e => e?.nome).filter(Boolean);
+                const a = nomes(alt.comprovantes_extras.de), b = nomes(alt.comprovantes_extras.para);
+                b.filter(n => !a.includes(n)).forEach(n => frases.push(`<i class="fa-solid fa-paperclip"></i> Comprovante adicional anexado: <strong>${_histEsc(n)}</strong>`));
+                a.filter(n => !b.includes(n)).forEach(n => frases.push(`<i class="fa-solid fa-trash"></i> Comprovante adicional removido: ${_histEsc(n)}`));
+                if (!a.length && !b.length) frases.push('<i class="fa-solid fa-paperclip"></i> Comprovantes adicionais alterados');
             }
             Object.entries(alt).forEach(([c, d]) => {
                 if (OCULTOS.has(c) || usados.has(c) || !_HIST_CONTA_CAMPOS[c]) return;
