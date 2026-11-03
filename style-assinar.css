@@ -97,3 +97,7 @@ body {
     .as-partes, .as-campos { grid-template-columns: 1fr; }
     .as-card { padding: 16px; }
 }
+.as-btn-baixar { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 12px 22px; border: none; border-radius: 10px; background: var(--azul); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+.as-btn-baixar:disabled { opacity: .6; cursor: wait; }
+.as-estado .as-btn-baixar i { font-size: 16px; margin: 0; color: #fff; }
+.as-btn-baixar[hidden] { display: none; }

@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://olinda.bcb.gov.br https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
     <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
     <meta name="theme-color" content="#4776ec">
@@ -14,9 +15,9 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | DRE / Balancete</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=fcfe125a">
+    <link rel="stylesheet" href="style-base.css?v=05b7d63f">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=dd85f08d">
+    <link rel="stylesheet" href="style-financeiro.css?v=7a7f0a34">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -52,6 +53,12 @@
                 <input type="month" id="dreInicio" onchange="dreCarregar()">
                 <span style="color:#94a3b8">até</span>
                 <input type="month" id="dreFim" onchange="dreCarregar()">
+                <label for="dreTipoVenda" style="margin-left:8px">Venda:</label>
+                <select id="dreTipoVenda" onchange="dreFiltrarTipoVenda()" style="padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;background:#fff">
+                    <option value="">Todas</option>
+                    <option value="exportacao_direta">Exportação direta</option>
+                    <option value="exportacao_indireta">Exportação indireta (trading)</option>
+                </select>
                 <button onclick="dreCarregar()" style="padding:7px 16px;background:#4776ec;color:white;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
                     <i class="fa-solid fa-rotate-right"></i> Atualizar
                 </button>
@@ -93,6 +100,7 @@
                         <option value="incoterm">Incoterm</option>
                         <option value="modal">Modal</option>
                         <option value="moeda">Moeda da operação</option>
+                        <option value="tipo">Tipo de exportação (direta / indireta)</option>
                         <option value="fornecedor">Fornecedor (custos)</option>
                     </select>
                 </div>
@@ -117,11 +125,11 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=c324da29"></script>
+<script src="supabase-api.js?v=5f5274b6"></script>
 <script src="auth.js?v=443d3cf2"></script>
-<script src="navegador.js?v=ba468009"></script>
+<script src="navegador.js?v=b52c2dea"></script>
 <script src="fin-moeda.js?v=7894e64c"></script>
-<script src="dre.js?v=5d356cb1"></script>
+<script src="dre.js?v=769782e5"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

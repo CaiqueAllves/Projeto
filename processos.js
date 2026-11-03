@@ -523,14 +523,14 @@ async function procCarregarExcluidos() {
 
     try {
         const u = (() => { try { return JSON.parse(sessionStorage.getItem('usuarioLogado') || '{}'); } catch { return {}; } })();
-        let query = supabaseClient
-            .from('processos')
-            .select('id, numero_processo, pais_origem, pais_destino, excluido_em, excluido_por')
-            .eq('status', 'excluido')
-            .order('excluido_em', { ascending: false });
-        if (u?.empresa_id) query = query.eq('empresa_proprietaria_id', u.empresa_id);
-
-        const { data, error } = await query;
+        const { data, error } = await _todasAsLinhas(() => {
+            const query = supabaseClient
+                .from('processos')
+                .select('id, numero_processo, pais_origem, pais_destino, excluido_em, excluido_por')
+                .eq('status', 'excluido')
+                .order('excluido_em', { ascending: false });
+            return u?.empresa_id ? query.eq('empresa_proprietaria_id', u.empresa_id) : query;
+        });
         if (error) throw error;
 
         if (!data?.length) {

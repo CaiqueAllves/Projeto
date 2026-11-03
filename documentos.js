@@ -54,10 +54,12 @@ async function docCarregar(opcoes = {}) {
     _docNovoEmProforma = null;
 
     const usuario = obterUsuarioLogado();
-    let query = supabaseClient.from('proformas').select('*').neq('status', 'excluido').order('created_at', { ascending: false });
-    if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-    if (_docProformaUnica) query = query.eq('id', _docProformaUnica);
-    const { data, error } = await query;
+    const { data, error } = await _todasAsLinhas(() => {
+        let query = supabaseClient.from('proformas').select('*').neq('status', 'excluido').order('created_at', { ascending: false });
+        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+        if (_docProformaUnica) query = query.eq('id', _docProformaUnica);
+        return query;
+    });
     if (error) {
         container.innerHTML = '<div class="doc-vazio">Erro ao carregar proformas.</div>';
         return;
@@ -322,7 +324,7 @@ async function docGerarPdfLinha(ev, proformaId, chave) {
     const html = link?.innerHTML;
     if (link) link.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Gerando...';
     try {
-        const r = await gerarEAnexarDocumentoProcesso(tipoId, processoId);
+        const r = await gerarEAnexarDocumentoProcesso(tipoId, processoId, { perguntarIdioma: true });
         if (!r) { if (link) link.innerHTML = html; return; }   // usuário escolheu não substituir
         // o número gerado (CI-/PL-…) foi gravado no Processo
         const pr = _docProformas.find(p => String(p.id) === String(proformaId))?._processos?.find(x => x.id === processoId);

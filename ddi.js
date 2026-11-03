@@ -38,3 +38,24 @@ function telefoneWhatsapp(telefone, ddi) {
     if (cod) return digitos.startsWith(cod) && digitos.length > 11 ? digitos : cod + digitos;
     return digitos.length === 10 || digitos.length === 11 ? '55' + digitos : digitos;
 }
+
+// Telefone para mostrar (PDFs): "+55 11999998888" quando há DDI
+function telefoneComDdi(telefone, ddi) {
+    const tel = String(telefone || '').trim();
+    const cod = String(ddi || '').replace(/\D/g, '');
+    return tel && cod ? `+${cod} ${tel}` : tel;
+}
+
+// DDI escrito de qualquer jeito (planilha): "BR +55", "+55", "55", "Brasil +55" → "BR +55"
+function ddiNormalizar(valor) {
+    const txt = String(valor || '').trim().toUpperCase();
+    if (!txt) return '';
+    const sigla = (txt.match(/\b([A-Z]{2})\b/) || [])[1];
+    const dig = txt.replace(/\D/g, '');
+    if (sigla && PAISES_DDI[sigla] && (!dig || PAISES_DDI[sigla] === dig)) return `${sigla} +${PAISES_DDI[sigla]}`;
+    if (!dig) return '';
+    const preferido = { '1': 'US', '7': 'RU', '44': 'GB', '599': 'CW', '672': 'NF' }[dig];
+    const cod = preferido || Object.keys(PAISES_DDI).find(k => PAISES_DDI[k] === dig);
+    return cod ? `${cod} +${dig}` : '';
+}
+

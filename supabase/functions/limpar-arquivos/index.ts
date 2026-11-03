@@ -6,21 +6,28 @@
 // `arquivos_remover`. O navegador só consegue apagar os arquivos da própria
 // empresa; esta função, rodando com service_role, apaga o resto.
 //
-// Só aceita chamada com a chave service_role (agendamento do pg_cron —
-// ver o final de database-melhorias-2026-10.sql).
+// Só aceita a chamada do agendamento (pg_cron): cabeçalho x-limpeza-segredo
+// igual ao segredo LIMPEZA_SEGREDO da função (database-limpeza-agendamento.sql)
+// — assim a chave service_role não fica gravada no comando do agendamento.
+// A chave service_role no Authorization continua aceita.
 //
 // Deploy:
-//   supabase functions deploy limpar-arquivos
+//   supabase secrets set LIMPEZA_SEGREDO=<segredo>
+//   supabase functions deploy limpar-arquivos --no-verify-jwt
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const LIMPEZA_SEGREDO = Deno.env.get('LIMPEZA_SEGREDO') ?? '';
 const LOTE = 500;
 
 Deno.serve(async (req) => {
   const auth = req.headers.get('Authorization') ?? '';
-  if (!SERVICE_ROLE_KEY || auth !== `Bearer ${SERVICE_ROLE_KEY}`) {
+  const segredo = req.headers.get('x-limpeza-segredo') ?? '';
+  const porSegredo = LIMPEZA_SEGREDO.length >= 24 && segredo === LIMPEZA_SEGREDO;
+  const porChave = !!SERVICE_ROLE_KEY && auth === `Bearer ${SERVICE_ROLE_KEY}`;
+  if (!porSegredo && !porChave) {
     return new Response(JSON.stringify({ erro: 'nao_autorizado' }), { status: 401 });
   }
 

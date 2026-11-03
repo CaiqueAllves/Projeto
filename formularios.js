@@ -702,11 +702,11 @@ async function _carregarMoedas() {
 async function _carregarUnidades() {
     if (_acUnidades.length > 0) return;
     try {
-        const { data } = await supabaseClient
+        // .limit(10000) não passava de 1000 (limite do Supabase): busca em blocos
+        const { data } = await _todasAsLinhas(() => supabaseClient
             .from('apoio_unidades_medida')
             .select('unidade, descricao')
-            .order('unidade', { ascending: true })
-            .limit(10000);
+            .order('unidade', { ascending: true }), 'unidade');
         _acUnidades = data || [];
     } catch { _acUnidades = []; }
 }
@@ -1014,12 +1014,12 @@ async function _itemProdutosDoRemetente(ids) {
     const chave = [...ids].sort().join(',');
     if (_itemProdutosCache[chave]) return _itemProdutosCache[chave];
     const usuario = obterUsuarioLogado();
-    const { data, error } = await supabaseClient
+    const { data, error } = await _todasAsLinhas(() => supabaseClient
         .from('produtos')
         .select('id, nome, sku, unidade_medida, preco_venda, moeda, status')
         .eq('empresa_id', usuario.empresa_id)
         .in('empresa_parceira_id', ids)
-        .order('nome', { ascending: true });
+        .order('nome', { ascending: true }));
     if (error) return [];
     const lista = (data || []).filter(p => p.status !== 'inativo' && p.status !== 'excluido');
     _itemProdutosCache[chave] = lista;

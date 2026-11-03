@@ -45,8 +45,8 @@ async function _pdfProformaCompletar(d) {
         const parc = id => (parcs || []).find(p => String(p.id) === String(id));
         // 1º contato cadastrado de cada empresa (Exportador terceiro e Importador)
         if (ids.length) {
-            const { data: cts } = await supabaseClient.from('parceiro_contatos').select('parceiro_id, nome, email, telefone, ordem').in('parceiro_id', ids).order('ordem');
-            const contato = id => { const c = (cts || []).find(x => String(x.parceiro_id) === String(id)); return c ? [c.nome, c.email || c.telefone].filter(Boolean).join(' · ') : ''; };
+            const { data: cts } = await supabaseClient.from('parceiro_contatos').select('*').in('parceiro_id', ids).order('ordem');
+            const contato = id => { const c = (cts || []).find(x => String(x.parceiro_id) === String(id)); return c ? [c.nome, c.email || (typeof telefoneComDdi === 'function' ? telefoneComDdi(c.telefone, c.ddi) : c.telefone)].filter(Boolean).join(' · ') : ''; };
             if (d.emissor_tipo === 'terceiro') d._contato_exp = contato(d.parceiro_id);
             d._contato_imp = contato(d.destinatario_id);
         }
@@ -258,13 +258,36 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
         { nome: vv(d.destinatario_razao_social) || '—', rotulo: indireta ? t.assinatura_aceite_comprador : t.assinatura_aceite },
     ]);
 
-    // Termos e Condições Gerais de Venda Internacional (pdf-termos.js) nas páginas finais
-    if (typeof pvTermosGerais === 'function') pvTermosGerais(doc);
+    // Termos e Condições nas páginas finais (pdf-termos.js): opcoes.termos → escolha
+    // gravada na Proforma → padrão da empresa. Base = desenhado aqui; modelo da
+    // empresa = PDF anexado depois de pronto; 'nenhum' = sem Termos.
+    const termos = typeof termosResolver === 'function'
+        ? await termosResolver(opcoes.termos ?? d.termos_modelo)
+        : { tipo: 'base' };
+    if (termos.tipo === 'base' && typeof pvTermosGerais === 'function') pvTermosGerais(doc);
 
     pvRodape(doc, { t, textoDireita: `${t.proforma_invoice} ${codigo}` });
 
-    if (opcoes.retornarBlob) return doc.output('blob');
-    doc.save(`proforma_${codigo}_${new Date().toISOString().slice(0,10)}.pdf`);
+    const nomeArquivo = `proforma_${codigo}_${new Date().toISOString().slice(0,10)}.pdf`;
+    if (termos.tipo !== 'modelo') {
+        if (opcoes.retornarBlob) return doc.output('blob');
+        doc.save(nomeArquivo);
+        return;
+    }
+    let blob;
+    try {
+        blob = new Blob([await termosAnexarPdf(doc.output('arraybuffer'), termos.modelo)], { type: 'application/pdf' });
+    } catch (e) {
+        // PDF dos Termos ilegível ou fora do ar: não deixa de emitir a Proforma
+        if (!opcoes.retornarBlob) mostrarNotificacao(`Proforma emitida sem os Termos "${termos.modelo.nome}": ${e.message}`, 'aviso');
+        blob = doc.output('blob');
+    }
+    if (opcoes.retornarBlob) return blob;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nomeArquivo;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ========================================

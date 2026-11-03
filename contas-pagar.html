@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://mvgbgjqkxsptbndgoskw.supabase.co wss://mvgbgjqkxsptbndgoskw.supabase.co https://viacep.com.br https://brasilapi.com.br https://api.emailjs.com https://olinda.bcb.gov.br https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
     <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
     <meta name="theme-color" content="#4776ec">
@@ -14,9 +15,9 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Contas a Pagar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=fcfe125a">
+    <link rel="stylesheet" href="style-base.css?v=05b7d63f">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-financeiro.css?v=dd85f08d">
+    <link rel="stylesheet" href="style-financeiro.css?v=7a7f0a34">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -147,6 +148,17 @@
                     <select id="cpConta" disabled><option value="">Escolha o Plano de Contas primeiro</option></select>
                 </div>
             </div>
+            <div class="fin-form-row" id="cpTributoLinha" hidden>
+                <div class="fin-form-group fin-full">
+                    <label for="cpTributoRecuperavel">Tributo recuperável? <span style="color:#ef4444">*</span></label>
+                    <select id="cpTributoRecuperavel">
+                        <option value="">Selecione...</option>
+                        <option value="sim">Sim — crédito a recuperar (não entra no DRE)</option>
+                        <option value="nao">Não — custo tributário (entra no DRE)</option>
+                    </select>
+                </div>
+            </div>
+            <small class="fin-controle-aviso" id="cpControleAviso" hidden><i class="fa-solid fa-circle-info"></i> Conta de controle tributário: fica registrada, mas não entra no DRE.</small>
             <div class="fin-form-row" id="cpCategoriaDetalheLinha" hidden>
                 <div class="fin-form-group fin-full">
                     <label for="cpCategoriaDetalhe">Descreva a categoria <span style="color:#ef4444">*</span></label>
@@ -264,7 +276,7 @@
                         <input type="file" id="cpComprovanteExtra" hidden accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Comprovante adicional" onchange="finComprovanteExtraEscolhido('cp', this)">
                     </div>
                 </div>
-                <small class="fin-cambio-info">Preencha a data, o valor e anexe o comprovante quando o pagamento acontecer — a conta passa a <strong>Paga</strong> sozinha.</small>
+                <small class="fin-cambio-info">Preencha a data, o valor e anexe o comprovante quando o pagamento acontecer.</small>
                 </div>
             </div>
 
@@ -313,13 +325,13 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=c324da29"></script>
+<script src="supabase-api.js?v=5f5274b6"></script>
 <script src="auth.js?v=443d3cf2"></script>
-<script src="navegador.js?v=ba468009"></script>
+<script src="navegador.js?v=b52c2dea"></script>
 <script src="fin-moeda.js?v=7894e64c"></script>
-<script src="fin-lancamento.js?v=2090cf26"></script>
-<script src="historico.js?v=44fe843c"></script>
-<script src="contas-pagar.js?v=d29a6951"></script>
+<script src="fin-lancamento.js?v=5660f380"></script>
+<script src="historico.js?v=c0ecd265"></script>
+<script src="contas-pagar.js?v=97f0317d"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

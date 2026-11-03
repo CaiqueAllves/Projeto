@@ -1034,3 +1034,5 @@
 .fin-modal.fin-modo-anexo .fin-modal-body input[type="file"]:not([hidden]) { display: block; pointer-events: auto; background: #fff !important; }
 .fin-modal.fin-modo-anexo .fin-comp-add:not([hidden]) { display: inline-block; }
 .fin-modal.fin-modo-anexo .fin-comp-remover--novo { pointer-events: auto; background: #fee2e2 !important; }
+.fin-controle-aviso { display: block; margin: -6px 0 12px; font-size: 12px; color: #1e40af; }
+.fin-controle-aviso[hidden] { display: none; }

@@ -25,11 +25,33 @@ module.exports = {
             await pub.mouse.move(box.x + 30, box.y + 60); await pub.mouse.down();
             await pub.mouse.move(box.x + 150, box.y + 90, { steps: 8 }); await pub.mouse.move(box.x + 260, box.y + 50, { steps: 8 }); await pub.mouse.up();
             await pub.check('#asAceite');
+            // assinar já baixa a via assinada (Proforma + página de comprovante)
+            const baixou = pub.waitForEvent('download', { timeout: 30000 }).catch(() => null);
             await pub.click('#asAssinar');
             // espera concluir (baixa o PDF p/ o hash + grava) ou aparecer erro
             await pub.waitForFunction(() => !document.getElementById('asConcluido').hidden || !document.getElementById('asMsg').hidden, null, { timeout: 20000 }).catch(() => {});
             const msgErro = await pub.evaluate(() => document.getElementById('asMsg').hidden ? '' : document.getElementById('asMsg').textContent);
             h.esperar(await pub.isVisible('#asConcluido'), 'Assinatura não foi concluída' + (msgErro ? ': ' + msgErro : ''));
+            const via = await baixou;
+            h.esperar(via, 'A via assinada não foi baixada depois de assinar');
+            const fsVia = require('fs');
+            const paginas = async (arq) => pub.evaluate(async b64 => {
+                const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+                return (await PDFLib.PDFDocument.load(bytes)).getPageCount();
+            }, fsVia.readFileSync(await arq.path()).toString('base64'));
+            const nVia = await paginas(via);
+            const nOriginal = await pub.evaluate(async () => {
+                const r = await supabaseClient.rpc('assinatura_arquivo_url', { p_token: asToken });
+                return (await PDFLib.PDFDocument.load(await (await fetch(r.data)).arrayBuffer())).getPageCount();
+            });
+            h.igual(nVia, nOriginal + 1, 'Via assinada deveria ter as páginas da Proforma + 1 de comprovante');
+            // reabrir o link: botão de baixar de novo (database-assinatura-download.sql)
+            await pub.reload(); await pub.waitForTimeout(3000);
+            h.esperar(await pub.isVisible('#asBaixar'), 'Link já assinado sem o botão de baixar a via assinada');
+            {
+                const [de_novo] = await Promise.all([pub.waitForEvent('download', { timeout: 30000 }), pub.click('#asBaixar')]);
+                h.igual(await paginas(de_novo), nOriginal + 1, 'Via assinada baixada de novo com páginas erradas');
+            }
             await ctx.close();
             const st = await page.evaluate(async (id) => ({
                 status: (await supabaseClient.from('proformas').select('status').eq('id', id).single()).data.status,

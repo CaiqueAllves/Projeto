@@ -1,5 +1,5 @@
 // ========================================
-// HISTÓRICO DE RELATÓRIOS GERADOS (comum a relatorios.js e relatorios-produtos.js)
+// HISTÓRICO DE RELATÓRIOS GERADOS (relatorios.js)
 // ========================================
 // Fica no banco (relatorios_historico — database-melhorias-2026-10.sql), visível
 // para a equipe toda. Sem a tabela, continua no navegador como antes.

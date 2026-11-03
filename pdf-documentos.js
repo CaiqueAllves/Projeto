@@ -38,9 +38,9 @@ async function _docPdfCarregarDados(tipo, processoId) {
         : { data: [] };
     const parc = id => (parceiros || []).find(p => String(p.id) === String(id)) || null;
     const { data: contatos } = parceiroIds.length
-        ? await supabaseClient.from('parceiro_contatos').select('parceiro_id, nome, email, telefone, ordem').in('parceiro_id', parceiroIds).order('ordem')
+        ? await supabaseClient.from('parceiro_contatos').select('*').in('parceiro_id', parceiroIds).order('ordem')
         : { data: [] };
-    const contatoDe = id => { const c = (contatos || []).find(x => String(x.parceiro_id) === String(id)); return c ? [c.nome, c.email || c.telefone].filter(Boolean).join(' · ') : ''; };
+    const contatoDe = id => { const c = (contatos || []).find(x => String(x.parceiro_id) === String(id)); return c ? [c.nome, c.email || (typeof telefoneComDdi === 'function' ? telefoneComDdi(c.telefone, c.ddi) : c.telefone)].filter(Boolean).join(' · ') : ''; };
 
     // Exportador: trading (indireta), parceiro escolhido (Terceiro) ou a própria empresa (Usuário)
     let exportador;
@@ -104,8 +104,8 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     await carregarJsPDFSobDemanda();
     const d = await _docPdfCarregarDados(tipo, processoId);
     const { proc, prof } = d;
-    // Mesmo idioma da Proforma de origem (pdf-kit.js → pdfIdioma)
-    const I = pdfIdioma(prof?.idioma), t = I.t;
+    // Idioma escolhido na janela de emissão; sem ele, o da Proforma de origem (pdf-kit.js → pdfIdioma)
+    const I = pdfIdioma(opcoes.idioma || prof?.idioma), t = I.t;
     const titulo = tipo === 'commercial' ? t.commercial_invoice : t.packing_list;
     const vv = s => (s === null || s === undefined || String(s).trim() === '') ? '' : String(s);
     const moeda = d.itens.find(it => it.moeda)?.moeda || proc.moeda || '';
@@ -253,7 +253,7 @@ async function _docPdfRegistroAtual(tipo, processoId) {
 // Gera, baixa e anexa ao documento daquele Processo (tela Documentos). Se já
 // existe um arquivo anexado, PERGUNTA antes de substituir (Não = cancela tudo).
 // Substituir um documento assinado desfaz a assinatura (o arquivo é outro).
-async function gerarEAnexarDocumentoProcesso(tipo, processoId, { baixar = true, perguntar = true } = {}) {
+async function gerarEAnexarDocumentoProcesso(tipo, processoId, { baixar = true, perguntar = true, perguntarIdioma = false } = {}) {
     const cfg = DOC_PDF_CFG[tipo];
     const { atual } = await _docPdfRegistroAtual(tipo, processoId);
     if (perguntar && atual?.arquivo_path) {
@@ -271,13 +271,24 @@ async function gerarEAnexarDocumentoProcesso(tipo, processoId, { baixar = true, 
         if (!ok) return null;
     }
 
+    // Janela de emissão: idioma do documento, já marcado o da Proforma (pdf-termos.js)
+    let idioma = null;
+    if (perguntarIdioma && typeof pdfDialogoEmissao === 'function') {
+        const { data: proc } = await supabaseClient.from('processos').select('proforma_id, numero_processo').eq('id', processoId).maybeSingle();
+        const { data: prof } = proc?.proforma_id
+            ? await supabaseClient.from('proformas').select('idioma').eq('id', proc.proforma_id).maybeSingle() : { data: null };
+        const op = await pdfDialogoEmissao({ titulo: `Emitir ${cfg.titulo.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())} — ${proc?.numero_processo || ''}`, idioma: prof?.idioma || 'pt' });
+        if (!op) return null;
+        idioma = op.idioma;
+    }
+
     // Commercial Invoice: janela de colunas antes de gerar (ci-colunas.js)
     let ci = null;
     if (tipo === 'commercial' && typeof ciAbrirJanelaColunas === 'function') {
         ci = await ciAbrirJanelaColunas(processoId);
         if (!ci) return null;
     }
-    const r = await gerarPDFDocumentoProcesso(tipo, processoId, { ci });
+    const r = await gerarPDFDocumentoProcesso(tipo, processoId, { ci, idioma });
     if (!r) return null;
 
     if (baixar) {

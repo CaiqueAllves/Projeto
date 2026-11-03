@@ -61,10 +61,13 @@ async function dreCarregar() {
 
     _dreDados = {
         pagar, receber,
+        base: { pagar, receber },   // sem o filtro de tipo de venda
+        periodoBase: `${_dreFmtPeriodo(inicio)} a ${_dreFmtPeriodo(fim)}`,
         periodo: `${_dreFmtPeriodo(inicio)} a ${_dreFmtPeriodo(fim)}`,
         operacoes: null,
         previsto: null,   // { pagar, receber } em valores previstos; revisado idem
     };
+    if (document.getElementById('dreTipoVenda')?.value) return dreFiltrarTipoVenda();
     _dreRenderAviso();
     _dreRenderResultado();
     // operações/análise carregam os dados das Proformas sob demanda
@@ -79,6 +82,26 @@ function dreAbrirAba(aba) {
     document.getElementById('drePainelAnalise').hidden   = aba !== 'analise';
     document.getElementById('drePainelPrevisto').hidden  = aba !== 'previsto';
     _dreRenderAbaAtual();
+}
+
+// ── Tipo de venda (exportação direta × indireta / trading) ───────────────────
+// DRE separado da exportação indireta: recalcula todas as abas só com as contas
+// das Proformas daquele tipo. Contas sem Proforma ficam só em "Todas".
+const _DRE_TIPO_VENDA = { exportacao_direta: 'Exportação direta', exportacao_indireta: 'Exportação indireta (trading)' };
+const _dreTipoDaProforma = p => p ? (p.tipo === 'exportacao_indireta' ? 'exportacao_indireta' : 'exportacao_direta') : null;
+
+async function dreFiltrarTipoVenda() {
+    if (!_dreDados) return;
+    const tipo = document.getElementById('dreTipoVenda')?.value || '';
+    await _dreCarregarOperacoes();
+    const daOperacao = c => _dreTipoDaProforma(_dreDados.operacoes[_dreProformaDaConta(c)]) === tipo;
+    _dreDados.pagar   = tipo ? _dreDados.base.pagar.filter(daOperacao)   : _dreDados.base.pagar;
+    _dreDados.receber = tipo ? _dreDados.base.receber.filter(daOperacao) : _dreDados.base.receber;
+    _dreDados.periodo = _dreDados.periodoBase + (tipo ? ` · ${_DRE_TIPO_VENDA[tipo]}` : '');
+    _dreDados.previsto = null;
+    _dreRenderAviso();
+    _dreRenderResultado();
+    if (_dreAba !== 'resultado') await _dreRenderAbaAtual();
 }
 
 async function _dreRenderAbaAtual() {
@@ -113,7 +136,10 @@ function _dreRenderAviso() {
 //   − Custo Operacional (Bloco 4) = Margem Operacional
 //   ± Resultado Financeiro/Cambial (Bloco 5: ganhos − custos)
 //   − Outras despesas (sem conta do plano, pela categoria antiga)
-//   = Resultado (Bloco 6 / tributário entra depois)
+//   = Resultado antes dos tributos
+//   ± Resultado Tributário (Bloco 6: créditos/benefícios realizados − custo tributário)
+//   = Resultado Líquido
+// Bloco 6 fora do resultado: contas de controle e tributo na aquisição recuperável.
 // Subfatores "(-)" (descontos/devoluções de compra) reduzem o custo.
 function _dreApurar(pagar, receber) {
     const somar = (obj, chave, v) => { obj[chave] = (obj[chave] || 0) + v; };
@@ -121,10 +147,12 @@ function _dreApurar(pagar, receber) {
     const chaveConta = pc => `${pc.conta_codigo} — ${pc.conta_nome}`;
 
     const receitas = {}, deducoes = {}, ganhosFin = {};
+    const ganhosTrib = {}, custosTrib = {}, controleTrib = {}, creditosRec = {};
     receber.filter(_dreRecebido).forEach(c => {
         const v = _dreValor(c), pc = c.plano_contas;
         if (!pc) return somar(receitas, 'Não classificado', v);
         if (Number(pc.bloco) === 5) return somar(ganhosFin, chaveConta(pc), v);
+        if (Number(pc.bloco) === 6) return somar(pc.natureza === 'controle' ? controleTrib : ganhosTrib, chaveConta(pc), v);
         if (String(pc.conta_codigo).startsWith('1.90')) return somar(deducoes, chaveConta(pc), v);
         somar(receitas, chaveConta(pc), v);
     });
@@ -132,6 +160,13 @@ function _dreApurar(pagar, receber) {
     const custos = { 2: {}, 3: {}, 4: {} }, custosFin = {}, cats = {};
     pagar.filter(_drePago).forEach(c => {
         const v = _dreValor(c), pc = c.plano_contas, b = Number(pc?.bloco);
+        if (b === 6) {
+            if (pc.natureza === 'controle') return somar(controleTrib, chaveConta(pc), v);
+            if (pc.natureza === 'ganho') return somar(ganhosTrib, chaveConta(pc), v);
+            // tributo na aquisição: recuperável = crédito a recuperar (fora do resultado); sem resposta conta como custo
+            if (pc.natureza === 'tributo' && c.tributo_recuperavel === true) return somar(creditosRec, chaveConta(pc), v);
+            return somar(custosTrib, chaveConta(pc), v);
+        }
         if (!pc || ![2, 3, 4, 5].includes(b)) return somar(cats, c.categoria || 'outro', v);
         if (b === 5) {
             // ganho lançado em Contas a Pagar (ex.: diferença de liquidação a favor) reduz o custo financeiro
@@ -141,7 +176,7 @@ function _dreApurar(pagar, receber) {
         somar(custos[b], chaveConta(pc), sinal * v);
     });
 
-    const a = { receitas, deducoes, custos, ganhosFin, custosFin, cats };
+    const a = { receitas, deducoes, custos, ganhosFin, custosFin, cats, ganhosTrib, custosTrib, controleTrib, creditosRec };
     a.receitaBruta    = total(receitas);
     a.totalDeducoes   = total(deducoes);
     a.receitaLiquida  = a.receitaBruta - a.totalDeducoes;
@@ -155,8 +190,12 @@ function _dreApurar(pagar, receber) {
     a.margemComercial = a.margemBruta - a.totalComercial;
     a.margemOperac    = a.margemComercial - a.totalOperac;
     a.resultadoFin    = a.totalGanhosFin - a.totalCustosFin;
-    a.resultado       = a.margemOperac + a.resultadoFin - a.totalOutras;
-    a.custoTotal      = a.totalDireto + a.totalComercial + a.totalOperac + a.totalCustosFin + a.totalOutras;
+    a.resultadoAntesTrib = a.margemOperac + a.resultadoFin - a.totalOutras;
+    a.totalGanhosTrib = total(ganhosTrib);
+    a.totalCustosTrib = total(custosTrib);
+    a.resultadoTrib   = a.totalGanhosTrib - a.totalCustosTrib;
+    a.resultado       = a.resultadoAntesTrib + a.resultadoTrib;
+    a.custoTotal      = a.totalDireto + a.totalComercial + a.totalOperac + a.totalCustosFin + a.totalOutras + a.totalCustosTrib;
     a.pct = v => a.receitaLiquida > 0 ? (v / a.receitaLiquida * 100) : null;
     return a;
 }
@@ -233,7 +272,22 @@ function _dreRenderResultado() {
         linhas.push(_dreTotal('(=) TOTAL OUTRAS DESPESAS', a.totalOutras, 'vermelho'));
     }
 
+    // RESULTADO TRIBUTÁRIO (Bloco 6)
+    linhas.push(_dreTotal(comPct('(=) RESULTADO ANTES DOS TRIBUTOS', a.resultadoAntesTrib), a.resultadoAntesTrib, a.resultadoAntesTrib < 0 ? 'vermelho' : ''));
+    linhas.push(_dreSecao('RESULTADO TRIBUTÁRIO'));
+    Object.entries(a.ganhosTrib).forEach(([conta, val]) => linhas.push(_dreLinhaIndent(`(+) ${escHtml(conta)}`, val, 'verde')));
+    Object.entries(a.custosTrib).forEach(([conta, val]) => linhas.push(_dreLinhaIndent(`(-) ${escHtml(conta)}`, val, 'vermelho')));
+    if (!Object.keys(a.ganhosTrib).length && !Object.keys(a.custosTrib).length) linhas.push(vazio('Nenhum crédito ou custo tributário no período'));
+    linhas.push(_dreTotal('(=) RESULTADO TRIBUTÁRIO', a.resultadoTrib, a.resultadoTrib < 0 ? 'vermelho' : ''));
+
     linhas.push(_dreResultado(a.resultado, a.pct(a.resultado) ?? 0));
+
+    // Controle tributário: registrado, sem efeito no resultado
+    if (Object.keys(a.creditosRec).length || Object.keys(a.controleTrib).length) {
+        linhas.push(_dreSecao('CONTROLE TRIBUTÁRIO (não afeta o resultado)'));
+        Object.entries(a.creditosRec).forEach(([conta, val]) => linhas.push(_dreLinhaIndent(`Crédito a recuperar — ${escHtml(conta)}`, val)));
+        Object.entries(a.controleTrib).forEach(([conta, val]) => linhas.push(_dreLinhaIndent(escHtml(conta), val)));
+    }
     document.getElementById('dreTbody').innerHTML = linhas.join('');
 }
 
@@ -248,7 +302,8 @@ function _dreRenderIndicadores(a) {
         ['Custo Operacional', _drePctTxt(a.pct(a.totalOperac)), 'Bloco 4 ÷ Receita Líquida'],
         ['Margem Operacional', _drePctTxt(a.pct(a.margemOperac)), 'Margem Operacional ÷ Receita Líquida'],
         ['Custo Financeiro', _drePctTxt(a.pct(a.totalCustosFin)), 'Custos financeiros ÷ Receita Líquida'],
-        ['Margem Líquida', _drePctTxt(a.pct(a.resultado)), 'Resultado ÷ Receita Líquida'],
+        ['Carga Tributária', _drePctTxt(a.pct(a.totalCustosTrib)), 'Custo tributário (Bloco 6) ÷ Receita Líquida'],
+        ['Margem Líquida', _drePctTxt(a.pct(a.resultado)), 'Resultado Líquido ÷ Receita Líquida'],
         ['Markup s/ CMV/CSV', markup === null ? '—' : `${markup.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`, 'Receita Líquida ÷ Custo Direto'],
         ['Retorno s/ Custo Total', _drePctTxt(retorno), 'Resultado ÷ Custo Total'],
     ];
@@ -268,12 +323,12 @@ function _dreProformaDaConta(c) {
 
 async function _dreCarregarOperacoes() {
     if (_dreDados.operacoes) return;
-    const { pagar, receber } = _dreDados;
+    const { pagar, receber } = _dreDados.base || _dreDados;
     const ids = [...new Set([...pagar, ...receber].map(_dreProformaDaConta).filter(Boolean))];
     const mapa = {};
     if (ids.length) {
         const { data } = await supabaseClient.from('proformas')
-            .select('id, codigo, destino_pais, incoterm, modal, itens, emissor_tipo, parceiro_id, destinatario_id, destinatario_razao_social')
+            .select('id, codigo, tipo, destino_pais, incoterm, modal, itens, emissor_tipo, parceiro_id, destinatario_id, destinatario_razao_social')
             .in('id', ids);
         const parcIds = [...new Set((data || []).map(p => p.destinatario_id).filter(Boolean))];
         const nomes = {};
@@ -304,7 +359,7 @@ function _dreAgruparPorOperacao() {
     pagar.forEach(c => g(_dreProformaDaConta(c)).pagar.push(c));
     receber.forEach(c => g(_dreProformaDaConta(c)).receber.push(c));
     return Object.values(grupos).map(gr => ({ ...gr, proforma: gr.id ? operacoes[gr.id] : null, a: _dreApurar(gr.pagar, gr.receber) }))
-        .filter(gr => gr.a.receitaLiquida || gr.a.custoTotal || gr.a.totalGanhosFin);
+        .filter(gr => gr.a.receitaLiquida || gr.a.custoTotal || gr.a.totalGanhosFin || gr.a.totalGanhosTrib);
 }
 
 // ── Aba: Por operação (7.15) ─────────────────────────────────────────────────
@@ -319,11 +374,11 @@ function _dreRenderOperacoes() {
         <table class="dre-grade">
             <thead><tr>
                 <th>Operação</th><th>Receita Líquida</th><th>Custo Direto</th><th>Comercial</th><th>Operacional</th>
-                <th>Financeiro</th><th>Resultado</th><th>Margem</th><th>Qtd</th><th>Custo unit.</th><th>Receita unit.</th><th>Lucro unit.</th>
+                <th>Financeiro</th><th>Tributário</th><th>Resultado</th><th>Margem</th><th>Qtd</th><th>Custo unit.</th><th>Receita unit.</th><th>Lucro unit.</th>
             </tr></thead>
             <tbody>${lista.map(({ proforma: p, a }) => {
                 const { qtd, unidade } = _dreQuantidade(p);
-                const custoUnitario = a.custoTotal - a.totalGanhosFin;   // custo total líquido dos ganhos financeiros
+                const custoUnitario = a.custoTotal - a.totalGanhosFin - a.totalGanhosTrib;   // custo total líquido dos ganhos financeiros e créditos tributários
                 const titulo = p
                     ? `<strong>${escHtml(p.codigo || '—')}</strong><br><span class="dre-sub">${escHtml(p.cliente)} · ${escHtml(p.destino_pais || '—')} · ${escHtml((p.incoterm || '').toUpperCase() || '—')}</span>`
                     : '<em>Sem operação vinculada</em>';
@@ -331,6 +386,7 @@ function _dreRenderOperacoes() {
                     <td>${titulo}</td>
                     <td>${fmt(a.receitaLiquida)}</td><td>${fmt(a.totalDireto)}</td><td>${fmt(a.totalComercial)}</td><td>${fmt(a.totalOperac)}</td>
                     <td>${fmt(-a.resultadoFin)}</td>
+                    <td>${fmt(-a.resultadoTrib)}</td>
                     <td class="${a.resultado < 0 ? 'dre-neg' : 'dre-pos'}">${fmt(a.resultado)}</td>
                     <td>${_drePctTxt(a.pct(a.resultado))}</td>
                     <td>${qtd ? `${qtd.toLocaleString('pt-BR')} ${escHtml(unidade)}` : '—'}</td>
@@ -372,6 +428,7 @@ function dreRenderAnalise() {
         incoterm: g => (g.proforma?.incoterm || '').toUpperCase(),
         modal: g => g.proforma?.modal,
         moeda: g => [...new Set(g.receber.filter(_dreRecebido).map(c => c.moeda || 'BRL'))].join(' + '),
+        tipo: g => _DRE_TIPO_VENDA[_dreTipoDaProforma(g.proforma)],
     }[dim];
     const grupos = {};
     _dreAgruparPorOperacao().forEach(g => {
@@ -466,7 +523,8 @@ function dreRenderPrevisto() {
         ['Custo Operacional', a => a.totalOperac, false],
         ['Resultado Financeiro / Cambial', a => a.resultadoFin, true],
         ['Outras despesas (sem conta)', a => a.totalOutras, false],
-        ['Resultado', a => a.resultado, true],
+        ['Resultado Tributário', a => a.resultadoTrib, true],
+        ['Resultado Líquido', a => a.resultado, true],
         ['Margem Líquida', a => a.pct(a.resultado), true, true],
     ];
     el.innerHTML = `

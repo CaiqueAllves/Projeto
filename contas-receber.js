@@ -49,8 +49,10 @@ let _crPlanoContasTodas = [];
 
 async function _crCarregarPlanoContas() {
     try {
-        const res = await buscarPlanoContas([1, 5]);
-        if (res.sucesso) _crPlanoContasTodas = (res.data || []).filter(c => Number(c.bloco) === 1 || ['ganho', 'ambos'].includes(c.natureza));
+        // + Bloco 6: créditos/benefícios tributários realizados (ganho/ambos) e contas de controle
+        const res = await buscarPlanoContas([1, 5, 6]);
+        if (res.sucesso) _crPlanoContasTodas = (res.data || []).filter(c => Number(c.bloco) === 1 || ['ganho', 'ambos'].includes(c.natureza)
+            || (Number(c.bloco) === 6 && c.natureza === 'controle'));
     } catch (e) {
         console.warn('[Contas a Receber] Falha ao carregar plano de contas:', e);
     }
@@ -74,7 +76,7 @@ async function _crVerificarGeracaoViaUrl() {
     if (proformaId) {
         const { data: proforma } = await supabaseClient
             .from('proformas')
-            .select('id, codigo, destinatario_id, destinatario_razao_social, valor_total, moeda_principal')
+            .select('id, codigo, destinatario_id, destinatario_razao_social, valor_total, moeda_principal, tipo')
             .eq('id', proformaId).maybeSingle();
         if (proforma) {
             // destinatario_id é BIGINT — referencia "parceiros", não "empresas"
@@ -92,7 +94,8 @@ async function _crVerificarGeracaoViaUrl() {
                 proformaId:   proforma.id,
                 proformaNome: proforma.codigo || '',
                 valor:        proforma.valor_total || '',
-                moeda:        proforma.moeda_principal || 'BRL',
+                // exportação indireta: venda para a trading, em reais
+                moeda:        proforma.tipo === 'exportacao_indireta' ? 'BRL' : (proforma.moeda_principal || 'BRL'),
             });
         }
     } else if (processoId) {
@@ -106,7 +109,7 @@ async function _crVerificarGeracaoViaUrl() {
         if (processo) {
             const moedaItens = (Array.isArray(processo.itens) ? processo.itens : []).find(i => i.moeda)?.moeda;
         const { data: profOrigem } = processo.proforma_id
-            ? await supabaseClient.from('proformas').select('codigo').eq('id', processo.proforma_id).maybeSingle()
+            ? await supabaseClient.from('proformas').select('codigo, tipo').eq('id', processo.proforma_id).maybeSingle()
             : { data: null };
             let clienteNome = '';
             if (!processo.proforma_id && processo.empresa_parceira_id) {
@@ -122,7 +125,7 @@ async function _crVerificarGeracaoViaUrl() {
                 clienteId:    processo.proforma_id ? null : (processo.empresa_parceira_id || null),
                 clienteNome,
                 valor:        processo.valor_total || '',
-                moeda:        moedaItens || processo.moeda || 'BRL',
+                moeda:        profOrigem?.tipo === 'exportacao_indireta' ? 'BRL' : (moedaItens || processo.moeda || 'BRL'),
             });
         }
     }
@@ -484,7 +487,7 @@ async function _crListarParceiros(termo) {
             .from('parceiros')
             .select('id, razao_social, nome_fantasia')
             .limit(termo ? 8 : 15);
-        if (termo) query = query.or(`razao_social.ilike.%${termo}%,nome_fantasia.ilike.%${termo}%`);
+        if (termo) query = query.or(`razao_social.ilike."%${filtroTexto(termo)}%",nome_fantasia.ilike."%${filtroTexto(termo)}%"`);
         else query = query.order('razao_social', { ascending: true });
         if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         const { data } = await query;
@@ -564,6 +567,8 @@ async function crSelecionarProforma(id, codigo) {
 let _crProformaProcessos = [];
 
 function _crResetCamposDerivados() {
+    const avisoInd = document.getElementById('crIndiretaInfo');
+    if (avisoInd) avisoInd.hidden = true;
     const clienteInput  = document.getElementById('crClienteNome');
     const processoInput = document.getElementById('crProcessoNome');
     clienteInput.readOnly = false;
@@ -601,9 +606,13 @@ async function _crDerivarDaProforma(proformaId) {
 
         const { data: proforma } = await supabaseClient
             .from('proformas')
-            .select('destinatario_id, destinatario_razao_social, valor_total, moeda_principal')
+            .select('destinatario_id, destinatario_razao_social, valor_total, moeda_principal, tipo')
             .eq('id', proformaId)
             .single();
+        // Exportação indireta: o cliente é a trading (destinatário da Proforma) e a venda é em reais
+        const indireta = proforma?.tipo === 'exportacao_indireta';
+        const avisoInd = document.getElementById('crIndiretaInfo');
+        if (avisoInd) avisoInd.hidden = !indireta;
 
         let nomeCliente = proforma?.destinatario_razao_social || '';
         if (proforma?.destinatario_id) {
@@ -622,7 +631,7 @@ async function _crDerivarDaProforma(proformaId) {
         if (!valorInput.value.trim() && proforma?.valor_total) {
             valorInput.value = _crFormatarMonetario(proforma.valor_total);
             const selMoeda = document.getElementById('crPrevMoeda');
-            const moeda = finMoedaParaOpcao(selMoeda, proforma.moeda_principal);
+            const moeda = finMoedaParaOpcao(selMoeda, indireta ? 'BRL' : proforma.moeda_principal);
             if (moeda) selMoeda.value = moeda;
             _finLinhaCambio('crPrev', { forcar: true });
         }

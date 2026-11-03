@@ -1395,11 +1395,13 @@ function _empPreencherDoUpload(dados) {
 
     // Contato (e-mail e telefone do 1º contato)
     const primeiroContato = document.querySelector('#emp-contato-rows .contato-lista-row');
-    if (primeiroContato && (dados.email_contato || dados.telefone_contato || dados.contato_nome || dados.contato_cargo)) {
+    if (primeiroContato && (dados.email_contato || dados.telefone_contato || dados.contato_nome || dados.contato_cargo || dados.ddi_contato)) {
         const ins = primeiroContato.querySelectorAll('input');
         if (ins[0] && dados.contato_cargo) ins[0].value = String(dados.contato_cargo).toUpperCase();
         if (ins[1] && dados.contato_nome)  ins[1].value = String(dados.contato_nome).toUpperCase();
         if (ins[2] && dados.email_contato)    ins[2].value = dados.email_contato.toLowerCase();
         if (ins[3] && dados.telefone_contato) ins[3].value = String(dados.telefone_contato).replace(/\D/g, '');
+        const ddi = typeof ddiNormalizar === 'function' ? ddiNormalizar(dados.ddi_contato) : '';
+        if (ddi) _empDdiDefinir(primeiroContato.querySelector('.contato-ddi-select'), ddi);
     }
 }

@@ -369,9 +369,6 @@ function destacarMenuAtivo() {
         'documentos.html':          'submenu-documentos-cadastro',
         'chamados-admin.html':      'menu-chamados-admin',
         'relatorios.html':          'menu-relatorios',
-        'relatorios-produtos.html': 'menu-relatorios',
-        'relatorios-proforma.html': 'menu-relatorios',
-        'relatorios-processos.html':'menu-relatorios',
 
         // Comercial
         'proposta.html':              'submenu-proposta',

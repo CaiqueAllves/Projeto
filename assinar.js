@@ -9,6 +9,7 @@ const AS_BUCKET = 'proforma-documentos-assinados';
 const asToken = new URLSearchParams(location.search).get('t') || '';
 let asDados = null;
 let asTemTraco = false;
+let asAssinatura = null;   // { nome, documento, cargo, email, imagem, hash, assinado_em }
 
 const $ = id => document.getElementById(id);
 const asEsc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -39,6 +40,8 @@ async function asCarregar() {
 
     if (data.status === 'assinado') {
         $('asConcluidoTexto').textContent = `A Proforma ${data.proforma.codigo} já foi assinada por ${data.assinante_nome} em ${asData(data.assinado_em)}.`;
+        // dados da assinatura (database-assinatura-download.sql): permite baixar de novo
+        if (data.assinatura) { asAssinatura = data.assinatura; $('asBaixar').hidden = false; }
         return asMostrar('asConcluido');
     }
     if (data.status === 'expirado') return asErro('Link expirado', `Este link venceu em ${asData(data.expira_em)}. Peça um novo link a quem enviou.`);
@@ -141,11 +144,116 @@ async function asAssinar() {
         asValidar();
         return;
     }
-    $('asConcluidoTexto').textContent = `Obrigado, ${$('asNome').value.trim()}. A Proforma ${asDados.proforma.codigo} foi assinada em ${asData(data.assinado_em)}. Você já pode fechar esta página.`;
+    asAssinatura = { nome: $('asNome').value.trim(), documento: $('asDocumento').value.trim(), cargo: $('asCargo').value.trim(),
+        email: $('asEmail').value.trim(), imagem, hash, assinado_em: data.assinado_em };
+    $('asConcluidoTexto').textContent = `Obrigado, ${asAssinatura.nome}. A Proforma ${asDados.proforma.codigo} foi assinada em ${asData(data.assinado_em)}. A sua via assinada está sendo baixada.`;
+    $('asBaixar').hidden = false;
     asMostrar('asConcluido');
+    asBaixarAssinada();
+}
+
+// ── Via assinada: PDF da Proforma + página de comprovante no fim (pdf-lib) ──
+let _asPdfLib = null;
+function asCarregarPdfLib() {
+    if (window.PDFLib) return Promise.resolve();
+    return _asPdfLib ||= new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+        s.integrity = 'sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI';   // SRI
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = () => { _asPdfLib = null; reject(new Error('Falha ao carregar o gerador de PDF.')); };
+        document.head.appendChild(s);
+    });
+}
+
+// A fonte padrão do PDF só tem os caracteres latinos (WinAnsi): o resto vira "?"
+const asTextoPdf = v => String(v ?? '').replace(/[\u2013\u2014]/g, '-').replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');
+
+async function asBaixarAssinada() {
+    const a = asAssinatura;
+    if (!a) return;
+    const btn = $('asBaixar'), html = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Preparando o PDF...';
+    try {
+        await asCarregarPdfLib();
+        const { PDFDocument, StandardFonts, rgb } = PDFLib;
+        let doc = null;
+        // PDF original da Proforma (link temporário do mesmo prazo do link de assinatura)
+        const r = await supabaseClient.rpc('assinatura_arquivo_url', { p_token: asToken });
+        if (!r.error && typeof r.data === 'string' && /^https:\/\//.test(r.data)) {
+            try { doc = await PDFDocument.load(await (await fetch(r.data)).arrayBuffer(), { ignoreEncryption: true }); } catch (_) { doc = null; }
+        }
+        if (!doc) doc = await PDFDocument.create();
+
+        const pag = doc.addPage([595.28, 841.89]);   // A4 em pé
+        const f = await doc.embedFont(StandardFonts.Helvetica), fb = await doc.embedFont(StandardFonts.HelveticaBold);
+        const navy = rgb(10 / 255, 40 / 255, 90 / 255), cinza = rgb(100 / 255, 116 / 255, 139 / 255), preto = rgb(15 / 255, 23 / 255, 42 / 255);
+        const M = 50, L = 595.28 - 2 * M;
+        let y = 790;
+        const txt = (t, x, yy, tam = 10, fonte = f, cor = preto) => pag.drawText(asTextoPdf(t), { x, y: yy, size: tam, font: fonte, color: cor });
+        const quebrar = (t, tam, larg, fonte = f) => {
+            const linhas = []; let atual = '';
+            asTextoPdf(t).split(/\s+/).forEach(p => {
+                const tenta = atual ? atual + ' ' + p : p;
+                if (fonte.widthOfTextAtSize(tenta, tam) > larg && atual) { linhas.push(atual); atual = p; } else atual = tenta;
+            });
+            if (atual) linhas.push(atual);
+            return linhas;
+        };
+        pag.drawRectangle({ x: 0, y: 812, width: 595.28, height: 30, color: navy });
+        txt('COMPROVANTE DE ASSINATURA', M, 822, 13, fb, rgb(1, 1, 1));
+        txt(`Proforma ${asDados?.proforma?.codigo || ''}`, M, y - 20, 16, fb, navy);
+        y -= 50;
+        const linha = (rot, val) => {
+            txt(rot, M, y, 9, fb, cinza);
+            quebrar(val || '-', 10, L - 150).forEach((l, i) => txt(l, M + 150, y - i * 13, 10));
+            y -= Math.max(1, quebrar(val || '-', 10, L - 150).length) * 13 + 6;
+        };
+        const p = asDados?.proforma || {};
+        linha('Exportador', p.exportador);
+        linha('Importador', [p.importador, p.importador_doc].filter(Boolean).join(' - '));
+        linha('Assinado por', a.nome);
+        linha('CPF / CNPJ / Passaporte', a.documento);
+        if (a.cargo) linha('Cargo', a.cargo);
+        if (a.email) linha('E-mail', a.email);
+        linha('Assinado em', asData(a.assinado_em));
+        linha('Hash SHA-256 do PDF', a.hash || '-');
+        y -= 10;
+        txt('Assinatura', M, y, 9, fb, cinza);
+        y -= 8;
+        pag.drawRectangle({ x: M, y: y - 130, width: L, height: 130, borderColor: rgb(0.82, 0.86, 0.92), borderWidth: 1 });
+        if (a.imagem && /^data:image\/png;base64,/.test(a.imagem)) {
+            try {
+                const img = await doc.embedPng(a.imagem);
+                const esc = Math.min((L - 20) / img.width, 120 / img.height);
+                pag.drawImage(img, { x: M + (L - img.width * esc) / 2, y: y - 125, width: img.width * esc, height: img.height * esc });
+            } catch (_) { /* imagem inválida: o quadro fica em branco */ }
+        }
+        y -= 150;
+        quebrar('Assinatura eletrônica realizada pelo link enviado ao assinante, com aceite expresso dos termos da Proforma. '
+            + 'Data/hora, endereço IP, navegador e hash do documento foram registrados no momento da assinatura '
+            + '(MP 2.200-2/2001, art. 10, par. 2 - Lei 14.063/2020).', 8.5, L).forEach(l => { txt(l, M, y, 8.5, f, cinza); y -= 12; });
+
+        const blob = new Blob([await doc.save()], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Proforma_${String(asDados?.proforma?.codigo || 'assinada').replace(/[^a-zA-Z0-9_-]/g, '_')}_assinada.pdf`;
+        document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e) {
+        $('asConcluidoTexto').textContent += ' Não foi possível gerar o PDF agora — toque em "Baixar Proforma assinada" para tentar de novo.';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = html;
+    }
 }
 
 ['asNome', 'asDocumento', 'asAceite'].forEach(id => $(id).addEventListener('input', asValidar));
 $('asAceite').addEventListener('change', asValidar);
 $('asAssinar').addEventListener('click', asAssinar);
+$('asBaixar').addEventListener('click', asBaixarAssinada);
 asCarregar();

@@ -33,7 +33,10 @@ import bcrypt from 'npm:bcryptjs@2.4.3';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-const MAX_TENTATIVAS = 5;
+const MAX_TENTATIVAS = 5;           // por CPF + IP (e por conta, sem a tabela login_tentativas)
+const MAX_TENTATIVAS_CONTA = 20;    // por conta, somando todos os endereços
+const MAX_TENTATIVAS_IP = 30;       // por endereço, qualquer CPF, numa janela de 1 h
+const JANELA_MINUTOS = 60;
 const BLOQUEIO_MINUTOS = 15;
 // Uma só mensagem para CPF inexistente, senha errada e conta bloqueada — não
 // revela qual foi o caso (nem se o CPF existe).
@@ -95,6 +98,35 @@ async function vincularAuth(admin: ReturnType<typeof createClient>, usuario: any
   return authId;
 }
 
+// ── Tentativas por CPF + IP e por IP (database-login-tentativas.sql) ──────
+// Um CPF conhecido não basta mais para travar a conta do cliente: o bloqueio
+// de 5 erros vale para aquele CPF naquele endereço. null = sem a tabela.
+function ipDaRequisicao(req: Request): string {
+  return (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || req.headers.get('cf-connecting-ip') || 'desconhecido';
+}
+
+async function limitesLer(admin: ReturnType<typeof createClient>, chaves: string[]) {
+  const { data, error } = await admin.from('login_tentativas').select('*').in('chave', chaves);
+  if (error) return null;
+  return Object.fromEntries((data ?? []).map((r: any) => [r.chave, r]));
+}
+
+const limiteAtivo = (r: any) => !!r?.bloqueado_ate && new Date(r.bloqueado_ate).getTime() > Date.now();
+
+async function limiteErro(admin: ReturnType<typeof createClient>, chave: string, atual: any, max: number) {
+  const agora = Date.now();
+  const recomeca = !atual
+    || agora - new Date(atual.janela_inicio).getTime() > JANELA_MINUTOS * 60000
+    || (atual.bloqueado_ate && new Date(atual.bloqueado_ate).getTime() <= agora);
+  const erros = (recomeca ? 0 : atual.erros) + 1;
+  await admin.from('login_tentativas').upsert({
+    chave, erros,
+    janela_inicio: recomeca ? new Date(agora).toISOString() : atual.janela_inicio,
+    bloqueado_ate: erros >= max ? new Date(agora + BLOQUEIO_MINUTOS * 60000).toISOString() : null,
+    atualizado_em: new Date(agora).toISOString(),
+  });
+}
+
 async function tratar(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
@@ -111,6 +143,19 @@ async function tratar(req: Request): Promise<Response> {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+    const ip = ipDaRequisicao(req);
+    const chavePar = `par:${cpf}|${ip}`, chaveIp = `ip:${ip}`;
+    const limites = await limitesLer(admin, [chavePar, chaveIp]);
+    // CPF+IP ou endereço bloqueados: mesma resposta da senha errada, sem conferir a senha
+    if (limites && (limiteAtivo(limites[chavePar]) || limiteAtivo(limites[chaveIp]))) {
+      return jsonResponse({ sucesso: false, mensagem: MSG_FALHA }, 401);
+    }
+    const registrarErro = async () => {
+      if (!limites) return;
+      await limiteErro(admin, chavePar, limites[chavePar], MAX_TENTATIVAS);
+      await limiteErro(admin, chaveIp, limites[chaveIp], MAX_TENTATIVAS_IP);
+    };
+
     const { data: usuario, error } = await admin
       .from('usuarios')
       .select('id, cpf, nome_completo, email, perfil, ativo, bloqueado_ate, tentativas_login, senha_hash, empresa_id, avatar_url, auth_id, empresas(razao_social, status, expira_em)')
@@ -118,6 +163,7 @@ async function tratar(req: Request): Promise<Response> {
       .single();
 
     if (error || !usuario) {
+      await registrarErro();   // varrer CPFs a partir do mesmo endereço também conta
       return jsonResponse({ sucesso: false, mensagem: MSG_FALHA }, 401);
     }
 
@@ -138,9 +184,10 @@ async function tratar(req: Request): Promise<Response> {
     }
 
     if (!senhaCorreta) {
+      await registrarErro();
       const tentativas = (usuario.tentativas_login || 0) + 1;
       const atualizacao: Record<string, unknown> = { tentativas_login: tentativas };
-      if (tentativas >= MAX_TENTATIVAS) {
+      if (tentativas >= (limites ? MAX_TENTATIVAS_CONTA : MAX_TENTATIVAS)) {
         atualizacao.bloqueado_ate = new Date(Date.now() + BLOQUEIO_MINUTOS * 60000).toISOString();
       }
       await admin.from('usuarios').update(atualizacao).eq('id', usuario.id);
@@ -154,6 +201,11 @@ async function tratar(req: Request): Promise<Response> {
     };
     if (eraTextoPuro) atualizacaoSucesso.senha_hash = bcrypt.hashSync(senha, 10); // upgrade transparente
     await admin.from('usuarios').update(atualizacaoSucesso).eq('id', usuario.id);
+    if (limites) {
+      await admin.from('login_tentativas').delete().eq('chave', chavePar);
+      // limpeza ocasional dos registros antigos
+      if (Math.random() < 0.05) await admin.from('login_tentativas').delete().lt('atualizado_em', new Date(Date.now() - 86400000).toISOString());
+    }
 
     try {
       await vincularAuth(admin, usuario, senha);

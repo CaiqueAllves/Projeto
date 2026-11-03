@@ -236,6 +236,23 @@ async function salvarProduto(e) {
     const textoOriginal = btn?.innerHTML;
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...'; }
 
+    // Imagem escolhida no ícone de upload: antes só aparecia na pré-visualização e
+    // se perdia ao salvar. Agora sobe em WebP (bucket "logos", pasta da empresa)
+    // e o endereço dela vai para o campo "URL da Imagem do Produto".
+    const arquivoImg = document.getElementById('prod-imagem-file')?.files?.[0];
+    if (arquivoImg) {
+        const img = await window.supabaseAPI.enviarImagemLogo(arquivoImg, 'produto', 1600);
+        if (!img.sucesso) {
+            if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal; }
+            mostrarNotificacao('Não foi possível enviar a imagem do produto: ' + img.mensagem, 'erro');
+            return;
+        }
+        dados.imagem_url = img.url;
+        const campoUrl = document.getElementById('prod-imagem-url');
+        if (campoUrl) campoUrl.value = img.url;
+        prodRemoverImagem();
+    }
+
     const jaExistia = !!_prodEditandoId;
     const res = jaExistia
         ? await window.supabaseAPI.editarProduto(_prodEditandoId, dados)
@@ -2063,7 +2080,7 @@ function iniciarAutocompleteEmbalagemProduto() {
         const q = input.value.trim().toLowerCase();
         try {
             let query = supabaseClient.from('embalagens').select('codigo, descricao').order('descricao');
-            if (q) query = query.or(`descricao.ilike.%${q}%,codigo.ilike.%${q}%`);
+            if (q) query = query.or(`descricao.ilike."%${filtroTexto(q)}%",codigo.ilike."%${filtroTexto(q)}%"`);
             // Tabela de apoio tem 62 tipos cadastrados — limite de 30 cortava
             // a lista pela metade (tudo de "ESTOJO" em diante, em ordem
             // alfabética, nunca aparecia sem digitar um filtro específico).
@@ -2110,7 +2127,7 @@ function iniciarAutocompleteAcondicionamentoProduto() {
         const q = input.value.trim().toLowerCase();
         try {
             let query = supabaseClient.from('apoio_acondicionamento').select('numero, descricao').order('descricao');
-            if (q) query = query.or(`descricao.ilike.%${q}%,numero.ilike.%${q}%`);
+            if (q) query = query.or(`descricao.ilike."%${filtroTexto(q)}%",numero.ilike."%${filtroTexto(q)}%"`);
             const { data } = await query.limit(30);
             if (!data?.length) { lista.classList.remove('aberta'); return; }
             lista.innerHTML = data.map(a => `

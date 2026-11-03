@@ -693,8 +693,9 @@ function previewFoto(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-        mostrarToast('A foto deve ter no máximo 2MB.', 'erro');
+    // a foto é reduzida e convertida para WebP no envio (uploadFoto)
+    if (file.size > 15 * 1024 * 1024) {
+        mostrarToast('A foto deve ter no máximo 15MB.', 'erro');
         return;
     }
 
@@ -713,6 +714,7 @@ function previewFoto(event) {
 }
 
 async function uploadFoto(file) {
+    file = await window.supabaseAPI.imagemParaWebp(file, { lado: 512 });   // foto de perfil em WebP, 512 px
     const fileName = `avatar_${usuarioAtual.id}_${Date.now()}.${file.name.split('.').pop()}`;
 
     // Upload para Supabase Storage (bucket 'avatars')

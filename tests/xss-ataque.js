@@ -72,7 +72,7 @@ const P = (campo) => `X"'><img src=x onerror="__xss.push('${campo}')">`;
     await visitar('processos.html?semabas=1', `abrirHistorico('processo','${ids.processos[0]}','x')`, 'histórico processo');
     await visitar('processos.html?semabas=1', `void ciAbrirJanelaColunas('${ids.processos[0]}')`, 'janela colunas CI');
     await visitar('processos.html?semabas=1', () => { document.querySelectorAll('.view-btn, [data-view]').forEach(b => b.click()); }, 'outra visão');
-    for (const t of ['produtos.html', 'cadastros.html', 'contas-pagar.html', 'contas-receber.html', 'fluxo-caixa.html', 'dre.html', 'pipeline.html', 'proposta.html', 'pipeline-financeiro.html', 'inicio.html', 'relatorios.html', 'relatorios-proforma.html', 'relatorios-processos.html', 'relatorios-produtos.html', 'relatorios-financeiro.html', 'relatorios-comercial.html'])
+    for (const t of ['produtos.html', 'cadastros.html', 'contas-pagar.html', 'contas-receber.html', 'fluxo-caixa.html', 'dre.html', 'pipeline.html', 'proposta.html', 'pipeline-financeiro.html', 'inicio.html', 'relatorios.html', 'relatorios-financeiro.html', 'relatorios-comercial.html'])
       await visitar(t + '?semabas=1');
     await visitar(`formularios.html?tab=proposta&id=${ids.proforma}&semabas=1`);
     await visitar(`formularios.html?tab=proposta&id=${ids.proforma}&modo=visualizar&semabas=1`);

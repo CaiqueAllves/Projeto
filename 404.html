@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#4776ec">
+    <title>Marpex | Página não encontrada</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+               background: linear-gradient(135deg, #4776ec 0%, #4271e9 50%, #3b5bdb 100%);
+               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #fff; text-align: center; padding: 24px; }
+        .codigo { font-size: 64px; font-weight: 800; letter-spacing: 2px; opacity: .9; }
+        h1 { font-size: 22px; margin: 8px 0 8px; }
+        p { margin: 0 0 24px; opacity: .9; line-height: 1.5; max-width: 340px; }
+        a { display: inline-block; background: #fff; color: #3b5bdb; border-radius: 10px; padding: 12px 28px; font-size: 15px; font-weight: 600; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="codigo">404</div>
+        <h1>Página não encontrada</h1>
+        <p>O endereço que você abriu não existe ou mudou de lugar.</p>
+        <a id="voltar" href="login.html">Ir para o Marpex</a>
+    </div>
+    <script>
+        // O GitHub Pages mostra esta página em qualquer caminho: o link aponta
+        // para a raiz do site (com /Projeto/ no endereço github.io).
+        (function () {
+            var base = location.hostname.endsWith('github.io') ? '/' + location.pathname.split('/')[1] + '/' : '/';
+            document.getElementById('voltar').href = base + 'login.html';
+        })();
+    </script>
+</body>
+</html>

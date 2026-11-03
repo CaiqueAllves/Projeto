@@ -249,6 +249,7 @@ function finCategoriaPedeDetalhe(conta) {
     return /\boutr[oa]s\b/i.test(conta?.subfator_nome || '');
 }
 function finCategoriaDetalheSincronizar(px) {
+    finTributoSincronizar(px);
     const linha = _flEl(px + 'CategoriaDetalheLinha');
     if (!linha) return;
     const pede = finCategoriaPedeDetalhe(finPlanoConta(px));
@@ -262,6 +263,32 @@ function finCategoriaDetalheCarregar(px, valor) {
 function finCategoriaDetalheLer(px) {
     if (!finCategoriaPedeDetalhe(finPlanoConta(px))) return null;
     return (_flEl(px + 'CategoriaDetalhe')?.value || '').trim().toUpperCase() || null;
+}
+
+// ── Bloco 6 (Tributário) — database-plano-contas-tributario.sql ──
+// natureza 'tributo' (tributos na aquisição): "Recuperável?" obrigatório
+//   Sim = crédito a recuperar (fora do DRE) · Não = custo tributário
+// natureza 'controle': só registro, aviso de que não entra no DRE
+function finTributoSincronizar(px) {
+    const conta = finPlanoConta(px);
+    const linha = _flEl(px + 'TributoLinha');
+    if (linha) {
+        const pede = conta?.natureza === 'tributo';
+        linha.hidden = !pede;
+        if (!pede) _flEl(px + 'TributoRecuperavel').value = '';
+    }
+    const aviso = _flEl(px + 'ControleAviso');
+    if (aviso) aviso.hidden = conta?.natureza !== 'controle';
+}
+function finTributoCarregar(px, valor) {
+    const el = _flEl(px + 'TributoRecuperavel');
+    if (el) el.value = finPlanoConta(px)?.natureza === 'tributo' && valor !== null && valor !== undefined ? (valor ? 'sim' : 'nao') : '';
+}
+// true / false para tributo na aquisição; null nas outras contas (ou sem resposta)
+function finTributoLer(px) {
+    if (finPlanoConta(px)?.natureza !== 'tributo') return null;
+    const v = _flEl(px + 'TributoRecuperavel')?.value;
+    return v === 'sim' ? true : v === 'nao' ? false : null;
 }
 
 // ── Comprovante ──

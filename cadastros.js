@@ -434,6 +434,7 @@ function _uploadParsearExcel(rows) {
         'site': 'site', 'website': 'site',
         'email': 'email_contato', 'e-mail': 'email_contato',
         'telefone': 'telefone_contato', 'fone': 'telefone_contato', 'celular': 'telefone_contato',
+        'ddi': 'ddi_contato', 'codigo ddi': 'ddi_contato', 'código ddi': 'ddi_contato', 'cod ddi': 'ddi_contato',
         'horario': 'horario_atendimento', 'horario atendimento': 'horario_atendimento', 'horario de atendimento': 'horario_atendimento',
         'pais': 'pais', 'country': 'pais',
         // classificação, contato e complementos (2026-10-27)

@@ -46,9 +46,10 @@ async function pfCarregar() {
     _pfSetLoading(true);
 
     const usuario = obterUsuarioLogado();
-    let query = supabaseClient.from('proformas').select('*').neq('status', 'excluido');
-    if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-    const { data, error } = await query;
+    const { data, error } = await _todasAsLinhas(() => {
+        const query = supabaseClient.from('proformas').select('*').neq('status', 'excluido');
+        return usuario?.empresa_id ? query.eq('empresa_id', usuario.empresa_id) : query;
+    });
     if (error) {
         _pfSetLoading(false);
         return;
@@ -85,12 +86,13 @@ async function pfCarregar() {
     // Contas a receber vinculadas às proformas
     _pfContasPorProforma = {};
     try {
-        let queryContas = supabaseClient
-            .from('contas_receber')
-            .select('id, proforma_id, status, valor, moeda, data_vencimento')
-            .not('proforma_id', 'is', null);
-        if (usuario?.empresa_id) queryContas = queryContas.eq('empresa_id', usuario.empresa_id);
-        const { data: contas } = await queryContas;
+        const { data: contas } = await _todasAsLinhas(() => {
+            const queryContas = supabaseClient
+                .from('contas_receber')
+                .select('id, proforma_id, status, valor, moeda, data_vencimento')
+                .not('proforma_id', 'is', null);
+            return usuario?.empresa_id ? queryContas.eq('empresa_id', usuario.empresa_id) : queryContas;
+        });
         (contas || []).forEach(c => {
             (_pfContasPorProforma[c.proforma_id] ||= []).push(c);
         });

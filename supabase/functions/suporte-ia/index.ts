@@ -25,7 +25,7 @@ const LIMITE_PEDIDOS     = 30;      // por usuário, por janela
 const JANELA_MS          = 10 * 60 * 1000;
 
 const PROMPTS: Record<string, { system: string; max_tokens: number }> = {
-  chat: { max_tokens: 512, system: `Você é um assistente virtual da Marpex, sistema de gestão de comércio exterior brasileiro.
+  chat: { max_tokens: 2048, system: `Você é um assistente virtual da Marpex, sistema de gestão de comércio exterior brasileiro.
 Seu objetivo é ajudar os usuários a usar o sistema de forma clara e eficiente.
 
 O sistema Marpex é organizado em 4 módulos, selecionáveis no topo do menu lateral:
@@ -62,7 +62,7 @@ Regras de resposta:
 - Para ajuda urgente, sugira o WhatsApp disponível no menu
 - Formate respostas longas em tópicos quando adequado
 - Não invente funcionalidades que não foram mencionadas acima` },
-  triagem: { max_tokens: 300, system: `Você é um assistente de triagem de suporte técnico do sistema Marpex (comércio exterior).
+  triagem: { max_tokens: 1024, system: `Você é um assistente de triagem de suporte técnico do sistema Marpex (comércio exterior).
 Você vai receber o título, módulo e descrição de um chamado aberto por um usuário do sistema.
 Gere uma triagem curta e objetiva para a equipe de suporte, em português, seguindo exatamente este formato (sem markdown, sem títulos extras, sem introdução):
 
@@ -122,10 +122,21 @@ async function tratar(req: Request): Promise<Response> {
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: cfg.max_tokens, system: cfg.system, messages: limpas }),
+      // Claude Haiku 5.5: pensa por padrão (o raciocínio conta no max_tokens, por isso
+      // os limites acima têm folga) — esforço baixo basta para chat e triagem.
+      body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: cfg.max_tokens, output_config: { effort: 'low' }, system: cfg.system, messages: limpas }),
     });
     const data = await anthropicRes.json();
-    return json(data, anthropicRes.status);
+    if (!anthropicRes.ok) return json(data, anthropicRes.status);
+    // A resposta pode começar com blocos de raciocínio (thinking): a tela
+    // (suporte.js) lê content[0].text, então só os blocos de texto voltam.
+    const textos = (data.content ?? []).filter((b: any) => b?.type === 'text' && b.text);
+    if (!textos.length) {
+      return json({ error: data.stop_reason === 'refusal'
+        ? 'Não consigo ajudar com esse pedido. Abra um chamado para a equipe.'
+        : 'Não consegui responder agora. Tente de novo.' }, 502);
+    }
+    return json({ ...data, content: textos }, 200);
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : String(err) }, 500);
   }

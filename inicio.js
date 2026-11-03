@@ -234,11 +234,12 @@ async function carregarPendenciasSistema() {
     if (!usuario) { _pendProformas = []; _pendProdutosPendentes = []; return; }
 
     // só os campos que as Pendências usam (antes trazia a Proforma inteira, com produtos etc.)
-    let query = supabaseClient.from('proformas')
-        .select('id, codigo, status, emissor_tipo, parceiro_id, parceiro_razao_social, destinatario_id, destinatario_razao_social')
-        .not('status', 'in', '(excluido,encerrado)');
-    if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-    const { data: proformasData } = await query;
+    const { data: proformasData } = await _todasAsLinhas(() => {
+        const query = supabaseClient.from('proformas')
+            .select('id, codigo, status, emissor_tipo, parceiro_id, parceiro_razao_social, destinatario_id, destinatario_razao_social')
+            .not('status', 'in', '(excluido,encerrado)');
+        return usuario.empresa_id ? query.eq('empresa_id', usuario.empresa_id) : query;
+    });
     const proformas = proformasData || [];
     const proformaIds = proformas.map(p => p.id).filter(Boolean);
 
@@ -691,8 +692,8 @@ async function inicializarGraficos(empresas) {
         const usuario = obterUsuarioLogado();
         if (!usuario?.empresa_id) return;
         const [resProc, resProf] = await Promise.all([
-            supabaseClient.from('processos').select('status').eq('empresa_proprietaria_id', usuario.empresa_id),
-            supabaseClient.from('proformas').select('status').eq('empresa_id', usuario.empresa_id)
+            _todasAsLinhas(() => supabaseClient.from('processos').select('id, status').eq('empresa_proprietaria_id', usuario.empresa_id)),
+            _todasAsLinhas(() => supabaseClient.from('proformas').select('id, status').eq('empresa_id', usuario.empresa_id))
         ]);
         criarGraficoProcessos(resProc.data || []);
         criarGraficoProformas(resProf.data || []);

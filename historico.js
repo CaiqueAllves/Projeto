@@ -470,6 +470,20 @@ async function abrirHistoricoConta(tipo, registroId, descricao) {
 
         if (h.acao === 'criado') {
             icone = 'fa-plus'; cor = '#16a34a'; titulo = 'Conta criada';
+            // como a conta nasceu (database-historico-contas-criacao.sql)
+            const ini = c => alt[c]?.para;
+            if (ini('data_vencimento') || ini('valor_previsto') != null) {
+                frases.push(`Previsão ${_histContaValor('data_vencimento', ini('data_vencimento'), ref)} · ${_histContaValor('valor_previsto', ini('valor_previsto') ?? ini('valor'), { ...ref, moeda_previsto: ini('moeda_previsto') || ini('moeda') })}`);
+            }
+            if (ini('categoria_detalhe')) frases.push(`<strong>Detalhe da categoria:</strong> ${_histEsc(ini('categoria_detalhe'))}`);
+            if (realizados.includes(ini('status'))) {
+                titulo = `Conta criada — ${palavra.toLowerCase()} já registrado`;
+                const meio = ini('meio_pagamento');
+                frases.push(`<strong>${palavra} em ${_histContaValor(campoData, ini(campoData), ref)}</strong> — ${_histContaValor('valor', ini('valor'), { ...ref, moeda: ini('moeda') })}`
+                    + (meio ? ` · ${_histContaValor('meio_pagamento', meio, ref)}` : '') + (ini('numero_documento') ? ` · NF ${_histEsc(ini('numero_documento'))}` : ''));
+            }
+            const anexos = [ini('comprovante_nome'), ...(Array.isArray(ini('comprovantes_extras')) ? ini('comprovantes_extras').map(e => e?.nome) : [])].filter(Boolean);
+            anexos.forEach(n => frases.push(`<i class="fa-solid fa-paperclip"></i> Comprovante anexado: <strong>${_histEsc(n)}</strong>`));
         } else if (h.acao === 'removido') {
             icone = 'fa-trash'; cor = '#64748b'; titulo = 'Conta excluída';
         } else {

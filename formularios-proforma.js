@@ -143,7 +143,30 @@ async function gerarPDFProposta() {
         mostrarNotificacao('Não há uma proforma salva pra gerar o PDF.', 'erro');
         return;
     }
-    await gerarPDFProformaDados(_propUltimoSalvo);
+    await propEmitirPDF(_propUltimoSalvo);
+}
+
+// Antes de emitir: janela de idioma e Termos (pdf-termos.js). A escolha fica
+// gravada na Proforma, e o anexo automático (o que vai para assinatura) é
+// refeito igual ao PDF emitido — se ainda não foi assinado.
+async function propEmitirPDF(d) {
+    const op = await pdfDialogoEmissao({ titulo: `Emitir Proforma ${d.codigo || ''}`, idioma: d.idioma || 'pt', termos: d.termos_modelo || '' });
+    if (!op) return;
+    const mudou = op.idioma !== (d.idioma || 'pt') || op.termos !== (d.termos_modelo || '');
+    const atual = { ...d, idioma: op.idioma, termos_modelo: op.termos };
+    if (mudou && d.id) {
+        let { error } = await supabaseClient.from('proformas').update({ idioma: op.idioma, termos_modelo: op.termos }).eq('id', d.id);
+        if (error && /termos_modelo/i.test(error.message || '')) ({ error } = await supabaseClient.from('proformas').update({ idioma: op.idioma }).eq('id', d.id));
+        if (error) mostrarNotificacao('Não foi possível guardar a escolha na Proforma: ' + error.message, 'aviso');
+        else {
+            Object.assign(d, { idioma: op.idioma, termos_modelo: op.termos });
+            anexarPDFProformaAutomatico(atual);
+            // formulário ainda aberto com esta Proforma: o idioma acompanha (senão salvar de novo voltaria o anterior)
+            const selIdioma = document.getElementById('prop-idioma');
+            if (selIdioma && document.getElementById('prop-id')?.value === d.id) selIdioma.value = op.idioma;
+        }
+    }
+    await gerarPDFProformaDados(atual, { termos: op.termos });
 }
 
 // ========================================

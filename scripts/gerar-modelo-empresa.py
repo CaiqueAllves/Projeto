@@ -45,7 +45,8 @@ SECOES = [
         ('Nome do Contato', False, 'Maria Souza', 'Pessoa de contato na empresa.'),
         ('Cargo', False, 'Financeiro', 'Cargo ou área do contato (Comercial, Financeiro, Logística...).'),
         ('E-mail', False, 'contato@exemplo.com.br', 'E-mail do contato principal.'),
-        ('Telefone', False, '(11) 99999-9999', 'Telefone do contato principal.'),
+        ('Código DDI', False, 'BR +55', 'Código do país do telefone: BR +55, US +1, AR +54... Em branco = país da empresa.'),
+        ('Telefone', False, '(11) 99999-9999', 'Telefone do contato principal, sem o DDI.'),
     ]),
     ('COMPLEMENTOS', [
         ('Site', False, 'www.exemplo.com.br', ''),

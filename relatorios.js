@@ -68,13 +68,11 @@ document.addEventListener('DOMContentLoaded', async function () {
 async function carregarStatsProformas() {
     try {
         const usuario = obterUsuarioLogado();
-        let query = supabaseClient
-            .from('proformas')
-            .select('*')
-            .neq('status', 'excluido');
-        if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
-
-        const { data, error } = await query;
+        // em blocos de 1000 (supabase-api.js → _todasAsLinhas)
+        const { data, error } = await _todasAsLinhas(() => {
+            const query = supabaseClient.from('proformas').select('*').neq('status', 'excluido');
+            return usuario?.empresa_id ? query.eq('empresa_id', usuario.empresa_id) : query;
+        });
         if (error) throw error;
 
         const proformas  = data || [];

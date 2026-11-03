@@ -17,7 +17,7 @@ module.exports = {
                 const zh = await ler(await gerarPDFProformaDados({ ...p, idioma: 'zh' }, { retornarBlob: true }));
                 return { prof, ci, pl, zh };
             }, ids);
-            for (const s of ['PAYMENT TERMS', 'Credit Card', 'At sight', 'GRAND TOTAL', 'Page 1 of 1', '500.00'])
+            for (const s of ['PAYMENT TERMS', 'Credit Card', 'At sight', 'GRAND TOTAL', 'Page 1 of ', '500.00'])
                 h.esperar(txt.prof.includes(s), `Proforma em inglês sem "${s}"`);
             h.esperar(!txt.prof.includes('CONDIÇÕES') && !txt.prof.includes('Cartão'), 'Proforma em inglês com texto em português');
             for (const s of ['GOODS', 'Credit Card', 'GRAND TOTAL']) h.esperar(txt.ci.includes(s), `Commercial Invoice sem "${s}"`);

@@ -355,24 +355,44 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
     }
 }
 
+// Texto digitado dentro de um filtro .or(): vírgula, parênteses e ponto
+// quebravam o filtro. Use entre aspas duplas: campo.ilike."%${filtroTexto(t)}%"
+function filtroTexto(termo) {
+    return String(termo ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+// O Supabase devolve no máximo 1000 linhas por consulta: acima disso a lista
+// era cortada sem aviso. Busca em blocos até acabar. `montar` devolve uma
+// consulta nova a cada chamada (o construtor do supabase-js é de uso único);
+// `id` desempata a ordem para nenhuma linha repetir ou sumir entre os blocos.
+const _BLOCO_LINHAS = 1000;
+async function _todasAsLinhas(montar, desempate = 'id') {
+    let todas = [];
+    for (let i = 0; ; i += _BLOCO_LINHAS) {
+        let q = montar();
+        if (desempate) q = q.order(desempate, { ascending: true });
+        const { data, error } = await q.range(i, i + _BLOCO_LINHAS - 1);
+        if (error) return { data: i ? todas : null, error };
+        todas = todas.concat(data || []);
+        if (!data || data.length < _BLOCO_LINHAS) return { data: todas, error: null };
+    }
+}
+
 async function buscarEmpresasCadastradas() {
     try {
         const usuarioLogado = obterUsuarioLogado();
         if (!usuarioLogado) return { sucesso: false, mensagem: 'Usuário não autenticado' };
 
         // Filtra por empresa_id (toda a equipe vê) ou fallback por created_by
-        let query = supabaseClient
-            .from('vw_parceiros_completo')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (usuarioLogado.empresa_id) {
-            query = query.eq('empresa_id', usuarioLogado.empresa_id);
-        } else {
-            query = query.eq('created_by', usuarioLogado.id);
-        }
-
-        const { data, error } = await query;
+        const { data, error } = await _todasAsLinhas(() => {
+            const query = supabaseClient
+                .from('vw_parceiros_completo')
+                .select('*')
+                .order('created_at', { ascending: false });
+            return usuarioLogado.empresa_id
+                ? query.eq('empresa_id', usuarioLogado.empresa_id)
+                : query.eq('created_by', usuarioLogado.id);
+        });
         if (error) return { sucesso: false, mensagem: 'Erro ao buscar cadastros' };
         return { sucesso: true, data: data || [] };
 
@@ -835,24 +855,25 @@ async function buscarProcessos(filtros = {}) {
         const usuario = obterUsuarioLogado();
         if (!usuario || !usuario.empresa_id) return { sucesso: false, mensagem: 'Não autenticado', data: [] };
 
-        let query = supabaseClient
-            .from('processos')
-            .select('*')
-            .eq('empresa_proprietaria_id', usuario.empresa_id)
-            .neq('status', 'excluido')
-            .order('criado_em', { ascending: false });
+        const { data, error } = await _todasAsLinhas(() => {
+            let query = supabaseClient
+                .from('processos')
+                .select('*')
+                .eq('empresa_proprietaria_id', usuario.empresa_id)
+                .neq('status', 'excluido')
+                .order('criado_em', { ascending: false });
 
-        if (filtros.tipo)   query = query.eq('tipo', filtros.tipo);
-        if (filtros.status) query = query.eq('status', filtros.status);
-        // Filtro de período (revisão de performance) — só se aplica a
-        // processos já encerrados; um em andamento continua sempre visível,
-        // não importa a data, senão sumiria algo que ainda precisa de ação.
-        if (filtros.diasAtras) {
-            const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString();
-            query = query.or(`status.not.in.(concluido,encerrada,cancelado),criado_em.gte.${desde}`);
-        }
-
-        const { data, error } = await query;
+            if (filtros.tipo)   query = query.eq('tipo', filtros.tipo);
+            if (filtros.status) query = query.eq('status', filtros.status);
+            // Filtro de período (revisão de performance) — só se aplica a
+            // processos já encerrados; um em andamento continua sempre visível,
+            // não importa a data, senão sumiria algo que ainda precisa de ação.
+            if (filtros.diasAtras) {
+                const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString();
+                query = query.or(`status.not.in.(concluido,encerrada,cancelado),criado_em.gte.${desde}`);
+            }
+            return query;
+        });
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) {
@@ -1066,15 +1087,14 @@ async function buscarProdutos(apenasAtivos = false) {
         const usuario = obterUsuarioLogado();
         if (!usuario || !usuario.empresa_id) return { sucesso: false, mensagem: 'Não autenticado', data: [] };
 
-        let query = supabaseClient
-            .from('produtos')
-            .select('*')
-            .eq('empresa_id', usuario.empresa_id)
-            .order('nome', { ascending: true });
-
-        if (apenasAtivos) query = query.eq('status', 'ativo');
-
-        const { data, error } = await query;
+        const { data, error } = await _todasAsLinhas(() => {
+            const query = supabaseClient
+                .from('produtos')
+                .select('*')
+                .eq('empresa_id', usuario.empresa_id)
+                .order('nome', { ascending: true });
+            return apenasAtivos ? query.eq('status', 'ativo') : query;
+        });
         if (error) return { sucesso: false, mensagem: error.message, data: [] };
         return { sucesso: true, data: data || [] };
     } catch (err) {
@@ -1921,11 +1941,17 @@ const _FIN_CAMPOS_PAGAMENTO = ['moeda_previsto', 'meio_pagamento', 'numero_docum
 const _FIN_CAMPOS_CI = ['commercial_invoice'];
 // Detalhe da categoria "Outros" e anexos adicionais (database-contas-detalhe-anexos.sql)
 const _FIN_CAMPOS_DETALHE = ['categoria_detalhe', 'comprovantes_extras'];
+// "Recuperável?" do tributo na aquisição (database-plano-contas-tributario.sql)
+const _FIN_CAMPOS_TRIB = ['tributo_recuperavel'];
 function _finAplicarPrevisto(payload, dados) {
-    [..._FIN_CAMPOS_PREVISTO, ..._FIN_CAMPOS_PAGAMENTO, ..._FIN_CAMPOS_CI, ..._FIN_CAMPOS_DETALHE].forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
+    [..._FIN_CAMPOS_PREVISTO, ..._FIN_CAMPOS_PAGAMENTO, ..._FIN_CAMPOS_CI, ..._FIN_CAMPOS_DETALHE, ..._FIN_CAMPOS_TRIB].forEach(k => { if (dados[k] !== undefined) payload[k] = dados[k]; });
 }
 async function _finGravarComFallback(gravar, payload) {
     let result = await gravar(payload);
+    if (result.error && /tributo_recuperavel/i.test(result.error.message || '')) {
+        _FIN_CAMPOS_TRIB.forEach(k => delete payload[k]);
+        result = await gravar(payload);
+    }
     if (result.error && /categoria_detalhe|comprovantes_extras/i.test(result.error.message || '')) {
         _FIN_CAMPOS_DETALHE.forEach(k => delete payload[k]);
         result = await gravar(payload);
@@ -1951,7 +1977,7 @@ async function _finGravarComFallback(gravar, payload) {
 async function _finSelectComFallback(montar, selects) {
     let r;
     for (const sel of selects) {
-        r = await montar(sel);
+        r = await _todasAsLinhas(() => montar(sel));
         if (!r.error || !_cpSemPlano(r.error)) return r;
     }
     return r;
@@ -2370,12 +2396,35 @@ async function buscarSaldoProforma(proformaId, processoIgnorarId = null) {
 // empresa do usuário (logos/<empresa_id>/...). Antes do SQL rodar, as funções
 // devolvem erro e as telas seguem funcionando sem esses dados.
 
-async function enviarImagemLogo(arquivo, prefixo = 'logo') {
+// Imagens enviadas viram WebP (bem menores que PNG/JPG, com transparência),
+// reduzidas a `lado` px no lado maior. GIF e SVG ficam como vieram (animação /
+// vetor); navegador sem WebP ou falha na conversão → envia o original.
+async function imagemParaWebp(arquivo, { lado = 1600, qualidade = 0.85 } = {}) {
+    if (!/^image\/(png|jpe?g|webp|bmp)$/i.test(arquivo?.type || '')) return arquivo;
+    try {
+        const bmp = await createImageBitmap(arquivo);
+        const escala = Math.min(1, lado / Math.max(bmp.width, bmp.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(bmp.width * escala));
+        canvas.height = Math.max(1, Math.round(bmp.height * escala));
+        canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+        bmp.close?.();
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/webp', qualidade));
+        if (!blob || blob.type !== 'image/webp') return arquivo;
+        if (arquivo.type === 'image/webp' && escala === 1 && blob.size >= arquivo.size) return arquivo;
+        return new File([blob], (arquivo.name || 'imagem').replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' });
+    } catch { return arquivo; }
+}
+
+// prefixo: 'logo' | 'marca' | 'produto' (pasta da empresa no bucket público "logos")
+async function enviarImagemLogo(arquivo, prefixo = 'logo', lado = 1000) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario?.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada' };
-        if (!/^image\//.test(arquivo?.type || '')) return { sucesso: false, mensagem: 'Escolha uma imagem (PNG ou JPG).' };
-        if (arquivo.size > 2 * 1024 * 1024) return { sucesso: false, mensagem: 'A imagem pode ter no máximo 2 MB.' };
+        if (!/^image\//.test(arquivo?.type || '')) return { sucesso: false, mensagem: 'Escolha uma imagem (PNG, JPG ou WebP).' };
+        if (arquivo.size > 15 * 1024 * 1024) return { sucesso: false, mensagem: 'A imagem pode ter no máximo 15 MB.' };
+        arquivo = await imagemParaWebp(arquivo, { lado });
+        if (arquivo.size > 2 * 1024 * 1024) return { sucesso: false, mensagem: 'A imagem ficou maior que 2 MB mesmo comprimida. Use uma imagem menor.' };
         const ext = (arquivo.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
         const caminho = `${usuario.empresa_id}/${prefixo}_${Date.now()}.${ext}`;
         const { error } = await supabaseClient.storage.from('logos').upload(caminho, arquivo, { contentType: arquivo.type });
@@ -2503,6 +2552,7 @@ async function hidratarArquivosPrivados(raiz = document) {
 
 window.supabaseAPI = {
     enviarImagemLogo,
+    imagemParaWebp,
     buscarContasBancarias,
     salvarContasBancarias,
     buscarMarcasParceiro,

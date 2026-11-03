@@ -27,7 +27,8 @@ let _cpPlanoContas = [];
 
 async function _cpCarregarPlanoContas() {
     try {
-        const res = await buscarPlanoContas([2, 3, 4, 5]);
+        // Bloco 6 (tributário): custo, tributo na aquisição, controle e ambos — os ganhos ficam em Contas a Receber
+        const res = await buscarPlanoContas([2, 3, 4, 5, 6]);
         if (res.sucesso) _cpPlanoContas = (res.data || []).filter(c => c.natureza !== 'ganho');
     } catch (e) {
         console.warn('[Contas a Pagar] Falha ao carregar plano de contas:', e);
@@ -47,6 +48,7 @@ function _cpCategoriaDaConta(c) {
     if (b === 2) return 'fornecedor';
     if (b === 3) return 'comercial';
     if (b === 5) return 'financeiro';
+    if (b === 6) return 'imposto';
     return ['04.04', '04.08', '04.10', '04.12'].includes(c.conta_codigo) ? 'frete' : 'operacional';
 }
 
@@ -307,6 +309,7 @@ function cpAbrirModal(id = null, prefill = null, soVer = false, avisado = false)
 
     finPlanoDefinir('cp', c?.plano_conta_id || '');
     finCategoriaDetalheCarregar('cp', c?.categoria_detalhe);
+    finTributoCarregar('cp', c?.tributo_recuperavel);
     // Seção 1 = previsão (contas antigas sem previsto: os valores da conta)
     finLinhaCarregar('cpPrev', {
         data: c?.data_vencimento || '',
@@ -376,6 +379,11 @@ async function cpSalvar() {
 
     if (!conta) { mostrarNotificacao('Escolha o Plano de Contas e a Categoria.', 'warning'); return; }
     const categoriaDetalhe = finCategoriaDetalheLer('cp');
+    if (conta.natureza === 'tributo' && finTributoLer('cp') === null) {
+        document.getElementById('cpTributoRecuperavel').focus();
+        mostrarNotificacao('Informe se o tributo é recuperável — define se ele entra no DRE.', 'warning');
+        return;
+    }
     if (finCategoriaPedeDetalhe(conta) && !categoriaDetalhe) {
         document.getElementById('cpCategoriaDetalhe').focus();
         mostrarNotificacao('Descreva a categoria escolhida — essa informação vai para os relatórios.', 'warning');
@@ -438,6 +446,7 @@ async function cpSalvar() {
         processo_id:     document.getElementById('cpProcessoId').value || null,
         commercial_invoice: finCILer('cp'),
         categoria_detalhe: categoriaDetalhe,
+        tributo_recuperavel: finTributoLer('cp'),
         plano_conta_id:  conta.id,
         categoria:       _cpCategoriaDaConta(conta) || null,
         // previsão (seção 1)
@@ -498,7 +507,7 @@ async function _cpListarParceiros(termo) {
             .from('parceiros')
             .select('id, razao_social, nome_fantasia')
             .limit(termo ? 8 : 15);
-        if (termo) query = query.or(`razao_social.ilike.%${termo}%,nome_fantasia.ilike.%${termo}%`);
+        if (termo) query = query.or(`razao_social.ilike."%${filtroTexto(termo)}%",nome_fantasia.ilike."%${filtroTexto(termo)}%"`);
         else query = query.order('razao_social', { ascending: true });
         if (usuario?.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
         const { data } = await query;
