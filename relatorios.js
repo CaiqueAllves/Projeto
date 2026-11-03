@@ -33,9 +33,22 @@ const _modeloEmpresa = e => {
     return 'empresa';
 };
 
+// Vindo do menu Comercial (?ver=comercial&modulo=proformas|processos): mostra só
+// Proformas e Processos, com a aba de volta para os Relatórios Comerciais.
+function _relAplicarVisaoComercial() {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('ver') !== 'comercial') return;
+    document.querySelectorAll('.rel-modulo-tab[data-modulo="empresas"], .rel-modulo-tab[data-modulo="produtos"]').forEach(b => { b.style.display = 'none'; });
+    const voltar = document.getElementById('relTabComercial');
+    if (voltar) voltar.style.display = '';
+    const modulo = q.get('modulo') === 'processos' ? 'processos' : 'proformas';
+    relSwitchModulo(modulo, document.querySelector(`.rel-modulo-tab[data-modulo="${modulo}"]`));
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
     verificarPermissoes();
     _relIniciarMostrarMais();
+    _relAplicarVisaoComercial();
 
     const resultado = await window.supabaseAPI.buscarEmpresas();
     todasEmpresas = resultado.sucesso ? resultado.data : [];

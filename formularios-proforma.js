@@ -98,6 +98,7 @@ function salvarProposta(e) {
         _propItens.forEach((item, i) => {
             if (!item.produto?.trim()) erros.push(`Item ${i + 1}: informe o nome do produto.`);
             if (!(item.qtd  > 0))     erros.push(`Item ${i + 1}: a quantidade deve ser maior que zero.`);
+            if (!item.unidade)        erros.push(`Item ${i + 1}: informe a unidade.`);
             if (!(item.preco > 0))    erros.push(`Item ${i + 1}: o preço deve ser maior que zero.`);
         });
     }
@@ -599,6 +600,66 @@ async function _propCarregarCepDest(d) {
     if (data?.cep && !el.value) el.value = _propCepExibir(data.cep);
 }
 
+// Gerar Proforma pela Proposta fechada (proposta.js): traz Exportador, Importador
+// e moeda. Observações da Proposta são internas e não vão para o PDF da Proforma.
+// O vínculo é gravado ao salvar (confirmarSalvar, formularios.js).
+let _propOportunidadeOrigem = null;
+
+async function propCarregarDaOportunidade(id) {
+    const { data: o, error } = await supabaseClient.from('oportunidades')
+        .select('id, titulo, moeda, cliente_id, remetente_parceiro_id, proforma_id, proforma:proformas!oportunidades_proforma_id_fkey(status)')
+        .eq('id', id).maybeSingle();
+    if (error || !o) { mostrarNotificacao('Proposta não encontrada.', 'erro'); return; }
+    // Já tem Proforma (ex.: outra aba): abre ela em vez de criar outra
+    if (o.proforma_id && o.proforma?.status !== 'excluido') {
+        window.location.replace(`formularios.html?tab=proposta&id=${encodeURIComponent(o.proforma_id)}`);
+        return;
+    }
+    _propOportunidadeOrigem = { id: o.id, numero: o.titulo || '' };
+
+    const ids = [o.cliente_id, o.remetente_parceiro_id].filter(Boolean);
+    const { data: parceiros } = ids.length
+        ? await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento, tipo_cadastro, cep, pais, codigo').in('id', ids)
+        : { data: [] };
+    const parc = pid => (parceiros || []).find(p => String(p.id) === String(pid));
+    const set = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = v ?? ''; };
+
+    // Exportador: Remetente da Proposta; sem ele, a própria empresa
+    const exp = parc(o.remetente_parceiro_id);
+    const emissorTipo = exp ? 'terceiro' : 'usuario';
+    const radio = document.querySelector(`input[name="prop-emissor-tipo"][value="${emissorTipo}"]`);
+    if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
+    if (exp) {
+        set('prop-cliente-id', exp.id);
+        await _propReaplicarEmissor({ emissor_tipo: 'terceiro', parceiro_id: exp.id,
+            parceiro_razao_social: exp.nome_fantasia || exp.razao_social, documento: exp.documento });
+        if (exp.pais) await _propPreencherPaisOrigem(exp.pais);
+        propCarregarContasBancarias();
+    }
+
+    // Importador: Destinatário da Proposta
+    const imp = parc(o.cliente_id);
+    if (imp) {
+        set('prop-emp-dest-busca', imp.razao_social);
+        set('prop-emp-dest-id', imp.id);
+        if (imp.documento) {
+            set('prop-emp-dest-doc', _mascaraDocBR(imp.documento));
+            const tipoCad = (imp.tipo_cadastro || '').toLowerCase();
+            set('prop-emp-dest-doc-tipo', ['cnpj', 'cpf', 'tin', 'ein', 'vat'].includes(tipoCad) ? tipoCad : _tipoDocBR(imp.documento));
+        }
+        set('prop-emp-dest-cep', _propCepExibir(imp.cep));
+        if (imp.pais) await _preencherPaisPorPrefixo('prop-destino', imp.pais);
+    }
+
+    // Moeda: a Proposta guarda a sigla; os itens, a descrição do Apoio
+    await _carregarMoedas();
+    const moeda = _acMoedas.find(m => [m.sigla, m.codigo, m.descricao].includes(o.moeda));
+    if (moeda && _propItens?.length) { _propItens.forEach(i => { i.moeda = moeda.descricao; }); propRenderizarItens(); }
+
+    document.getElementById('prop-destino-pais')?.dispatchEvent(new Event('change'));
+    mostrarNotificacao(`Dados trazidos da Proposta ${o.titulo || ''}. Complete os produtos e as condições.`, 'sucesso');
+}
+
 function propAbrirCadastroNovaEmpresa() {
     window.open('cadastros.html', '_blank');
     const buscaGroup = document.getElementById('prop-emp-dest-busca-group');
@@ -949,7 +1010,7 @@ async function propCarregarEdicao(id) {
             produto_id: it.produto_id || null,
             produto:  it.produto  || '',
             qtd:      it.qtd      ?? it.quantidade ?? 1,
-            unidade:  it.unidade  || (_acUnidades[0]?.unidade || 'UN'),
+            unidade:  it.unidade  || '',
             preco:    it.preco    ?? it.preco_unit ?? 0,
             moeda:    it.moeda    || (_acMoedas[0]?.descricao || 'USD'),
         }));
@@ -1074,7 +1135,7 @@ async function propCarregarDuplicar(id) {
             produto_id: it.produto_id || null,
             produto:  it.produto  || '',
             qtd:      it.qtd      ?? it.quantidade ?? 1,
-            unidade:  it.unidade  || (_acUnidades[0]?.unidade || 'UN'),
+            unidade:  it.unidade  || '',
             preco:    it.preco    ?? it.preco_unit ?? 0,
             moeda:    it.moeda    || (_acMoedas[0]?.descricao || 'USD'),
         }));

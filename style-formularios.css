@@ -2133,7 +2133,7 @@ form {
 
 .contato-lista-header {
     display: grid;
-    grid-template-columns: 120px 1fr 1fr 1fr 28px;
+    grid-template-columns: 120px 1fr 1fr 170px 1fr 28px;
     gap: 8px;
     background: #f8fafc;
     padding: 8px 12px;
@@ -2147,7 +2147,7 @@ form {
 
 .contato-lista-row {
     display: grid;
-    grid-template-columns: 120px 1fr 1fr 1fr 28px;
+    grid-template-columns: 120px 1fr 1fr 170px 1fr 28px;
     gap: 8px;
     padding: 8px 12px;
     border-bottom: 1px solid #f1f5f9;
@@ -3913,3 +3913,36 @@ input.transp-campo-auto { background: #f8fafc; color: #334155; cursor: default; 
 .proc-trading-info small i { color: #4776ec; margin-right: 3px; }
 .doc-subcampo { display: block; font-size: 12px; font-weight: 600; color: #475569; margin: 8px 0 4px; }
 .doc-subcampo small { font-weight: 400; color: #94a3b8; }
+.contato-ddi-select { width: 100%; min-width: 0; height: 36px; padding: 0 8px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 13px; color: #1e293b; }
+@media (max-width: 760px) {
+    .contato-lista-header { display: none; }
+    .contato-lista-row { grid-template-columns: 1fr 1fr; }
+    .contato-lista-row .btn-remover-contato { grid-column: 1 / -1; justify-self: end; }
+}
+/* Celular: Modelo e Tipo em linhas (bolinha = uma opção; caixa = várias) */
+@media (max-width: 760px) {
+    .emp-modelo-tipo-row { display: block; }
+    .emp-modelo-tipo-row .modelo-selector-group { min-width: 0; max-width: 100%; }
+    .emp-modelo-tipo-row #emp-tipo-group { margin-top: 14px; width: 100%; }
+    .emp-modelo-tipo-row .modelo-cards-group,
+    .emp-modelo-tipo-row #emp-tipo-group .tipo-cards-group { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; width: 100%; }
+    .emp-modelo-tipo-row .modelo-card,
+    .emp-modelo-tipo-row #emp-tipo-group .tipo-card { display: block; width: 100%; height: auto; min-width: 0; }
+    .emp-modelo-tipo-row .modelo-card-inner,
+    .emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner { flex-direction: row; justify-content: flex-start; align-items: center; gap: 10px; width: 100%; height: auto; min-height: 48px; min-width: 0; padding: 8px 12px; box-sizing: border-box; text-align: left; font-size: 13px; }
+    .emp-modelo-tipo-row .modelo-card-inner i,
+    .emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner i { flex: 0 0 20px; margin: 0; font-size: 15px; text-align: center; }
+    /* Modelo: ícone | nome e, abaixo, a descrição | bolinha */
+    .emp-modelo-tipo-row .modelo-card-inner { display: grid; grid-template-columns: 20px minmax(0, 1fr) 18px; column-gap: 10px; row-gap: 1px; align-items: center; }
+    .emp-modelo-tipo-row .modelo-card-inner i { grid-column: 1; grid-row: 1 / span 2; }
+    .emp-modelo-tipo-row .modelo-card-inner strong { grid-column: 2; grid-row: 1; font-size: 13px; line-height: 1.2; }
+    .emp-modelo-tipo-row .modelo-card-inner small { grid-column: 2; grid-row: 2; margin: 0; font-size: 11px; line-height: 1.2; }
+    /* indicador de seleção à direita */
+    .emp-modelo-tipo-row .modelo-card-inner::after,
+    .emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner::after { content: ""; flex: 0 0 18px; height: 18px; margin-left: auto; box-sizing: border-box; border: 2px solid #cbd5e1; background: #fff; }
+    .emp-modelo-tipo-row .modelo-card-inner::after { grid-column: 3; grid-row: 1 / span 2; margin-left: 0; border-radius: 50%; }
+    .emp-modelo-tipo-row #emp-tipo-group .tipo-card-inner::after { border-radius: 4px; }
+    .emp-modelo-tipo-row .modelo-card input:checked + .modelo-card-inner::after,
+    .emp-modelo-tipo-row .modelo-card--ativo .modelo-card-inner::after { border: 5px solid #4776ec; }
+    .emp-modelo-tipo-row #emp-tipo-group .tipo-card input:checked + .tipo-card-inner::after { border-color: #4776ec; background: #4776ec url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.5l2.5 2.5L10 3.5' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center / 12px no-repeat; }
+}

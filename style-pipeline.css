@@ -345,6 +345,9 @@
 .pl-btn-avancar:hover  { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
 .pl-btn-excluir:hover  { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 .pl-btn-whatsapp:hover { background: #f0fdf4; color: #25d366; border-color: #bbf7d0; }
+.pl-btn-proforma { color: #4776ec; }
+.pl-btn-proforma:hover { background: #eef3ff; color: #1e40af; border-color: #c7d7fb; }
+.pl-btn-proforma-gerar { background: #eef3ff; border-color: #c7d7fb; }
 
 /* ── Vazia / loading ───────────────────────────────────────────── */
 .pl-col-vazia {

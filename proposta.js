@@ -253,6 +253,7 @@ function _propRenderCard(o) {
         <div class="prop-kcard-motivo">
             <span class="prop-kcard-label">Motivo da Perda:</span> ${_propEscapar(o.motivo_perda)}
         </div>` : ''}
+        ${_propProformaLinha(o)}
         <div class="prop-kcard-footer">
             <select class="prop-etapa-select prop-etapa-${etapa}" onchange="propAlterarEtapa('${o.id}', this)">
                 ${PROP_ETAPAS.map(e => `<option value="${e}" ${e === etapa ? 'selected' : ''}>${PROP_ETAPA_LABEL[e]}</option>`).join('')}
@@ -264,12 +265,38 @@ function _propRenderCard(o) {
                 <button class="pl-btn-acao pl-btn-whatsapp" onclick="propEnviarWhatsapp('${o.id}')" title="Enviar por WhatsApp">
                     <i class="fa-brands fa-whatsapp"></i>
                 </button>
+                ${_propBotaoProforma(o)}
                 <button class="pl-btn-acao pl-btn-excluir" onclick="propAbrirModalExcluir('${o.id}')" title="Excluir">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
         </div>` : ''}
     </div>`;
+}
+
+// Proposta → Proforma: Fechada gera a Proforma; com Proforma ativa, abre ela.
+// Proforma que foi para a lixeira libera gerar de novo.
+function _propTemProforma(o) {
+    return !!o.proforma_id && o.proforma?.status !== 'excluido';
+}
+function _propBotaoProforma(o) {
+    if (_propTemProforma(o)) {
+        return `<button class="pl-btn-acao pl-btn-proforma" onclick="propVerProforma('${o.proforma_id}')" title="Ver Proforma ${_propEscapar(o.proforma?.codigo || '')}"><i class="fa-solid fa-file-invoice-dollar"></i></button>`;
+    }
+    if ((o.etapa || 'proposta') !== 'fechado') return '';
+    return `<button class="pl-btn-acao pl-btn-proforma pl-btn-proforma-gerar" onclick="propGerarProforma('${o.id}')" title="Gerar Proforma"><i class="fa-solid fa-file-circle-plus"></i></button>`;
+}
+function _propProformaLinha(o) {
+    if (!_propTemProforma(o)) return '';
+    return `<div class="prop-kcard-meta">
+            <span class="prop-kcard-label">Proforma:</span> <span>${_propEscapar(o.proforma?.codigo || '—')}</span>
+        </div>`;
+}
+function propGerarProforma(id) {
+    window.open(`formularios.html?tab=proposta&oportunidade_id=${encodeURIComponent(id)}`, '_blank');
+}
+function propVerProforma(id) {
+    window.open(`formularios.html?tab=proposta&id=${encodeURIComponent(id)}&modo=visualizar`, '_blank');
 }
 
 // Abre o WhatsApp Web/App já com o número do Destinatário e uma mensagem
@@ -282,14 +309,14 @@ async function propEnviarWhatsapp(id) {
 
     const { data: contato } = await supabaseClient
         .from('parceiro_contatos')
-        .select('telefone')
+        .select('*')
         .eq('parceiro_id', o.cliente_id)
         .not('telefone', 'is', null)
         .order('ordem', { ascending: true })
         .limit(1)
         .maybeSingle();
 
-    const telefone = _propNormalizarTelefoneWhatsapp(contato?.telefone);
+    const telefone = telefoneWhatsapp(contato?.telefone, contato?.ddi);
     if (!telefone) { mostrarNotificacao('Nenhum telefone cadastrado para esse parceiro.', 'aviso'); return; }
 
     const nome  = o.parceiros?.nome_fantasia || o.parceiros?.razao_social || '';
@@ -303,16 +330,6 @@ async function propEnviarWhatsapp(id) {
     ].join(' ');
 
     window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
-}
-
-// Aceita telefone com ou sem código do país/DDD só com dígitos — wa.me exige
-// só números, com código do país na frente (assume Brasil quando o número
-// tem cara de nacional: 10 ou 11 dígitos, sem o "55" already na frente).
-function _propNormalizarTelefoneWhatsapp(telefone) {
-    const digitos = String(telefone || '').replace(/\D/g, '');
-    if (!digitos) return null;
-    if (digitos.length === 10 || digitos.length === 11) return '55' + digitos;
-    return digitos;
 }
 
 // Troca a Etapa direto pelo select do card — livre entre as 4 (mesma
@@ -383,6 +400,7 @@ function _propRenderizarTabela() {
             <td>
                 <div class="ped-acoes">
                                 ${podeAvancar ? `<button class="pl-btn-acao pl-btn-avancar" onclick="propAvancarEtapa('${o.id}')" title="Avançar para ${PROP_ETAPA_LABEL[proxEtapa[etapa]]}"><i class="fa-solid fa-arrow-right"></i></button>` : ''}
+                    ${_propBotaoProforma(o)}
                     <button class="pl-btn-acao pl-btn-editar" onclick="propAbrirModal('${o.id}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
                     </button>
@@ -559,6 +577,7 @@ function propToggleMotivoPerda() {
 const PROP_HIST_EVENTO_LABEL = {
     criada:                  'Proposta criada',
     etapa_alterada:          'Etapa alterada',
+    proforma_gerada:         'Proforma gerada',
     pedido_gerado:           'Pedido gerado',
     pedido_status_alterado:  'Status do Pedido alterado',
     pedido_excluido:         'Pedido excluído',
@@ -569,6 +588,7 @@ const PROP_HIST_EVENTO_LABEL = {
 const PROP_HIST_EVENTO_ICONE = {
     criada:                 'fa-solid fa-plus',
     etapa_alterada:         'fa-solid fa-arrow-right',
+    proforma_gerada:        'fa-solid fa-file-invoice-dollar',
     pedido_gerado:          'fa-solid fa-bag-shopping',
     pedido_status_alterado: 'fa-solid fa-truck-fast',
     pedido_excluido:        'fa-solid fa-trash',
@@ -609,6 +629,8 @@ async function _propCarregarHistorico(oportunidadeId) {
                 detalhe = de ? `${_propEscapar(de)} → ${_propEscapar(para)}` : _propEscapar(para);
             } else if (ev.evento === 'pedido_gerado') {
                 detalhe = `Pedido ${_propEscapar(ev.pedidos?.numero || para || '')}`;
+            } else if (ev.evento === 'proforma_gerada') {
+                detalhe = `Proforma ${_propEscapar(para || '')}`;
             } else if (ev.evento === 'criada') {
                 detalhe = `Etapa inicial: ${_propEscapar(para)}`;
             }

@@ -149,7 +149,7 @@ async function salvarEmpresa(e) {
             const tipo = ins[0].value.trim(), nome = ins[1].value.trim(),
                   email = ins[2].value.trim(), tel = ins[3].value.trim();
             if (tipo || nome || email || tel)
-                dados.contatos.push({ tipo, nome, email, telefone: tel });
+                dados.contatos.push({ tipo, nome, email, telefone: tel, ddi: row.querySelector('.contato-ddi-select')?.value || null });
         }
     });
 
@@ -260,6 +260,13 @@ function toggleSuframa() {
 let _empContatoCount = 0;
 const EMP_CONTATO_MAX = 3;
 
+document.addEventListener('DOMContentLoaded', () => {
+    const pais = document.getElementById('emp-pais');
+    pais?.addEventListener('change', _empDdiAcompanharPais);
+    pais?.addEventListener('blur', () => setTimeout(_empDdiAcompanharPais, 200));
+    document.getElementById('emp-pais-lista')?.addEventListener('mousedown', () => setTimeout(_empDdiAcompanharPais, 100));
+});
+
 function empContatoIniciar() {
     empContatoAdicionar();
 }
@@ -279,6 +286,7 @@ function empContatoAdicionar() {
         <input type="text"  class="contato-tipo-input" name="contato_${id}_tipo"  placeholder="Ex: Financeiro">
         <input type="text"  name="contato_${id}_nome"  placeholder="Nome completo">
         <input type="email" name="contato_${id}_email" placeholder="email@empresa.com">
+        <select class="contato-ddi-select" name="contato_${id}_ddi" aria-label="Código DDI" onchange="delete this.dataset.auto"><option value="">DDI</option></select>
         <input type="text"  name="contato_${id}_tel"   placeholder="Número de telefone" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
         <button type="button" class="btn-remover-contato" onclick="empContatoRemover('${id}')" title="Remover">
             <i class="fa-solid fa-xmark"></i>
@@ -286,6 +294,54 @@ function empContatoAdicionar() {
     container.appendChild(row);
 
     _empContatoAtualizarUI();
+    _empDdiMontar(row.querySelector('.contato-ddi-select'));
+}
+
+// Código DDI do contato: valor "BR +55". Linha nova vem com o país da empresa
+// (em branco = Brasil) e acompanha o país até o usuário escolher outro DDI.
+let _empDdiOpcoes = null;
+
+async function _empDdiLista() {
+    if (_empDdiOpcoes) return _empDdiOpcoes;
+    await _acCarregarPaises();
+    _empDdiOpcoes = _acPaises.filter(p => PAISES_DDI[p.codigo]).map(p => ({
+        valor: `${p.codigo} +${PAISES_DDI[p.codigo]}`, texto: `${p.descricao.trim()} +${PAISES_DDI[p.codigo]}`, codigo: p.codigo, nome: p.descricao.trim().toLowerCase(),
+    }));
+    return _empDdiOpcoes;
+}
+
+function _empDdiDoPais(lista) {
+    const cod  = (document.getElementById('emp-pais-codigo')?.value || '').trim().toUpperCase();
+    const nome = (document.getElementById('emp-pais')?.value || '').trim().toLowerCase();
+    if (!cod && !nome) return lista.find(o => o.codigo === 'BR')?.valor || '';
+    return lista.find(o => o.codigo === cod || o.nome === nome)?.valor || '';
+}
+
+async function _empDdiMontar(sel) {
+    sel.dataset.auto = '1';
+    const lista = await _empDdiLista();
+    const opcao = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; };
+    sel.replaceChildren(opcao('', 'DDI'), ...lista.map(o => opcao(o.valor, o.texto)));
+    const salvo = sel.dataset.valor;
+    if (salvo !== undefined) {
+        if (salvo && !lista.some(o => o.valor === salvo)) sel.add(opcao(salvo, salvo));
+        sel.value = salvo;
+    } else {
+        sel.value = _empDdiDoPais(lista);
+    }
+}
+
+// Contato já salvo: mostra o DDI gravado (vazio fica vazio), sem seguir o país
+function _empDdiDefinir(sel, valor) {
+    if (!sel) return;
+    sel.dataset.valor = valor || '';
+    delete sel.dataset.auto;
+    sel.value = valor || '';
+}
+
+async function _empDdiAcompanharPais() {
+    const lista = await _empDdiLista();
+    document.querySelectorAll('#emp-contato-rows .contato-ddi-select[data-auto]').forEach(sel => { sel.value = _empDdiDoPais(lista); });
 }
 
 function empContatoRemover(id) {
@@ -1116,6 +1172,7 @@ function _empPreencherEdicao(dados) {
                 if (ins[1]) ins[1].value = (c.nome     || '').toUpperCase();
                 if (ins[2]) ins[2].value =  c.email    || '';
                 if (ins[3]) ins[3].value =  c.telefone || '';
+                _empDdiDefinir(row.querySelector('.contato-ddi-select'), c.ddi);
             }
         });
     }

@@ -242,6 +242,14 @@ function _colunasColetaParceiro(dadosEmpresa) {
 // Modelo "Trading" exige database-exportacao-indireta.sql (regra parceiros_modelo_check)
 const _MSG_MODELO_TRADING = 'O modelo "Trading" ainda não foi ativado no banco: rode database/database-exportacao-indireta.sql no Supabase.';
 
+// Contatos são apagados e regravados ao editar: sem a coluna ddi
+// (database-parceiro-contatos-ddi.sql), grava sem ela para não perdê-los.
+async function _inserirContatosParceiro(rows) {
+    const r = await supabaseClient.from('parceiro_contatos').insert(rows);
+    if (!r.error || !/\bddi\b/i.test(r.error.message || '')) return r;
+    return supabaseClient.from('parceiro_contatos').insert(rows.map(({ ddi, ...c }) => c));
+}
+
 function _semColunasColeta(payload) {
     const p = { ...payload };
     Object.keys(p).forEach(k => { if (k.startsWith('coleta_') || k === 'codigo') delete p[k]; });
@@ -311,9 +319,10 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
                 nome:        c.nome     || null,
                 email:       c.email    || null,
                 telefone:    c.telefone || null,
+                ddi:         c.ddi      || null,
                 ordem:       i + 1,
             }));
-            const { error: errC } = await supabaseClient.from('parceiro_contatos').insert(rows);
+            const { error: errC } = await _inserirContatosParceiro(rows);
             if (errC) console.error('Erro ao salvar contatos:', errC);
         }
 
@@ -439,9 +448,10 @@ async function editarEmpresaCadastrada(id, dadosEmpresa) {
                 nome:        c.nome     || null,
                 email:       c.email    || null,
                 telefone:    c.telefone || null,
+                ddi:         c.ddi      || null,
                 ordem:       i + 1,
             }));
-            await supabaseClient.from('parceiro_contatos').insert(rows);
+            await _inserirContatosParceiro(rows);
         }
 
         // 3. Upsert financeiro
@@ -2552,6 +2562,7 @@ window.supabaseAPI = {
     buscarOportunidades,
     buscarHistoricoOportunidade,
     salvarOportunidade,
+    vincularProformaOportunidade,
     gerarNumeroSequencial,
     atualizarEtapaOportunidade,
     excluirOportunidade,
@@ -2624,7 +2635,8 @@ async function buscarOportunidades(filtros = {}) {
             .from('oportunidades')
             .select(`*,
                 parceiros!oportunidades_cliente_id_fkey(razao_social, nome_fantasia, documento),
-                remetente:parceiros!oportunidades_remetente_parceiro_id_fkey(razao_social, nome_fantasia, documento)`)
+                remetente:parceiros!oportunidades_remetente_parceiro_id_fkey(razao_social, nome_fantasia, documento),
+                proforma:proformas!oportunidades_proforma_id_fkey(id, codigo, status)`)
             .is('excluido_em', null)
             .order('updated_at', { ascending: false });
         if (usuario.empresa_id) query = query.eq('empresa_proprietaria_id', usuario.empresa_id);
@@ -2697,7 +2709,7 @@ async function salvarOportunidade(dados, id = null) {
             valor: dados.valor || null, moeda: dados.moeda || 'USD',
             etapa: dados.etapa || 'proposta',
             responsavel: dados.responsavel || null, data_prevista: dados.data_prevista || null,
-            observacoes: dados.observacoes || null, proforma_id: dados.proforma_id || null,
+            observacoes: dados.observacoes || null,
             // Só faz sentido quando etapa === 'perdido', mas gravar null nos
             // outros casos também limpa um motivo antigo se a proposta for
             // reaberta depois (etapa mudada de volta pra Proposta/Negociação).
@@ -2723,6 +2735,21 @@ async function salvarOportunidade(dados, id = null) {
         }
 
         return { sucesso: true, data: result.data };
+    } catch (err) { return { sucesso: false, mensagem: err.message }; }
+}
+
+// Proforma gerada pela Proposta: grava o vínculo nos dois lados (database-proposta-proforma.sql)
+async function vincularProformaOportunidade(oportunidadeId, proformaId, codigo) {
+    try {
+        const { data, error } = await supabaseClient.from('oportunidades')
+            .update({ proforma_id: proformaId, updated_at: new Date().toISOString() })
+            .eq('id', oportunidadeId).select('titulo').single();
+        if (error) return { sucesso: false, mensagem: error.message };
+        const { error: errProf } = await supabaseClient.from('proformas')
+            .update({ oportunidade_id: oportunidadeId, oportunidade_numero: data.titulo || null }).eq('id', proformaId);
+        if (errProf) console.warn('[Proposta] Proforma sem o nº da Proposta:', errProf.message);
+        _registrarHistoricoOportunidade(oportunidadeId, 'proforma_gerada', null, codigo || null);
+        return { sucesso: true };
     } catch (err) { return { sucesso: false, mensagem: err.message }; }
 }
 

@@ -153,6 +153,14 @@ async function confirmarSalvar() {
             // "Nº Proforma Invoice" continua automático.
             _propUltimoSalvo = res.data;
             anexarPDFProformaAutomatico(res.data);
+
+            // Veio da Proposta: grava o vínculo e atualiza a tela que abriu esta aba
+            if (!editandoId && _propOportunidadeOrigem && res.data?.id) {
+                const vinc = await window.supabaseAPI.vincularProformaOportunidade(_propOportunidadeOrigem.id, res.data.id, codigo);
+                if (!vinc.sucesso) mostrarNotificacao(`Proforma salva, mas não foi possível vincular à Proposta: ${vinc.mensagem}`, 'aviso');
+                _propOportunidadeOrigem = null;   // "Criar outro" não repete o vínculo
+                try { if (typeof window.opener?.propCarregar === 'function') window.opener.propCarregar(); } catch (e) {}
+            }
         } else {
             mostrarNotificacao('Erro ao salvar proposta: ' + (res.mensagem || 'Tente novamente.'), 'erro');
         }
@@ -634,13 +642,15 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Linha de produto em branco só numa Proforma nova. Na edição/duplicação
     // ela corria em paralelo com o carregamento e, se terminasse depois, era
     // somada aos itens já carregados (aparecia um item vazio a mais).
-    if (!_propIdEdicao && !_propIdDuplicar) propIniciarItens();
+    if (!_propIdEdicao && !_propIdDuplicar) await propIniciarItens();
 
     if (_propIdEdicao) {
         await propCarregarEdicao(_propIdEdicao);
         if (_urlModo === 'visualizar') propAplicarModoVisualizacao();
     } else if (_propIdDuplicar) {
         await propCarregarDuplicar(_propIdDuplicar);
+    } else if (_urlTab === 'proposta' && _urlParams.get('oportunidade_id')) {
+        await propCarregarDaOportunidade(_urlParams.get('oportunidade_id'));
     }
 
     // Processo — pré-preencher ao editar via ?tab=processo&id=...
@@ -832,7 +842,7 @@ function _itensNormalizar(lista) {
         produto_id: it.produto_id || null,
         produto:  it.produto  || '',
         qtd:      it.qtd      ?? it.quantidade ?? 1,
-        unidade:  it.unidade  || (_acUnidades[0]?.unidade || 'UN'),
+        unidade:  it.unidade  || '',
         preco:    it.preco    ?? it.preco_unit ?? 0,
         moeda:    it.moeda    || (_acMoedas[0]?.descricao || 'USD'),
     }));
@@ -841,8 +851,8 @@ function _itensNormalizar(lista) {
 async function itemAdicionar(pfx) {
     await Promise.all([_carregarMoedas(), _carregarUnidades()]);
     const _moedaDefault   = _acMoedas.length   > 0 ? _acMoedas[0].descricao   : '';
-    const _unidadeDefault = _acUnidades.length  > 0 ? _acUnidades[0].unidade   : 'un';
-    _itensDe(pfx).push({ produto_id: null, produto: '', qtd: 1, unidade: _unidadeDefault, preco: 0, moeda: _moedaDefault });
+    // Unidade começa vazia: vem do cadastro do produto ao selecioná-lo (itemSelecionarProduto)
+    _itensDe(pfx).push({ produto_id: null, produto: '', qtd: 1, unidade: '', preco: 0, moeda: _moedaDefault });
     itensRenderizar(pfx);
 }
 
@@ -912,6 +922,8 @@ function itensRenderizar(pfx) {
                 <div class="prop-item-field prop-item-field--un">
                     <label for="${pfx}-item-un-${i}">Un.</label>
                     <select id="${pfx}-item-un-${i}" class="prop-item-select" onchange="itemAtualizar('${pfx}', ${i}, 'unidade', this.value)">
+                        <option value="">Selecione...</option>
+                        ${item.unidade && !unidades.some(u => u.unidade === item.unidade) ? `<option value="${escHtml(item.unidade)}" selected>${escHtml(item.unidade)}</option>` : ''}
                         ${unidades.map(u => `<option value="${escHtml(u.unidade)}"${item.unidade===u.unidade?' selected':''}>${escHtml(u.unidade)}</option>`).join('')}
                     </select>
                 </div>
@@ -1052,10 +1064,10 @@ function itemSelecionarProduto(pfx, idx, produtoId) {
     if (!p || !item) return;
     item.produto_id = p.id;
     item.produto    = p.nome || '';
-    if (p.unidade_medida) {
-        const un = _acUnidades.find(u => String(u.unidade).toLowerCase() === String(p.unidade_medida).toLowerCase());
-        item.unidade = un ? un.unidade : p.unidade_medida;
-    }
+    // Unidade do cadastro do produto (sigla ou descrição); sem ela, fica para escolher
+    const unCad = String(p.unidade_medida || '').trim();
+    const un = _acUnidades.find(u => [u.unidade, u.descricao].some(v => String(v || '').toLowerCase() === unCad.toLowerCase()));
+    item.unidade = un ? un.unidade : unCad;
     if (p.preco_venda) item.preco = Number(p.preco_venda) || 0;
     if (p.moeda) {
         const m = _acMoedas.find(x => [x.sigla, x.codigo, x.descricao].map(v => String(v ?? '')).includes(String(p.moeda)));

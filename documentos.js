@@ -869,12 +869,6 @@ function docCopiarLinkAssinatura(ev, token) {
         .catch(() => window.prompt('Copie o link de assinatura:', url));
 }
 
-function _docTelefoneWhatsapp(tel) {
-    const d = String(tel || '').replace(/\D/g, '');
-    if (!d) return '';
-    return (d.length === 10 || d.length === 11) ? '55' + d : d;
-}
-
 async function docEnviarLinkAssinatura(proformaId) {
     const p = _docProformas.find(x => String(x.id) === String(proformaId));
     if (!p) return;
@@ -889,10 +883,10 @@ async function docEnviarLinkAssinatura(proformaId) {
         }
         let telefone = '';
         if (p.destinatario_id) {
-            const { data: c } = await supabaseClient.from('parceiro_contatos').select('telefone')
+            const { data: c } = await supabaseClient.from('parceiro_contatos').select('*')
                 .eq('parceiro_id', p.destinatario_id).not('telefone', 'is', null)
                 .order('ordem', { ascending: true }).limit(1).maybeSingle();
-            telefone = _docTelefoneWhatsapp(c?.telefone);
+            telefone = telefoneWhatsapp(c?.telefone, c?.ddi) || '';
         }
         const res = await window.supabaseAPI.criarAssinaturaProforma(proformaId, reg?.arquivo_path, telefone);
         if (!res.sucesso) { aba?.close(); mostrarNotificacao('Não foi possível gerar o link: ' + res.mensagem, 'erro'); return; }

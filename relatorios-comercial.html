@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style-base.css?v=fcfe125a">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-relatorios-comercial.css?v=b062f3ea">
+    <link rel="stylesheet" href="style-relatorios-comercial.css?v=e13c0432">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -45,6 +45,13 @@
         </div>
 
         <div class="content">
+
+            <!-- Opções de relatório do módulo: Proformas e Processos ficam em relatorios.html -->
+            <div class="rc-modulo-tabs">
+                <button class="rc-modulo-tab active"><i class="fa-solid fa-chart-line"></i> Comercial</button>
+                <button class="rc-modulo-tab" onclick="window.location.href='relatorios.html?ver=comercial&modulo=proformas'"><i class="fa-solid fa-file-lines"></i> Proformas</button>
+                <button class="rc-modulo-tab" onclick="window.location.href='relatorios.html?ver=comercial&modulo=processos'"><i class="fa-solid fa-ship"></i> Processos</button>
+            </div>
 
             <!-- FILTROS DE PERÍODO -->
             <div class="rc-filtros">
@@ -138,9 +145,9 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=3d018a22"></script>
+<script src="supabase-api.js?v=c324da29"></script>
 <script src="auth.js?v=443d3cf2"></script>
-<script src="navegador.js?v=43ffeccc"></script>
+<script src="navegador.js?v=ba468009"></script>
 <script src="relatorios-comercial.js?v=f033074d"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>

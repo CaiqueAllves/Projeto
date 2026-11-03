@@ -260,6 +260,7 @@ function _profRenderCard(p) {
         <div class="prof-card-modal">
             ${modalLabel ? `<span class="tag-badge"><i class="fa-solid ${modalIco}"></i> ${_profEscapar(modalLabel)}</span>` : ''}
             ${p.incoterm ? `<span class="tag-badge">${_profEscapar(p.incoterm)}</span>` : ''}
+            ${p.oportunidade_numero ? `<span class="tag-badge" title="Proposta de origem"><i class="fa-solid fa-handshake"></i> ${_profEscapar(p.oportunidade_numero)}</span>` : ''}
         </div>` : ''}
         <div class="prof-card-empresa-linha">
             <span class="prof-card-label">Exportador:</span>
@@ -348,6 +349,7 @@ function profRenderizarLista(lista) {
                 <div style="display:flex;flex-direction:column;gap:3px;">
                     ${modalLabel ? `<span class="tag-badge" style="width:fit-content;"><i class="fa-solid ${modalIco}"></i> ${modalLabel}</span>` : '<span class="cell-vazio">—</span>'}
                     ${p.incoterm ? `<span class="tag-badge" style="width:fit-content;">${escHtml(p.incoterm)}</span>` : ''}
+                    ${p.oportunidade_numero ? `<span class="tag-badge" style="width:fit-content;" title="Proposta de origem"><i class="fa-solid fa-handshake"></i> ${escHtml(p.oportunidade_numero)}</span>` : ''}
                 </div>
             </td>
             <td class="cell-nowrap">
