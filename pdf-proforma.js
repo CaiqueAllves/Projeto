@@ -167,13 +167,13 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     }
     const nomeExp = vv(d.empresa_nome || d.razao_social) || '—';
     const cidadeExp = [vv(d.cidade), vv(d.estado)].filter(Boolean).join(' / ');
-    const enderecoExp = [vv(d.endereco), cidadeExp, vv(d.origem_pais), d.cep ? `${t.cep} ${d.cep}` : ''].filter(Boolean).join(' · ');
+    const enderecoExp = [vv(d.endereco), cidadeExp, vv(d.origem_pais), d.cep ? `${t.cep} ${formatarCep(d.cep, d.origem_pais)}` : ''].filter(Boolean).join(' · ');
 
     // ── Cabeçalho: Exportador + número e datas ──
     let Y = pvCabecalho(doc, {
         emissor: {
             nome: nomeExp,
-            linhas: [d.documento ? `${t.identificacao}: ${d.documento}` : '', enderecoExp, d._contato_exp ? `${t.contato}: ${d._contato_exp}` : ''],
+            linhas: [d.documento ? `${t.identificacao}: ${formatarDocumentoFiscal(d.documento, d.documento_tipo)}` : '', enderecoExp, d._contato_exp ? `${t.contato}: ${d._contato_exp}` : ''],
             logo: await pdfCarregarImagem(d._logo_url),
         },
         titulo: t.proforma_invoice,
@@ -186,7 +186,7 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     const pontoDestino = d.modal === 'maritimo' ? d.porto_destino : d.modal === 'aereo' ? d.aeroporto_destino : d.fronteira_entrada;
     Y = pvFaixaTermos(doc, Y, [
         [t.incoterm_rot, [vv(d.incoterm), vv(d.incoterm_local)].filter(Boolean).join(' · '), 1.5],
-        [t.modal, I.modal(d.modal)], [t.moeda, moeda], [t.tipo, I.tipo(d.tipo), 1.2], [t.proposito, I.proposito(d.proposito)],
+        [t.modal, I.modal(d.modal)], [t.moeda, pdfMoedaRotulo(moeda, I.cod)], [t.tipo, I.tipo(d.tipo), 1.2], [t.proposito, I.proposito(d.proposito)],
     ]);
 
     // ── Exportador | Importador (indireta: Vendedor | Comprador — quem exporta é a trading) ──
@@ -194,12 +194,12 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
     const cidadeImp = [vv(d.destinatario_cidade), vv(d.destinatario_estado)].filter(Boolean).join(' / ');
     Y = pvQuadros(doc, Y, [
         { titulo: indireta ? t.vendedor : t.exportador, nome: nomeExp, ultimaCinza: !!d._contato_exp,
-          linhas: [d.documento ? `${t.identificacao}: ${d.documento}` : '', [vv(d.endereco), cidadeExp].filter(Boolean).join(' · '),
-                   [vv(d.origem_pais), vv(d.cep)].filter(Boolean).join(' · '), d._contato_exp ? `${t.contato}: ${d._contato_exp}` : ''].filter(Boolean) },
+          linhas: [d.documento ? `${t.identificacao}: ${formatarDocumentoFiscal(d.documento, d.documento_tipo)}` : '', [vv(d.endereco), cidadeExp].filter(Boolean).join(' · '),
+                   [vv(d.origem_pais), vv(formatarCep(d.cep, d.origem_pais))].filter(Boolean).join(' · '), d._contato_exp ? `${t.contato}: ${d._contato_exp}` : ''].filter(Boolean) },
         // exportação indireta: a destinatária é a trading (compradora), não o importador
         { titulo: indireta ? t.comprador : t.importador, nome: vv(d.destinatario_razao_social) || '—', ultimaCinza: !!d._contato_imp,
-          linhas: [d.destinatario_doc ? `${t.identificacao_fiscal}: ${d.destinatario_doc}` : '', [vv(d.destinatario_endereco), cidadeImp].filter(Boolean).join(' · '),
-                   [vv(d.destinatario_pais || d.destino_pais), vv(d.destinatario_cep)].filter(Boolean).join(' · '), d._contato_imp ? `${t.contato}: ${d._contato_imp}` : ''].filter(Boolean) },
+          linhas: [d.destinatario_doc ? `${t.identificacao_fiscal}: ${formatarDocumentoFiscal(d.destinatario_doc, d.destinatario_doc_tipo, d.destino_pais)}` : '', [vv(d.destinatario_endereco), cidadeImp].filter(Boolean).join(' · '),
+                   [vv(d.destinatario_pais || d.destino_pais), vv(formatarCep(d.destinatario_cep, d.destinatario_pais || d.destino_pais))].filter(Boolean).join(' · '), d._contato_imp ? `${t.contato}: ${d._contato_imp}` : ''].filter(Boolean) },
     ]);
 
     // ── Embarque | Condições de pagamento ──
@@ -242,7 +242,7 @@ async function gerarPDFProformaDados(d, opcoes = {}) {
             .filter(([, v]) => v),
         extenso: total ? pdfValorPorExtenso(total, moeda, I.cod) : '', rotExtenso: t.total_extenso,
         totais: [[t.subtotal, I.num(subtotal)], ...(frete ? [[t.frete, I.num(frete)]] : []), ...(seguro ? [[t.seguro, I.num(seguro)]] : []), [t.total_geral, I.num(total)]],
-        rotuloTotal: `${t.total_geral}${moeda ? ' · ' + moeda : ''}`,
+        rotuloTotal: `${t.total_geral}${moeda ? ' · ' + pdfMoedaRotulo(moeda, I.cod) : ''}`,
     });
 
     // ── Dados bancários | Observações ──

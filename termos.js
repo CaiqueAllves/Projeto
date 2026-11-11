@@ -25,3 +25,10 @@ document.addEventListener('DOMContentLoaded', function () {
         mudarTab(tab);
     }
 });
+
+// Versão e data vêm de um lugar só (TERMOS_VERSAO/TERMOS_DATA em supabase-api.js),
+// a mesma versão que o sistema pede para aceitar (auth.js).
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof TERMOS_VERSAO !== 'undefined') document.querySelectorAll('[data-termos-versao]').forEach(el => { el.textContent = TERMOS_VERSAO; });
+    if (typeof TERMOS_DATA !== 'undefined') document.querySelectorAll('[data-termos-data]').forEach(el => { el.textContent = TERMOS_DATA; });
+});

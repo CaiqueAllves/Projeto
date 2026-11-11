@@ -121,7 +121,7 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     let Y = pvCabecalho(doc, {
         emissor: {
             nome: nomeEx,
-            linhas: [ex.documento ? `${t.identificacao}: ${ex.documento}` : '', [rua(ex), cidade(ex), vv(ex.pais), ex.cep ? `${t.cep} ${ex.cep}` : ''].filter(Boolean).join(' · '),
+            linhas: [ex.documento ? `${t.identificacao}: ${formatarDocumentoFiscal(ex.documento, ex.tipo_cadastro, ex.pais)}` : '', [rua(ex), cidade(ex), vv(ex.pais), ex.cep ? `${t.cep} ${formatarCep(ex.cep, ex.pais)}` : ''].filter(Boolean).join(' · '),
                      ex._contato ? `${t.contato}: ${ex._contato}` : ''],
             logo: await pdfCarregarImagem(ex.logo_url),
         },
@@ -134,7 +134,7 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     const pontoDestino = proc.modal === 'maritimo' ? proc.porto_destino : proc.modal === 'aereo' ? proc.aeroporto_destino : proc.fronteira_entrada;
     Y = pvFaixaTermos(doc, Y, [
         [t.incoterm_rot, [vv(proc.incoterm), vv(prof?.incoterm_local)].filter(Boolean).join(' · '), 1.3],
-        [t.modal, I.modal(proc.modal), 1], [t.moeda, moeda, 1.1], [t.processo, vv(proc.numero_processo), 1.5],
+        [t.modal, I.modal(proc.modal), 1], [t.moeda, pdfMoedaRotulo(moeda, I.cod), 1.1], [t.processo, vv(proc.numero_processo), 1.5],
         [t.origem, [vv(proc.pais_origem), vv(pontoOrigem)].filter(Boolean).join(' · '), 1.6],
         [t.destino, [vv(proc.pais_destino), vv(pontoDestino)].filter(Boolean).join(' · '), 1.6],
         ...(proc.data_embarque ? [[t.data_embarque, I.data(proc.data_embarque), 1.1]] : []),
@@ -144,8 +144,8 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
     // ── Exportador | Importador ──
     const quadroEmpresa = (titulo, nome, e) => ({
         titulo, nome, ultimaCinza: !!e._contato,
-        linhas: [e.documento ? `${t.identificacao}: ${e.documento}` : '', [rua(e), cidade(e)].filter(Boolean).join(' · '),
-                 [vv(e.pais), vv(e.cep)].filter(Boolean).join(' · '), e._contato ? `${t.contato}: ${e._contato}` : ''].filter(Boolean),
+        linhas: [e.documento ? `${t.identificacao}: ${formatarDocumentoFiscal(e.documento, e.tipo_cadastro, e.pais)}` : '', [rua(e), cidade(e)].filter(Boolean).join(' · '),
+                 [vv(e.pais), vv(formatarCep(e.cep, e.pais))].filter(Boolean).join(' · '), e._contato ? `${t.contato}: ${e._contato}` : ''].filter(Boolean),
     });
     // ── Exportador | Importador (+ Pagamento ao lado na CI, folha deitada) ──
     const quadroPagamento = tipo === 'commercial'
@@ -201,7 +201,7 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
             linhas, { vazio: t.nenhum_produto, maxTxt: 6, maxSub: 6 });
         Y = pvResumo(doc, Y, {
             stats, extenso: total ? pdfValorPorExtenso(total, moeda, I.cod) : '', rotExtenso: t.total_extenso,
-            totais: [[t.total_geral, I.num(total)]], rotuloTotal: `${t.total_geral}${moeda ? ' · ' + moeda : ''}`,
+            totais: [[t.total_geral, I.num(total)]], rotuloTotal: `${t.total_geral}${moeda ? ' · ' + pdfMoedaRotulo(moeda, I.cod) : ''}`,
         });
         Y = pvQuadros(doc, Y, [pvQuadroBanco(prof?.dados_bancarios, t, nomeEx)]);
     } else {
@@ -212,7 +212,7 @@ async function gerarPDFDocumentoProcesso(tipo, processoId, opcoes = {}) {
         const campoFab = { chave: 'fabricante', origem: 'padrao' }, campoComp = { chave: 'composicao', origem: 'padrao' };
         const linhas = d.itens.map((it, i) => {
             const p = d.produtos[it.produto_id] || {}, l = log[i];
-            const sub = [p.sku ? `SKU ${p.sku}` : '', (p.hscode || p.ncm) ? `HS ${p.hscode || p.ncm}` : '', vv(l.e?.tipo_embalagem || l.e?.nome), l.dims].filter(Boolean).join(' · ');
+            const sub = [p.sku ? `SKU ${p.sku}` : '', hsDoProduto(p) ? `HS ${hsDoProduto(p)}` : '', vv(l.e?.tipo_embalagem || l.e?.nome), l.dims].filter(Boolean).join(' · ');
             return [{ txt: l.marcacao || '—', negrito: true, cor: PDF_CORES.AZUL }, { txt: vv(it.produto) || '—', sub },
                     ciValorCampo(d, it, i, campoFab, ciPl, I) || '—', ciValorCampo(d, it, i, campoComp, ciPl, I) || '—',
                     I.num(it.qtd, 0), l.vols ? I.num(l.vols, 0) : '—', l.vols ? I.num(l.liq, 3) : '—', l.vols ? I.num(l.bruto, 3) : '—'];

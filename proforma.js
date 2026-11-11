@@ -518,7 +518,7 @@ async function profSeguirProcesso(id) {
             cancelar: 'Não',
             aceite: 'Estou ciente de que a proforma não foi assinada e aceito os termos para iniciar o processo.',
             link: {
-                texto: 'Assinar Proposta',
+                texto: 'Assinar Proforma',
                 acao: () => profVerDocumentos(id),
             },
         }

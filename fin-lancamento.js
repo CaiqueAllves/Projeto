@@ -88,7 +88,25 @@ function finLinhaIniciar(p) {
     _flEl(p + 'Moeda')?.addEventListener('change', () => _finLinhaCambio(p, { forcar: true }));
     _flEl(p + 'Data')?.addEventListener('change', () => _finLinhaCambio(p));
     _flEl(p + 'Valor')?.addEventListener('input', e => { finLancMascara(e.target); _finLinhaBRL(p); });
+    _flEl(p + 'Valor')?.addEventListener('blur', e => {   // "3.500" → "3.500,00": sem dúvida de casas decimais
+        const el = e.target; if (!el.value.trim()) return;
+        el.value = (Number(el.value.replace(/\./g, '').replace(',', '.')) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    });
     _flEl(p + 'Cambio')?.addEventListener('input', e => { e.target.dataset.manual = '1'; _finLinhaBRL(p, 'taxa informada'); });
+    // Pagamento/recebimento: ao informar a Data de Execução com o valor em branco,
+    // sugere o valor e a moeda da Previsão (quase sempre é o mesmo — antes era redigitado)
+    if (/Pag$/.test(p)) _flEl(p + 'Data')?.addEventListener('change', () => {
+        const prev = p.replace(/Pag$/, 'Prev');
+        const vPag = _flEl(p + 'Valor'), vPrev = _flEl(prev + 'Valor');
+        if (!_flEl(p + 'Data').value || !vPag || vPag.value.trim() || !vPrev?.value.trim()) return;
+        const mPag = _flEl(p + 'Moeda'), mPrev = _flEl(prev + 'Moeda');
+        if (mPag && mPrev?.value && mPag.value !== mPrev.value && [...mPag.options].some(o => o.value === mPrev.value)) {
+            mPag.value = mPrev.value;
+            _finLinhaCambio(p, { forcar: true });
+        }
+        vPag.value = vPrev.value;
+        _finLinhaBRL(p);
+    });
 }
 
 function _finLinhaBRL(p, origem) {

@@ -14,9 +14,9 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Termos e Políticas</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=05b7d63f">
+    <link rel="stylesheet" href="style-base.css?v=7fa3f9db">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
-    <link rel="stylesheet" href="style-termos.css?v=fdac96d1">
+    <link rel="stylesheet" href="style-termos.css?v=aa08bc5b">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
     <link rel="stylesheet" href="style-mobile.css?v=4d316938">
 </head>
@@ -62,7 +62,7 @@
                 </div>
                 <div class="termos-hero-text">
                     <h1>Termos e Políticas</h1>
-                    <p>Documentos legais que regem o uso da plataforma Marpex. Última atualização: <strong>Janeiro de 2026</strong>.</p>
+                    <p>Documentos que regem o uso da plataforma Marpex. Versão <strong data-termos-versao>2.0</strong> · última atualização: <strong data-termos-data>Novembro de 2026</strong>.</p>
                 </div>
             </div>
 
@@ -75,7 +75,7 @@
                     <i class="fa-solid fa-shield-halved"></i> Privacidade
                 </button>
                 <button class="tab-btn" data-tab="cookies" onclick="mudarTab('cookies')">
-                    <i class="fa-solid fa-cookie-bite"></i> Cookies
+                    <i class="fa-solid fa-cookie-bite"></i> Armazenamento
                 </button>
                 <button class="tab-btn" data-tab="responsabilidade" onclick="mudarTab('responsabilidade')">
                     <i class="fa-solid fa-triangle-exclamation"></i> Responsabilidades
@@ -97,72 +97,108 @@
                         </div>
                         <div>
                             <h2>Termos de Uso</h2>
-                            <span class="termos-badge">Versão 1.0 · Jan/2026</span>
+                            <span class="termos-badge">Versão <span data-termos-versao>2.0</span> · <span data-termos-data>Novembro de 2026</span></span>
                         </div>
                     </div>
 
                     <div class="termos-section">
                         <h3><span class="section-num">1</span> Aceitação dos Termos</h3>
-                        <p>Ao acessar e utilizar a plataforma <strong>Marpex</strong>, você concorda com estes Termos de Uso na íntegra. Caso não concorde com qualquer disposição aqui contida, solicitamos que não utilize nossos serviços.</p>
-                        <p>Estes termos aplicam-se a todos os usuários da plataforma, incluindo administradores, gerentes e usuários comuns cadastrados por uma empresa.</p>
+                        <p>Estes Termos de Uso regulam o acesso e o uso da plataforma <strong>Marpex</strong>, oferecida por <span class="termos-preencher">[PREENCHER: razão social]</span>, inscrita no CNPJ sob o nº <span class="termos-preencher">[PREENCHER: CNPJ]</span> ("Marpex"), à empresa que contrata o serviço ("Cliente") e às pessoas que ela cadastra como usuárias ("Usuários").</p>
+                        <p>O aceite é feito eletronicamente no cadastro e, a cada nova versão destes Termos, no primeiro acesso após a atualização. Cada aceite fica registrado com a versão, a data e a hora, o endereço IP e o navegador utilizados. Quem não concordar com estes Termos não deve utilizar a plataforma.</p>
                     </div>
 
                     <div class="termos-section">
                         <h3><span class="section-num">2</span> Descrição do Serviço</h3>
-                        <p>A Marpex é uma plataforma de gestão de documentos e processos de comércio exterior, oferecendo funcionalidades como:</p>
+                        <p>A Marpex é uma plataforma on-line de gestão de comércio exterior, com foco em exportação. Entre as funcionalidades oferecidas estão:</p>
                         <ul class="termos-list">
-                            <li><i class="fa-solid fa-check"></i> Cadastro e gestão de empresas, clientes e fornecedores</li>
-                            <li><i class="fa-solid fa-check"></i> Controle de processos de exportação</li>
-                            <li><i class="fa-solid fa-check"></i> Upload e gestão de documentos fiscais e comerciais</li>
-                            <li><i class="fa-solid fa-check"></i> Relatórios e análises de desempenho</li>
-                            <li><i class="fa-solid fa-check"></i> Tabelas de referência de comércio exterior</li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Cadastros:</strong> empresas parceiras (fabricantes, importadores, transportadoras, tradings), produtos, embalagens e composição</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Comercial:</strong> propostas, Proformas Invoice com geração de PDF em vários idiomas e Termos e Condições de venda</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Assinatura eletrônica</strong> de Proformas por link enviado ao importador</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Operacional:</strong> processos de exportação (direta e indireta), transporte, etapas, Commercial Invoice, Packing List e anexos de documentos</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Financeiro:</strong> contas a pagar e a receber com comprovantes, plano de contas, câmbio (cotações do Banco Central), DRE, fluxo de caixa e relatórios</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Suporte:</strong> abertura de chamados, assistente com inteligência artificial e atendimento por WhatsApp</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span>Tabelas de apoio (NCM, unidades, moedas, países) e aplicativo instalável no celular</span></li>
                         </ul>
+                        <p>A plataforma está em evolução constante: funcionalidades podem ser incluídas, alteradas ou descontinuadas, buscando-se sempre preservar os dados já registrados pelo Cliente.</p>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">3</span> Cadastro e Conta</h3>
-                        <p>Para utilizar a plataforma, é necessário realizar um cadastro fornecendo informações verdadeiras, precisas e atualizadas. O usuário é responsável por:</p>
+                        <h3><span class="section-num">3</span> Cadastro, Conta e Perfis de Acesso</h3>
+                        <p>O cadastro exige informações verdadeiras, precisas e atualizadas. Cada empresa tem um administrador, que convida os demais Usuários e define o perfil e os módulos que cada um pode acessar. O Usuário é responsável por:</p>
                         <ul class="termos-list">
-                            <li><i class="fa-solid fa-check"></i> Manter a confidencialidade de suas credenciais de acesso</li>
-                            <li><i class="fa-solid fa-check"></i> Todas as atividades realizadas com sua conta</li>
-                            <li><i class="fa-solid fa-check"></i> Notificar imediatamente a Marpex sobre qualquer uso não autorizado</li>
+                            <li><i class="fa-solid fa-check"></i> Manter a confidencialidade da sua senha, que é pessoal e intransferível</li>
+                            <li><i class="fa-solid fa-check"></i> Todas as atividades realizadas com a sua conta</li>
+                            <li><i class="fa-solid fa-check"></i> Comunicar imediatamente à Marpex qualquer uso não autorizado</li>
                         </ul>
+                        <p>O Cliente responde pelos Usuários que cadastra e pelas permissões que concede a cada um. Por segurança, o acesso é bloqueado temporariamente (15 minutos) após 5 tentativas de login com senha incorreta.</p>
                         <div class="termos-alert termos-alert-warning">
                             <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>O compartilhamento de credenciais é estritamente proibido e pode resultar no bloqueio imediato da conta.</span>
+                            <span>O compartilhamento de senhas é proibido e pode resultar no bloqueio da conta.</span>
                         </div>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">4</span> Uso Permitido</h3>
-                        <p>A plataforma deve ser utilizada exclusivamente para fins lícitos relacionados à gestão de comércio exterior. É expressamente proibido:</p>
+                        <h3><span class="section-num">4</span> Conta de Avaliação</h3>
+                        <p>O cadastro sem vínculo com uma empresa cria uma conta de avaliação, com acesso por <strong>24 horas</strong>. Ao fim desse prazo o acesso é bloqueado até a conta ser vinculada a uma empresa. <span class="termos-preencher">[PREENCHER: o que acontece com os dados da conta de avaliação não vinculada — ex.: excluídos após X dias]</span></p>
+                    </div>
+
+                    <div class="termos-section">
+                        <h3><span class="section-num">5</span> Planos, Pagamento e Cancelamento</h3>
+                        <p>O serviço é contratado pela empresa Cliente. Usuários adicionais, além do administrador, são contratados à parte e liberados pela Marpex após a contratação.</p>
+                        <p><span class="termos-preencher">[PREENCHER: planos e valores, forma e periodicidade de pagamento, reajuste, consequências do atraso (ex.: suspensão após X dias), regras de cancelamento e de reembolso]</span></p>
+                        <p>Após o cancelamento, os dados do Cliente seguem as regras de retenção da Política de Privacidade. O Cliente pode solicitar uma cópia dos seus dados antes do encerramento.</p>
+                    </div>
+
+                    <div class="termos-section">
+                        <h3><span class="section-num">6</span> Uso Permitido</h3>
+                        <p>A plataforma deve ser utilizada somente para fins lícitos ligados à gestão de comércio exterior. É proibido:</p>
                         <ul class="termos-list termos-list-danger">
-                            <li><i class="fa-solid fa-xmark"></i> Utilizar a plataforma para atividades ilegais ou fraudulentas</li>
-                            <li><i class="fa-solid fa-xmark"></i> Tentar acessar dados de outras empresas sem autorização</li>
-                            <li><i class="fa-solid fa-xmark"></i> Realizar engenharia reversa ou tentativas de invasão</li>
-                            <li><i class="fa-solid fa-xmark"></i> Enviar conteúdo malicioso, spam ou vírus</li>
-                            <li><i class="fa-solid fa-xmark"></i> Reproduzir ou redistribuir o sistema sem autorização expressa</li>
+                            <li><i class="fa-solid fa-xmark"></i> Utilizar a plataforma para atividades ilegais ou fraudulentas, inclusive documentos falsos</li>
+                            <li><i class="fa-solid fa-xmark"></i> Enviar links de assinatura a quem não seja o legítimo representante do destinatário, ou tentar obter assinaturas por engano</li>
+                            <li><i class="fa-solid fa-xmark"></i> Tentar acessar dados de outras empresas ou contornar permissões</li>
+                            <li><i class="fa-solid fa-xmark"></i> Realizar engenharia reversa, testes de invasão não autorizados ou sobrecarga intencional</li>
+                            <li><i class="fa-solid fa-xmark"></i> Enviar conteúdo malicioso, spam ou arquivos com vírus</li>
+                            <li><i class="fa-solid fa-xmark"></i> Inserir dados pessoais sensíveis desnecessários ao serviço (saúde, religião, biometria etc.)</li>
+                            <li><i class="fa-solid fa-xmark"></i> Reproduzir, revender ou redistribuir o sistema sem autorização</li>
                         </ul>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">5</span> Propriedade Intelectual</h3>
-                        <p>Todo o conteúdo da plataforma Marpex, incluindo mas não se limitando a: software, design, logotipos, textos e funcionalidades, são propriedade exclusiva da Marpex e estão protegidos pelas leis de propriedade intelectual vigentes no Brasil.</p>
+                        <h3><span class="section-num">7</span> Dados do Cliente e Documentos Gerados</h3>
+                        <p>Os dados e arquivos inseridos pelo Cliente continuam sendo do Cliente. A Marpex os trata apenas para prestar o serviço, conforme a Política de Privacidade.</p>
+                        <p>Os documentos gerados pela plataforma (Proforma, Commercial Invoice, Packing List, PDFs de processos e comprovantes de assinatura) são montados com os dados informados pelo Cliente. Cabe ao Cliente conferi-los antes de enviar ou utilizar.</p>
+                        <p>Os <strong>Termos e Condições de venda base</strong> oferecidos para anexar à Proforma são um modelo genérico, disponível somente em português, e não constituem assessoria jurídica. O Cliente pode substituí-los pelos seus próprios Termos (em PDF) ou emitir a Proforma sem eles. A escolha e o conteúdo dos Termos de venda são de responsabilidade do Cliente.</p>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">6</span> Rescisão</h3>
-                        <p>A Marpex reserva-se o direito de suspender ou encerrar o acesso de qualquer usuário que viole estes Termos de Uso, sem necessidade de aviso prévio, nos casos de violação grave ou reincidente.</p>
+                        <h3><span class="section-num">8</span> Assinatura Eletrônica de Proformas</h3>
+                        <p>O Usuário pode gerar um link para o importador conferir e assinar a Proforma. O link é <strong>válido por 3 dias</strong>. Para assinar, o signatário informa nome e documento, desenha a assinatura e confirma que leu e concorda com a Proforma. A plataforma registra a data e a hora, o endereço IP, o navegador e o código <em>hash</em> (SHA-256) do PDF assinado, e entrega ao signatário uma via com o comprovante.</p>
+                        <p>Trata-se de assinatura eletrônica nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001, válida entre as partes que admitirem esse meio de comprovação. Cabe ao Cliente enviar o link à pessoa correta e assegurar que o destinatário aceita a assinatura por esse meio.</p>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">7</span> Alterações nos Termos</h3>
-                        <p>Reservamo-nos o direito de modificar estes termos a qualquer momento. Alterações significativas serão comunicadas via notificação na plataforma com antecedência mínima de 15 dias. O uso continuado após as alterações implica aceitação dos novos termos.</p>
+                        <h3><span class="section-num">9</span> Assistente de Suporte com Inteligência Artificial</h3>
+                        <p>O assistente do suporte usa inteligência artificial de terceiro (Anthropic) para responder dúvidas sobre o uso da plataforma. As respostas são geradas automaticamente e <strong>podem conter erros</strong>; não substituem a orientação de despachante aduaneiro, contador ou advogado. Não informe senhas ou dados sensíveis no chat. As mensagens enviadas ao assistente são processadas pelo fornecedor de IA, conforme a Política de Privacidade.</p>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">8</span> Lei Aplicável e Foro</h3>
-                        <p>Estes Termos são regidos pelas leis brasileiras. Fica eleito o foro da Comarca de São Paulo/SP para dirimir quaisquer controvérsias decorrentes deste instrumento, com renúncia expressa a qualquer outro.</p>
+                        <h3><span class="section-num">10</span> Propriedade Intelectual</h3>
+                        <p>O software, o design, as marcas, os logotipos, os textos e as funcionalidades da plataforma Marpex pertencem à Marpex e são protegidos pela legislação brasileira de propriedade intelectual. Estes Termos concedem ao Cliente apenas o direito de uso da plataforma durante a contratação.</p>
+                    </div>
+
+                    <div class="termos-section">
+                        <h3><span class="section-num">11</span> Suspensão e Encerramento</h3>
+                        <p>A Marpex pode suspender ou encerrar o acesso de quem violar estes Termos. Nos casos graves ou reincidentes, isso pode ocorrer sem aviso prévio. O Cliente pode encerrar a contratação a qualquer momento, conforme o item 5.</p>
+                    </div>
+
+                    <div class="termos-section">
+                        <h3><span class="section-num">12</span> Alterações destes Termos</h3>
+                        <p>Estes Termos e a Política de Privacidade podem ser atualizados. Cada nova versão é publicada nesta página. No primeiro acesso após a atualização, a plataforma exibe o aviso e pede um novo aceite. Sem o aceite da versão vigente não é possível continuar utilizando a plataforma.</p>
+                    </div>
+
+                    <div class="termos-section">
+                        <h3><span class="section-num">13</span> Lei Aplicável e Foro</h3>
+                        <p>Estes Termos são regidos pelas leis brasileiras. Fica eleito o foro da Comarca de <span class="termos-preencher">[PREENCHER: cidade/UF]</span> para resolver controvérsias decorrentes deste instrumento.</p>
                     </div>
                 </div>
 
@@ -180,114 +216,174 @@
                         </div>
                         <div>
                             <h2>Política de Privacidade</h2>
-                            <span class="termos-badge">LGPD Compliant · Jan/2026</span>
+                            <span class="termos-badge">LGPD · Versão <span data-termos-versao>2.0</span> · <span data-termos-data>Novembro de 2026</span></span>
                         </div>
                     </div>
 
                     <div class="termos-alert termos-alert-info">
                         <i class="fa-solid fa-circle-info"></i>
-                        <span>Esta política está em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong>.</span>
+                        <span>Esta política segue a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong> e explica quais dados pessoais a Marpex trata, para quê, com quem compartilha e por quanto tempo.</span>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">1</span> Dados Coletados</h3>
-                        <p>Coletamos as seguintes categorias de dados para a prestação dos nossos serviços:</p>
+                        <h3><span class="section-num">1</span> Papéis no Tratamento dos Dados</h3>
+                        <ul class="termos-list">
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Marpex como controladora:</strong> dados dos Usuários da plataforma (cadastro, login, uso, segurança e suporte).</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Marpex como operadora:</strong> dados que a empresa Cliente insere sobre terceiros — contatos de clientes, importadores, fornecedores e transportadoras, motoristas e pessoas que assinam Proformas. Nesses casos a <strong>controladora é a empresa Cliente</strong>, e a Marpex trata os dados somente para prestar o serviço, de acordo com as instruções do Cliente.</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="termos-section">
+                        <h3><span class="section-num">2</span> Dados Tratados</h3>
                         <div class="termos-grid">
                             <div class="termos-info-card">
                                 <i class="fa-solid fa-user"></i>
-                                <h4>Dados de Cadastro</h4>
-                                <p>Nome completo, CPF, e-mail, cargo e telefone.</p>
+                                <h4>Usuário</h4>
+                                <p>Nome, CPF, e-mail, cargo, telefone, foto de perfil e senha (guardada somente de forma criptografada).</p>
                             </div>
                             <div class="termos-info-card">
                                 <i class="fa-solid fa-building"></i>
-                                <h4>Dados da Empresa</h4>
-                                <p>Razão social, CNPJ, endereço e dados de contato.</p>
+                                <h4>Empresa Cliente</h4>
+                                <p>Razão social, CNPJ, inscrições, endereço, contas bancárias, logotipo e marcas.</p>
+                            </div>
+                            <div class="termos-info-card">
+                                <i class="fa-solid fa-address-book"></i>
+                                <h4>Terceiros inseridos pelo Cliente</h4>
+                                <p>Nome, e-mail, telefone/WhatsApp e cargo de contatos; nome, CNH e telefone de motoristas.</p>
                             </div>
                             <div class="termos-info-card">
                                 <i class="fa-solid fa-file"></i>
-                                <h4>Dados Operacionais</h4>
-                                <p>Processos, documentos e registros de comércio exterior.</p>
+                                <h4>Operacionais</h4>
+                                <p>Propostas, Proformas, processos, documentos, contas, comprovantes e arquivos anexados.</p>
                             </div>
                             <div class="termos-info-card">
-                                <i class="fa-solid fa-chart-line"></i>
-                                <h4>Dados de Uso</h4>
-                                <p>Logs de acesso, IP, navegador e interações na plataforma.</p>
+                                <i class="fa-solid fa-signature"></i>
+                                <h4>Assinatura eletrônica</h4>
+                                <p>Nome, documento, cargo e e-mail de quem assina, imagem da assinatura, IP, navegador, data/hora e <em>hash</em> do PDF.</p>
+                            </div>
+                            <div class="termos-info-card">
+                                <i class="fa-solid fa-lock"></i>
+                                <h4>Segurança</h4>
+                                <p>CPF e IP de tentativas de login com erro, IP do cadastro, registro do aceite destes termos e histórico de alterações (quem alterou e quando).</p>
+                            </div>
+                            <div class="termos-info-card">
+                                <i class="fa-solid fa-headset"></i>
+                                <h4>Suporte</h4>
+                                <p>Mensagens e imagens anexadas aos chamados e conversas com o assistente de IA.</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">2</span> Finalidade do Tratamento</h3>
-                        <p>Os dados coletados são utilizados exclusivamente para:</p>
+                        <h3><span class="section-num">3</span> Finalidades e Bases Legais</h3>
                         <ul class="termos-list">
-                            <li><i class="fa-solid fa-check"></i> Prestação e melhoria dos serviços da plataforma</li>
-                            <li><i class="fa-solid fa-check"></i> Autenticação e controle de acesso</li>
-                            <li><i class="fa-solid fa-check"></i> Comunicações relacionadas ao serviço</li>
-                            <li><i class="fa-solid fa-check"></i> Cumprimento de obrigações legais e regulatórias</li>
-                            <li><i class="fa-solid fa-check"></i> Prevenção de fraudes e segurança da plataforma</li>
+                            <li><i class="fa-solid fa-check"></i> <span>Prestar o serviço contratado, autenticar e controlar o acesso — <em>execução de contrato</em> (art. 7º, V)</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span>Segurança, prevenção de fraudes e limite de tentativas de login — <em>legítimo interesse</em> (art. 7º, IX)</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span>Registro das assinaturas eletrônicas e dos aceites destes termos, como prova — <em>exercício regular de direitos</em> (art. 7º, VI)</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span>Cumprimento de obrigações legais e regulatórias — <em>obrigação legal</em> (art. 7º, II)</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span>Comunicações sobre o serviço e atendimento do suporte — <em>execução de contrato</em></span></li>
                         </ul>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">3</span> Compartilhamento de Dados</h3>
-                        <p>A Marpex <strong>não vende, aluga ou comercializa</strong> dados pessoais dos usuários. O compartilhamento ocorre apenas nas seguintes situações:</p>
-                        <ul class="termos-list">
-                            <li><i class="fa-solid fa-check"></i> Com provedores de infraestrutura (ex: Supabase) sob contrato de confidencialidade</li>
-                            <li><i class="fa-solid fa-check"></i> Por determinação legal ou judicial</li>
-                            <li><i class="fa-solid fa-check"></i> Para proteção de direitos da Marpex em processos judiciais</li>
-                        </ul>
+                        <h3><span class="section-num">4</span> Compartilhamento e Fornecedores</h3>
+                        <p>A Marpex <strong>não vende, aluga ou comercializa</strong> dados pessoais. Para funcionar, a plataforma usa os fornecedores abaixo, que recebem apenas os dados necessários à sua função:</p>
+                        <div class="cookies-table-wrap">
+                            <table class="cookies-table">
+                                <thead>
+                                    <tr><th>Fornecedor</th><th>Função</th><th>Dados</th><th>Local</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Supabase</td><td>Banco de dados, login, arquivos e funções do servidor</td><td>Todos os dados da plataforma</td><td>Brasil (São Paulo)</td></tr>
+                                    <tr><td>GitHub (Microsoft)</td><td>Hospedagem das páginas do sistema</td><td>IP e navegador de quem acessa</td><td>EUA</td></tr>
+                                    <tr><td>Anthropic</td><td>Assistente de suporte com IA</td><td>Mensagens enviadas ao assistente</td><td>EUA</td></tr>
+                                    <tr><td>EmailJS</td><td>E-mail de boas-vindas</td><td>Nome e e-mail do novo Usuário</td><td><span class="termos-preencher">[CONFIRMAR]</span></td></tr>
+                                    <tr><td>BrasilAPI e ViaCEP</td><td>Consulta de CNPJ e de CEP</td><td>Somente o número consultado</td><td>Brasil</td></tr>
+                                    <tr><td>Banco Central do Brasil</td><td>Cotações de câmbio (PTAX)</td><td>Nenhum dado pessoal</td><td>Brasil</td></tr>
+                                    <tr><td>Cloudflare (cdnjs) e jsDelivr</td><td>Entrega de bibliotecas usadas pelas telas</td><td>IP e navegador de quem acessa</td><td>Global</td></tr>
+                                    <tr><td>WhatsApp (Meta)</td><td>Envio de mensagens e links, sempre iniciado pelo próprio Usuário</td><td>O que o Usuário decidir enviar</td><td>Global</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p>Os dados também podem ser compartilhados por determinação legal ou judicial, ou para defesa de direitos da Marpex.</p>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">4</span> Seus Direitos (LGPD)</h3>
-                        <p>Como titular dos dados, você tem os seguintes direitos garantidos pela LGPD:</p>
+                        <h3><span class="section-num">5</span> Transferência Internacional</h3>
+                        <p>Alguns fornecedores acima tratam dados fora do Brasil (por exemplo, nos Estados Unidos). Essas transferências ocorrem para a execução do serviço e com as garantias previstas no art. 33 da LGPD. <span class="termos-preencher">[CONFIRMAR com o jurídico: mecanismo adotado — ex.: cláusulas contratuais dos fornecedores]</span></p>
+                    </div>
+
+                    <div class="termos-section">
+                        <h3><span class="section-num">6</span> Direitos do Titular</h3>
+                        <p>Como titular dos dados, você pode solicitar:</p>
                         <div class="termos-direitos-grid">
                             <div class="termos-direito-item">
                                 <i class="fa-solid fa-eye" style="color: #4776ec;"></i>
-                                <span><strong>Acesso</strong> — Solicitar cópia dos dados que mantemos sobre você</span>
+                                <span><strong>Acesso</strong> — confirmação e cópia dos dados tratados</span>
                             </div>
                             <div class="termos-direito-item">
                                 <i class="fa-solid fa-pen" style="color: #f59e0b;"></i>
-                                <span><strong>Correção</strong> — Corrigir dados incompletos ou incorretos</span>
+                                <span><strong>Correção</strong> — de dados incompletos ou incorretos</span>
                             </div>
                             <div class="termos-direito-item">
                                 <i class="fa-solid fa-trash" style="color: #dc2626;"></i>
-                                <span><strong>Exclusão</strong> — Solicitar a eliminação dos seus dados</span>
+                                <span><strong>Eliminação</strong> — de dados desnecessários ou tratados em desconformidade</span>
                             </div>
                             <div class="termos-direito-item">
                                 <i class="fa-solid fa-ban" style="color: #7c3aed;"></i>
-                                <span><strong>Oposição</strong> — Opor-se ao tratamento de dados</span>
+                                <span><strong>Oposição</strong> — ao tratamento baseado em legítimo interesse</span>
                             </div>
                             <div class="termos-direito-item">
                                 <i class="fa-solid fa-download" style="color: #16a34a;"></i>
-                                <span><strong>Portabilidade</strong> — Receber seus dados em formato legível</span>
+                                <span><strong>Portabilidade</strong> — dos dados em formato estruturado</span>
                             </div>
                             <div class="termos-direito-item">
                                 <i class="fa-solid fa-info-circle" style="color: #06b6d4;"></i>
-                                <span><strong>Informação</strong> — Saber com quem seus dados são compartilhados</span>
+                                <span><strong>Informação</strong> — sobre com quem os dados são compartilhados</span>
                             </div>
                         </div>
                         <div class="termos-alert termos-alert-info" style="margin-top: 16px;">
                             <i class="fa-solid fa-circle-info"></i>
-                            <span>Para exercer seus direitos, entre em contato pelo e-mail <strong>privacidade@marpex.com.br</strong>. Responderemos em até 15 dias úteis.</span>
+                            <span>Pedidos pelo e-mail do Encarregado: <strong><span class="termos-preencher">[PREENCHER: e-mail de privacidade]</span></strong>. Respondemos em até 15 dias. Se os dados foram inseridos por uma empresa Cliente (contatos, motoristas, signatários), o pedido deve ser feito a essa empresa, que é a controladora — a Marpex ajuda a atendê-lo.</span>
                         </div>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">5</span> Retenção dos Dados</h3>
-                        <p>Os dados são mantidos pelo período necessário à prestação dos serviços ou pelo prazo exigido por lei. Após o encerramento da conta, os dados são anonimizados ou excluídos em até <strong>90 dias</strong>, salvo obrigação legal de retenção.</p>
+                        <h3><span class="section-num">7</span> Retenção e Eliminação</h3>
+                        <ul class="termos-list">
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Conta e dados do Cliente:</strong> enquanto a contratação estiver ativa. Após o encerramento, <span class="termos-preencher">[PREENCHER: prazo para exclusão/anonimização]</span>, salvo os dados que a lei obrigue a guardar.</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Lixeira:</strong> Proformas e Processos excluídos podem ser restaurados por 7 dias; depois são removidos definitivamente, junto com os arquivos.</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Tentativas de login com erro:</strong> apagadas após o login correto ou depois de 24 horas.</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Links de assinatura:</strong> válidos por 3 dias. O registro da assinatura é mantido junto à Proforma, como prova, enquanto ela existir.</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Histórico de alterações e aceites destes termos:</strong> enquanto existirem o registro e a conta a que se referem.</span></li>
+                            <li><i class="fa-solid fa-check"></i> <span><strong>Cópias de segurança:</strong> o banco de dados tem cópia diária, guardada por <span class="termos-preencher">[PREENCHER: prazo de retenção dos backups]</span>.</span></li>
+                        </ul>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">6</span> Segurança</h3>
-                        <p>Adotamos medidas técnicas e organizacionais para proteger seus dados, incluindo criptografia em trânsito (TLS), controle de acesso por perfil, Row Level Security (RLS) no banco de dados e registros de auditoria de acesso.</p>
+                        <h3><span class="section-num">8</span> Segurança</h3>
+                        <p>Medidas adotadas:</p>
+                        <ul class="termos-list">
+                            <li><i class="fa-solid fa-check"></i> Conexão criptografada (HTTPS/TLS) e senhas guardadas apenas de forma criptografada</li>
+                            <li><i class="fa-solid fa-check"></i> Bloqueio temporário após tentativas de login com erro</li>
+                            <li><i class="fa-solid fa-check"></i> Isolamento dos dados de cada empresa no banco de dados (Row Level Security)</li>
+                            <li><i class="fa-solid fa-check"></i> Permissões por perfil e por módulo, definidas pelo administrador</li>
+                            <li><i class="fa-solid fa-check"></i> Documentos e comprovantes em armazenamento privado, com links temporários</li>
+                            <li><i class="fa-solid fa-check"></i> Histórico de alterações dos principais registros e cópia de segurança diária do banco</li>
+                        </ul>
+                        <p>Em caso de incidente de segurança que possa causar risco ou dano relevante aos titulares, a Marpex comunicará a Autoridade Nacional de Proteção de Dados (ANPD) e os titulares afetados, conforme o art. 48 da LGPD. Quando os dados forem de terceiros inseridos pelo Cliente, o Cliente também será avisado.</p>
+                    </div>
+
+                    <div class="termos-section">
+                        <h3><span class="section-num">9</span> Crianças e Adolescentes</h3>
+                        <p>A plataforma é destinada a empresas e a profissionais maiores de 18 anos e não é dirigida a crianças ou adolescentes.</p>
                     </div>
                 </div>
 
             </div>
 
             <!-- ============================
-                 TAB: COOKIES
+                 TAB: ARMAZENAMENTO (COOKIES)
             ============================= -->
             <div class="tab-content" id="tab-cookies">
 
@@ -297,18 +393,18 @@
                             <i class="fa-solid fa-cookie-bite"></i>
                         </div>
                         <div>
-                            <h2>Política de Cookies e Armazenamento Local</h2>
-                            <span class="termos-badge">Jan/2026</span>
+                            <h2>Cookies e Armazenamento no Navegador</h2>
+                            <span class="termos-badge">Versão <span data-termos-versao>2.0</span> · <span data-termos-data>Novembro de 2026</span></span>
                         </div>
                     </div>
 
                     <div class="termos-section">
                         <h3><span class="section-num">1</span> O que Utilizamos</h3>
-                        <p>A plataforma Marpex utiliza <strong>localStorage</strong> e <strong>sessionStorage</strong> do navegador para garantir o funcionamento correto do sistema. Não utilizamos cookies de rastreamento ou publicidade.</p>
+                        <p>A Marpex <strong>não usa cookies de rastreamento nem de publicidade</strong>. Para funcionar, guarda no navegador apenas informações técnicas (em <em>localStorage</em>, <em>sessionStorage</em> e no cache do aplicativo). Esses itens são necessários ao funcionamento do serviço.</p>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">2</span> Dados Armazenados Localmente</h3>
+                        <h3><span class="section-num">2</span> Itens Guardados no Navegador</h3>
                         <div class="cookies-table-wrap">
                             <table class="cookies-table">
                                 <thead>
@@ -321,34 +417,64 @@
                                 </thead>
                                 <tbody>
                                     <tr>
+                                        <td><code>sb-…-auth-token</code></td>
+                                        <td><span class="badge-tipo local">Local</span></td>
+                                        <td>Sessão de login segura (Supabase)</td>
+                                        <td>Até sair ou a sessão expirar</td>
+                                    </tr>
+                                    <tr>
                                         <td><code>usuarioLogado</code></td>
                                         <td><span class="badge-tipo sessao">Session</span></td>
-                                        <td>Dados do usuário autenticado na sessão atual</td>
+                                        <td>Dados básicos do Usuário na sessão atual (nome, empresa, perfil)</td>
                                         <td>Até fechar o navegador</td>
                                     </tr>
                                     <tr>
-                                        <td><code>usuarioSalvo</code></td>
+                                        <td><code>usuarioSalvo</code>, <code>rememberMe</code>, <code>lastLogin</code></td>
                                         <td><span class="badge-tipo local">Local</span></td>
-                                        <td>Dados para "Lembrar-me" entre sessões</td>
-                                        <td>Até logout</td>
-                                    </tr>
-                                    <tr>
-                                        <td><code>rememberMe</code></td>
-                                        <td><span class="badge-tipo local">Local</span></td>
-                                        <td>Flag de preferência de login automático</td>
-                                        <td>Até logout</td>
+                                        <td>Opção "Lembrar-me": manter o acesso entre visitas</td>
+                                        <td>Até sair</td>
                                     </tr>
                                     <tr>
                                         <td><code>cpfSalvo</code></td>
                                         <td><span class="badge-tipo local">Local</span></td>
-                                        <td>CPF para pré-preenchimento do formulário</td>
-                                        <td>Até logout</td>
+                                        <td>CPF já preenchido na tela de login (opção "Lembrar-me")</td>
+                                        <td>Até desmarcar "Lembrar-me" ou limpar o navegador</td>
                                     </tr>
                                     <tr>
-                                        <td><code>lastLogin</code></td>
+                                        <td><code>modulo_ativo</code>, <code>abas_abertas_v2</code></td>
+                                        <td><span class="badge-tipo sessao">Session</span></td>
+                                        <td>Módulo do menu e abas abertas</td>
+                                        <td>Até fechar o navegador</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>semAbas</code></td>
                                         <td><span class="badge-tipo local">Local</span></td>
-                                        <td>Registro da data/hora do último acesso</td>
-                                        <td>Até logout</td>
+                                        <td>Preferência de navegação sem abas</td>
+                                        <td>Até limpar o navegador</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>termosAceitos_…</code></td>
+                                        <td><span class="badge-tipo sessao">Session</span></td>
+                                        <td>Evita pedir de novo o aceite destes termos na mesma sessão</td>
+                                        <td>Até fechar o navegador</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>suporte_…</code>, <code>solicitacoesUltimaChecagem</code>, <code>processos_updated</code></td>
+                                        <td><span class="badge-tipo local">Local</span> <span class="badge-tipo sessao">Session</span></td>
+                                        <td>Avisos do suporte, de solicitações de acesso e atualização de listas entre abas</td>
+                                        <td>Até sair ou limpar o navegador</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>_upload…</code>, <code>_tenantEmpresaEdicao</code></td>
+                                        <td><span class="badge-tipo sessao">Session</span></td>
+                                        <td>Dados temporários de um formulário em preenchimento (importação de planilha/PDF)</td>
+                                        <td>Até concluir o formulário ou fechar o navegador</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cache do aplicativo</td>
+                                        <td><span class="badge-tipo local">Cache</span></td>
+                                        <td>Cópia das telas e ícones do sistema para abrir mais rápido e funcionar como app. Não guarda dados das empresas.</td>
+                                        <td>Até a próxima versão do sistema</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -357,11 +483,11 @@
 
                     <div class="termos-section">
                         <h3><span class="section-num">3</span> Como Limpar os Dados</h3>
-                        <p>Você pode remover todos os dados armazenados localmente a qualquer momento:</p>
+                        <p>Você pode remover os dados guardados no navegador a qualquer momento:</p>
                         <ul class="termos-list">
-                            <li><i class="fa-solid fa-check"></i> Realizando o <strong>logout</strong> pela plataforma (método recomendado)</li>
-                            <li><i class="fa-solid fa-check"></i> Limpando o armazenamento do site nas configurações do navegador</li>
-                            <li><i class="fa-solid fa-check"></i> Usando o modo anônimo/privativo do navegador</li>
+                            <li><i class="fa-solid fa-check"></i> <span>Saindo da plataforma pelo botão <strong>Sair</strong> (remove a sessão e o "Lembrar-me")</span></li>
+                            <li><i class="fa-solid fa-check"></i> Limpando os dados do site nas configurações do navegador (remove tudo, inclusive o CPF lembrado e o cache do app)</li>
+                            <li><i class="fa-solid fa-check"></i> Usando uma janela anônima/privativa</li>
                         </ul>
                     </div>
                 </div>
@@ -380,49 +506,50 @@
                         </div>
                         <div>
                             <h2>Limitação de Responsabilidade</h2>
-                            <span class="termos-badge">Jan/2026</span>
+                            <span class="termos-badge">Versão <span data-termos-versao>2.0</span> · <span data-termos-data>Novembro de 2026</span></span>
                         </div>
                     </div>
 
                     <div class="termos-section">
                         <h3><span class="section-num">1</span> Disponibilidade do Serviço</h3>
-                        <p>A Marpex envidará seus melhores esforços para manter a plataforma disponível 24 horas por dia, 7 dias por semana. Contudo, não garantimos disponibilidade ininterrupta, podendo ocorrer indisponibilidades por:</p>
+                        <p>A Marpex busca manter a plataforma disponível 24 horas por dia, 7 dias por semana, mas não garante funcionamento ininterrupto. Podem ocorrer indisponibilidades por:</p>
                         <ul class="termos-list">
-                            <li><i class="fa-solid fa-check"></i> Manutenções programadas (comunicadas com antecedência)</li>
-                            <li><i class="fa-solid fa-check"></i> Falhas em serviços de terceiros (infraestrutura, DNS, CDN)</li>
-                            <li><i class="fa-solid fa-check"></i> Eventos de força maior ou caso fortuito</li>
+                            <li><i class="fa-solid fa-check"></i> Manutenções e atualizações do sistema</li>
+                            <li><i class="fa-solid fa-check"></i> Falhas de fornecedores (hospedagem, banco de dados, DNS, bibliotecas, consultas de CNPJ/CEP/câmbio, IA)</li>
+                            <li><i class="fa-solid fa-check"></i> Caso fortuito ou força maior</li>
                         </ul>
                     </div>
 
                     <div class="termos-section">
                         <h3><span class="section-num">2</span> Limitação de Danos</h3>
-                        <p>Em nenhuma hipótese a Marpex será responsável por danos indiretos, incidentais, especiais ou consequentes decorrentes do uso ou impossibilidade de uso da plataforma, incluindo mas não se limitando a:</p>
+                        <p>Na máxima extensão permitida pela lei, a Marpex não responde por danos indiretos decorrentes do uso ou da impossibilidade de uso da plataforma, como:</p>
                         <ul class="termos-list termos-list-danger">
-                            <li><i class="fa-solid fa-xmark"></i> Perda de lucros ou receitas</li>
-                            <li><i class="fa-solid fa-xmark"></i> Perda de dados por ação do usuário</li>
-                            <li><i class="fa-solid fa-xmark"></i> Danos causados por uso indevido da plataforma</li>
-                            <li><i class="fa-solid fa-xmark"></i> Decisões tomadas com base nas informações exibidas</li>
+                            <li><i class="fa-solid fa-xmark"></i> Lucros cessantes ou perda de negócios</li>
+                            <li><i class="fa-solid fa-xmark"></i> Perda de dados causada por ação do Usuário (exclusões, substituições de arquivos)</li>
+                            <li><i class="fa-solid fa-xmark"></i> Danos causados por uso indevido ou por permissões concedidas pelo próprio Cliente</li>
+                            <li><i class="fa-solid fa-xmark"></i> Decisões tomadas com base em informações, cálculos ou respostas exibidas pela plataforma</li>
                         </ul>
+                        <p><span class="termos-preencher">[PREENCHER/CONFIRMAR com o jurídico: limite de valor da responsabilidade, se houver — ex.: valor pago nos últimos 12 meses]</span></p>
                     </div>
 
                     <div class="termos-section">
-                        <h3><span class="section-num">3</span> Responsabilidade do Usuário</h3>
-                        <p>O usuário é integral e exclusivamente responsável por:</p>
+                        <h3><span class="section-num">3</span> Responsabilidade do Cliente e do Usuário</h3>
+                        <p>Cabe ao Cliente e aos seus Usuários:</p>
                         <ul class="termos-list">
-                            <li><i class="fa-solid fa-check"></i> A veracidade e precisão dos dados inseridos na plataforma</li>
-                            <li><i class="fa-solid fa-check"></i> O cumprimento das obrigações legais do comércio exterior</li>
-                            <li><i class="fa-solid fa-check"></i> A guarda e confidencialidade de suas credenciais</li>
-                            <li><i class="fa-solid fa-check"></i> As ações realizadas por usuários cadastrados em sua empresa</li>
+                            <li><i class="fa-solid fa-check"></i> A veracidade e a exatidão dos dados inseridos e dos documentos emitidos</li>
+                            <li><i class="fa-solid fa-check"></i> O cumprimento das obrigações aduaneiras, cambiais, fiscais e contratuais da exportação</li>
+                            <li><i class="fa-solid fa-check"></i> A base legal para inserir dados pessoais de terceiros (contatos, motoristas, signatários)</li>
+                            <li><i class="fa-solid fa-check"></i> A guarda das senhas e as ações dos Usuários que cadastrar</li>
                         </ul>
                         <div class="termos-alert termos-alert-warning">
                             <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>As informações das tabelas de apoio (NCM, tarifas, etc.) têm caráter informativo e não substituem a consulta a um despachante aduaneiro ou advogado especializado.</span>
+                            <span>Tabelas de apoio (NCM, moedas etc.), cotações de câmbio, DRE, valores tributários, Termos de venda base e respostas do assistente de IA têm caráter informativo. Não substituem despachante aduaneiro, contador ou advogado.</span>
                         </div>
                     </div>
 
                     <div class="termos-section">
                         <h3><span class="section-num">4</span> Integridade dos Dados</h3>
-                        <p>Recomendamos fortemente que os usuários mantenham backups regulares de seus documentos críticos. A Marpex realiza backups periódicos da infraestrutura, mas não se responsabiliza por perda de dados decorrente de ações do usuário.</p>
+                        <p>O banco de dados tem cópia de segurança diária. Ainda assim, recomendamos que o Cliente guarde cópia dos documentos críticos (Proformas assinadas, comprovantes, faturas). A Marpex não se responsabiliza por perdas decorrentes de exclusões feitas pelo próprio Usuário após o prazo de 7 dias da lixeira.</p>
                     </div>
                 </div>
 
@@ -439,13 +566,13 @@
                             <i class="fa-solid fa-headset"></i>
                         </div>
                         <div>
-                            <h2>Contato e Suporte Jurídico</h2>
+                            <h2>Contato</h2>
                             <span class="termos-badge">Atendimento em dias úteis</span>
                         </div>
                     </div>
 
                     <div class="termos-section">
-                        <p>Para dúvidas, solicitações de direitos ou questões relacionadas a estes documentos, utilize os canais abaixo:</p>
+                        <p>Para dúvidas, pedidos sobre seus dados ou questões sobre estes documentos, use os canais abaixo:</p>
                     </div>
 
                     <div class="contato-grid">
@@ -454,21 +581,21 @@
                                 <i class="fa-solid fa-user-shield"></i>
                             </div>
                             <h4>Encarregado de Dados (DPO)</h4>
-                            <p>Responsável pelo tratamento de dados pessoais conforme a LGPD.</p>
-                            <a href="mailto:privacidade@marpex.com.br" class="contato-link">
-                                <i class="fa-solid fa-envelope"></i> privacidade@marpex.com.br
-                            </a>
+                            <p><span class="termos-preencher">[PREENCHER: nome do Encarregado]</span> — atende os titulares e a ANPD.</p>
+                            <span class="contato-link">
+                                <i class="fa-solid fa-envelope"></i> <span class="termos-preencher">[PREENCHER: e-mail de privacidade]</span>
+                            </span>
                         </div>
 
                         <div class="contato-card">
                             <div class="contato-icon" style="background: #dcfce7; color: #16a34a;">
                                 <i class="fa-solid fa-headset"></i>
                             </div>
-                            <h4>Suporte Técnico</h4>
-                            <p>Problemas com acesso, bugs ou dúvidas sobre funcionalidades.</p>
-                            <a href="mailto:suporte@marpex.com.br" class="contato-link">
-                                <i class="fa-solid fa-envelope"></i> suporte@marpex.com.br
-                            </a>
+                            <h4>Suporte</h4>
+                            <p>Dúvidas de uso, problemas de acesso e erros: pelo botão de ajuda <i class="fa-solid fa-circle-question"></i> dentro da plataforma (chamados e WhatsApp).</p>
+                            <span class="contato-link">
+                                <i class="fa-solid fa-envelope"></i> <span class="termos-preencher">[PREENCHER: e-mail de suporte]</span>
+                            </span>
                         </div>
 
                         <div class="contato-card">
@@ -476,17 +603,17 @@
                                 <i class="fa-solid fa-scale-balanced"></i>
                             </div>
                             <h4>Questões Jurídicas</h4>
-                            <p>Contratos, disputas, notificações extrajudiciais e jurídico geral.</p>
-                            <a href="mailto:juridico@marpex.com.br" class="contato-link">
-                                <i class="fa-solid fa-envelope"></i> juridico@marpex.com.br
-                            </a>
+                            <p>Contratos, notificações e assuntos jurídicos.</p>
+                            <span class="contato-link">
+                                <i class="fa-solid fa-envelope"></i> <span class="termos-preencher">[PREENCHER: e-mail jurídico]</span>
+                            </span>
                         </div>
                     </div>
 
                     <div class="termos-section" style="margin-top: 28px;">
                         <div class="termos-alert termos-alert-info">
                             <i class="fa-solid fa-clock"></i>
-                            <span>Prazo de resposta: até <strong>5 dias úteis</strong> para suporte técnico e até <strong>15 dias úteis</strong> para solicitações relacionadas à LGPD.</span>
+                            <span>Prazos de resposta: até <strong>5 dias úteis</strong> para o suporte e até <strong>15 dias</strong> para pedidos sobre dados pessoais (LGPD).</span>
                         </div>
                     </div>
 
@@ -495,10 +622,9 @@
                         <div class="endereco-box">
                             <i class="fa-solid fa-location-dot"></i>
                             <div>
-                                <strong>Marpex Gestão de Documentos Ltda.</strong><br>
-                                Av. Paulista, 1000 — Sala 101<br>
-                                Bela Vista — São Paulo/SP — CEP 01310-100<br>
-                                CNPJ: 00.000.000/0001-00
+                                <strong><span class="termos-preencher">[PREENCHER: razão social]</span></strong><br>
+                                <span class="termos-preencher">[PREENCHER: endereço completo, cidade/UF e CEP]</span><br>
+                                CNPJ: <span class="termos-preencher">[PREENCHER: CNPJ]</span>
                             </div>
                         </div>
                     </div>
@@ -509,7 +635,7 @@
             <!-- RODAPÉ -->
             <footer class="dashboard-footer">
                 <span>© 2026 Marpex — Todos os direitos reservados</span>
-                <span class="footer-version">v3.0</span>
+                <span class="footer-version">Termos v<span data-termos-versao>2.0</span></span>
             </footer>
 
         </div>
@@ -517,10 +643,10 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=5f5274b6"></script>
-<script src="auth.js?v=443d3cf2"></script>
+<script src="supabase-api.js?v=3cae1f58"></script>
+<script src="auth.js?v=7943eb3e"></script>
 <script src="navegador.js?v=b52c2dea"></script>
-<script src="termos.js?v=bbe1d504"></script>
+<script src="termos.js?v=2b2ac4e7"></script>
 
 <script src="suporte.js?v=1debcf1b"></script>
 </body>

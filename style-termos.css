@@ -580,3 +580,7 @@
 .visitante-btn-voltar:hover {
     opacity: .9;
 }
+
+/* Trecho que o responsável ainda precisa preencher (dados da empresa, prazos, valores) */
+.termos-preencher { background: #fef08a; color: #713f12; padding: 0 4px; border-radius: 4px; font-weight: 600; }
+.termos-section .cookies-table-wrap { margin: 10px 0 12px; }

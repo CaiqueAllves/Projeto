@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     finLinhaIniciar('cpPag');
     await _cpCarregarPlanoContas();
     finPlanoMontar('cp', _cpPlanoContas);
+    document.getElementById('cpConta')?.addEventListener('change', _cpFornecedorDoFrete);
     if (!FIN_JANELA) await cpCarregar();
     await _cpVerificarGeracaoViaUrl();
 });
@@ -524,6 +525,7 @@ async function _cpListarParceiros(termo) {
 
 function cpBuscarParceiro(termo) {
     document.getElementById('cpFornecedorId').value = '';
+    document.getElementById('cpFornecedorNome').dataset.sugerido = '';
     clearTimeout(_cpBuscaTimer);
     _cpBuscaTimer = setTimeout(() => _cpListarParceiros(termo?.length >= 2 ? termo : ''), 300);
 }
@@ -611,6 +613,29 @@ function _cpResetProcesso() {
     finCICarregar('cp', '');
 }
 
+// Categoria de frete/transporte com o fornecedor ainda na sugestão automática (o
+// Exportador): troca pela transportadora do Processo, se ela estiver cadastrada.
+async function _cpFornecedorDoFrete() {
+    const nomeEl = document.getElementById('cpFornecedorNome');
+    const conta = finPlanoConta('cp');
+    const processoId = document.getElementById('cpProcessoId').value;
+    const ehFrete = /frete|transporte|rodovi|log[ií]stica/i.test(`${conta?.conta_nome || ''} ${conta?.subfator_nome || ''}`);
+    if (!ehFrete || !processoId || (document.getElementById('cpFornecedorId').value && nomeEl.dataset.sugerido !== '1')) return;
+    const { data: proc } = await supabaseClient.from('processos').select('transporte').eq('id', processoId).maybeSingle();
+    const t = proc?.transporte || {};
+    if (t.tipo === 'propria') return;   // coleta pelo próprio Importador: não há transportadora a pagar
+    const doc = String(t.cnpj || '').replace(/\D/g, '');
+    if (!doc) return;
+    const formas = [...new Set([doc, formatarDocumentoFiscal(doc), String(t.cnpj).trim()])];
+    const { data: lista } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia')
+        .eq('empresa_id', obterUsuarioLogado()?.empresa_id).in('documento', formas).limit(1);
+    const transp = lista?.[0];
+    if (!transp) return;
+    document.getElementById('cpFornecedorId').value = transp.id;
+    nomeEl.value = transp.nome_fantasia || transp.razao_social;
+    nomeEl.dataset.sugerido = '1';
+}
+
 async function _cpDerivarDaProforma(proformaId) {
     const fornecedorInput = document.getElementById('cpFornecedorNome');
     const processoInput   = document.getElementById('cpProcessoNome');
@@ -638,6 +663,7 @@ async function _cpDerivarDaProforma(proformaId) {
             }
             document.getElementById('cpFornecedorId').value = proforma.parceiro_id || '';
             fornecedorInput.value = nomeSugerido;
+            fornecedorInput.dataset.sugerido = '1';   // sugestão automática: a categoria de frete troca pela transportadora
         }
 
         // Só a moeda da proforma é sugerida (se o valor ainda estiver vazio): o

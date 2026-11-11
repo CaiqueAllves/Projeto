@@ -15,7 +15,7 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Proposta</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=05b7d63f">
+    <link rel="stylesheet" href="style-base.css?v=7fa3f9db">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
     <link rel="stylesheet" href="style-pipeline.css?v=c9bc5b77">
     <link rel="stylesheet" href="style-proposta.css?v=36d2e13f">
@@ -209,7 +209,7 @@
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label for="propDestinatarioNome">Importador</label>
+                    <label for="propDestinatarioNome">Importador <span class="required" style="color:#dc2626">*</span></label>
                     <input type="text" id="propDestinatarioNome" placeholder="Buscar empresa..." autocomplete="off" oninput="propBuscarEmpresa('destinatario', this.value)" onfocus="propMostrarEmpresas('destinatario', this.value)">
                     <input type="hidden" id="propDestinatarioId">
                     <div class="pl-autocomplete" id="propAutoDestinatario"></div>
@@ -222,8 +222,8 @@
 
             <div class="pl-form-row">
                 <div class="pl-form-group">
-                    <label for="propValor">Valor</label>
-                    <input type="text" id="propValor" placeholder="0,00" inputmode="decimal" oninput="propMascaraMonetaria(this)">
+                    <label for="propValor">Valor <span class="required" style="color:#dc2626">*</span></label>
+                    <input type="text" id="propValor" placeholder="0,00" inputmode="decimal" oninput="propMascaraMonetaria(this)" onblur="this.value && (this.value = _propFormatarMonetario(_propValorMonetario(this)))">
                 </div>
                 <div class="pl-form-group">
                     <label for="propMoeda">Moeda</label>
@@ -349,11 +349,11 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=5f5274b6"></script>
-<script src="auth.js?v=443d3cf2"></script>
+<script src="supabase-api.js?v=3cae1f58"></script>
+<script src="auth.js?v=7943eb3e"></script>
 <script src="navegador.js?v=b52c2dea"></script>
 <script src="ddi.js?v=2beac16e"></script>
-<script src="proposta.js?v=cb70b5e4"></script>
+<script src="proposta.js?v=d8744e2d"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>

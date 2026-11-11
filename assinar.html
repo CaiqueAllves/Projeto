@@ -16,32 +16,32 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Assinatura de Proforma — Marpex</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha384-t1nt8BQoYMLFN5p42tRAtuAAFQaCQODekUVeKKZrEnEyp4H2R0RHFz0KWpmj7i8g" crossorigin="anonymous">
-    <link rel="stylesheet" href="style-assinar.css?v=9dcd6431">
+    <link rel="stylesheet" href="style-assinar.css?v=b68aad44">
 </head>
 <body>
     <header class="as-topo">
-        <div class="as-topo-marca">MARPEX <span>Gestão de Comércio Exterior</span></div>
-        <div class="as-topo-titulo"><i class="fa-solid fa-file-signature"></i> Assinatura de Proforma</div>
+        <div class="as-topo-marca">MARPEX <span data-i18n="marca_sub">Gestão de Comércio Exterior</span></div>
+        <div class="as-topo-titulo"><i class="fa-solid fa-file-signature"></i> <span data-i18n="topo_titulo">Assinatura de Proforma</span></div>
     </header>
 
     <main class="as-main">
         <!-- estados: carregando / erro / assinado / formulário -->
         <section id="asCarregando" class="as-card as-estado">
             <i class="fa-solid fa-circle-notch fa-spin"></i>
-            <p>Carregando a Proforma...</p>
+            <p data-i18n="carregando">Carregando a Proforma...</p>
         </section>
 
         <section id="asErro" class="as-card as-estado" hidden>
             <i class="fa-solid fa-link-slash as-icone-erro"></i>
-            <h2 id="asErroTitulo">Link inválido</h2>
-            <p id="asErroTexto">Este link de assinatura não existe ou foi cancelado. Peça um novo link a quem enviou.</p>
+            <h2 id="asErroTitulo" data-i18n="link_invalido">Link inválido</h2>
+            <p id="asErroTexto" data-i18n="link_inexistente">Este link de assinatura não existe ou foi cancelado. Peça um novo link a quem enviou.</p>
         </section>
 
         <section id="asConcluido" class="as-card as-estado" hidden>
             <i class="fa-solid fa-circle-check as-icone-ok"></i>
-            <h2>Proforma assinada</h2>
+            <h2 data-i18n="assinada_titulo">Proforma assinada</h2>
             <p id="asConcluidoTexto"></p>
-            <button type="button" id="asBaixar" class="as-btn-baixar" hidden><i class="fa-solid fa-file-arrow-down"></i> Baixar Proforma assinada</button>
+            <button type="button" id="asBaixar" class="as-btn-baixar" hidden><i class="fa-solid fa-file-arrow-down"></i> <span data-i18n="baixar">Baixar Proforma assinada</span></button>
         </section>
 
         <div id="asConteudo" hidden>
@@ -52,57 +52,60 @@
                         <div class="as-codigo" id="asCodigo">—</div>
                     </div>
                     <a id="asLinkPdf" class="as-btn-pdf" target="_blank" rel="noopener" hidden>
-                        <i class="fa-solid fa-file-pdf"></i> Ver PDF completo
+                        <i class="fa-solid fa-file-pdf"></i> <span data-i18n="ver_pdf">Ver PDF completo</span>
                     </a>
                 </div>
                 <div class="as-partes">
-                    <div><div class="as-rotulo">Exportador</div><div id="asExportador">—</div></div>
-                    <div><div class="as-rotulo">Importador</div><div id="asImportador">—</div><div class="as-sub" id="asImportadorDoc"></div></div>
+                    <div><div class="as-rotulo" data-i18n="exportador">Exportador</div><div id="asExportador">—</div></div>
+                    <div><div class="as-rotulo" data-i18n="importador">Importador</div><div id="asImportador">—</div><div class="as-sub" id="asImportadorDoc"></div></div>
                     <div><div class="as-rotulo">Incoterm / Modal</div><div id="asIncoterm">—</div></div>
-                    <div><div class="as-rotulo">Pagamento</div><div id="asPagamento">—</div></div>
+                    <div><div class="as-rotulo" data-i18n="pagamento">Pagamento</div><div id="asPagamento">—</div></div>
                 </div>
                 <div class="as-tabela-wrap">
                     <table class="as-tabela">
-                        <thead><tr><th>Produto</th><th class="dir">Qtd</th><th>Un.</th><th class="dir">Preço</th><th class="dir">Total</th></tr></thead>
+                        <thead><tr><th data-i18n="produto">Produto</th><th class="dir" data-i18n="qtd">Qtd</th><th data-i18n="un">Un.</th><th class="dir" data-i18n="preco">Preço</th><th class="dir" data-i18n="total">Total</th></tr></thead>
                         <tbody id="asItens"></tbody>
                     </table>
                 </div>
-                <div class="as-total"><span>Total</span><strong id="asTotal">—</strong></div>
+                <div class="as-total"><span data-i18n="total">Total</span><strong id="asTotal">—</strong></div>
             </section>
 
             <section class="as-card">
-                <h3 class="as-h3">Dados de quem assina</h3>
+                <h3 class="as-h3" data-i18n="dados_assinante">Dados de quem assina</h3>
                 <div class="as-campos">
-                    <label>Nome completo <span class="obr">*</span><input type="text" id="asNome" autocomplete="name" maxlength="150"></label>
-                    <label>CPF / CNPJ / Passaporte <span class="obr">*</span><input type="text" id="asDocumento" maxlength="40"></label>
-                    <label>Cargo<input type="text" id="asCargo" maxlength="80"></label>
+                    <label><span data-i18n="nome">Nome completo</span> <span class="obr">*</span><input type="text" id="asNome" autocomplete="name" maxlength="150"></label>
+                    <label><span data-i18n="documento">CPF / CNPJ / Passaporte</span> <span class="obr">*</span><input type="text" id="asDocumento" maxlength="40"></label>
+                    <label><span data-i18n="cargo">Cargo</span><input type="text" id="asCargo" maxlength="80"></label>
                     <label>E-mail<input type="email" id="asEmail" autocomplete="email" maxlength="120"></label>
                 </div>
 
                 <div class="as-assinatura-cab">
-                    <span>Assinatura <span class="obr">*</span> <small>(desenhe com o dedo ou o mouse)</small></span>
-                    <button type="button" id="asLimpar" class="as-btn-link"><i class="fa-solid fa-eraser"></i> Limpar</button>
+                    <span><span data-i18n="assinatura">Assinatura</span> <span class="obr">*</span> <small data-i18n="desenhe">(desenhe com o dedo ou o mouse)</small></span>
+                    <button type="button" id="asLimpar" class="as-btn-link"><i class="fa-solid fa-eraser"></i> <span data-i18n="limpar">Limpar</span></button>
                 </div>
                 <canvas id="asCanvas" class="as-canvas"></canvas>
 
                 <label class="as-aceite">
                     <input type="checkbox" id="asAceite">
-                    <span>Li a Proforma <strong id="asCodigoAceite"></strong> e concordo com os seus termos. Reconheço esta assinatura eletrônica como válida, com a data, a hora e o endereço de acesso registrados.</span>
+                    <span><span data-i18n="aceite_a">Li a Proforma</span> <strong id="asCodigoAceite"></strong> <span data-i18n="aceite_b">e concordo com os seus termos. Reconheço esta assinatura eletrônica como válida, com a data, a hora e o endereço de acesso registrados.</span></span>
                 </label>
 
                 <p id="asMsg" class="as-msg" hidden></p>
                 <button type="button" id="asAssinar" class="as-btn-assinar" disabled>
-                    <i class="fa-solid fa-signature"></i> Assinar Proforma
+                    <i class="fa-solid fa-signature"></i> <span data-i18n="assinar">Assinar Proforma</span>
                 </button>
                 <p class="as-validade" id="asValidade"></p>
+                <p class="as-privacidade"><i class="fa-solid fa-shield-halved"></i>
+                    <span><span data-i18n="privacidade">Os dados informados (nome, documento, cargo, e-mail e assinatura), com data, hora, IP e navegador, ficam registrados como prova desta assinatura. Quem os controla é a empresa que enviou a Proforma; a Marpex os processa em nome dela.</span>
+                    <a href="termos.html?tab=privacidade" target="_blank" rel="noopener" data-i18n="privacidade_link">Política de Privacidade</a></span></p>
             </section>
         </div>
     </main>
 
-    <footer class="as-rodape">© 2026 Marpex — assinatura eletrônica (MP 2.200-2/2001, art. 10 §2º · Lei 14.063/2020)</footer>
+    <footer class="as-rodape">© 2026 Marpex — <span data-i18n="rodape">assinatura eletrônica</span> (MP 2.200-2/2001, art. 10 §2º · Lei 14.063/2020)</footer>
 
     <script src="supabase.min.js?v=ba2e1d14"></script>
-    <script src="supabase-api.js?v=5f5274b6"></script>
-    <script src="assinar.js?v=d5aaa0a7"></script>
+    <script src="supabase-api.js?v=3cae1f58"></script>
+    <script src="assinar.js?v=a68b4f4d"></script>
 </body>
 </html>

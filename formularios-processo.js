@@ -103,6 +103,11 @@ async function salvarProcesso(e) {
         }
     }
 
+    // Concluir o Processo: lista as pendências e pede confirmação (a mesma da lista de Processos)
+    const idProc = document.getElementById('proc-id')?.value;
+    if (idProc && document.getElementById('proc-status')?.value === 'concluido' && window._procStatusSalvo !== 'concluido'
+        && !(await confirmarConclusaoProcesso(idProc))) return;
+
     const modal = document.getElementById('modal-confirmar-salvar');
     modal.dataset.origem = 'processo';
     modal.style.display = 'flex';
@@ -166,16 +171,20 @@ async function procCarregarEdicao(id) {
         const radio = document.getElementById('proc-emissor-terceiro');
         if (radio) { radio.checked = true; fire('proc-emissor-terceiro', 'change'); }
         if (p.remetente_parceiro_id) {
-            const { data: remetente } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia').eq('id', p.remetente_parceiro_id).single();
+            const { data: remetente } = await supabaseClient.from('parceiros').select('id, razao_social, nome_fantasia, documento').eq('id', p.remetente_parceiro_id).single();
             if (remetente) {
                 set('proc-cliente',    remetente.nome_fantasia || remetente.razao_social);
                 set('proc-cliente-id', remetente.id);
+                // Processos salvos antes da correção ficaram sem o documento: recupera do cadastro
+                const docEl = document.getElementById('proc-documento');
+                if (docEl && !docEl.value && remetente.documento) { docEl.value = remetente.documento; _procSincronizarTipoDoc(); }
             }
         }
     }
 
     // Status / prazos / container
     set('proc-status',            p.status);
+    window._procStatusSalvo = p.status;   // concluir pede confirmação só na troca (salvarProcesso)
     fire('proc-status', 'change');
     set('proc-data-abertura',     p.data_abertura);
     set('proc-data-previsao',     p.data_previsao);
@@ -1244,7 +1253,9 @@ function iniciarEmissor() {
             if (docInput) {
                 docInput.readOnly    = true;
                 docInput.placeholder = 'Preenchido automaticamente';
-                docInput.value       = '';
+                // só a troca feita pelo usuário limpa: na abertura de um Processo
+                // salvo a troca é programática e o documento gravado tem de ficar
+                if (trocaManual) docInput.value = '';
             }
             if (origemPais) {
                 origemPais.readOnly    = true;
@@ -1556,6 +1567,16 @@ async function _procPreencherDaProforma(id) {
             if (!_procItens.length) mostrarNotificacao('Todos os produtos desta proforma já estão em outros processos.', 'warning');
         }
 
+        // Moeda do frete: começa na moeda da Proforma (antes ficava vazia e a busca
+        // por "DOLAR" sugeria primeiro o Dólar Australiano)
+        const freteMoeda = document.getElementById('transp-frete-moeda'), freteDisplay = document.getElementById('transp-frete-moeda-display');
+        const moedaProf = (data.itens || []).find(i => i.moeda)?.moeda || data.moeda_principal;
+        if (freteMoeda && freteDisplay && !freteMoeda.value && moedaProf) {
+            await _carregarMoedas();
+            const m = _acMoedas.find(x => [x.descricao, x.sigla, x.codigo].includes(moedaProf));
+            if (m) { freteMoeda.value = m.descricao; freteDisplay.value = m.descricao; }
+        }
+
         // Tipo
         const tipoEl = document.getElementById('proc-tipo');
         if (tipoEl && data.tipo) { tipoEl.value = data.tipo; tipoEl.dispatchEvent(new Event('change')); }
@@ -1672,10 +1693,10 @@ async function procBuscarCep(input, prefixo) {
         const data = await res.json();
         if (data.erro) return;
 
-        set(`proc-${prefixo}-estado`,   data.uf);
-        set(`proc-${prefixo}-cidade`,   data.localidade);
-        set(`proc-${prefixo}-bairro`,   data.bairro);
-        set(`proc-${prefixo}-endereco`, data.logradouro);
+        set(`proc-${prefixo}-estado`,   String(data.uf || '').toUpperCase());
+        set(`proc-${prefixo}-cidade`,   String(data.localidade || '').toUpperCase());
+        set(`proc-${prefixo}-bairro`,   String(data.bairro || '').toUpperCase());
+        set(`proc-${prefixo}-endereco`, String(data.logradouro || '').toUpperCase());
         document.getElementById(`proc-${prefixo}-numero`)?.focus();
     } catch { /* CEP inválido ou sem conexão */ }
 }
@@ -2027,11 +2048,10 @@ function iniciarCEPDestino() {
                 cepInput.style.borderColor = '#dc2626';
             } else {
                 const map = {
-                    'proc-destino-estado':      dados.uf          || '',
-                    'proc-destino-cidade':      dados.localidade  || '',
-                    'proc-destino-bairro':      dados.bairro      || '',
-                    'proc-destino-endereco':    dados.logradouro  || '',
-                    'proc-destino-complemento': dados.complemento || '',
+                    'proc-destino-estado':      String(dados.uf || '').toUpperCase(),
+                    'proc-destino-cidade':      String(dados.localidade || '').toUpperCase(),
+                    'proc-destino-bairro':      String(dados.bairro || '').toUpperCase(),
+                    'proc-destino-endereco':    String(dados.logradouro || '').toUpperCase(),
                 };
                 Object.entries(map).forEach(([id, val]) => {
                     const el = document.getElementById(id);
@@ -2668,14 +2688,9 @@ function iniciarMascarasTransporte() {
         });
     }
 
-    // Máscara contábil: digita só números, centavos à direita (1234567 → 12.345,67)
+    // mesma máscara de valor do sistema todo (formularios.js → mascaraValorLivre)
     const freteInput = document.getElementById('transp-frete-valor');
-    if (freteInput) {
-        freteInput.addEventListener('input', function () {
-            const raw = this.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
-            this.value = raw ? (parseInt(raw, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
-        });
-    }
+    if (freteInput) freteInput.addEventListener('input', function () { mascaraValorLivre(this); });
 
     // Espelha o incoterm selecionado no campo de frete
     const incotermSelect  = document.getElementById('proc-incoterm');

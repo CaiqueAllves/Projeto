@@ -283,7 +283,7 @@ async function realizarCadastro() {
     }
 
     try {
-        const resultado = await window.supabaseAPI.cadastrar({ nome, cpf, email, senha, empresa, cnpjEmpresa: docEmpresa, chaveEmpresa, aceitouTermos });
+        const resultado = await window.supabaseAPI.cadastrar({ nome, cpf, email, senha, empresa, cnpjEmpresa: docEmpresa, chaveEmpresa, aceitouTermos, termosVersao: TERMOS_VERSAO });
 
         if (resultado.sucesso) {
             fecharModal('modalCadastro');

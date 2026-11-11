@@ -15,7 +15,7 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Meu Perfil</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=05b7d63f">
+    <link rel="stylesheet" href="style-base.css?v=7fa3f9db">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
     <link rel="stylesheet" href="style-permissoes.css?v=22176f74">
     <link rel="stylesheet" href="style-perfil.css?v=272e6ee6">
@@ -475,7 +475,7 @@
                             <!-- IE | IM | SUFRAMA -->
                             <div class="perfil-form-group-row3">
                                 <div class="perfil-form-group">
-                                    <label for="editEmpIE">Inscrição Estadual</label>
+                                    <label for="editEmpIE">Inscrição Estadual <button type="button" class="ie-isento-btn" onclick="const c=document.getElementById('editEmpIE');c.value='ISENTO';c.dispatchEvent(new Event('input',{bubbles:true}))" title="A empresa não tem Inscrição Estadual">Isento</button></label>
                                     <input type="text" id="editEmpIE" placeholder="000.000.00-0" maxlength="15" inputmode="numeric" oninput="this.value=_mascaraIE(this.value)">
                                 </div>
                                 <div class="perfil-form-group">
@@ -595,10 +595,10 @@
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js" integrity="sha384-qGFE4FIJLgCFuYs3nzg39XpCtvT5AZUhaBdjB3e1+vpKQa03AkyWOyBSFb9OcQ/g" crossorigin="anonymous"></script>
-<script src="supabase-api.js?v=5f5274b6"></script>
-<script src="auth.js?v=443d3cf2"></script>
+<script src="supabase-api.js?v=3cae1f58"></script>
+<script src="auth.js?v=7943eb3e"></script>
 <script src="navegador.js?v=b52c2dea"></script>
-<script src="perfil.js?v=e483a8ad"></script>
+<script src="perfil.js?v=5ed3bb08"></script>
 
 <script src="suporte.js?v=1debcf1b"></script>
 </body>

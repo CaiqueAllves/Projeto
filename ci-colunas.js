@@ -52,7 +52,7 @@ function ciValorCampo(d, it, i, campo, cfg, I) {
     if (campo.origem === 'personalizada') return '';
     switch (campo.chave) {
         case 'ncm': return p.ncm || '';
-        case 'hscode': return p.hscode || '';
+        case 'hscode': return hsDoProduto(p);
         case 'marca': return p.marca || '';
         case 'gtin': return p.gtin || '';
         case 'lote': return p.lote || '';

@@ -13,13 +13,121 @@ let asAssinatura = null;   // { nome, documento, cargo, email, imagem, hash, ass
 
 const $ = id => document.getElementById(id);
 const asEsc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const asNum = (n, d = 2) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
-const asData = iso => iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
-const AS_PAGAMENTO = { 'cartao-credito': 'Cartão de Crédito', 'cartao-debito': 'Cartão de Débito', boleto: 'Boleto Bancário',
-    deposito: 'Depósito Bancário', swift: 'SWIFT', cad: 'CAD', '30-advanced': '30% ADVANCED', '70-against-document': '70% AGAINST DOCUMENT',
-    duplicata: 'Duplicata Mercantil', dinheiro: 'Dinheiro', cheque: 'Cheque', avista: 'À Vista' };
-const AS_MODAL = { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' };
+// ── Idioma da página: o do link (&l=, vem do idioma da Proforma) ou o do navegador.
+// Português, inglês e espanhol; os outros caem no inglês.
+const AS_TEXTOS = {
+    pt: {
+        marca_sub: 'Gestão de Comércio Exterior', topo_titulo: 'Assinatura de Proforma', carregando: 'Carregando a Proforma...',
+        link_invalido: 'Link inválido', link_inexistente: 'Este link de assinatura não existe ou foi cancelado. Peça um novo link a quem enviou.',
+        link_incompleto: 'O link está incompleto. Abra novamente pelo link recebido no WhatsApp.',
+        nao_abriu: 'Não foi possível abrir', tente: 'Tente novamente em alguns instantes.',
+        expirado: 'Link expirado', expirado_txt: d => `Este link venceu em ${d}. Peça um novo link a quem enviou.`,
+        cancelado: 'Link cancelado', cancelado_txt: 'Este link não é mais válido. Peça um novo link a quem enviou.',
+        ja_assinada: (c, n, d) => `A Proforma ${c} já foi assinada por ${n} em ${d}.`,
+        assinada_titulo: 'Proforma assinada', baixar: 'Baixar Proforma assinada', ver_pdf: 'Ver PDF completo',
+        exportador: 'Exportador', importador: 'Importador', pagamento: 'Pagamento',
+        produto: 'Produto', qtd: 'Qtd', un: 'Un.', preco: 'Preço', total: 'Total', sem_itens: 'Sem itens', dias: n => `${n} dias`,
+        dados_assinante: 'Dados de quem assina', nome: 'Nome completo', documento: 'CPF / CNPJ / Passaporte', cargo: 'Cargo',
+        assinatura: 'Assinatura', desenhe: '(desenhe com o dedo ou o mouse)', limpar: 'Limpar',
+        aceite_a: 'Li a Proforma', aceite_b: 'e concordo com os seus termos. Reconheço esta assinatura eletrônica como válida, com a data, a hora e o endereço de acesso registrados.',
+        assinar: 'Assinar Proforma', registrando: 'Registrando assinatura...', rodape: 'assinatura eletrônica',
+        privacidade: 'Os dados informados (nome, documento, cargo, e-mail e assinatura), com data, hora, IP e navegador, ficam registrados como prova desta assinatura. Quem os controla é a empresa que enviou a Proforma; a Marpex os processa em nome dela.',
+        privacidade_link: 'Política de Privacidade',
+        validade: (d, por) => `Link válido até ${d}${por ? ` · enviado por ${por}` : ''}.`,
+        motivos: { expirado: 'Este link expirou.', ja_assinado: 'Esta Proforma já foi assinada.', cancelado: 'Este link foi cancelado.',
+            dados_incompletos: 'Preencha nome, documento e a assinatura.', imagem_grande: 'A assinatura ficou grande demais — limpe e desenhe de novo.' },
+        erro_registrar: 'Não foi possível registrar a assinatura. Tente novamente.',
+        obrigado: (n, c, d) => `Obrigado, ${n}. A Proforma ${c} foi assinada em ${d}. A sua via assinada está sendo baixada.`,
+        pdf_falhou: ' Não foi possível gerar o PDF agora — toque em "Baixar Proforma assinada" para tentar de novo.',
+        preparando: 'Preparando o PDF...',
+        comp_titulo: 'COMPROVANTE DE ASSINATURA', assinado_por: 'Assinado por', assinado_em: 'Assinado em', hash: 'Hash SHA-256 do PDF',
+        comp_texto: 'Assinatura eletrônica realizada pelo link enviado ao assinante, com aceite expresso dos termos da Proforma. '
+            + 'Data/hora, endereço IP, navegador e hash do documento foram registrados no momento da assinatura '
+            + '(MP 2.200-2/2001, art. 10, par. 2 - Lei 14.063/2020).',
+        modal: { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' },
+        pag: { 'cartao-credito': 'Cartão de Crédito', 'cartao-debito': 'Cartão de Débito', boleto: 'Boleto Bancário', deposito: 'Depósito Bancário',
+            duplicata: 'Duplicata Mercantil', dinheiro: 'Dinheiro', cheque: 'Cheque', avista: 'À Vista' },
+    },
+    en: {
+        marca_sub: 'Foreign Trade Management', topo_titulo: 'Proforma Signature', carregando: 'Loading the Proforma...',
+        link_invalido: 'Invalid link', link_inexistente: 'This signature link does not exist or was cancelled. Please ask the sender for a new link.',
+        link_incompleto: 'The link is incomplete. Please open it again from the message you received.',
+        nao_abriu: 'Could not open', tente: 'Please try again in a few moments.',
+        expirado: 'Link expired', expirado_txt: d => `This link expired on ${d}. Please ask the sender for a new link.`,
+        cancelado: 'Link cancelled', cancelado_txt: 'This link is no longer valid. Please ask the sender for a new link.',
+        ja_assinada: (c, n, d) => `Proforma ${c} was already signed by ${n} on ${d}.`,
+        assinada_titulo: 'Proforma signed', baixar: 'Download signed Proforma', ver_pdf: 'View full PDF',
+        exportador: 'Exporter', importador: 'Importer', pagamento: 'Payment',
+        produto: 'Product', qtd: 'Qty', un: 'Unit', preco: 'Price', total: 'Total', sem_itens: 'No items', dias: n => `${n} days`,
+        dados_assinante: 'Signer details', nome: 'Full name', documento: 'Tax ID / Passport', cargo: 'Position',
+        assinatura: 'Signature', desenhe: '(draw with your finger or mouse)', limpar: 'Clear',
+        aceite_a: 'I have read Proforma', aceite_b: 'and agree to its terms. I acknowledge this electronic signature as valid, with the date, time and access address recorded.',
+        assinar: 'Sign Proforma', registrando: 'Recording signature...', rodape: 'electronic signature',
+        privacidade: 'The data provided (name, ID, position, e-mail and signature), together with date, time, IP address and browser, is recorded as evidence of this signature. It is controlled by the company that sent the Proforma; Marpex processes it on that company\'s behalf.',
+        privacidade_link: 'Privacy Policy (in Portuguese)',
+        validade: (d, por) => `Link valid until ${d}${por ? ` · sent by ${por}` : ''}.`,
+        motivos: { expirado: 'This link has expired.', ja_assinado: 'This Proforma has already been signed.', cancelado: 'This link was cancelled.',
+            dados_incompletos: 'Please fill in name, ID and the signature.', imagem_grande: 'The signature is too large — clear it and draw again.' },
+        erro_registrar: 'Could not record the signature. Please try again.',
+        obrigado: (n, c, d) => `Thank you, ${n}. Proforma ${c} was signed on ${d}. Your signed copy is being downloaded.`,
+        pdf_falhou: ' The PDF could not be generated now — tap "Download signed Proforma" to try again.',
+        preparando: 'Preparing the PDF...',
+        comp_titulo: 'SIGNATURE CERTIFICATE', assinado_por: 'Signed by', assinado_em: 'Signed on', hash: 'PDF SHA-256 hash',
+        comp_texto: 'Electronic signature made through the link sent to the signer, with express acceptance of the Proforma terms. '
+            + 'Date/time, IP address, browser and document hash were recorded at the moment of signature '
+            + '(Brazilian law: MP 2.200-2/2001, art. 10, par. 2 - Law 14.063/2020).',
+        modal: { aereo: 'Air', maritimo: 'Sea', terrestre: 'Road' },
+        pag: { 'cartao-credito': 'Credit Card', 'cartao-debito': 'Debit Card', boleto: 'Bank Slip', deposito: 'Bank Deposit',
+            duplicata: 'Trade Bill', dinheiro: 'Cash', cheque: 'Check', avista: 'At sight' },
+    },
+    es: {
+        marca_sub: 'Gestión de Comercio Exterior', topo_titulo: 'Firma de Proforma', carregando: 'Cargando la Proforma...',
+        link_invalido: 'Enlace inválido', link_inexistente: 'Este enlace de firma no existe o fue cancelado. Solicite un nuevo enlace a quien lo envió.',
+        link_incompleto: 'El enlace está incompleto. Ábralo nuevamente desde el mensaje recibido.',
+        nao_abriu: 'No se pudo abrir', tente: 'Inténtelo de nuevo en unos instantes.',
+        expirado: 'Enlace vencido', expirado_txt: d => `Este enlace venció el ${d}. Solicite un nuevo enlace a quien lo envió.`,
+        cancelado: 'Enlace cancelado', cancelado_txt: 'Este enlace ya no es válido. Solicite un nuevo enlace a quien lo envió.',
+        ja_assinada: (c, n, d) => `La Proforma ${c} ya fue firmada por ${n} el ${d}.`,
+        assinada_titulo: 'Proforma firmada', baixar: 'Descargar Proforma firmada', ver_pdf: 'Ver PDF completo',
+        exportador: 'Exportador', importador: 'Importador', pagamento: 'Pago',
+        produto: 'Producto', qtd: 'Cant.', un: 'Un.', preco: 'Precio', total: 'Total', sem_itens: 'Sin ítems', dias: n => `${n} días`,
+        dados_assinante: 'Datos de quien firma', nome: 'Nombre completo', documento: 'Identificación fiscal / Pasaporte', cargo: 'Cargo',
+        assinatura: 'Firma', desenhe: '(dibuje con el dedo o el mouse)', limpar: 'Borrar',
+        aceite_a: 'He leído la Proforma', aceite_b: 'y acepto sus términos. Reconozco esta firma electrónica como válida, con la fecha, la hora y la dirección de acceso registradas.',
+        assinar: 'Firmar Proforma', registrando: 'Registrando la firma...', rodape: 'firma electrónica',
+        privacidade: 'Los datos informados (nombre, identificación, cargo, correo y firma), junto con fecha, hora, IP y navegador, quedan registrados como prueba de esta firma. Los controla la empresa que envió la Proforma; Marpex los procesa en su nombre.',
+        privacidade_link: 'Política de Privacidad (en portugués)',
+        validade: (d, por) => `Enlace válido hasta ${d}${por ? ` · enviado por ${por}` : ''}.`,
+        motivos: { expirado: 'Este enlace venció.', ja_assinado: 'Esta Proforma ya fue firmada.', cancelado: 'Este enlace fue cancelado.',
+            dados_incompletos: 'Complete nombre, identificación y la firma.', imagem_grande: 'La firma quedó demasiado grande — bórrela y dibuje de nuevo.' },
+        erro_registrar: 'No se pudo registrar la firma. Inténtelo de nuevo.',
+        obrigado: (n, c, d) => `Gracias, ${n}. La Proforma ${c} fue firmada el ${d}. Su copia firmada se está descargando.`,
+        pdf_falhou: ' No se pudo generar el PDF ahora — toque "Descargar Proforma firmada" para intentarlo de nuevo.',
+        preparando: 'Preparando el PDF...',
+        comp_titulo: 'COMPROBANTE DE FIRMA', assinado_por: 'Firmado por', assinado_em: 'Firmado el', hash: 'Hash SHA-256 del PDF',
+        comp_texto: 'Firma electrónica realizada mediante el enlace enviado al firmante, con aceptación expresa de los términos de la Proforma. '
+            + 'Fecha/hora, dirección IP, navegador y hash del documento fueron registrados en el momento de la firma '
+            + '(ley brasileña: MP 2.200-2/2001, art. 10, párr. 2 - Ley 14.063/2020).',
+        modal: { aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' },
+        pag: { 'cartao-credito': 'Tarjeta de Crédito', 'cartao-debito': 'Tarjeta de Débito', boleto: 'Boleto Bancario', deposito: 'Depósito Bancario',
+            duplicata: 'Letra Comercial', dinheiro: 'Efectivo', cheque: 'Cheque', avista: 'Al contado' },
+    },
+};
+const AS_PAG_FIXOS = { swift: 'SWIFT', cad: 'CAD', '30-advanced': '30% ADVANCED', '70-against-document': '70% AGAINST DOCUMENT' };
+const asIdioma = (() => {
+    const pedido = (new URLSearchParams(location.search).get('l') || navigator.language || 'pt').slice(0, 2).toLowerCase();
+    return AS_TEXTOS[pedido] ? pedido : 'en';
+})();
+const T = AS_TEXTOS[asIdioma];
+const AS_LOCALE = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' }[asIdioma];
+const asNum = (n, d = 2) => Number(n || 0).toLocaleString(AS_LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
+const asData = iso => iso ? new Date(iso).toLocaleString(AS_LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const AS_PAGAMENTO = { ...AS_PAG_FIXOS, ...T.pag };
+const AS_MODAL = T.modal;
+document.documentElement.lang = AS_LOCALE;
+document.title = `${T.topo_titulo} — Marpex`;
+document.querySelectorAll('[data-i18n]').forEach(el => { const v = T[el.dataset.i18n]; if (typeof v === 'string') el.textContent = v; });
 
 function asMostrar(id) {
     ['asCarregando', 'asErro', 'asConcluido', 'asConteudo'].forEach(x => { $(x).hidden = x !== id; });
@@ -32,20 +140,20 @@ function asErro(titulo, texto) {
 }
 
 async function asCarregar() {
-    if (!asToken) return asErro('Link inválido', 'O link está incompleto. Abra novamente pelo link recebido no WhatsApp.');
+    if (!asToken) return asErro(T.link_invalido, T.link_incompleto);
     const { data, error } = await supabaseClient.rpc('assinatura_obter', { p_token: asToken });
-    if (error || !data) return asErro('Não foi possível abrir', 'Tente novamente em alguns instantes.');
-    if (data.erro) return asErro('Link inválido', 'Este link de assinatura não existe ou foi cancelado. Peça um novo link a quem enviou.');
+    if (error || !data) return asErro(T.nao_abriu, T.tente);
+    if (data.erro) return asErro(T.link_invalido, T.link_inexistente);
     asDados = data;
 
     if (data.status === 'assinado') {
-        $('asConcluidoTexto').textContent = `A Proforma ${data.proforma.codigo} já foi assinada por ${data.assinante_nome} em ${asData(data.assinado_em)}.`;
+        $('asConcluidoTexto').textContent = T.ja_assinada(data.proforma.codigo, data.assinante_nome, asData(data.assinado_em));
         // dados da assinatura (database-assinatura-download.sql): permite baixar de novo
         if (data.assinatura) { asAssinatura = data.assinatura; $('asBaixar').hidden = false; }
         return asMostrar('asConcluido');
     }
-    if (data.status === 'expirado') return asErro('Link expirado', `Este link venceu em ${asData(data.expira_em)}. Peça um novo link a quem enviou.`);
-    if (data.status !== 'pendente') return asErro('Link cancelado', 'Este link não é mais válido. Peça um novo link a quem enviou.');
+    if (data.status === 'expirado') return asErro(T.expirado, T.expirado_txt(asData(data.expira_em)));
+    if (data.status !== 'pendente') return asErro(T.cancelado, T.cancelado_txt);
 
     const p = data.proforma;
     $('asCodigo').textContent = p.codigo || '—';
@@ -54,7 +162,7 @@ async function asCarregar() {
     $('asImportador').textContent = p.importador || '—';
     $('asImportadorDoc').textContent = p.importador_doc || '';
     $('asIncoterm').textContent = [p.incoterm, AS_MODAL[p.modal] || p.modal].filter(Boolean).join(' · ') || '—';
-    $('asPagamento').textContent = [AS_PAGAMENTO[p.forma_pagamento] || p.forma_pagamento, AS_PAGAMENTO[p.prazo_pagamento] || (p.prazo_pagamento ? `${p.prazo_pagamento} dias` : '')].filter(Boolean).join(' · ') || '—';
+    $('asPagamento').textContent = [AS_PAGAMENTO[p.forma_pagamento] || p.forma_pagamento, AS_PAGAMENTO[p.prazo_pagamento] || (p.prazo_pagamento ? T.dias(p.prazo_pagamento) : '')].filter(Boolean).join(' · ') || '—';
 
     const itens = Array.isArray(p.itens) ? p.itens : [];
     const somas = {};
@@ -62,7 +170,7 @@ async function asCarregar() {
         const tot = (Number(it.qtd) || 0) * (Number(it.preco) || 0);
         somas[it.moeda || p.moeda || ''] = (somas[it.moeda || p.moeda || ''] || 0) + tot;
         return `<tr><td>${asEsc(it.produto)}</td><td class="dir">${asNum(it.qtd, 0)}</td><td>${asEsc(it.unidade || '')}</td><td class="dir">${asNum(it.preco)}</td><td class="dir">${asNum(tot)}</td></tr>`;
-    }).join('') || '<tr><td colspan="5" class="vazio">Sem itens</td></tr>';
+    }).join('') || `<tr><td colspan="5" class="vazio">${T.sem_itens}</td></tr>`;
     $('asTotal').textContent = Object.entries(somas).map(([m, v]) => `${asNum(v)} ${m}`).join(' + ') || `${asNum(p.valor_total)} ${p.moeda || ''}`;
 
     if (data.arquivo_path) {
@@ -74,7 +182,7 @@ async function asCarregar() {
         if (!url) url = supabaseClient.storage.from(AS_BUCKET).getPublicUrl(data.arquivo_path).data?.publicUrl;
         if (url) { $('asLinkPdf').href = url; $('asLinkPdf').hidden = false; }
     }
-    $('asValidade').textContent = `Link válido até ${asData(data.expira_em)}${data.criado_por ? ` · enviado por ${data.criado_por}` : ''}.`;
+    $('asValidade').textContent = T.validade(asData(data.expira_em), data.criado_por);
     asMostrar('asConteudo');
     asIniciarCanvas();
 }
@@ -124,7 +232,7 @@ async function asHashPdf() {
 async function asAssinar() {
     const btn = $('asAssinar');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Registrando assinatura...';
+    btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> ${T.registrando}`;
     $('asMsg').hidden = true;
 
     const imagem = $('asCanvas').toDataURL('image/png');
@@ -135,18 +243,17 @@ async function asAssinar() {
         p_hash: hash, p_user_agent: navigator.userAgent,
     });
 
-    const motivos = { expirado: 'Este link expirou.', ja_assinado: 'Esta Proforma já foi assinada.', cancelado: 'Este link foi cancelado.',
-        dados_incompletos: 'Preencha nome, documento e a assinatura.', imagem_grande: 'A assinatura ficou grande demais — limpe e desenhe de novo.' };
+    const motivos = T.motivos;
     if (error || !data || data.erro) {
-        $('asMsg').textContent = motivos[data?.erro] || 'Não foi possível registrar a assinatura. Tente novamente.';
+        $('asMsg').textContent = motivos[data?.erro] || T.erro_registrar;
         $('asMsg').hidden = false;
-        btn.innerHTML = '<i class="fa-solid fa-signature"></i> Assinar Proforma';
+        btn.innerHTML = `<i class="fa-solid fa-signature"></i> ${T.assinar}`;
         asValidar();
         return;
     }
     asAssinatura = { nome: $('asNome').value.trim(), documento: $('asDocumento').value.trim(), cargo: $('asCargo').value.trim(),
         email: $('asEmail').value.trim(), imagem, hash, assinado_em: data.assinado_em };
-    $('asConcluidoTexto').textContent = `Obrigado, ${asAssinatura.nome}. A Proforma ${asDados.proforma.codigo} foi assinada em ${asData(data.assinado_em)}. A sua via assinada está sendo baixada.`;
+    $('asConcluidoTexto').textContent = T.obrigado(asAssinatura.nome, asDados.proforma.codigo, asData(data.assinado_em));
     $('asBaixar').hidden = false;
     asMostrar('asConcluido');
     asBaixarAssinada();
@@ -176,7 +283,7 @@ async function asBaixarAssinada() {
     if (!a) return;
     const btn = $('asBaixar'), html = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Preparando o PDF...';
+    btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> ${T.preparando}`;
     try {
         await asCarregarPdfLib();
         const { PDFDocument, StandardFonts, rgb } = PDFLib;
@@ -204,7 +311,7 @@ async function asBaixarAssinada() {
             return linhas;
         };
         pag.drawRectangle({ x: 0, y: 812, width: 595.28, height: 30, color: navy });
-        txt('COMPROVANTE DE ASSINATURA', M, 822, 13, fb, rgb(1, 1, 1));
+        txt(T.comp_titulo, M, 822, 13, fb, rgb(1, 1, 1));
         txt(`Proforma ${asDados?.proforma?.codigo || ''}`, M, y - 20, 16, fb, navy);
         y -= 50;
         const linha = (rot, val) => {
@@ -213,16 +320,16 @@ async function asBaixarAssinada() {
             y -= Math.max(1, quebrar(val || '-', 10, L - 150).length) * 13 + 6;
         };
         const p = asDados?.proforma || {};
-        linha('Exportador', p.exportador);
-        linha('Importador', [p.importador, p.importador_doc].filter(Boolean).join(' - '));
-        linha('Assinado por', a.nome);
-        linha('CPF / CNPJ / Passaporte', a.documento);
-        if (a.cargo) linha('Cargo', a.cargo);
+        linha(T.exportador, p.exportador);
+        linha(T.importador, [p.importador, p.importador_doc].filter(Boolean).join(' - '));
+        linha(T.assinado_por, a.nome);
+        linha(T.documento, a.documento);
+        if (a.cargo) linha(T.cargo, a.cargo);
         if (a.email) linha('E-mail', a.email);
-        linha('Assinado em', asData(a.assinado_em));
-        linha('Hash SHA-256 do PDF', a.hash || '-');
+        linha(T.assinado_em, asData(a.assinado_em));
+        linha(T.hash, a.hash || '-');
         y -= 10;
-        txt('Assinatura', M, y, 9, fb, cinza);
+        txt(T.assinatura, M, y, 9, fb, cinza);
         y -= 8;
         pag.drawRectangle({ x: M, y: y - 130, width: L, height: 130, borderColor: rgb(0.82, 0.86, 0.92), borderWidth: 1 });
         if (a.imagem && /^data:image\/png;base64,/.test(a.imagem)) {
@@ -233,9 +340,7 @@ async function asBaixarAssinada() {
             } catch (_) { /* imagem inválida: o quadro fica em branco */ }
         }
         y -= 150;
-        quebrar('Assinatura eletrônica realizada pelo link enviado ao assinante, com aceite expresso dos termos da Proforma. '
-            + 'Data/hora, endereço IP, navegador e hash do documento foram registrados no momento da assinatura '
-            + '(MP 2.200-2/2001, art. 10, par. 2 - Lei 14.063/2020).', 8.5, L).forEach(l => { txt(l, M, y, 8.5, f, cinza); y -= 12; });
+        quebrar(T.comp_texto, 8.5, L).forEach(l => { txt(l, M, y, 8.5, f, cinza); y -= 12; });
 
         const blob = new Blob([await doc.save()], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
@@ -245,7 +350,7 @@ async function asBaixarAssinada() {
         document.body.appendChild(link); link.click(); link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (e) {
-        $('asConcluidoTexto').textContent += ' Não foi possível gerar o PDF agora — toque em "Baixar Proforma assinada" para tentar de novo.';
+        $('asConcluidoTexto').textContent += T.pdf_falhou;
     } finally {
         btn.disabled = false;
         btn.innerHTML = html;

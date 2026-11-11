@@ -201,6 +201,11 @@ function switchView(mode) {
 async function procAlterarStatus(id, selectEl) {
     const novoStatus  = selectEl.value;
     const statusAntes = _processosTodos.find(x => x.id === id)?.status || 'aberto';
+    // Concluir pede confirmação e lista o que ainda está aberto
+    if (novoStatus === 'concluido' && statusAntes !== 'concluido' && !(await confirmarConclusaoProcesso(id))) {
+        selectEl.value = statusAntes;
+        return;
+    }
     selectEl.className = `proc-status-select proc-status-${novoStatus}`;
     selectEl.disabled  = true;
     try {
@@ -209,6 +214,10 @@ async function procAlterarStatus(id, selectEl) {
         const p = _processosTodos.find(x => x.id === id);
         if (p) { p.status = novoStatus; p.atualizado_em = new Date().toISOString(); }
         renderTabela(document.getElementById('filtroProcessos')?.value || '');
+        if (novoStatus === 'concluido' || novoStatus === 'cancelado') {
+            const pf = p?.proforma_id || (await supabaseClient.from('processos').select('proforma_id').eq('id', id).maybeSingle()).data?.proforma_id;
+            oferecerEncerrarProforma(pf);
+        }
     } catch (err) {
         mostrarNotificacao('Erro ao atualizar status: ' + err.message, 'erro');
         selectEl.value     = statusAntes;

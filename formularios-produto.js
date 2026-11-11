@@ -852,7 +852,7 @@ function iniciarAutocompleteMoedaProduto() {
         await _carregarMoedas();
         const q = input.value.trim().toLowerCase();
         const filtradas = q
-            ? _acMoedas.filter(m => (m.descricao || '').toLowerCase().includes(q))
+            ? filtrarSugestoes(_acMoedas, q, ['sigla', 'codigo', 'descricao'])
             : _acMoedas;
         if (!filtradas.length) { lista.classList.remove('aberta'); return; }
         lista.innerHTML = filtradas.slice(0, 30).map(m => `
@@ -2005,7 +2005,7 @@ function iniciarAutocompleteUnidadeProduto() {
         await _carregarUnidades();
         const q = input.value.trim().toLowerCase();
         const filtradas = q
-            ? _acUnidades.filter(u => (u.unidade || '').toLowerCase().includes(q) || (u.descricao || '').toLowerCase().includes(q))
+            ? filtrarSugestoes(_acUnidades, q, ['unidade', 'descricao'])
             : _acUnidades;
         if (!filtradas.length) { lista.classList.remove('aberta'); return; }
         lista.innerHTML = filtradas.slice(0, 100).map(u => `

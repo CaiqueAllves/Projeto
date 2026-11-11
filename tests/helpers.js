@@ -38,6 +38,14 @@ async function login(page) {
     await page.fill('#password', senha);
     await page.click('#btnLogin');
     await page.waitForURL('**/app.html', { timeout: 20000 });
+    // conta de teste: aceite dos Termos vigentes já registrado (senão o aviso de
+    // "Termos atualizados" cobre as telas) — database-termos-aceite.sql
+    await page.evaluate(async () => {
+        if (typeof TERMOS_VERSAO === 'undefined') return;
+        for (let i = 0; i < 40 && !(await supabaseClient.auth.getSession()).data?.session; i++) await new Promise(r => setTimeout(r, 250));
+        await supabaseClient.rpc('registrar_aceite_termos', { p_versao: TERMOS_VERSAO, p_user_agent: 'testes' }).catch(() => {});
+        sessionStorage.setItem('termosAceitos_' + TERMOS_VERSAO, '1');
+    }).catch(() => {});
 }
 
 async function ir(page, caminho, espera = 3500) {

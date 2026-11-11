@@ -119,6 +119,7 @@ function _formatarDocumentoExibicao(documento) {
 function _docTipoLabel(e) {
     if (e.tipo_cadastro === 'cnpj') return 'CNPJ';
     if (e.tipo_cadastro === 'cpf')  return 'CPF';
+    if (['tin', 'ein', 'vat'].includes(e.tipo_cadastro)) return 'Tax ID';
     const digitos = String(e.documento || '').replace(/\D/g, '');
     if (digitos.length === 14) return 'CNPJ';
     if (digitos.length === 11) return 'CPF';

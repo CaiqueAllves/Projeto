@@ -78,6 +78,7 @@ function verificarAutenticacao(opcoes = {}) {
     if (usuarioAtual) {
         _authAtualizarInterface(usuarioAtual);
         _authNotificarSolicitacoesPendentes(usuarioAtual);
+        _authVerificarAceiteTermos();
 
         // Migração de autenticação (ver auditoria de segurança): a sessão
         // customizada acima não basta mais sozinha — as consultas de verdade
@@ -113,6 +114,55 @@ function verificarAutenticacao(opcoes = {}) {
     }
 }
 
+// ── Aceite dos Termos de Uso / Política de Privacidade ─────────────────────
+// Quem ainda não aceitou a versão vigente (TERMOS_VERSAO, supabase-api.js) —
+// usuários antigos ou Termos atualizados — precisa aceitar para continuar. O
+// aceite fica gravado (versão, data, IP, navegador): database-termos-aceite.sql.
+// Só na janela principal (com abas, cada tela é um iframe) e uma vez por sessão;
+// antes do SQL rodar, a consulta falha e nada é pedido.
+async function _authVerificarAceiteTermos() {
+    if (window.top !== window || typeof TERMOS_VERSAO === 'undefined' || typeof supabaseClient === 'undefined') return;
+    if (PAGINAS_PUBLICAS.includes(window.location.pathname.split('/').pop())) return;
+    const marca = 'termosAceitos_' + TERMOS_VERSAO;
+    if (sessionStorage.getItem(marca)) return;
+    // logo após o login a sessão do Supabase pode ainda não estar pronta — sem ela
+    // o banco não sabe quem é o usuário e responderia "não aceitou"
+    let sessao = null;
+    for (let i = 0; i < 20 && !sessao; i++) {
+        sessao = (await supabaseClient.auth.getSession()).data?.session;
+        if (!sessao) await new Promise(r => setTimeout(r, 250));
+    }
+    if (!sessao) return;
+    const { data: aceitou, error } = await supabaseClient.rpc('termos_aceite_atual', { p_versao: TERMOS_VERSAO });
+    if (error) return;
+    if (aceitou) { sessionStorage.setItem(marca, '1'); return; }
+    for (;;) {
+        let leu = false;
+        const ok = await confirmarAcao(
+            `Os Termos de Uso e a Política de Privacidade da Marpex foram atualizados (versão ${TERMOS_VERSAO}, ${TERMOS_DATA}). Para continuar usando o sistema, leia e aceite os novos termos.`,
+            {
+                titulo: 'Termos atualizados',
+                confirmar: 'Aceitar e continuar',
+                cancelar: 'Sair',
+                aceite: 'Li e aceito os Termos de Uso e a Política de Privacidade.',
+                link: { texto: 'Ler os Termos e a Política', acao: () => { leu = true; window.open('termos.html', '_blank', 'noopener'); } },
+            }
+        );
+        if (ok) {
+            const r = await supabaseClient.rpc('registrar_aceite_termos', { p_versao: TERMOS_VERSAO, p_user_agent: navigator.userAgent });
+            if (!r.error && r.data) { sessionStorage.setItem(marca, '1'); return; }
+            mostrarNotificacao('Não foi possível registrar o aceite. Tente de novo.', 'erro');
+            continue;
+        }
+        if (leu) continue;          // abriu os Termos para ler: o aviso volta
+        // "Sair" já é a resposta: encerra sem perguntar de novo (mesma limpeza do handleLogout)
+        _authEncerrarSessaoExpirada();
+        sessionStorage.removeItem('abas_abertas_v2');
+        window.location.href = 'login.html';
+        return;
+    }
+}
+
 function _authAtualizarInterface(usuarioAtual) {
     _authAplicarPermissoes(usuarioAtual);
     const displayUsername = document.getElementById('displayUsername');
@@ -121,6 +171,9 @@ function _authAtualizarInterface(usuarioAtual) {
     if (displayUsername) {
         displayUsername.textContent = usuarioAtual.nome;
     }
+    // e-mail da topbar (várias telas não preenchiam e ficava "usuario@email.com")
+    const userEmail = document.getElementById('userEmail');
+    if (userEmail) userEmail.textContent = usuarioAtual.email || '—';
     if (empresaNome) {
         empresaNome.textContent = usuarioAtual.empresa;
     }

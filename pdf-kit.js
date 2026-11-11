@@ -373,6 +373,11 @@ const _PDF_CENTAVOS = { pt: ['centavo', 'centavos'], en: ['cent', 'cents'], es: 
 function _pdfCodigoMoeda(moeda) {
     const m = String(moeda || '').toUpperCase();
     if (/^[A-Z]{3}$/.test(m)) return m;
+    // dólares e pesos de outros países antes do genérico (antes "DOLAR AUSTRALIANO" virava USD)
+    const outros = [[/AUSTRAL/, 'AUD'], [/CANAD/, 'CAD'], [/HONG/, 'HKD'], [/ZEL[AÂ]NDIA|ZEALAND/, 'NZD'], [/SINGAP/, 'SGD'],
+        [/PESO.*(CHIL)/, 'CLP'], [/PESO.*(MEXIC)/, 'MXN'], [/PESO.*(COLOMB)/, 'COP'], [/PESO.*(URUGU)/, 'UYU'], [/IENE|YEN/, 'JPY'], [/FRANCO SU[IÍ]/, 'CHF']];
+    const o = outros.find(([re]) => re.test(m));
+    if (o) return o[1];
     if (/D[ÓO]LAR/.test(m)) return 'USD';
     if (/EURO/.test(m)) return 'EUR';
     if (/REAL|REAIS/.test(m)) return 'BRL';
@@ -502,6 +507,13 @@ const _pdfExtenso = {
     },
 };
 
+// Moeda exibida no PDF: em português o nome do cadastro ("DOLAR DOS EUA"); nos
+// outros idiomas o código ISO (USD), que vale em qualquer língua.
+function pdfMoedaRotulo(moeda, idioma = 'pt') {
+    if (!moeda || idioma === 'pt') return moeda || '';
+    return _pdfCodigoMoeda(moeda) || moeda;
+}
+
 function pdfValorPorExtenso(valor, moeda, idioma = 'pt') {
     const lang = _pdfExtenso[idioma] ? idioma : 'en';
     const v = Math.round(Math.abs(Number(valor) || 0) * 100);
@@ -588,18 +600,28 @@ function pvFaixaTermos(doc, Y, itens) {
     const lista = itens.filter(([, v]) => v && v !== '—');
     if (!lista.length) return Y;
     const pesoTot = lista.reduce((t, it) => t + (it[2] || 1), 0);
+    // Célula estreita (folha em pé, nomes longos de fronteira/porto): diminui a
+    // fonte até caber em 2 linhas sem partir palavra; se nem assim, usa 3 linhas
+    // e a faixa cresce — nunca descarta texto (antes cortava o fim do valor).
+    const nPal = t => String(t).trim().split(/\s+/).length;
     const cel = lista.map(([r, v, p]) => {
         const w = CW * (p || 1) / pesoTot;
-        return { r, w, linhas: _pvCorta(doc, v, w - 5, 8.3, 'bold').slice(0, 2) };
+        let tam = 8.3, linhas = _pvCorta(doc, v, w - 5, tam, 'bold');
+        for (const t of [7.4, 6.6]) {
+            if (linhas.length <= 2 && nPal(linhas.join(' ')) === nPal(v)) break;
+            tam = t; linhas = _pvCorta(doc, v, w - 5, tam, 'bold');
+        }
+        return { r, w, tam, linhas: linhas.slice(0, 3) };
     });
-    const h = cel.some(c => c.linhas.length > 1) ? 14.5 : 11;
+    const nMax = Math.max(...cel.map(c => c.linhas.length));
+    const h = nMax > 2 ? 17.5 : nMax > 1 ? 14.5 : 11;
     doc.setFillColor(...C.CINZA_BG); doc.setDrawColor(...C.BORDA); doc.setLineWidth(0.25);
     doc.roundedRect(ML, Y, CW, h, 1.5, 1.5, 'FD');
     let x = ML;
     cel.forEach((c, i) => {
         if (i) { doc.setDrawColor(...C.BORDA); doc.line(x, Y, x, Y + h); }
         _pvT(doc, 'bold', 5.8, C.CINZA, c.r.toUpperCase(), x + 3, Y + 4.2);
-        c.linhas.forEach((ln, k) => _pvT(doc, 'bold', 8.3, C.AZUL, ln, x + 3, Y + 8.7 + k * 3.5));
+        c.linhas.forEach((ln, k) => _pvT(doc, 'bold', c.tam, C.AZUL, ln, x + 3, Y + 8.7 + k * c.tam * 0.42));
         x += c.w;
     });
     return Y + h + 4;

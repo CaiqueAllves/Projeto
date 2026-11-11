@@ -1771,7 +1771,7 @@ form small {
 .confirmar-icone { width:52px; height:52px; margin:0 auto 12px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; background:#eff6ff; color:#4776ec; }
 .confirmar-icone--perigo { background:#fef2f2; color:#dc2626; }
 .confirmar-titulo { margin:0 0 6px; font-size:16px; font-weight:700; color:#0f172a; }
-.confirmar-msg { margin:0 0 20px; font-size:13.5px; line-height:1.5; color:#64748b; overflow-wrap:anywhere; }
+.confirmar-msg { white-space:pre-line; margin:0 0 20px; font-size:13.5px; line-height:1.5; color:#64748b; overflow-wrap:anywhere; }
 .confirmar-acoes { display:flex; gap:10px; }
 .confirmar-btn { flex:1; padding:10px 14px; border:none; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer; transition:filter .15s, box-shadow .15s; }
 .confirmar-btn:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(71,118,236,.35); }
@@ -2051,3 +2051,7 @@ html.fin-janela body > *:not(.fin-modal-overlay):not(.notificacao) { display: no
 .pdf-emissao-aviso[hidden] { display: none; }
 .pdf-emissao-enviar { margin: 10px 0 4px; padding: 6px 12px; border: 1px dashed #93b4f5; border-radius: 8px; background: #f5f8ff; color: #4776ec; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 .pdf-emissao .confirmar-acoes { margin-top: 18px; }
+
+/* Botão "Isento" ao lado do rótulo da Inscrição Estadual (empresa sem IE) */
+.ie-isento-btn { margin-left: 8px; padding: 1px 8px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; color: #475569; font-size: 11px; font-weight: 600; cursor: pointer; vertical-align: middle; }
+.ie-isento-btn:hover { background: #eef2ff; border-color: #4776ec; color: #4776ec; }

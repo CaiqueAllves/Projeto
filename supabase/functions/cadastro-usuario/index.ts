@@ -49,7 +49,7 @@ async function tratar(req: Request): Promise<Response> {
 
   try {
     const dados = await req.json();
-    const { nome, cpf, email, senha, empresa, cnpjEmpresa, chaveEmpresa, aceitouTermos } = dados;
+    const { nome, cpf, email, senha, empresa, cnpjEmpresa, chaveEmpresa, aceitouTermos, termosVersao } = dados;
 
     if (!aceitouTermos) {
       return jsonResponse({ sucesso: false, mensagem: 'Você deve aceitar os termos de uso!' });
@@ -162,6 +162,18 @@ async function tratar(req: Request): Promise<Response> {
     if (empresaId) {
       await admin.from('usuarios').update({ empresa_id: empresaId }).eq('id', novoUsuario.id);
     }
+
+    // Prova do aceite dos Termos/Política (versão, data, IP, navegador) —
+    // database-termos-aceite.sql. Sem a tabela ainda, o cadastro segue normal.
+    try {
+      await admin.from('termos_aceites').insert({
+        usuario_id: novoUsuario.id,
+        versao: String(termosVersao || 'desconhecida').slice(0, 40),
+        origem: 'cadastro',
+        ip: ip === 'desconhecido' ? null : ip,
+        user_agent: (req.headers.get('user-agent') ?? '').slice(0, 400) || null,
+      });
+    } catch (_) { /* tabela ainda não criada */ }
 
     if (empresaSolicitadaId) {
       const { error: erroSol } = await admin

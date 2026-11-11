@@ -11,7 +11,8 @@ module.exports = {
                 const ler = async b => new TextDecoder('latin1').decode(new Uint8Array(await b.arrayBuffer()));
                 await supabaseClient.from('proformas').update({ idioma: 'en' }).eq('id', ids.proforma);
                 const { data: p } = await supabaseClient.from('proformas').select('*').eq('id', ids.proforma).single();
-                const prof = await ler(await gerarPDFProformaDados(p, { retornarBlob: true }));
+                // sem Termos: os Termos base existem só em português (a janela de emissão avisa)
+                const prof = await ler(await gerarPDFProformaDados(p, { retornarBlob: true, termos: 'nenhum' }));
                 const ci = await ler((await gerarPDFDocumentoProcesso('commercial', ids.processos[0])).blob);
                 const pl = await ler((await gerarPDFDocumentoProcesso('packing', ids.processos[0])).blob);
                 const zh = await ler(await gerarPDFProformaDados({ ...p, idioma: 'zh' }, { retornarBlob: true }));

@@ -253,7 +253,7 @@ function _propRenderCard(o) {
         <div class="prop-kcard-motivo">
             <span class="prop-kcard-label">Motivo da Perda:</span> ${_propEscapar(o.motivo_perda)}
         </div>` : ''}
-        ${_propProformaLinha(o)}
+        ${_propProformaLinha(o)}` : ''}
         <div class="prop-kcard-footer">
             <select class="prop-etapa-select prop-etapa-${etapa}" onchange="propAlterarEtapa('${o.id}', this)">
                 ${PROP_ETAPAS.map(e => `<option value="${e}" ${e === etapa ? 'selected' : ''}>${PROP_ETAPA_LABEL[e]}</option>`).join('')}
@@ -270,7 +270,7 @@ function _propRenderCard(o) {
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
-        </div>` : ''}
+        </div>
     </div>`;
 }
 
@@ -666,6 +666,22 @@ async function propSalvar() {
         return;
     }
 
+    // Exportador vazio = a própria empresa; Importador e Valor são obrigatórios
+    // (antes uma proposta totalmente vazia era salva e ia para o kanban)
+    const exigir = (id, msg) => {
+        const el = document.getElementById(id);
+        mostrarNotificacao(msg, 'warning');
+        el?.focus();
+        if (el) { el.style.borderColor = '#dc2626'; el.addEventListener('input', () => { el.style.borderColor = ''; }, { once: true }); }
+    };
+    if (!document.getElementById('propDestinatarioId').value) {
+        return exigir('propDestinatarioNome', document.getElementById('propDestinatarioNome').value.trim()
+            ? 'Escolha o Importador na lista de empresas cadastradas.' : 'Informe o Importador da proposta.');
+    }
+    if (!(_propValorMonetario(document.getElementById('propValor')) > 0)) {
+        return exigir('propValor', 'Informe o Valor da proposta.');
+    }
+
     const btn = document.getElementById('propBtnSalvar');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
@@ -754,19 +770,11 @@ function propSelecionarEmpresa(tipo, id, nome, documento) {
 }
 
 // CPF (11 dígitos): 000.000.000-00 — CNPJ (14 dígitos): 00.000.000/0000-00
+// Só exibição (campos somente leitura): CPF/CNPJ completos com máscara; documento
+// estrangeiro (Tax ID, CUIT...) como foi cadastrado — antes um Tax ID de 9 dígitos
+// virava "328.870.180", parecendo um CPF.
 function _propMascaraDocBR(valor) {
-    const d = String(valor || '').replace(/\D/g, '').slice(0, 14);
-    if (d.length <= 11) {
-        if (d.length > 9) return d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6,9) + '-' + d.slice(9);
-        if (d.length > 6) return d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6);
-        if (d.length > 3) return d.slice(0,3) + '.' + d.slice(3);
-        return d;
-    }
-    if (d.length > 12) return d.slice(0,2) + '.' + d.slice(2,5) + '.' + d.slice(5,8) + '/' + d.slice(8,12) + '-' + d.slice(12);
-    if (d.length > 8)  return d.slice(0,2) + '.' + d.slice(2,5) + '.' + d.slice(5,8) + '/' + d.slice(8);
-    if (d.length > 5)  return d.slice(0,2) + '.' + d.slice(2,5) + '.' + d.slice(5);
-    if (d.length > 2)  return d.slice(0,2) + '.' + d.slice(2);
-    return d;
+    return formatarDocumentoFiscal(valor);
 }
 
 // Escapa valores usados dentro de filtros PostgREST (.or()) — evita que

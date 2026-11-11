@@ -31,6 +31,17 @@ function toggleSection(titleEl) {
     content.style.display = isActive ? 'none' : 'block';
 }
 
+// Abre as seções recolhidas que escondem um campo (validação aponta o campo
+// faltando — sem isso a mensagem fala de um campo que o usuário não vê)
+function abrirSecaoDoCampo(el) {
+    for (let sec = el?.closest('.form-section'); sec; sec = sec.parentElement?.closest('.form-section')) {
+        if (!sec.classList.contains('active')) {
+            const titulo = sec.querySelector(':scope > .section-title');
+            if (titulo) toggleSection(titulo);
+        }
+    }
+}
+
 // Limpar formulário
 async function limparForm(formId) {
     if (await confirmarAcao('Deseja limpar todos os campos?', { titulo: 'Limpar campos', confirmar: 'Limpar', perigo: true })) {
@@ -137,7 +148,7 @@ async function confirmarSalvar() {
             if (codigoWrap) codigoWrap.style.display = '';
             if (pdfWrap)    pdfWrap.style.display    = '';
             if (pdfBtn) {
-                pdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Gerar PDF da Proposta';
+                pdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Gerar PDF da Proforma';
                 pdfBtn.onclick   = () => gerarPDFProposta();
             }
 
@@ -162,7 +173,7 @@ async function confirmarSalvar() {
                 try { if (typeof window.opener?.propCarregar === 'function') window.opener.propCarregar(); } catch (e) {}
             }
         } else {
-            mostrarNotificacao('Erro ao salvar proposta: ' + (res.mensagem || 'Tente novamente.'), 'erro');
+            mostrarNotificacao('Erro ao salvar a proforma: ' + (res.mensagem || 'Tente novamente.'), 'erro');
         }
         return;
     }
@@ -196,6 +207,12 @@ async function confirmarSalvar() {
         const codigoEl   = document.getElementById('pos-salvo-codigo');
         const pdfWrap    = document.getElementById('pos-salvo-pdf-wrap');
         const pdfBtn     = document.getElementById('pos-salvo-pdf-btn');
+
+        // Concluiu agora: se a Proforma terminou (tudo embarcado, processos concluídos), oferece encerrar
+        if (['concluido', 'cancelado'].includes(dadosProc.status) && window._procStatusSalvo !== dadosProc.status) {
+            window._procStatusSalvo = dadosProc.status;
+            await oferecerEncerrarProforma(propostaOrigemId);
+        }
 
         const numeroProcesso = resProc.data?.numero_processo || '—';
         if (resProc.data?.numero_processo) window._procNumero = resProc.data.numero_processo;
@@ -743,9 +760,7 @@ async function carregarMoedasTransporte() {
         hidden.value = '';
         const q = this.value.trim().toLowerCase();
         if (!q) { dropdown.style.display = 'none'; return; }
-        mostrar(_acMoedas.filter(m =>
-            m.descricao?.toLowerCase().includes(q) || m.codigo?.toLowerCase().includes(q)
-        ));
+        mostrar(filtrarSugestoes(_acMoedas, q, ['sigla', 'codigo', 'descricao']));
     });
 
     display.addEventListener('blur', () => {
@@ -758,6 +773,9 @@ async function carregarMoedasTransporte() {
 // ========================================
 
 function _mascaraIE(valor) {
+    // Sem IE (produtor, MEI, prestador de serviço): aceita "ISENTO"
+    const letras = String(valor || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (letras && !/\d/.test(valor)) return 'ISENTO'.startsWith(letras) ? letras : (letras.startsWith('ISENTO') ? 'ISENTO' : '');
     const d = valor.replace(/\D/g, '').slice(0, 12);
     if (d.length <= 9) {
         let o = d.slice(0, 3);
@@ -873,12 +891,37 @@ function itemAtualizar(pfx, idx, campo, valor) {
     itensRecalcular(pfx);
 }
 
+// ── Valores em dinheiro: UM padrão no sistema todo ─────────────────────────
+// Digita como escreve: "3500" = 3.500,00 e "3500,5" = 3.500,50 (igual a Proposta,
+// Produto e Contas). Antes Proforma/Processo usavam a máscara "contábil" (centavos
+// entrando pela direita: 3500 virava 35,00) — o mesmo número dava valores 100×
+// diferentes conforme a tela. Ao sair do campo, completa os centavos (",00").
+function mascaraValorLivre(el) {
+    const cursor = el.selectionStart, antes = el.value.length;
+    let raw = el.value.replace(/[^\d,]/g, '');
+    const p = raw.split(',');
+    if (p.length > 2) raw = p[0] + ',' + p.slice(1).join('');
+    const q = raw.split(',');
+    if (q[1] !== undefined) q[1] = q[1].slice(0, 2);
+    q[0] = q[0].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    el.value = q.join(',');
+    const d = el.value.length - antes;
+    try { el.setSelectionRange(cursor + d, cursor + d); } catch (_) { /* campo sem seleção */ }
+}
+function valorLivreNumero(txt) {
+    return Number(String(txt ?? '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+function formatarValorLivre(el) {
+    if (!el || !el.value.trim()) return;
+    el.value = valorLivreNumero(el.value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+document.addEventListener('focusout', e => {
+    if (e.target.matches?.('[id*="-item-preco-"], #prop-frete-valor, #prop-seguro-valor, #transp-frete-valor')) formatarValorLivre(e.target);
+});
+
 function itemMascaraPreco(pfx, input, idx) {
-    let raw = input.value.replace(/\D/g, '');
-    if (!raw) { itemAtualizar(pfx, idx, 'preco', 0); return; }
-    const num = parseInt(raw, 10) / 100;
-    input.value = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    itemAtualizar(pfx, idx, 'preco', num);
+    mascaraValorLivre(input);
+    itemAtualizar(pfx, idx, 'preco', valorLivreNumero(input.value));
 }
 
 function _itemEsc(v) {

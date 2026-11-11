@@ -89,7 +89,7 @@ function salvarProposta(e) {
     }
 
     // ── Datas ─────────────────────────────
-    checar('prop-validade-dias', 'Selecione a Validade da proposta.');
+    checar('prop-validade-dias', 'Selecione a Validade da proforma.');
 
     // ── Itens ─────────────────────────────
     if (!_propItens || _propItens.length === 0) {
@@ -114,6 +114,7 @@ function salvarProposta(e) {
     // ── Resultado ─────────────────────────
     if (erros.length > 0) {
         mostrarNotificacao(erros[0], 'warning');
+        abrirSecaoDoCampo(primeiroEl);
         primeiroEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
@@ -123,8 +124,8 @@ function salvarProposta(e) {
     modalEl.dataset.origem = 'proposta';
     const titulo = modalEl.querySelector('.modal-confirm-title');
     const msg    = modalEl.querySelector('.modal-confirm-msg');
-    if (titulo) titulo.textContent = 'Salvar Proposta';
-    if (msg)    msg.textContent    = 'Deseja salvar as informações desta proposta?';
+    if (titulo) titulo.textContent = 'Salvar Proforma';
+    if (msg)    msg.textContent    = 'Deseja salvar as informações desta proforma?';
     modalEl.style.display = 'flex';
 }
 
@@ -251,11 +252,8 @@ function propToggleFreteSeguro() {
     const ativo = _propFreteSeguroAtivo();
     document.querySelectorAll('.prop-frete-seguro').forEach(el => { el.style.display = ativo ? '' : 'none'; });
 }
-// máscara contábil: digita só números, centavos à direita (1234567 → 12.345,67)
-function propMascaraValor(input) {
-    const raw = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
-    input.value = raw ? (parseInt(raw, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
-}
+// mesma máscara de valor do sistema todo (formularios.js → mascaraValorLivre)
+function propMascaraValor(input) { mascaraValorLivre(input); }
 function _propLerValor(id) {
     const v = (document.getElementById(id)?.value || '').replace(/\./g, '').replace(',', '.');
     return v ? Number(v) || null : null;
@@ -666,9 +664,9 @@ async function propCarregarDaOportunidade(id) {
         set('prop-emp-dest-busca', imp.razao_social);
         set('prop-emp-dest-id', imp.id);
         if (imp.documento) {
-            set('prop-emp-dest-doc', _mascaraDocBR(imp.documento));
-            const tipoCad = (imp.tipo_cadastro || '').toLowerCase();
-            set('prop-emp-dest-doc-tipo', ['cnpj', 'cpf', 'tin', 'ein', 'vat'].includes(tipoCad) ? tipoCad : _tipoDocBR(imp.documento));
+            // estrangeiro (Tax ID, CUIT...) fica como foi cadastrado — sem máscara de CPF/CNPJ
+            set('prop-emp-dest-doc', formatarDocumentoFiscal(imp.documento, imp.tipo_cadastro, imp.pais));
+            set('prop-emp-dest-doc-tipo', tipoDocumentoFiscal(imp.documento, imp.tipo_cadastro, imp.pais));
         }
         set('prop-emp-dest-cep', _propCepExibir(imp.cep));
         if (imp.pais) await _preencherPaisPorPrefixo('prop-destino', imp.pais);
@@ -770,7 +768,7 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
             return;
         }
 
-        if (docEl) docEl.value = doc ? _mascaraDocBR(doc) : '';
+        if (docEl) docEl.value = formatarDocumentoFiscal(doc, item.dataset.tipo, item.dataset.pais);
         if (cepEl) cepEl.value = _propCepExibir(item.dataset.cep);
         // País de Destino = país do cadastro, editável. Na exportação indireta a
         // compradora é a trading no Brasil e o destino é outro: fica à mão.
@@ -780,7 +778,7 @@ function iniciarAutocompleteEmpresaDestinoProposta() {
         }
         const tipoDestEl = document.getElementById('prop-emp-dest-doc-tipo');
         const tipoCad = (item.dataset.tipo || '').toLowerCase();
-        if (tipoDestEl && doc) tipoDestEl.value = ['cnpj', 'cpf', 'tin', 'ein', 'vat'].includes(tipoCad) ? tipoCad : _tipoDocBR(doc);
+        if (tipoDestEl && doc) tipoDestEl.value = tipoDocumentoFiscal(doc, tipoCad, item.dataset.pais);
         if (idEl && idGrp) { idEl.value = idInt; idGrp.style.display = idInt ? '' : 'none'; }
     }
 
@@ -1001,12 +999,12 @@ async function propCarregarEdicao(id) {
         // BIGINT em "parceiros") — busca pra exibir no campo Destinatário.
         if (!d.destinatario_razao_social) {
             const { data: parc } = await supabaseClient.from('parceiros')
-                .select('razao_social, tipo_cadastro, documento').eq('id', d.destinatario_id).maybeSingle();
+                .select('razao_social, tipo_cadastro, documento, pais').eq('id', d.destinatario_id).maybeSingle();
             if (parc) {
                 g('prop-emp-dest-busca', parc.razao_social);
                 if (!d.destinatario_doc && parc.documento) {
-                    g('prop-emp-dest-doc', _mascaraDocBR(parc.documento));
-                    g('prop-emp-dest-doc-tipo', parc.tipo_cadastro || _tipoDocBR(parc.documento));
+                    g('prop-emp-dest-doc', formatarDocumentoFiscal(parc.documento, parc.tipo_cadastro, parc.pais));
+                    g('prop-emp-dest-doc-tipo', tipoDocumentoFiscal(parc.documento, parc.tipo_cadastro, parc.pais));
                 }
             }
         }
@@ -1119,12 +1117,12 @@ async function propCarregarDuplicar(id) {
         // BIGINT em "parceiros") — busca pra exibir no campo Destinatário.
         if (!d.destinatario_razao_social) {
             const { data: parc } = await supabaseClient.from('parceiros')
-                .select('razao_social, tipo_cadastro, documento').eq('id', d.destinatario_id).maybeSingle();
+                .select('razao_social, tipo_cadastro, documento, pais').eq('id', d.destinatario_id).maybeSingle();
             if (parc) {
                 g('prop-emp-dest-busca', parc.razao_social);
                 if (!d.destinatario_doc && parc.documento) {
-                    g('prop-emp-dest-doc', _mascaraDocBR(parc.documento));
-                    g('prop-emp-dest-doc-tipo', parc.tipo_cadastro || _tipoDocBR(parc.documento));
+                    g('prop-emp-dest-doc', formatarDocumentoFiscal(parc.documento, parc.tipo_cadastro, parc.pais));
+                    g('prop-emp-dest-doc-tipo', tipoDocumentoFiscal(parc.documento, parc.tipo_cadastro, parc.pais));
                 }
             }
         }
@@ -1318,3 +1316,29 @@ async function propIniciarItens() {
 
 // Compatibilidade com os chamadores antigos da Proforma.
 function propRenderizarItens() { itensRenderizar('prop'); }
+
+// ── Idioma sugerido pelo País de Destino ─────────────────────────────────
+// Proforma nova: ao escolher o destino, o idioma vai para o do país (Argentina →
+// espanhol, Estados Unidos → inglês...). Se o usuário já mexeu no idioma, fica o dele.
+const PROP_IDIOMA_POR_PAIS = [
+    [/ARGENTIN|URUGUAI|PARAGUAI|CHILE|BOL[IÍ]VIA|PERU|COL[OÔ]MBIA|EQUADOR|VENEZUELA|M[EÉ]XICO|ESPANHA|COSTA RICA|PANAM|GUATEMALA|HONDURAS|NICAR[AÁ]GUA|EL SALVADOR|CUBA|REP[UÚ]BLICA DOMINICANA|PORTO RICO/, 'es'],
+    [/PORTUGAL|ANGOLA|MO[CÇ]AMBIQUE|CABO VERDE|GUIN[EÉ]-BISSAU|S[AÃ]O TOM[EÉ]|TIMOR/, 'pt'],
+    [/FRAN[CÇ]A|B[EÉ]LGICA|LUXEMBURGO|M[OÔ]NACO|SENEGAL|COSTA DO MARFIM|MARROCOS|ARG[EÉ]LIA|TUN[IÍ]SIA|CAMAR[OÕ]ES/, 'fr'],
+    [/ALEMANHA|[AÁ]USTRIA|SU[IÍ][CÇ]A|LIECHTENSTEIN/, 'de'],
+    [/CHINA|HONG KONG|TAIWAN/, 'zh'],
+];
+document.addEventListener('DOMContentLoaded', () => {
+    const idioma = document.getElementById('prop-idioma');
+    const pais   = document.getElementById('prop-destino-pais');
+    if (!idioma || !pais) return;
+    idioma.addEventListener('change', e => { if (e.isTrusted) idioma.dataset.manual = '1'; });
+    pais.addEventListener('change', () => {
+        // indireta: a Proforma é para a trading no Brasil — o idioma fica o português
+        if (document.getElementById('prop-id')?.value || idioma.dataset.manual || _propEhIndireta()) return;
+        const p = pais.value.trim().toUpperCase();
+        if (!p || /^BRASIL$/.test(p)) return;
+        const achado = PROP_IDIOMA_POR_PAIS.find(([re]) => re.test(p));
+        const novo = achado ? achado[1] : 'en';
+        if ([...idioma.options].some(o => o.value === novo)) idioma.value = novo;
+    });
+});

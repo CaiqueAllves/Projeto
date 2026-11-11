@@ -472,6 +472,18 @@ function onModeloChange(modelo) {
     const isCompany = modelo === 'company';
     const ieInput = document.getElementById('emp-ie');
 
+    // Tipo de identificação: Company (exterior) usa Tax ID; Brasil usa CNPJ/CPF; Outros, todos.
+    // (disabled em vez de esconder: no iPhone display:none em <option> não funciona)
+    const tipoDocSel = document.getElementById('emp-tipo-cadastro');
+    if (tipoDocSel) {
+        const so = isCompany ? ['tin'] : modelo === 'outros' ? null : ['cnpj', 'cpf'];
+        [...tipoDocSel.options].forEach(o => { if (o.value) o.disabled = !!so && !so.includes(o.value); });
+        if ((so && tipoDocSel.value && !so.includes(tipoDocSel.value)) || (isCompany && !tipoDocSel.value)) {
+            tipoDocSel.value = so ? so[0] : '';
+            tipoDocSel.dispatchEvent(new Event('change'));
+        }
+    }
+
     // Highlight active modelo card
     document.querySelectorAll('.modelo-card').forEach(card => {
         const radio = card.querySelector('input[type="radio"]');
@@ -564,10 +576,10 @@ function iniciarMascaraCEPColeta() {
             const dados = await res.json();
             if (!dados.erro) {
                 const map = {
-                    'emp-coleta-estado':   dados.uf         || '',
-                    'emp-coleta-cidade':   dados.localidade || '',
-                    'emp-coleta-bairro':   dados.bairro     || '',
-                    'emp-coleta-endereco': dados.logradouro || '',
+                    'emp-coleta-estado':   String(dados.uf || '').toUpperCase(),
+                    'emp-coleta-cidade':   String(dados.localidade || '').toUpperCase(),
+                    'emp-coleta-bairro':   String(dados.bairro || '').toUpperCase(),
+                    'emp-coleta-endereco': String(dados.logradouro || '').toUpperCase(),
                 };
                 Object.entries(map).forEach(([id, val]) => {
                     const el = document.getElementById(id);
@@ -934,11 +946,10 @@ async function buscarCEPEmpresa() {
             cepInput.style.borderColor = '#dc2626';
         } else {
             const map = {
-                'emp-estado':      dados.uf          || '',
-                'emp-cidade':      dados.localidade  || '',
-                'emp-bairro':      dados.bairro      || '',
-                'emp-endereco':    dados.logradouro  || '',
-                'emp-complemento': dados.complemento || '',
+                'emp-estado':      String(dados.uf || '').toUpperCase(),
+                'emp-cidade':      String(dados.localidade || '').toUpperCase(),
+                'emp-bairro':      String(dados.bairro || '').toUpperCase(),
+                'emp-endereco':    String(dados.logradouro || '').toUpperCase(),
             };
             Object.entries(map).forEach(([id, val]) => {
                 const el = document.getElementById(id);
@@ -966,6 +977,8 @@ function aplicarMascaraDocumento() {
     if (!tipoSelect || !docInput) return;
 
     function mascarar(valor, tipo) {
+        // Empresa estrangeira: Tax ID / CUIT / VAT / RUT como vier (letras, hífen, ponto, barra)
+        if (tipo === 'tin') return valor.toUpperCase().replace(/[^A-Z0-9 .\-\/]/g, '').slice(0, 25);
         valor = valor.replace(/\D/g, '');
         if (tipo === 'cpf') {
             valor = valor.slice(0, 11);
@@ -987,6 +1000,9 @@ function aplicarMascaraDocumento() {
         if (tipo === 'cpf') {
             docInput.placeholder = '000.000.000-00';
             docInput.maxLength   = 14;
+        } else if (tipo === 'tin') {
+            docInput.placeholder = 'Ex.: 20-12345678-9 (CUIT), DE123456789 (VAT)';
+            docInput.maxLength   = 25;
         } else {
             docInput.placeholder = '00.000.000/0001-00';
             docInput.maxLength   = 18;
@@ -1099,11 +1115,7 @@ function _empPreencherEdicao(dados) {
     }
 
     // Documento formatado
-    const digitos = String(dados.documento || '').replace(/\D/g, '');
-    let docFmt = digitos;
-    if (digitos.length === 14) docFmt = digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    else if (digitos.length === 11) docFmt = digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    set('emp-documento', docFmt);
+    set('emp-documento', formatarDocumentoFiscal(dados.documento, dados.tipo_cadastro, dados.pais));
 
     set('emp-nome',        dados.razao_social);
     set('emp-fantasia',    dados.nome_fantasia);

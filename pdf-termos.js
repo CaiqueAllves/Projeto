@@ -287,7 +287,18 @@ function pdfDialogoEmissao({ titulo = 'Emitir PDF', idioma = 'pt', termos } = {}
             const pt = selIdioma.value === 'pt';
             const usaBase = escolha === 'base' || (!escolha && !(_termosLista || []).some(m => m.padrao));
             aviso.hidden = pt || !usaBase;
-            aviso.textContent = 'Os Termos base do sistema estão em português.';
+            aviso.textContent = `Os Termos base do sistema existem só em português — o documento sai em ${nomeIdioma(selIdioma.value)} com os Termos em português. `
+                + (podeGerenciar ? 'Para Termos no mesmo idioma, envie os da empresa abaixo (PDF) ou escolha "Sem Termos".' : 'Para Termos no mesmo idioma, peça ao administrador para enviar os da empresa.');
+        }
+        // Trocou o idioma: se a empresa tem Termos naquele idioma, já marca eles
+        function termosDoIdioma() {
+            const lista = _termosLista || [];
+            const atual = lista.find(m => m.id === escolha);
+            if (escolha === 'nenhum' || atual?.idioma === selIdioma.value) return;
+            const doIdioma = lista.find(m => m.idioma === selIdioma.value && m.padrao) || lista.find(m => m.idioma === selIdioma.value);
+            if (!doIdioma) return;
+            escolha = doIdioma.id;
+            box?.querySelectorAll('input[name="pdfEmTermo"]').forEach(r => { r.checked = r.value === escolha; });
         }
         async function montar() {
             if (!box) return;
@@ -301,8 +312,9 @@ function pdfDialogoEmissao({ titulo = 'Emitir PDF', idioma = 'pt', termos } = {}
             opcao('nenhum', 'Sem Termos e Condições', '');
             atualizarAviso();
         }
-        selIdioma.addEventListener('change', atualizarAviso);
+        selIdioma.addEventListener('change', () => { termosDoIdioma(); atualizarAviso(); });
         await montar();
+        termosDoIdioma(); atualizarAviso();
 
         const arq = ov.querySelector('#pdfEmArquivo');
         ov.querySelector('#pdfEmEnviar')?.addEventListener('click', () => arq.click());

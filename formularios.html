@@ -15,7 +15,7 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Formulários</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=05b7d63f">
+    <link rel="stylesheet" href="style-base.css?v=7fa3f9db">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
     <link rel="stylesheet" href="style-formularios.css?v=6e282040">
     <link rel="stylesheet" href="style-cadastro.css?v=2c563d82">
@@ -182,6 +182,7 @@
                                                     <option value="">Selecione...</option>
                                                     <option value="cnpj">CNPJ</option>
                                                     <option value="cpf">CPF</option>
+                                                    <option value="tin">Tax ID (empresa estrangeira)</option>
                                                 </select>
                                             </div>
                                             <div class="form-group">
@@ -210,7 +211,7 @@
                                             </div>
 
                                             <div class="form-group">
-                                                <label for="emp-ie">Inscrição Estadual <span class="required">*</span></label>
+                                                <label for="emp-ie">Inscrição Estadual <span class="required">*</span> <button type="button" class="ie-isento-btn" onclick="const c=document.getElementById('emp-ie');c.value='ISENTO';c.dispatchEvent(new Event('input',{bubbles:true}))" title="A empresa não tem Inscrição Estadual">Isento</button></label>
                                                 <input type="text" id="emp-ie" name="inscricao_estadual" placeholder="000.000.00-0" inputmode="numeric" maxlength="15" oninput="this.value=_mascaraIE(this.value)">
                                             </div>
                                             <div class="form-group" id="emp-im-group" style="display:none;">
@@ -1777,7 +1778,7 @@
                                             </div>
                                             <div class="form-group">
                                                 <label for="transp-frete-valor">Valor do Frete <span class="required">*</span></label>
-                                                <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00" inputmode="numeric" autocomplete="off">
+                                                <input type="text" id="transp-frete-valor" name="transp_frete_valor" placeholder="0,00" inputmode="decimal" autocomplete="off">
                                             </div>
                                             <div class="form-group">
                                                 <label for="transp-seguro">Apólice de Seguro <span class="campo-opcional">(se houver)</span></label>
@@ -2185,7 +2186,7 @@
                                             <i class="fa-solid fa-chevron-down prod-obs-icon"></i>
                                         </div>
                                         <div class="prod-obs-content">
-                                            <textarea id="prop-obs-status" name="obs_status" placeholder="Informações adicionais sobre o status da proposta..."></textarea>
+                                            <textarea id="prop-obs-status" name="obs_status" placeholder="Informações adicionais sobre o status da proforma..."></textarea>
                                         </div>
                                     </div>
 
@@ -2273,11 +2274,11 @@
                                     <!-- Frete / Seguro: só nos Incoterms em que o vendedor paga (C e D) -->
                                     <div class="form-group prop-frete-seguro" style="display:none;">
                                         <label for="prop-frete-valor">Frete <span class="label-opcional">(opcional)</span></label>
-                                        <input type="text" id="prop-frete-valor" name="frete_valor" placeholder="0,00" inputmode="numeric" oninput="propMascaraValor(this)">
+                                        <input type="text" id="prop-frete-valor" name="frete_valor" placeholder="0,00" inputmode="decimal" oninput="propMascaraValor(this)">
                                     </div>
                                     <div class="form-group prop-frete-seguro" style="display:none;">
                                         <label for="prop-seguro-valor">Seguro <span class="label-opcional">(opcional)</span></label>
-                                        <input type="text" id="prop-seguro-valor" name="seguro_valor" placeholder="0,00" inputmode="numeric" oninput="propMascaraValor(this)">
+                                        <input type="text" id="prop-seguro-valor" name="seguro_valor" placeholder="0,00" inputmode="decimal" oninput="propMascaraValor(this)">
                                     </div>
                                     <div class="form-group full-width prod-obs-wrapper">
                                         <div class="prod-obs-toggle" onclick="prodToggleObs(this)">
@@ -3346,7 +3347,7 @@
                     </div>
                     <div id="pos-salvo-pdf-wrap" style="display:none; margin-top:12px;">
                         <button class="btn-pdf modal-btn-pdf" id="pos-salvo-pdf-btn" onclick="gerarPDFProposta()">
-                            <i class="fa-solid fa-file-pdf"></i> Gerar PDF da Proposta
+                            <i class="fa-solid fa-file-pdf"></i> Gerar PDF da Proforma
                         </button>
                     </div>
                 </div>
@@ -3363,26 +3364,26 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=5f5274b6"></script>
-<script src="auth.js?v=443d3cf2"></script>
+<script src="supabase-api.js?v=3cae1f58"></script>
+<script src="auth.js?v=7943eb3e"></script>
 <script src="navegador.js?v=b52c2dea"></script>
 <script src="doc-tipos.js?v=b64b3ef0"></script>
-<script src="formularios.js?v=10284448"></script>
+<script src="formularios.js?v=48c94be5"></script>
 <script src="cadastro-logo-contas.js?v=e016db4c"></script>
 <script src="ddi.js?v=2beac16e"></script>
-<script src="formularios-empresa.js?v=8c5a7360"></script>
+<script src="formularios-empresa.js?v=e630f7e3"></script>
 <script src="etapas.js?v=b53c73d8"></script>
-<script src="formularios-processo.js?v=008a4d41"></script>
-<script src="formularios-proforma.js?v=0f7b6278"></script>
-<script src="formularios-produto.js?v=b9e9b4ca"></script>
+<script src="formularios-processo.js?v=539047a3"></script>
+<script src="formularios-proforma.js?v=563bdfe9"></script>
+<script src="formularios-produto.js?v=780d929e"></script>
 <script src="formularios-mobile.js?v=aeda52c3"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
-<script src="pdf-kit.js?v=b39e3d3c"></script>
-<script src="pdf-termos.js?v=57202b3c"></script>
+<script src="pdf-kit.js?v=a61a6eed"></script>
+<script src="pdf-termos.js?v=8be1c8bd"></script>
 <script src="pdf-processo.js?v=48b13492"></script>
-<script src="pdf-proforma.js?v=f7bd4c9a"></script>
-<script src="ci-colunas.js?v=e3169275"></script>
-<script src="pdf-documentos.js?v=29e333b7"></script>
+<script src="pdf-proforma.js?v=369c3f7d"></script>
+<script src="ci-colunas.js?v=dc3177f0"></script>
+<script src="pdf-documentos.js?v=83424441"></script>
 
 <script src="suporte.js?v=1debcf1b"></script>
 </body>

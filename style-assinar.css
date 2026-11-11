@@ -101,3 +101,8 @@ body {
 .as-btn-baixar:disabled { opacity: .6; cursor: wait; }
 .as-estado .as-btn-baixar i { font-size: 16px; margin: 0; color: #fff; }
 .as-btn-baixar[hidden] { display: none; }
+
+/* Aviso de privacidade (LGPD) abaixo do botão de assinar */
+.as-privacidade { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; font-size: 12px; line-height: 1.5; color: #64748b; }
+.as-privacidade i { margin-top: 3px; color: #94a3b8; }
+.as-privacidade a { color: #4776ec; white-space: nowrap; }

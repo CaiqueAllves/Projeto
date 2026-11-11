@@ -1,0 +1,270 @@
+MARPEX — TERMOS E POLÍTICAS
+Versão 2.0 · Novembro de 2026
+
+Trechos marcados com [PREENCHER] ou [CONFIRMAR] ainda precisam ser completados antes da publicação.
+
+========================================================================
+TERMOS DE USO
+========================================================================
+
+1. ACEITAÇÃO DOS TERMOS
+
+Estes Termos de Uso regulam o acesso e o uso da plataforma Marpex, oferecida por [PREENCHER: razão social], inscrita no CNPJ sob o nº [PREENCHER: CNPJ] ("Marpex"), à empresa que contrata o serviço ("Cliente") e às pessoas que ela cadastra como usuárias ("Usuários").
+
+O aceite é feito eletronicamente no cadastro e, a cada nova versão destes Termos, no primeiro acesso após a atualização. Cada aceite fica registrado com a versão, a data e a hora, o endereço IP e o navegador utilizados. Quem não concordar com estes Termos não deve utilizar a plataforma.
+
+2. DESCRIÇÃO DO SERVIÇO
+
+A Marpex é uma plataforma on-line de gestão de comércio exterior, com foco em exportação. Entre as funcionalidades oferecidas estão:
+
+- Cadastros: empresas parceiras (fabricantes, importadores, transportadoras, tradings), produtos, embalagens e composição
+- Comercial: propostas, Proformas Invoice com geração de PDF em vários idiomas e Termos e Condições de venda
+- Assinatura eletrônica de Proformas por link enviado ao importador
+- Operacional: processos de exportação (direta e indireta), transporte, etapas, Commercial Invoice, Packing List e anexos de documentos
+- Financeiro: contas a pagar e a receber com comprovantes, plano de contas, câmbio (cotações do Banco Central), DRE, fluxo de caixa e relatórios
+- Suporte: abertura de chamados, assistente com inteligência artificial e atendimento por WhatsApp
+- Tabelas de apoio (NCM, unidades, moedas, países) e aplicativo instalável no celular
+
+A plataforma está em evolução constante: funcionalidades podem ser incluídas, alteradas ou descontinuadas, buscando-se sempre preservar os dados já registrados pelo Cliente.
+
+3. CADASTRO, CONTA E PERFIS DE ACESSO
+
+O cadastro exige informações verdadeiras, precisas e atualizadas. Cada empresa tem um administrador, que convida os demais Usuários e define o perfil e os módulos que cada um pode acessar. O Usuário é responsável por:
+
+- Manter a confidencialidade da sua senha, que é pessoal e intransferível
+- Todas as atividades realizadas com a sua conta
+- Comunicar imediatamente à Marpex qualquer uso não autorizado
+
+O Cliente responde pelos Usuários que cadastra e pelas permissões que concede a cada um. Por segurança, o acesso é bloqueado temporariamente (15 minutos) após 5 tentativas de login com senha incorreta.
+
+IMPORTANTE: O compartilhamento de senhas é proibido e pode resultar no bloqueio da conta.
+
+4. CONTA DE AVALIAÇÃO
+
+O cadastro sem vínculo com uma empresa cria uma conta de avaliação, com acesso por 24 horas. Ao fim desse prazo o acesso é bloqueado até a conta ser vinculada a uma empresa. [PREENCHER: o que acontece com os dados da conta de avaliação não vinculada — ex.: excluídos após X dias]
+
+5. PLANOS, PAGAMENTO E CANCELAMENTO
+
+O serviço é contratado pela empresa Cliente. Usuários adicionais, além do administrador, são contratados à parte e liberados pela Marpex após a contratação.
+
+[PREENCHER: planos e valores, forma e periodicidade de pagamento, reajuste, consequências do atraso (ex.: suspensão após X dias), regras de cancelamento e de reembolso]
+
+Após o cancelamento, os dados do Cliente seguem as regras de retenção da Política de Privacidade. O Cliente pode solicitar uma cópia dos seus dados antes do encerramento.
+
+6. USO PERMITIDO
+
+A plataforma deve ser utilizada somente para fins lícitos ligados à gestão de comércio exterior. É proibido:
+
+- Utilizar a plataforma para atividades ilegais ou fraudulentas, inclusive documentos falsos
+- Enviar links de assinatura a quem não seja o legítimo representante do destinatário, ou tentar obter assinaturas por engano
+- Tentar acessar dados de outras empresas ou contornar permissões
+- Realizar engenharia reversa, testes de invasão não autorizados ou sobrecarga intencional
+- Enviar conteúdo malicioso, spam ou arquivos com vírus
+- Inserir dados pessoais sensíveis desnecessários ao serviço (saúde, religião, biometria etc.)
+- Reproduzir, revender ou redistribuir o sistema sem autorização
+
+7. DADOS DO CLIENTE E DOCUMENTOS GERADOS
+
+Os dados e arquivos inseridos pelo Cliente continuam sendo do Cliente. A Marpex os trata apenas para prestar o serviço, conforme a Política de Privacidade.
+
+Os documentos gerados pela plataforma (Proforma, Commercial Invoice, Packing List, PDFs de processos e comprovantes de assinatura) são montados com os dados informados pelo Cliente. Cabe ao Cliente conferi-los antes de enviar ou utilizar.
+
+Os Termos e Condições de venda base oferecidos para anexar à Proforma são um modelo genérico, disponível somente em português, e não constituem assessoria jurídica. O Cliente pode substituí-los pelos seus próprios Termos (em PDF) ou emitir a Proforma sem eles. A escolha e o conteúdo dos Termos de venda são de responsabilidade do Cliente.
+
+8. ASSINATURA ELETRÔNICA DE PROFORMAS
+
+O Usuário pode gerar um link para o importador conferir e assinar a Proforma. O link é válido por 3 dias. Para assinar, o signatário informa nome e documento, desenha a assinatura e confirma que leu e concorda com a Proforma. A plataforma registra a data e a hora, o endereço IP, o navegador e o código hash (SHA-256) do PDF assinado, e entrega ao signatário uma via com o comprovante.
+
+Trata-se de assinatura eletrônica nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001, válida entre as partes que admitirem esse meio de comprovação. Cabe ao Cliente enviar o link à pessoa correta e assegurar que o destinatário aceita a assinatura por esse meio.
+
+9. ASSISTENTE DE SUPORTE COM INTELIGÊNCIA ARTIFICIAL
+
+O assistente do suporte usa inteligência artificial de terceiro (Anthropic) para responder dúvidas sobre o uso da plataforma. As respostas são geradas automaticamente e podem conter erros; não substituem a orientação de despachante aduaneiro, contador ou advogado. Não informe senhas ou dados sensíveis no chat. As mensagens enviadas ao assistente são processadas pelo fornecedor de IA, conforme a Política de Privacidade.
+
+10. PROPRIEDADE INTELECTUAL
+
+O software, o design, as marcas, os logotipos, os textos e as funcionalidades da plataforma Marpex pertencem à Marpex e são protegidos pela legislação brasileira de propriedade intelectual. Estes Termos concedem ao Cliente apenas o direito de uso da plataforma durante a contratação.
+
+11. SUSPENSÃO E ENCERRAMENTO
+
+A Marpex pode suspender ou encerrar o acesso de quem violar estes Termos. Nos casos graves ou reincidentes, isso pode ocorrer sem aviso prévio. O Cliente pode encerrar a contratação a qualquer momento, conforme o item 5.
+
+12. ALTERAÇÕES DESTES TERMOS
+
+Estes Termos e a Política de Privacidade podem ser atualizados. Cada nova versão é publicada nesta página. No primeiro acesso após a atualização, a plataforma exibe o aviso e pede um novo aceite. Sem o aceite da versão vigente não é possível continuar utilizando a plataforma.
+
+13. LEI APLICÁVEL E FORO
+
+Estes Termos são regidos pelas leis brasileiras. Fica eleito o foro da Comarca de [PREENCHER: cidade/UF] para resolver controvérsias decorrentes deste instrumento.
+
+========================================================================
+POLÍTICA DE PRIVACIDADE
+========================================================================
+
+IMPORTANTE: Esta política segue a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018) e explica quais dados pessoais a Marpex trata, para quê, com quem compartilha e por quanto tempo.
+
+1. PAPÉIS NO TRATAMENTO DOS DADOS
+
+- Marpex como controladora: dados dos Usuários da plataforma (cadastro, login, uso, segurança e suporte).
+- Marpex como operadora: dados que a empresa Cliente insere sobre terceiros — contatos de clientes, importadores, fornecedores e transportadoras, motoristas e pessoas que assinam Proformas. Nesses casos a controladora é a empresa Cliente, e a Marpex trata os dados somente para prestar o serviço, de acordo com as instruções do Cliente.
+
+2. DADOS TRATADOS
+
+- Usuário: Nome, CPF, e-mail, cargo, telefone, foto de perfil e senha (guardada somente de forma criptografada).
+- Empresa Cliente: Razão social, CNPJ, inscrições, endereço, contas bancárias, logotipo e marcas.
+- Terceiros inseridos pelo Cliente: Nome, e-mail, telefone/WhatsApp e cargo de contatos; nome, CNH e telefone de motoristas.
+- Operacionais: Propostas, Proformas, processos, documentos, contas, comprovantes e arquivos anexados.
+- Assinatura eletrônica: Nome, documento, cargo e e-mail de quem assina, imagem da assinatura, IP, navegador, data/hora e hash do PDF.
+- Segurança: CPF e IP de tentativas de login com erro, IP do cadastro, registro do aceite destes termos e histórico de alterações (quem alterou e quando).
+- Suporte: Mensagens e imagens anexadas aos chamados e conversas com o assistente de IA.
+
+3. FINALIDADES E BASES LEGAIS
+
+- Prestar o serviço contratado, autenticar e controlar o acesso — execução de contrato (art. 7º, V)
+- Segurança, prevenção de fraudes e limite de tentativas de login — legítimo interesse (art. 7º, IX)
+- Registro das assinaturas eletrônicas e dos aceites destes termos, como prova — exercício regular de direitos (art. 7º, VI)
+- Cumprimento de obrigações legais e regulatórias — obrigação legal (art. 7º, II)
+- Comunicações sobre o serviço e atendimento do suporte — execução de contrato
+
+4. COMPARTILHAMENTO E FORNECEDORES
+
+A Marpex não vende, aluga ou comercializa dados pessoais. Para funcionar, a plataforma usa os fornecedores abaixo, que recebem apenas os dados necessários à sua função:
+
+  Fornecedor | Função | Dados | Local
+  Supabase | Banco de dados, login, arquivos e funções do servidor | Todos os dados da plataforma | Brasil (São Paulo)
+  GitHub (Microsoft) | Hospedagem das páginas do sistema | IP e navegador de quem acessa | EUA
+  Anthropic | Assistente de suporte com IA | Mensagens enviadas ao assistente | EUA
+  EmailJS | E-mail de boas-vindas | Nome e e-mail do novo Usuário | [CONFIRMAR]
+  BrasilAPI e ViaCEP | Consulta de CNPJ e de CEP | Somente o número consultado | Brasil
+  Banco Central do Brasil | Cotações de câmbio (PTAX) | Nenhum dado pessoal | Brasil
+  Cloudflare (cdnjs) e jsDelivr | Entrega de bibliotecas usadas pelas telas | IP e navegador de quem acessa | Global
+  WhatsApp (Meta) | Envio de mensagens e links, sempre iniciado pelo próprio Usuário | O que o Usuário decidir enviar | Global
+
+Os dados também podem ser compartilhados por determinação legal ou judicial, ou para defesa de direitos da Marpex.
+
+5. TRANSFERÊNCIA INTERNACIONAL
+
+Alguns fornecedores acima tratam dados fora do Brasil (por exemplo, nos Estados Unidos). Essas transferências ocorrem para a execução do serviço e com as garantias previstas no art. 33 da LGPD. [CONFIRMAR com o jurídico: mecanismo adotado — ex.: cláusulas contratuais dos fornecedores]
+
+6. DIREITOS DO TITULAR
+
+Como titular dos dados, você pode solicitar:
+
+- Acesso — confirmação e cópia dos dados tratados
+- Correção — de dados incompletos ou incorretos
+- Eliminação — de dados desnecessários ou tratados em desconformidade
+- Oposição — ao tratamento baseado em legítimo interesse
+- Portabilidade — dos dados em formato estruturado
+- Informação — sobre com quem os dados são compartilhados
+
+IMPORTANTE: Pedidos pelo e-mail do Encarregado: [PREENCHER: e-mail de privacidade]. Respondemos em até 15 dias. Se os dados foram inseridos por uma empresa Cliente (contatos, motoristas, signatários), o pedido deve ser feito a essa empresa, que é a controladora — a Marpex ajuda a atendê-lo.
+
+7. RETENÇÃO E ELIMINAÇÃO
+
+- Conta e dados do Cliente: enquanto a contratação estiver ativa. Após o encerramento, [PREENCHER: prazo para exclusão/anonimização], salvo os dados que a lei obrigue a guardar.
+- Lixeira: Proformas e Processos excluídos podem ser restaurados por 7 dias; depois são removidos definitivamente, junto com os arquivos.
+- Tentativas de login com erro: apagadas após o login correto ou depois de 24 horas.
+- Links de assinatura: válidos por 3 dias. O registro da assinatura é mantido junto à Proforma, como prova, enquanto ela existir.
+- Histórico de alterações e aceites destes termos: enquanto existirem o registro e a conta a que se referem.
+- Cópias de segurança: o banco de dados tem cópia diária, guardada por [PREENCHER: prazo de retenção dos backups].
+
+8. SEGURANÇA
+
+Medidas adotadas:
+
+- Conexão criptografada (HTTPS/TLS) e senhas guardadas apenas de forma criptografada
+- Bloqueio temporário após tentativas de login com erro
+- Isolamento dos dados de cada empresa no banco de dados (Row Level Security)
+- Permissões por perfil e por módulo, definidas pelo administrador
+- Documentos e comprovantes em armazenamento privado, com links temporários
+- Histórico de alterações dos principais registros e cópia de segurança diária do banco
+
+Em caso de incidente de segurança que possa causar risco ou dano relevante aos titulares, a Marpex comunicará a Autoridade Nacional de Proteção de Dados (ANPD) e os titulares afetados, conforme o art. 48 da LGPD. Quando os dados forem de terceiros inseridos pelo Cliente, o Cliente também será avisado.
+
+9. CRIANÇAS E ADOLESCENTES
+
+A plataforma é destinada a empresas e a profissionais maiores de 18 anos e não é dirigida a crianças ou adolescentes.
+
+========================================================================
+COOKIES E ARMAZENAMENTO NO NAVEGADOR
+========================================================================
+
+1. O QUE UTILIZAMOS
+
+A Marpex não usa cookies de rastreamento nem de publicidade. Para funcionar, guarda no navegador apenas informações técnicas (em localStorage, sessionStorage e no cache do aplicativo). Esses itens são necessários ao funcionamento do serviço.
+
+2. ITENS GUARDADOS NO NAVEGADOR
+
+  Chave | Tipo | Finalidade | Duração
+  sb-…-auth-token | Local | Sessão de login segura (Supabase) | Até sair ou a sessão expirar
+  usuarioLogado | Session | Dados básicos do Usuário na sessão atual (nome, empresa, perfil) | Até fechar o navegador
+  usuarioSalvo, rememberMe, lastLogin | Local | Opção "Lembrar-me": manter o acesso entre visitas | Até sair
+  cpfSalvo | Local | CPF já preenchido na tela de login (opção "Lembrar-me") | Até desmarcar "Lembrar-me" ou limpar o navegador
+  modulo_ativo, abas_abertas_v2 | Session | Módulo do menu e abas abertas | Até fechar o navegador
+  semAbas | Local | Preferência de navegação sem abas | Até limpar o navegador
+  termosAceitos_… | Session | Evita pedir de novo o aceite destes termos na mesma sessão | Até fechar o navegador
+  suporte_…, solicitacoesUltimaChecagem, processos_updated | Local e Session | Avisos do suporte, de solicitações de acesso e atualização de listas entre abas | Até sair ou limpar o navegador
+  _upload…, _tenantEmpresaEdicao | Session | Dados temporários de um formulário em preenchimento (importação de planilha/PDF) | Até concluir o formulário ou fechar o navegador
+  Cache do aplicativo | Cache | Cópia das telas e ícones do sistema para abrir mais rápido e funcionar como app. Não guarda dados das empresas. | Até a próxima versão do sistema
+
+3. COMO LIMPAR OS DADOS
+
+Você pode remover os dados guardados no navegador a qualquer momento:
+
+- Saindo da plataforma pelo botão Sair (remove a sessão e o "Lembrar-me")
+- Limpando os dados do site nas configurações do navegador (remove tudo, inclusive o CPF lembrado e o cache do app)
+- Usando uma janela anônima/privativa
+
+========================================================================
+LIMITAÇÃO DE RESPONSABILIDADE
+========================================================================
+
+1. DISPONIBILIDADE DO SERVIÇO
+
+A Marpex busca manter a plataforma disponível 24 horas por dia, 7 dias por semana, mas não garante funcionamento ininterrupto. Podem ocorrer indisponibilidades por:
+
+- Manutenções e atualizações do sistema
+- Falhas de fornecedores (hospedagem, banco de dados, DNS, bibliotecas, consultas de CNPJ/CEP/câmbio, IA)
+- Caso fortuito ou força maior
+
+2. LIMITAÇÃO DE DANOS
+
+Na máxima extensão permitida pela lei, a Marpex não responde por danos indiretos decorrentes do uso ou da impossibilidade de uso da plataforma, como:
+
+- Lucros cessantes ou perda de negócios
+- Perda de dados causada por ação do Usuário (exclusões, substituições de arquivos)
+- Danos causados por uso indevido ou por permissões concedidas pelo próprio Cliente
+- Decisões tomadas com base em informações, cálculos ou respostas exibidas pela plataforma
+
+[PREENCHER/CONFIRMAR com o jurídico: limite de valor da responsabilidade, se houver — ex.: valor pago nos últimos 12 meses]
+
+3. RESPONSABILIDADE DO CLIENTE E DO USUÁRIO
+
+Cabe ao Cliente e aos seus Usuários:
+
+- A veracidade e a exatidão dos dados inseridos e dos documentos emitidos
+- O cumprimento das obrigações aduaneiras, cambiais, fiscais e contratuais da exportação
+- A base legal para inserir dados pessoais de terceiros (contatos, motoristas, signatários)
+- A guarda das senhas e as ações dos Usuários que cadastrar
+
+IMPORTANTE: Tabelas de apoio (NCM, moedas etc.), cotações de câmbio, DRE, valores tributários, Termos de venda base e respostas do assistente de IA têm caráter informativo. Não substituem despachante aduaneiro, contador ou advogado.
+
+4. INTEGRIDADE DOS DADOS
+
+O banco de dados tem cópia de segurança diária. Ainda assim, recomendamos que o Cliente guarde cópia dos documentos críticos (Proformas assinadas, comprovantes, faturas). A Marpex não se responsabiliza por perdas decorrentes de exclusões feitas pelo próprio Usuário após o prazo de 7 dias da lixeira.
+
+========================================================================
+CONTATO
+========================================================================
+
+Para dúvidas, pedidos sobre seus dados ou questões sobre estes documentos, use os canais abaixo:
+
+- Encarregado de Dados (DPO): [PREENCHER: nome do Encarregado] — atende os titulares e a ANPD. E-mail: [PREENCHER: e-mail de privacidade]
+- Suporte: Dúvidas de uso, problemas de acesso e erros: pelo botão de ajuda dentro da plataforma (chamados e WhatsApp). E-mail: [PREENCHER: e-mail de suporte]
+- Questões Jurídicas: Contratos, notificações e assuntos jurídicos. E-mail: [PREENCHER: e-mail jurídico]
+
+IMPORTANTE: Prazos de resposta: até 5 dias úteis para o suporte e até 15 dias para pedidos sobre dados pessoais (LGPD).
+
+1. ENDEREÇO PARA CORRESPONDÊNCIA
+
+[PREENCHER: razão social] / [PREENCHER: endereço completo, cidade/UF e CEP] / CNPJ: [PREENCHER: CNPJ]

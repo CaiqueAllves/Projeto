@@ -948,6 +948,9 @@ function _mascaraDocBR(valor) {
 }
 
 function _mascaraIE(valor) {
+    // Sem IE (produtor, MEI, prestador de serviço): aceita "ISENTO"
+    const letras = String(valor || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (letras && !/\d/.test(valor)) return 'ISENTO'.startsWith(letras) ? letras : (letras.startsWith('ISENTO') ? 'ISENTO' : '');
     const d = valor.replace(/\D/g, '').slice(0, 12);
     if (d.length <= 9) {
         let o = d.slice(0, 3);
@@ -1003,10 +1006,10 @@ async function editEmpBuscarCep() {
         const data = await res.json();
         if (data.erro) return;
         const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
-        set('editEmpEstado',  data.uf);
-        set('editEmpCidade',  data.localidade);
-        set('editEmpBairro',  data.bairro);
-        set('editEmpEndereco', data.logradouro);
+        set('editEmpEstado',  String(data.uf || '').toUpperCase());
+        set('editEmpCidade',  String(data.localidade || '').toUpperCase());
+        set('editEmpBairro',  String(data.bairro || '').toUpperCase());
+        set('editEmpEndereco', String(data.logradouro || '').toUpperCase());
     } catch {}
 }
 

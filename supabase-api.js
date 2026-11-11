@@ -87,6 +87,12 @@ function gerarChaveEmpresa() {
 // com service_role — réplica fiel da lógica que estava aqui.
 const CADASTRO_ENDPOINT = `${SUPABASE_URL}/functions/v1/cadastro-usuario`;
 
+// Versão vigente dos Termos de Uso / Política de Privacidade (termos.html).
+// Trocar a versão faz o sistema pedir o aceite de novo a todos no próximo acesso
+// (auth.js) — o aceite fica gravado em termos_aceites (database-termos-aceite.sql).
+const TERMOS_VERSAO = '2.0';
+const TERMOS_DATA   = 'Novembro de 2026';
+
 async function cadastrarContaSupabase(dados) {
     try {
         const res = await fetch(CADASTRO_ENDPOINT, {
@@ -357,6 +363,75 @@ async function salvarEmpresaCadastrada(dadosEmpresa) {
 
 // Texto digitado dentro de um filtro .or(): vírgula, parênteses e ponto
 // quebravam o filtro. Use entre aspas duplas: campo.ilike."%${filtroTexto(t)}%"
+// ── Sugestões de listas (moeda, unidade...): filtra e ORDENA pela relevância ──
+// Igual ao termo > começa com o termo > começa uma palavra > só contém. Antes a
+// ordem era a alfabética: "UN" trazia "CJ (conjunto)" antes de "UN" e "DOLAR"
+// trazia o Dólar Australiano antes do Dólar dos EUA.
+const SUGESTAO_PREFERIDAS = ['USD', 'EUR', 'BRL', 'GBP', 'CNY', 'JPY', 'ARS', 'CHF', 'CAD', 'UNID', 'UN', 'KG', 'CX', 'PC'];
+function filtrarSugestoes(lista, termo, campos) {
+    const sem = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const q = sem(termo);
+    if (!q) return lista;
+    // nota = nível × 10 + posição do campo (código antes de descrição); sem relação = Infinity
+    const nota = item => {
+        let melhor = Infinity;
+        campos.forEach((c, i) => {
+            const v = sem(item[c]);
+            if (!v) return;
+            const nivel = v === q ? 0 : v.startsWith(q) ? 1 : (' ' + v).includes(' ' + q) ? 2 : v.includes(q) ? 3 : null;
+            if (nivel !== null) melhor = Math.min(melhor, nivel * 10 + i);
+        });
+        return melhor;
+    };
+    const pref = item => { const k = campos.map(c => String(item[c] ?? '').toUpperCase()).find(v => SUGESTAO_PREFERIDAS.includes(v)); return k ? SUGESTAO_PREFERIDAS.indexOf(k) : 99; };
+    return lista.map(item => ({ item, n: nota(item) })).filter(x => x.n !== Infinity)
+        .sort((a, b) => Math.floor(a.n / 10) - Math.floor(b.n / 10) || pref(a.item) - pref(b.item) || a.n - b.n)
+        .map(x => x.item);
+}
+
+// HS Code do produto: o cadastrado; sem ele, os 6 primeiros dígitos do NCM (o NCM
+// é o HS de 6 dígitos + 2 do Mercosul) — 6109.10.00 → 6109.10
+function hsDoProduto(p) {
+    if (p?.hscode) return String(p.hscode).trim();
+    const d = String(p?.ncm || '').replace(/\D/g, '');
+    return d.length >= 6 ? `${d.slice(0, 4)}.${d.slice(4, 6)}` : '';
+}
+
+// CEP brasileiro com máscara (01001000 → 01001-000); código postal estrangeiro como veio
+function formatarCep(cep, pais) {
+    const txt = String(cep ?? '').trim();
+    const d = txt.replace(/\D/g, '');
+    const p = String(pais || '').trim().toLowerCase();
+    return d.length === 8 && d === txt.replace(/-/g, '') && (!p || ['brasil', 'brazil', 'br'].includes(p)) ? d.replace(/^(\d{5})(\d{3})$/, '$1-$2') : txt;
+}
+
+// ── Documento fiscal: CNPJ/CPF com máscara; estrangeiro (Tax ID, CUIT, VAT...) como foi digitado ──
+// tipo = tipo_cadastro / *_doc_tipo ('cnpj' | 'cpf' | 'tin' | 'ein' | 'vat'); pais = país da empresa.
+const DOC_TIPOS_ESTRANGEIROS = ['tin', 'ein', 'vat'];
+function documentoEhEstrangeiro(doc, tipo, pais) {
+    const t = String(tipo || '').toLowerCase();
+    if (DOC_TIPOS_ESTRANGEIROS.includes(t)) return true;
+    if (t === 'cnpj' || t === 'cpf') return false;
+    if (/[a-z]/i.test(String(doc || ''))) return true;
+    const p = String(pais || '').trim().toLowerCase();
+    return !!p && !['brasil', 'brazil', 'br'].includes(p);
+}
+function tipoDocumentoFiscal(doc, tipo, pais) {
+    const t = String(tipo || '').toLowerCase();
+    if (['cnpj', 'cpf', ...DOC_TIPOS_ESTRANGEIROS].includes(t)) return t;
+    if (documentoEhEstrangeiro(doc, t, pais)) return 'tin';
+    return String(doc || '').replace(/\D/g, '').length <= 11 ? 'cpf' : 'cnpj';
+}
+function formatarDocumentoFiscal(doc, tipo, pais) {
+    const txt = String(doc ?? '').trim();
+    if (!txt) return '';
+    if (documentoEhEstrangeiro(txt, tipo, pais)) return txt.toUpperCase();
+    const d = txt.replace(/\D/g, '');
+    if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+    return txt;
+}
+
 function filtroTexto(termo) {
     return String(termo ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
@@ -2002,13 +2077,25 @@ async function buscarContasPagar(filtros = {}) {
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
 }
 
+// Período das contas (DRE, Fluxo de Caixa, Relatórios Financeiros): a conta
+// já paga/recebida entra pela data em que o dinheiro saiu/entrou; a que ainda
+// está em aberto, pelo vencimento. (Antes era tudo pelo vencimento — um
+// recebimento antecipado caía no mês do vencimento, não no do recebimento.)
+function _finFiltroPeriodo(query, inicio, fim, statusBaixa, colBaixa) {
+    const venc = `data_vencimento.gte.${inicio},data_vencimento.lte.${fim}`;
+    return query.or([
+        `and(status.eq.${statusBaixa},${colBaixa}.gte.${inicio},${colBaixa}.lte.${fim})`,
+        `and(status.eq.${statusBaixa},${colBaixa}.is.null,${venc})`,
+        `and(status.neq.${statusBaixa},${venc})`,
+    ].join(','));
+}
+
 async function buscarContasPagarPeriodo(inicio, fim) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
         const montar = (sel) => {
-            let query = supabaseClient.from('contas_pagar').select(sel)
-                .gte('data_vencimento', inicio).lte('data_vencimento', fim)
+            let query = _finFiltroPeriodo(supabaseClient.from('contas_pagar').select(sel), inicio, fim, 'pago', 'data_pagamento')
                 .order('data_vencimento', { ascending: true });
             if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
             return query;
@@ -2125,8 +2212,7 @@ async function buscarContasReceberPeriodo(inicio, fim) {
         const usuario = obterUsuarioLogado();
         if (!usuario) return { sucesso: false, data: [] };
         const montar = (sel) => {
-            let query = supabaseClient.from('contas_receber').select(sel)
-                .gte('data_vencimento', inicio).lte('data_vencimento', fim)
+            let query = _finFiltroPeriodo(supabaseClient.from('contas_receber').select(sel), inicio, fim, 'recebido', 'data_recebimento')
                 .order('data_vencimento', { ascending: true });
             if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
             return query;
@@ -2263,8 +2349,10 @@ async function buscarAssinaturasProformas(proformaIds) {
     } catch (err) { return { sucesso: false, mensagem: err.message, data: [] }; }
 }
 
-function urlAssinaturaProforma(token) {
-    return new URL(`assinar.html?t=${encodeURIComponent(token)}`, location.href).href;
+// idioma: o da Proforma — a página de assinatura abre nele (pt/en/es; os outros em inglês)
+function urlAssinaturaProforma(token, idioma) {
+    const l = idioma && idioma !== 'pt' ? `&l=${encodeURIComponent(idioma)}` : '';
+    return new URL(`assinar.html?t=${encodeURIComponent(token)}${l}`, location.href).href;
 }
 
 // ========================================
@@ -2379,6 +2467,54 @@ function calcularSaldoProforma(itensProforma, processos, processoIgnorarId = nul
         usado += Math.min(s.usado, s.total);
     });
     return { itens: saldo, percentual: total ? Math.round(usado / total * 100) : 0, esgotado: total > 0 && usado >= total };
+}
+
+// ── Concluir Processo ─────────────────────────────────────────────────────
+// Antes de concluir: mostra o que ainda está aberto (etapas, embarque, contas)
+// e pede confirmação. Sem pendências, uma confirmação simples.
+async function confirmarConclusaoProcesso(processoId) {
+    const { data: p } = await supabaseClient.from('processos')
+        .select('id, numero_processo, etapas, data_embarque').eq('id', processoId).maybeSingle();
+    if (!p) return true;
+    const abertas = (q, baixa) => q.select('id').eq('processo_id', processoId).not('status', 'in', `(${baixa},cancelado)`);
+    const [cr, cp] = await Promise.all([
+        abertas(supabaseClient.from('contas_receber'), 'recebido'),
+        abertas(supabaseClient.from('contas_pagar'), 'pago'),
+    ]);
+    const pend = [];
+    const etapas = Array.isArray(p.etapas) ? p.etapas : [];
+    const naoFeitas = etapas.filter(e => !e.concluida);
+    if (naoFeitas.length) pend.push(`${naoFeitas.length} de ${etapas.length} etapas não concluídas (${naoFeitas.slice(0, 3).map(e => e.nome).join(', ')}${naoFeitas.length > 3 ? '...' : ''})`);
+    if (!p.data_embarque) pend.push('Data de Embarque não informada');
+    if (cr.data?.length) pend.push(`${cr.data.length} conta(s) a receber em aberto`);
+    if (cp.data?.length) pend.push(`${cp.data.length} conta(s) a pagar em aberto`);
+    const num = p.numero_processo || '';
+    if (!pend.length) {
+        return confirmarAcao(`Concluir o Processo ${num}?`, { titulo: 'Concluir processo', confirmar: 'Concluir', cancelar: 'Voltar' });
+    }
+    return confirmarAcao(`O Processo ${num} ainda tem pendências:\n• ${pend.join('\n• ')}`, {
+        titulo: 'Concluir com pendências?', confirmar: 'Concluir mesmo assim', cancelar: 'Voltar',
+        aceite: 'Estou ciente das pendências e quero concluir o processo.',
+    });
+}
+
+// Depois de concluir: se TODOS os processos da Proforma terminaram e todo o saldo
+// foi embarcado, oferece encerrar a Proforma (o status dela continua manual).
+async function oferecerEncerrarProforma(proformaId) {
+    if (!proformaId) return false;
+    const r = await buscarSaldoProforma(proformaId);
+    const prof = r.proforma;
+    if (!prof || ['encerrado', 'excluido'].includes(prof.status)) return false;
+    const ativos = r.processos.filter(x => x.status !== 'excluido');
+    if (!ativos.length || ativos.some(x => !['concluido', 'cancelado'].includes(x.status)) || !r.esgotado) return false;
+    const ok = await confirmarAcao(`Todos os produtos da Proforma ${prof.codigo || ''} foram embarcados e os processos dela estão concluídos. Deseja encerrar a Proforma?`,
+        { titulo: 'Encerrar Proforma', confirmar: 'Encerrar', cancelar: 'Agora não' });
+    if (!ok) return false;
+    const { error } = await supabaseClient.from('proformas')
+        .update({ status: 'encerrado', status_atualizado_em: new Date().toISOString() }).eq('id', proformaId);
+    if (error) { mostrarNotificacao('Não foi possível encerrar a Proforma: ' + error.message, 'erro'); return false; }
+    mostrarNotificacao(`Proforma ${prof.codigo || ''} encerrada.`, 'sucesso');
+    return true;
 }
 
 async function buscarSaldoProforma(proformaId, processoIgnorarId = null) {

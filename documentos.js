@@ -860,13 +860,13 @@ function _docAssinaturaLinkHtml(proforma, assinado) {
             <button class="doc-btn-whats" onclick="docEnviarLinkAssinatura('${proforma.id}')" title="Gerar link de assinatura e enviar ao Importador pelo WhatsApp">
                 <i class="fa-brands fa-whatsapp"></i> ${pendente ? 'Reenviar link' : 'Enviar link p/ assinar'}
             </button>
-            ${pendente ? `<span class="doc-link-pendente">Aguardando · enviado ${fmt(a.criado_em)} <a href="#" onclick="docCopiarLinkAssinatura(event,'${a.token}')" title="Copiar o link">copiar link</a></span>` : ''}
+            ${pendente ? `<span class="doc-link-pendente">Aguardando · enviado ${fmt(a.criado_em)} <a href="#" data-idioma="${_docEsc(proforma.idioma || '')}" onclick="docCopiarLinkAssinatura(event,'${a.token}',this.dataset.idioma)" title="Copiar o link">copiar link</a></span>` : ''}
         </div>`;
 }
 
-function docCopiarLinkAssinatura(ev, token) {
+function docCopiarLinkAssinatura(ev, token, idioma) {
     ev?.preventDefault(); ev?.stopPropagation();
-    const url = urlAssinaturaProforma(token);
+    const url = urlAssinaturaProforma(token, idioma);
     navigator.clipboard?.writeText(url).then(() => mostrarNotificacao('Link de assinatura copiado.', 'sucesso'))
         .catch(() => window.prompt('Copie o link de assinatura:', url));
 }
@@ -893,14 +893,17 @@ async function docEnviarLinkAssinatura(proformaId) {
         const res = await window.supabaseAPI.criarAssinaturaProforma(proformaId, reg?.arquivo_path, telefone);
         if (!res.sucesso) { aba?.close(); mostrarNotificacao('Não foi possível gerar o link: ' + res.mensagem, 'erro'); return; }
 
-        const url = urlAssinaturaProforma(res.data.token);
+        const url = urlAssinaturaProforma(res.data.token, p.idioma);
         const nome = _docDestinatarioNome(p);
-        const msg = [
-            `Olá${nome && nome !== '—' ? ', ' + nome : ''}!`,
-            `Segue o link para conferir e assinar a Proforma ${p.codigo || ''}:`,
-            url,
-            `O link é válido até ${new Date(res.data.expira_em).toLocaleDateString('pt-BR')}.`,
-        ].join('\n');
+        const ate = new Date(res.data.expira_em).toLocaleDateString('pt-BR');
+        const ola = nome && nome !== '—' ? ', ' + nome : '';
+        // no idioma da Proforma (o Importador recebe a mensagem); fr/de seguem em inglês
+        const msgs = {
+            pt: [`Olá${ola}!`, `Segue o link para conferir e assinar a Proforma ${p.codigo || ''}:`, url, `O link é válido até ${ate}.`],
+            en: [`Hello${ola}!`, `Here is the link to review and sign Proforma ${p.codigo || ''}:`, url, `The link is valid until ${ate}.`],
+            es: [`¡Hola${ola}!`, `Le enviamos el enlace para revisar y firmar la Proforma ${p.codigo || ''}:`, url, `El enlace es válido hasta el ${ate}.`],
+        };
+        const msg = (msgs[p.idioma] || (p.idioma && p.idioma !== 'pt' ? msgs.en : msgs.pt)).join('\n');
         const wa = `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`;
         if (aba) aba.location.href = wa; else window.open(wa, '_blank');
 

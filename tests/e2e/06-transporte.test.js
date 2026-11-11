@@ -24,8 +24,10 @@ module.exports = {
             await page.dispatchEvent('#transp-nome-lista .autocomplete-item', 'mousedown');
             h.igual(await page.inputValue('#transp-cnpj'), '33.333.333/0001-33', 'Documento da transportadora não preenchido');
             // máscara contábil
-            await page.fill('#transp-frete-valor', ''); await page.type('#transp-frete-valor', '550000');
-            h.igual(await page.inputValue('#transp-frete-valor'), '5.500,00', 'Máscara do frete');
+            await page.fill('#transp-frete-valor', ''); await page.type('#transp-frete-valor', '5500');
+            h.igual(await page.inputValue('#transp-frete-valor'), '5.500', 'Máscara do frete (digita como escreve)');
+            await page.press('#transp-frete-valor', 'Tab');
+            h.igual(await page.inputValue('#transp-frete-valor'), '5.500,00', 'Frete completa os centavos ao sair do campo');
             // Própria do Cliente usa o Importador
             await page.evaluate(() => { document.getElementById('proc-emp-dest-busca').value = 'IMP X'; document.getElementById('proc-emp-dest-auto-doc').value = '22.222.222/0001-22'; });
             await page.selectOption('#transp-tipo', 'propria'); await page.waitForTimeout(300);
