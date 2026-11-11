@@ -1006,7 +1006,6 @@ function _payloadProcesso(dados) {
         sem_assinatura:                !!dados.sem_assinatura,
         sem_assinatura_confirmado_por: dados.sem_assinatura ? (dados.sem_assinatura_confirmado_por || null) : null,
         sem_assinatura_confirmado_em:  dados.sem_assinatura ? (dados.sem_assinatura_confirmado_em  || null) : null,
-        pedido_id:               dados.pedido_id || null,
         tipo:                    dados.tipo || null,
         proposito:               dados.proposito || null,
         emissor_tipo:            dados.emissor_tipo || 'usuario',
@@ -2065,6 +2064,7 @@ async function buscarContasPagar(filtros = {}) {
         const montar = (sel) => {
             let query = supabaseClient.from('contas_pagar').select(sel).order('data_vencimento', { ascending: true });
             if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+            if (filtros.id) query = query.eq('id', filtros.id);   // uma conta só (ver na janela)
             if (filtros.diasAtras) {
                 const desde = new Date(Date.now() - filtros.diasAtras * 86400000).toISOString().slice(0, 10);
                 query = query.or(`status.not.in.(pago,cancelado),data_vencimento.gte.${desde}`);
@@ -2193,6 +2193,7 @@ async function buscarContasReceber(filtros = {}) {
         const montar = (sel) => {
             let query = supabaseClient.from('contas_receber').select(sel).order('data_vencimento', { ascending: true });
             if (usuario.empresa_id) query = query.eq('empresa_id', usuario.empresa_id);
+            if (filtros.id) query = query.eq('id', filtros.id);   // uma conta só (ver na janela)
             // Filtro de período (revisão de performance) — mesma lógica de
             // buscarContasPagar: só afeta contas já recebidas/canceladas.
             if (filtros.diasAtras) {
@@ -2855,13 +2856,12 @@ async function buscarOportunidades(filtros = {}) {
 // avança (Perdido) ou é excluída — pedido do usuário de ter rastreabilidade
 // completa, não só o estado atual. Nunca deixa uma falha aqui quebrar a
 // ação principal que a disparou (por isso não usa await nos call sites).
-async function _registrarHistoricoOportunidade(oportunidadeId, evento, deValor = null, paraValor = null, pedidoId = null) {
+async function _registrarHistoricoOportunidade(oportunidadeId, evento, deValor = null, paraValor = null) {
     try {
         const usuario = obterUsuarioLogado();
         if (!usuario?.empresa_id || !oportunidadeId) return;
         await supabaseClient.from('oportunidade_historico').insert({
             oportunidade_id: oportunidadeId,
-            pedido_id: pedidoId,
             evento,
             de_valor: deValor,
             para_valor: paraValor,
@@ -2877,7 +2877,7 @@ async function buscarHistoricoOportunidade(oportunidadeId) {
     try {
         const { data, error } = await supabaseClient
             .from('oportunidade_historico')
-            .select('*, pedidos(numero)')
+            .select('*')   // sem join com pedidos: as tabelas do Pedido serão removidas (database-remover-pedidos.sql)
             .eq('oportunidade_id', oportunidadeId)
             .order('criado_em', { ascending: true });
         if (error) return { sucesso: false, mensagem: error.message, data: [] };

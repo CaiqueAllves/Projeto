@@ -87,6 +87,19 @@ async function _cpVerificarGeracaoViaUrl() {
     const editarId = params.get('editar');
     if (editarId) { cpAbrirModal(editarId); return; }
 
+    // Ver uma conta só para leitura (janela "Contas que lancei" — contas-lancadas.js).
+    // Na janela a lista não é carregada: busca só esta conta.
+    const verId = params.get('ver');
+    if (verId) {
+        if (!_cpTodas.some(x => x.id === verId)) {
+            const r = await buscarContasPagar({ id: verId });
+            _cpTodas = [...(_cpTodas || []), ...(r.data || [])];
+        }
+        if (_cpTodas.some(x => x.id === verId)) cpVer(verId);
+        else { mostrarNotificacao('Conta não encontrada ou sem acesso.', 'erro'); if (FIN_JANELA) finJanelaFechar(false); }
+        return;
+    }
+
     const processoId = params.get('gerar_processo_id');
     if (!processoId) return;
 

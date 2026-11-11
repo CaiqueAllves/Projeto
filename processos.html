@@ -15,7 +15,7 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Processos</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=7fa3f9db">
+    <link rel="stylesheet" href="style-base.css?v=84dec4e1">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
     <link rel="stylesheet" href="style-cadastro.css?v=2c563d82">
     <link rel="stylesheet" href="style-proforma.css?v=67b71bbc">
@@ -86,6 +86,9 @@
                     </div>
                 </div>
                 <div class="header-right">
+                    <button class="btn-excluidos" onclick="abrirContasLancadas()" title="Contas a pagar e a receber que você lançou">
+                        <i class="fa-solid fa-receipt"></i> Contas que lancei
+                    </button>
                     <div id="procExcluidosWrapper">
                         <button class="btn-excluidos" onclick="procToggleExcluidos()">
                             <i class="fa-solid fa-trash-can"></i> Excluídos
@@ -228,7 +231,7 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=3cae1f58"></script>
+<script src="supabase-api.js?v=a29098b1"></script>
 <script src="auth.js?v=7943eb3e"></script>
 <script src="navegador.js?v=b52c2dea"></script>
 <script src="historico.js?v=c0ecd265"></script>
@@ -243,6 +246,7 @@
 <script src="etapas.js?v=b53c73d8"></script>
 <script src="resumo.js?v=83205524"></script>
 <script src="processos.js?v=bc547feb"></script>
+<script src="contas-lancadas.js?v=529c7142"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 
 </body>
