@@ -9,8 +9,9 @@
 --     pelo backup.
 --
 -- Tudo roda numa transação: se algo falhar, nada é apagado. Antes de apagar,
--- o SQL confere se alguma função ou view do banco ainda usa as tabelas; se usar,
--- para com a lista do que depende delas (mande o resultado para revisar).
+-- o SQL confere se alguma função ou view do banco ainda usa as tabelas (se usar,
+-- para com a lista — mande o resultado para revisar) e remove as regras de acesso
+-- (policies) que consultam as tabelas do Pedido.
 -- Pode rodar de novo sem erro.
 
 BEGIN;
@@ -55,19 +56,37 @@ SELECT o.bucket_id, o.name
  WHERE o.bucket_id IN ('pedido-documentos-assinados', 'pedido-confirmacoes')
    AND NOT EXISTS (SELECT 1 FROM arquivos_remover a WHERE a.bucket = o.bucket_id AND a.caminho = o.name);
 
--- 4. Colunas pedido_id nas tabelas que continuam (levam junto a ligação com pedidos)
+-- 4. Regras de acesso (policies) que consultam as tabelas do Pedido — em qualquer
+--    esquema; no Storage eram as do bucket pedido-documentos-assinados
+--    (pedido_doc_* e pedido_doc_assinado_*), que barraram a 1ª tentativa (2026-11-12). Sem elas os buckets do Pedido ficam
+--    fechados para os usuários; a limpeza noturna (service_role) continua apagando.
+DO $$
+DECLARE r RECORD;
+BEGIN
+    FOR r IN
+        SELECT schemaname, tablename, policyname
+          FROM pg_policies
+         WHERE coalesce(qual, '') || ' ' || coalesce(with_check, '') ~* '\m(pedidos|pedido_itens|pedido_documentos)\M'
+           AND tablename NOT IN ('pedidos', 'pedido_itens', 'pedido_documentos')
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', r.policyname, r.schemaname, r.tablename);
+        RAISE NOTICE 'policy removida: %.% → %', r.schemaname, r.tablename, r.policyname;
+    END LOOP;
+END $$;
+
+-- 5. Colunas pedido_id nas tabelas que continuam (levam junto a ligação com pedidos)
 ALTER TABLE IF EXISTS proformas              DROP COLUMN IF EXISTS pedido_id;
 ALTER TABLE IF EXISTS processos              DROP COLUMN IF EXISTS pedido_id;
 ALTER TABLE IF EXISTS contas_pagar           DROP COLUMN IF EXISTS pedido_id;
 ALTER TABLE IF EXISTS contas_receber         DROP COLUMN IF EXISTS pedido_id;
 ALTER TABLE IF EXISTS oportunidade_historico DROP COLUMN IF EXISTS pedido_id;
 
--- 5. As tabelas do Pedido (sem CASCADE: se ainda houver dependência, para aqui)
+-- 6. As tabelas do Pedido (sem CASCADE: se ainda houver dependência, para aqui)
 DROP TABLE IF EXISTS pedido_documentos;
 DROP TABLE IF EXISTS pedido_itens;
 DROP TABLE IF EXISTS pedidos;
 
--- 6. Numeração e histórico de alterações do Pedido
+-- 7. Numeração e histórico de alterações do Pedido
 DELETE FROM contadores_numeracao WHERE tipo ILIKE 'pedido%';
 DELETE FROM historico_alteracoes WHERE tabela IN ('pedidos', 'pedido_itens', 'pedido_documentos');
 

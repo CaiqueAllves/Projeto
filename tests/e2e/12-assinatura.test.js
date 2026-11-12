@@ -16,6 +16,7 @@ module.exports = {
             }, ids.proforma);
             // página pública, em outra sessão (sem login)
             const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } });
+            await h.usarProjetoDeTestes(ctx);
             const pub = await ctx.newPage();
             await pub.goto(`${h.BASE}/assinar.html?t=${token}`); await pub.waitForTimeout(3000);
             h.esperar(await pub.isVisible('#asConteudo'), 'Página de assinatura não abriu a Proforma');

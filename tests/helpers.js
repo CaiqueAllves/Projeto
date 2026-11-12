@@ -21,9 +21,31 @@ async function garantirServidor() {
     throw new Error('Não foi possível subir o servidor local na porta ' + PORTA);
 }
 
+// Projeto Supabase de TESTES: com MARPEX_TESTE_SUPABASE_REF e MARPEX_TESTE_SUPABASE_ANON
+// definidos, as páginas servidas pelo servidor local passam a falar com o projeto de
+// testes (troca o endereço e a chave pública em todos os arquivos, inclusive a CSP).
+// Sem elas, os testes rodam no projeto de produção, como antes.
+const SUPABASE_PROD_REF  = 'mvgbgjqkxsptbndgoskw';
+const SUPABASE_PROD_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12Z2JnanFreHNwdGJuZGdvc2t3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MTgxNTcsImV4cCI6MjA4ODQ5NDE1N30.MSBVWGwpdlYeSKoLL64It5BGWatxoU9uuW6FypgN628';
+const TESTE_REF  = process.env.MARPEX_TESTE_SUPABASE_REF  || '';
+const TESTE_ANON = process.env.MARPEX_TESTE_SUPABASE_ANON || '';
+if (TESTE_REF && !TESTE_ANON) throw new Error('Defina também MARPEX_TESTE_SUPABASE_ANON (chave anon do projeto de testes).');
+
+async function _usarProjetoDeTestes(ctx) {
+    if (!TESTE_REF) return;
+    await ctx.route(BASE + '/**', async route => {
+        const resp = await route.fetch();
+        const tipo = resp.headers()['content-type'] || '';
+        if (!/javascript|html|json|css/.test(tipo)) return route.fulfill({ response: resp });
+        const corpo = (await resp.text()).split(SUPABASE_PROD_ANON).join(TESTE_ANON).split(SUPABASE_PROD_REF).join(TESTE_REF);
+        await route.fulfill({ response: resp, body: corpo });
+    });
+}
+
 async function abrirNavegador({ mobile = false } = {}) {
     const browser = await chromium.launch();
     const ctx = await browser.newContext(mobile ? { ...devices['iPhone 13'] } : { viewport: { width: 1500, height: 950 }, acceptDownloads: true });
+    await _usarProjetoDeTestes(ctx);
     const page = await ctx.newPage();
     page.__erros = [];
     page.on('pageerror', e => page.__erros.push(e.message));
@@ -62,7 +84,7 @@ function semErrosJS(page) { esperar(!page.__erros.length, 'Erros de JavaScript n
 
 const marca = () => 'TSTE2E' + Date.now() + Math.floor(Math.random() * 1000);
 
-module.exports = { BASE, garantirServidor, abrirNavegador, login, ir, esperar, igual, semErrosJS, marca, FalhaTeste };
+module.exports = { BASE, garantirServidor, abrirNavegador, login, ir, esperar, igual, semErrosJS, marca, FalhaTeste, usarProjetoDeTestes: _usarProjetoDeTestes };
 
 // ── Pular (quando depende de uma migração ainda não rodada) ──
 class PularTeste extends Error {}
