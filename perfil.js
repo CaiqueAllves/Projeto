@@ -3,6 +3,12 @@
 // ========================================
 
 const PLANOS = {
+    free: {
+        nome: 'Gratuito', icone: 'fa-gift', cor: '#0f766e', corFundo: '#ccfbf1',
+        total: 2, admins: 1, subs: 1,
+        descricao: '1 administrador + 1 usuário.',
+        recursos: ['Processos de exportação', 'Cadastro de empresas', 'Cadastro de produtos', 'Propostas comerciais', 'Relatórios básicos'],
+    },
     basico: {
         nome: 'Básico', icone: 'fa-seedling', cor: '#64748b', corFundo: '#f1f5f9',
         total: 1, admins: 1, subs: 0,
@@ -547,13 +553,13 @@ function formatarTamanho(bytes) {
 // ========================================
 
 function renderizarPlano(dados) {
-    const planoKey      = dados.plano || 'basico';
-    const plano         = PLANOS[planoKey] || PLANOS.basico;
+    const planoKey      = PLANOS[dados.plano] ? dados.plano : 'free';
+    const plano         = PLANOS[planoKey];
     const ativos        = dados.usuarios_ativos || 0;
     const totalUsuarios = dados.total_usuarios  || 0;
     const extras        = dados.usuarios_extras_pagos || 0;
     const isEmpresa     = planoKey === 'empresa';
-    const proximos      = { basico: 'regular', regular: 'profissional', profissional: 'empresa' };
+    const proximos      = { free: 'regular', basico: 'regular', regular: 'profissional', profissional: 'empresa' };
     const proximo       = proximos[planoKey];
     // Vagas extras compradas à parte (sem trocar de plano) somam à
     // capacidade base — combinadas fora do sistema e liberadas pelo Marpex

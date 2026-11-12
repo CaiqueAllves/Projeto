@@ -550,8 +550,9 @@ window.handleLogin = async function(event) {
         // nenhuma, nem redireciona. Cobre o caso de alguém que ficou
         // deslogado até o prazo vencer (a checagem em auth.js cobre quem
         // já estava logado quando o prazo bateu).
+        // (empresa no plano Gratuito vencido NÃO bloqueia: entra em modo só leitura)
         const expiraEm = resultado.usuario.empresa_expira_em;
-        if (expiraEm && new Date(expiraEm) <= new Date()) {
+        if (resultado.usuario.empresa_status === 'sandbox' && expiraEm && new Date(expiraEm) <= new Date()) {
             btnLogin.classList.remove('loading');
             btnLogin.disabled = false;
             mostrarNotificacao('Seu período de avaliação de 24h expirou. Insira uma chave de empresa ou cadastre sua empresa para continuar.', 'error');

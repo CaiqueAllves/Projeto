@@ -1,0 +1,110 @@
+<!--
+    Template de e-mail para o EmailJS — fim do período gratuito (Marpex)
+
+    Como usar:
+    1. Em emailjs.com → Email Templates → Create New Template (mesma conta e
+       serviço do e-mail de boas-vindas)
+    2. Aba Settings:
+         To email: {{to_email}}
+         Subject:  Seu período gratuito no Marpex termina em {{dias_restantes}}
+    3. Na aba Content, troque para o modo "Code editor" e cole todo o HTML abaixo
+    4. Salve, copie o Template ID gerado e coloque em
+       AVISO_VENC_EMAILJS_TEMPLATE_ID (aviso-vencimento.js) — até lá o e-mail
+       não é enviado (o aviso dentro do sistema já funciona)
+
+    Variáveis (enviadas pelo aviso-vencimento.js):
+    {{to_name}}         — nome do administrador
+    {{to_email}}        — e-mail do administrador
+    {{empresa}}         — razão social da empresa
+    {{data_vencimento}} — dia em que o período gratuito termina (dd/mm/aaaa)
+    {{dias_restantes}}  — "3 dias", "2 dias", "1 dia"
+    {{link_planos}}     — tela de Perfil → Plano no sistema
+    {{link_whatsapp}}   — conversa com a Marpex no WhatsApp, com mensagem pronta
+-->
+<div style="background-color:#f1f5f9; padding:24px 12px; font-family:Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:0 auto; background-color:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e2e8f0;">
+
+    <!-- Cabeçalho -->
+    <tr>
+      <td style="background-color:#4f46e5; padding:32px 24px; text-align:center;">
+        <div style="color:#ffffff; font-size:20px; font-weight:bold;">Marpex</div>
+        <div style="color:#e0e7ff; font-size:13px; margin-top:4px;">Gestão de comércio exterior</div>
+      </td>
+    </tr>
+
+    <!-- Aviso -->
+    <tr>
+      <td style="padding:32px 32px 0 32px; text-align:center;">
+        <div style="width:56px; height:56px; background-color:#fef3c7; border-radius:50%; margin:0 auto 16px auto; line-height:56px; font-size:24px;">
+          ⏳
+        </div>
+        <p style="margin:0; font-size:20px; font-weight:bold; color:#0f172a;">
+          Seu período gratuito termina em {{dias_restantes}}
+        </p>
+        <p style="margin:12px 0 0 0; font-size:14px; line-height:1.6; color:#475569;">
+          Olá, {{to_name}}. O período gratuito da empresa <strong>{{empresa}}</strong> no Marpex
+          termina em <strong>{{data_vencimento}}</strong>.
+        </p>
+      </td>
+    </tr>
+
+    <!-- O que acontece -->
+    <tr>
+      <td style="padding:24px 32px 0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fffbeb; border:1px solid #fde68a; border-radius:8px;">
+          <tr>
+            <td style="padding:16px;">
+              <p style="margin:0 0 8px 0; font-size:12px; letter-spacing:0.05em; text-transform:uppercase; color:#92400e;">O que acontece depois dessa data</p>
+              <p style="margin:0; font-size:14px; line-height:1.6; color:#0f172a;">
+                O sistema entra em <strong>modo só leitura</strong>:
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+                <tr><td style="padding:4px 0; font-size:14px; color:#334155;">✅ Vocês continuam entrando, vendo e baixando tudo (Proformas, Processos, documentos, relatórios).</td></tr>
+                <tr><td style="padding:4px 0; font-size:14px; color:#334155;">⛔ Não será possível criar, alterar ou excluir Propostas, Proformas, Processos, Contas e cadastros.</td></tr>
+                <tr><td style="padding:4px 0; font-size:14px; color:#334155;">🔒 Nenhum dado é apagado: tudo continua guardado do jeito que está.</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Solução -->
+    <tr>
+      <td style="padding:24px 32px 0 32px;">
+        <p style="margin:0 0 8px 0; font-size:12px; letter-spacing:0.05em; text-transform:uppercase; color:#94a3b8;">Como continuar usando normalmente</p>
+        <p style="margin:0; font-size:14px; line-height:1.6; color:#334155;">
+          Contrate um plano antes de {{data_vencimento}}. A troca é feita pela nossa equipe e
+          o sistema volta a funcionar por completo na hora, com todos os seus dados.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Botões -->
+    <tr>
+      <td style="padding:24px 32px 8px 32px; text-align:center;">
+        <a href="{{link_whatsapp}}" style="display:inline-block; background-color:#16a34a; color:#ffffff; text-decoration:none; font-size:14px; font-weight:bold; padding:14px 28px; border-radius:8px; margin:4px;">
+          Falar com a Marpex no WhatsApp
+        </a>
+        <a href="{{link_planos}}" style="display:inline-block; background-color:#4f46e5; color:#ffffff; text-decoration:none; font-size:14px; font-weight:bold; padding:14px 28px; border-radius:8px; margin:4px;">
+          Ver os planos
+        </a>
+      </td>
+    </tr>
+
+    <!-- Rodapé -->
+    <tr>
+      <td style="padding:28px 32px 32px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding-top:16px; font-size:12px; color:#94a3b8; text-align:center;">
+              Você recebeu este e-mail por ser o administrador da empresa {{empresa}} no Marpex.<br>
+              Dúvidas? Use o botão de Suporte dentro do sistema.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+  </table>
+</div>

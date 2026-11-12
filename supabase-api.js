@@ -863,6 +863,19 @@ async function criarSubUsuario(dados) {
         const usuario = obterUsuarioLogado();
         if (!usuario || !usuario.empresa_id) return { sucesso: false, mensagem: 'Sem empresa vinculada.' };
 
+        // Pelo banco (database-usuarios-pelo-servidor.sql): confere perfil, CPF/e-mail
+        // em todo o sistema e o limite do plano, e grava a senha cifrada.
+        const rpc = await supabaseClient.rpc('criar_usuario_empresa', {
+            p_nome: dados.nome, p_cpf: dados.cpf, p_email: dados.email, p_senha: dados.senha,
+            p_perfil: dados.perfil || 'usuario', p_data_nasc: dados.dataNasc || null,
+        });
+        if (!rpc.error) {
+            if (!rpc.data?.sucesso) return { sucesso: false, mensagem: rpc.data?.mensagem || 'Não foi possível criar o usuário.' };
+            return { sucesso: true, data: { id: rpc.data.id } };
+        }
+        // Função ainda não criada no banco (SQL não rodado): segue pelo caminho antigo
+        if (!/criar_usuario_empresa|PGRST202|function/i.test(rpc.error.message || '')) return { sucesso: false, mensagem: rpc.error.message };
+
         // Verificar CPF duplicado
         const { data: cpfExistente } = await supabaseClient
             .from('usuarios')

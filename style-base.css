@@ -2097,3 +2097,9 @@ html.fin-janela body > *:not(.fin-modal-overlay):not(.notificacao) { display: no
     .cl-cab, .cl-filtros, .cl-lista { padding-left: 16px; padding-right: 16px; }
     .cl-ajuda { margin-left: 16px; margin-right: 16px; }
 }
+
+/* ── Plano Gratuito vencido: modo só leitura (auth.js _authFaixaModoLeitura) ── */
+.faixa-modo-leitura { position: fixed; left: 50%; bottom: 52px; transform: translateX(-50%); z-index: 8500; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 999px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; box-shadow: 0 8px 24px rgba(15, 23, 42, .18); font-size: 13px; font-weight: 600; }
+.faixa-modo-leitura a { color: #4776ec; white-space: nowrap; }
+body.modo-leitura .btn-cadastrar, body.modo-leitura .btn-novo-usuario { display: none !important; }
+@media (max-width: 600px) { .faixa-modo-leitura { border-radius: 12px; bottom: 76px; font-size: 12px; } }

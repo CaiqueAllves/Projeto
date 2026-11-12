@@ -7,7 +7,7 @@ let todosUsuarios = [];
 let pendingToggle = null; // { id, ativoAtual }
 let dadosPlanoAtual = null; // { plano, total_usuarios, usuarios_ativos }
 
-const PLANO_SUBS = { basico: 0, regular: 2, profissional: 4, empresa: Infinity };
+const PLANO_SUBS = { free: 1, basico: 0, regular: 2, profissional: 4, empresa: Infinity };
 
 document.addEventListener('DOMContentLoaded', async function () {
     usuarioAtual = obterUsuarioLogado();
@@ -362,7 +362,7 @@ async function executarToggle() {
         document.getElementById('statInativos').textContent = todosUsuarios.filter(u => !u.ativo).length;
         mostrarToast(novoStatus ? 'Usuário ativado com sucesso.' : 'Usuário desativado.', novoStatus ? 'sucesso' : 'erro');
     } else {
-        mostrarToast('Erro ao alterar status do usuário.', 'erro');
+        mostrarToast(/limite/i.test(res.mensagem || '') ? res.mensagem : 'Erro ao alterar status do usuário.', 'erro');
     }
 }
 
@@ -410,16 +410,18 @@ async function toggleModulo(id, modulo, novoValor) {
 
 function abrirModalNovoUsuario() {
     const planoKey = dadosPlanoAtual?.plano || 'basico';
-    const totalAtual = dadosPlanoAtual?.total_usuarios ?? (todosUsuarios.length + 1);
+    // só usuários ATIVOS contam (desativados não ocupam vaga) — mesma regra do banco
+    const totalAtual = dadosPlanoAtual?.usuarios_ativos ?? (todosUsuarios.filter(u => u.ativo).length + 1);
 
-    const PLANO_TOTAL = { basico: 1, regular: 3, profissional: 5, empresa: Infinity };
+    // espelha plano_limite_usuarios() do banco (database-usuarios-pelo-servidor.sql)
+    const PLANO_TOTAL = { free: 2, basico: 1, regular: 3, profissional: 5, empresa: Infinity };
     // Vagas extras compradas à parte (sem trocar de plano) — combinadas fora
     // do sistema (não tem gateway de pagamento integrado) e liberadas pelo
     // Marpex direto no banco (empresas.usuarios_extras_pagos).
-    const limiteTotal = (PLANO_TOTAL[planoKey] ?? 1) + (dadosPlanoAtual?.usuarios_extras_pagos || 0);
+    const limiteTotal = (PLANO_TOTAL[planoKey] ?? 2) + (dadosPlanoAtual?.usuarios_extras_pagos || 0);
 
     if (totalAtual >= limiteTotal) {
-        mostrarToast(`Limite de ${limiteTotal} usuário${limiteTotal !== 1 ? 's' : ''} do seu plano atingido. Fale com a gente pra adicionar vagas extras ou fazer upgrade.`, 'erro');
+        mostrarToast(`Limite de ${limiteTotal} usuário${limiteTotal !== 1 ? 's' : ''} ativo${limiteTotal !== 1 ? 's' : ''} do seu plano atingido. Desative alguém ou fale com a gente para contratar vagas extras ou fazer upgrade.`, 'erro');
         return;
     }
 
@@ -494,7 +496,10 @@ async function salvarNovoUsuario() {
         renderizarAtividade(todosUsuarios);
         renderizarStats(todosUsuarios, []);
 
-        if (dadosPlanoAtual) dadosPlanoAtual.total_usuarios = (dadosPlanoAtual.total_usuarios || 0) + 1;
+        if (dadosPlanoAtual) {
+            dadosPlanoAtual.total_usuarios  = (dadosPlanoAtual.total_usuarios  || 0) + 1;
+            dadosPlanoAtual.usuarios_ativos = (dadosPlanoAtual.usuarios_ativos || 0) + 1;
+        }
     } else {
         mostrarToast(res.mensagem || 'Erro ao criar usuário.', 'erro');
     }

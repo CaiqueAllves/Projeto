@@ -22,11 +22,22 @@ window.addEventListener('load', function() {
 });
 
 // Conta sandbox (cadastro sem chave/empresa, ver login.js `realizarCadastro`)
-// tem 24h de acesso — `empresa_expira_em` só existe pra esse tipo de conta,
-// vira null assim que o usuário se vincula a uma empresa de verdade.
+// tem 24h de acesso e BLOQUEIA o login ao vencer. A empresa no plano Gratuito
+// também tem `empresa_expira_em` (15 dias, database-gratuito-15-dias.sql), mas
+// ao vencer ela só entra em modo só leitura — ver empresaEmModoLeitura().
 function _authSandboxExpirado(usuarioAtual) {
-    return !!usuarioAtual.empresa_expira_em && new Date(usuarioAtual.empresa_expira_em) <= new Date();
+    return usuarioAtual.empresa_status === 'sandbox'
+        && !!usuarioAtual.empresa_expira_em && new Date(usuarioAtual.empresa_expira_em) <= new Date();
 }
+
+// Plano Gratuito vencido: entra, vê e baixa tudo, mas não cria/altera/exclui
+// (o banco recusa — gatilho trg_modo_leitura). Plano pago não tem vencimento.
+function empresaEmModoLeitura(u) {
+    u = u || (typeof obterUsuarioLogado === 'function' ? obterUsuarioLogado() : null);
+    return !!u && u.empresa_status !== 'sandbox'
+        && !!u.empresa_expira_em && new Date(u.empresa_expira_em) <= new Date();
+}
+const MSG_MODO_LEITURA = 'O período gratuito da sua empresa terminou e o sistema está em modo só leitura: você pode ver e baixar tudo, mas não criar, alterar ou excluir. Para voltar a usar normalmente, contrate um plano (Perfil → Plano).';
 
 function _authEncerrarSessaoExpirada() {
     sessionStorage.removeItem('usuarioLogado');
@@ -48,6 +59,10 @@ function exigirEmpresaVinculada() {
         : JSON.parse(sessionStorage.getItem('usuarioLogado') || 'null');
     if (usuario && usuario.empresa_status === 'sandbox') {
         mostrarNotificacao('Ação indisponível em conta sem empresa vinculada. Acesse Perfil para inserir uma chave de empresa ou cadastrar a sua.', 'warning');
+        return false;
+    }
+    if (empresaEmModoLeitura(usuario)) {
+        mostrarNotificacao(MSG_MODO_LEITURA, 'warning');
         return false;
     }
     return true;
@@ -163,6 +178,21 @@ async function _authVerificarAceiteTermos() {
     }
 }
 
+// Faixa fixa no topo enquanto a empresa estiver em modo só leitura (some sozinha
+// quando o plano é contratado — a sessão é atualizada a cada tela aberta)
+function _authFaixaModoLeitura(u) {
+    const existente = document.getElementById('faixaModoLeitura');
+    document.body.classList.toggle('modo-leitura', empresaEmModoLeitura(u));
+    if (!empresaEmModoLeitura(u)) { existente?.remove(); return; }
+    if (existente || window.self !== window.top) return;   // com abas, a faixa fica só na janela principal
+    const f = document.createElement('div');
+    f.id = 'faixaModoLeitura';
+    f.className = 'faixa-modo-leitura';
+    f.innerHTML = '<i class="fa-solid fa-lock"></i> <span></span> <a href="perfil.html">Ver planos</a>';
+    f.querySelector('span').textContent = `Período gratuito encerrado em ${new Date(u.empresa_expira_em).toLocaleDateString('pt-BR')} — modo só leitura.`;
+    document.body.prepend(f);
+}
+
 function _authAtualizarInterface(usuarioAtual) {
     _authAplicarPermissoes(usuarioAtual);
     const displayUsername = document.getElementById('displayUsername');
@@ -171,6 +201,7 @@ function _authAtualizarInterface(usuarioAtual) {
     if (displayUsername) {
         displayUsername.textContent = usuarioAtual.nome;
     }
+    _authFaixaModoLeitura(usuarioAtual);
     // e-mail da topbar (várias telas não preenchiam e ficava "usuario@email.com")
     const userEmail = document.getElementById('userEmail');
     if (userEmail) userEmail.textContent = usuarioAtual.email || '—';
@@ -478,6 +509,7 @@ function _authAplicarPermissoes(u) {
 // Mensagens que já estão em português (ex.: as das regras do banco) passam
 // direto.
 const _ERROS_AMIGAVEIS = [
+    [/MODO_SO_LEITURA/, 'O período gratuito terminou e a empresa está em modo só leitura. Contrate um plano para voltar a criar e alterar dados (Perfil → Plano).'],
     [/row-level security|permission denied|insufficient_privilege/i, 'Você não tem permissão para fazer isso.'],
     [/duplicate key value|already exists|23505/i, 'Já existe um registro com esses dados.'],
     [/foreign key constraint|still referenced|23503/i, 'Este registro está ligado a outros dados e não pode ser alterado ou excluído.'],

@@ -15,7 +15,7 @@
     <script src="pwa.js?v=6b117d57"></script>
     <title>Marpex | Central de Chamados</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style-base.css?v=84dec4e1">
+    <link rel="stylesheet" href="style-base.css?v=3765b3b8">
     <link rel="stylesheet" href="style-navegador.css?v=eda2ee95">
     <link rel="stylesheet" href="style-chamados-admin.css?v=a77a7569">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
@@ -32,6 +32,9 @@
             <div class="topbar-left">
                 <h2><i class="fa-solid fa-headset"></i> Central de Chamados</h2>
             </div>
+            <button type="button" class="cl-btn" onclick="abrirEmpresasPlanos()" title="Plano e vagas de usuários de cada empresa" style="margin-left:auto;margin-right:12px">
+                <i class="fa-solid fa-building-user"></i> Empresas e planos
+            </button>
             <div class="topbar-right">
                 <div class="user-info-card">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
@@ -140,10 +143,11 @@
 </div>
 
 <script src="supabase.min.js?v=ba2e1d14"></script>
-<script src="supabase-api.js?v=a29098b1"></script>
-<script src="auth.js?v=7943eb3e"></script>
+<script src="supabase-api.js?v=3d1d9163"></script>
+<script src="auth.js?v=b91a78ee"></script>
 <script src="navegador.js?v=b52c2dea"></script>
 <script src="chamados-admin.js?v=55896901"></script>
+<script src="empresas-planos.js?v=e3d4e39a"></script>
 <script src="suporte.js?v=1debcf1b"></script>
 </body>
 </html>
