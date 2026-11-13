@@ -32,9 +32,6 @@
             <div class="topbar-left">
                 <h2><i class="fa-solid fa-headset"></i> Central de Chamados</h2>
             </div>
-            <button type="button" class="cl-btn" onclick="abrirEmpresasPlanos()" title="Plano e vagas de usuários de cada empresa" style="margin-left:auto;margin-right:12px">
-                <i class="fa-solid fa-building-user"></i> Empresas e planos
-            </button>
             <div class="topbar-right">
                 <div class="user-info-card">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
@@ -50,6 +47,14 @@
         </div>
 
         <div class="content" style="padding:32px; display:flex; flex-direction:column; gap:20px;">
+
+            <!-- Painel do dono da Marpex: plano, vagas e período gratuito de cada empresa (empresas-planos.js).
+                 Fica no conteúdo, não na barra do topo: dentro das abas a barra do topo some. -->
+            <div class="cad-barra-admin" style="display:flex; justify-content:flex-end;">
+                <button type="button" class="cl-btn" onclick="abrirEmpresasPlanos()" title="Plano, vagas de usuários e período gratuito de cada empresa">
+                    <i class="fa-solid fa-building-user"></i> Empresas e planos
+                </button>
+            </div>
 
             <div class="filtros-container">
                 <div class="cad-busca-grupo">
